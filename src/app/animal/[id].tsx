@@ -1,0 +1,332 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Platform, Pressable, View } from 'react-native';
+
+import { AlertItem } from '@/components/AlertItem';
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Header,
+  Icon,
+  type IconName,
+  IconBadge,
+  Screen,
+  Text,
+} from '@/components/ui';
+import { especieMeta } from '@/data/constants';
+import { formatDataPt, idadeExtenso } from '@/data/helpers';
+import { useGado } from '@/data/store';
+import type { EventoTipo } from '@/data/types';
+import { colors, radii, shadow, spacing } from '@/theme';
+
+const eventoIcone: Record<EventoTipo, IconName> = {
+  Parto: 'baby-bottle-outline',
+  Vacinação: 'needle',
+  Medicamento: 'medical-bag',
+  Pesagem: 'scale',
+  Movimentação: 'swap-horizontal',
+  Compra: 'cart-outline',
+  Venda: 'cash',
+  Morte: 'grave-stone',
+};
+
+function confirmarEliminar(nome: string, onYes: () => void) {
+  const msg = `Eliminar "${nome}"? Esta ação não pode ser anulada.`;
+  if (Platform.OS === 'web') {
+    // eslint-disable-next-line no-alert
+    if (typeof window !== 'undefined' && window.confirm(msg)) onYes();
+  } else {
+    // Import dinâmico para não afetar a web
+    const { Alert } = require('react-native');
+    Alert.alert('Eliminar animal', msg, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: onYes },
+    ]);
+  }
+}
+
+export default function AnimalDetalheScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { animalById, terrenoById, exploracaoById, eventosByAnimal, alertas, deleteAnimal } = useGado();
+
+  const animal = animalById(id);
+
+  if (!animal) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <Header title="Animal" />
+        <EmptyState icon="cow-off" title="Animal não encontrado" message="Este registo já não existe." />
+      </View>
+    );
+  }
+
+  const meta = especieMeta[animal.especie];
+  const terreno = animal.terrenoId ? terrenoById(animal.terrenoId) : undefined;
+  const exploracao = exploracaoById(animal.exploracaoId);
+  const mae = animal.maeId ? animalById(animal.maeId) : undefined;
+  const pai = animal.paiId ? animalById(animal.paiId) : undefined;
+  const eventos = eventosByAnimal(animal.id);
+  const meusAlertas = alertas.filter((a) => a.animalId === animal.id);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <Header title={animal.nome ?? 'Animal'} />
+      <Screen>
+        {/* Hero */}
+        <LinearGradient
+          colors={[colors.headerFrom, colors.headerTo]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[{ borderRadius: radii.xl, padding: spacing.lg, alignItems: 'center' }, shadow.md]}>
+          <View
+            style={{
+              width: 88,
+              height: 88,
+              borderRadius: radii.pill,
+              backgroundColor: 'rgba(255,255,255,0.16)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: spacing.sm,
+            }}>
+            <Icon name={meta.icon} size={52} color={colors.textOnDark} />
+          </View>
+          <Text variant="h1" color={colors.textOnDark}>
+            {animal.nome ?? 'Sem nome'}
+          </Text>
+          <Text variant="body" color={colors.textOnDarkMuted}>
+            {animal.numeroIdentificacao ?? 'Sem brinco'}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <HeroChip icon={meta.icon} label={animal.especie} />
+            <HeroChip icon={animal.sexo === 'Fêmea' ? 'gender-female' : 'gender-male'} label={animal.sexo} />
+            <HeroChip icon="cake-variant" label={idadeExtenso(animal.dataNascimento)} />
+          </View>
+        </LinearGradient>
+
+        {/* Alertas do animal */}
+        {meusAlertas.length > 0 ? (
+          <>
+            <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+              A precisar de atenção
+            </Text>
+            <Card padded={false}>
+              <View style={{ paddingHorizontal: spacing.md }}>
+                {meusAlertas.map((a, i) => (
+                  <AlertItem key={a.id} alerta={a} divider={i < meusAlertas.length - 1} />
+                ))}
+              </View>
+            </Card>
+          </>
+        ) : null}
+
+        {/* Identificação */}
+        <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+          Identificação
+        </Text>
+        <Card>
+          <InfoField icon="tag-outline" label="Nº de identificação (brinco)" value={animal.numeroIdentificacao ?? '—'} />
+          <InfoField icon="calendar-check" label="Data de identificação" value={animal.dataIdentificacao ? formatDataPt(animal.dataIdentificacao) : '—'} />
+          <InfoField
+            icon="cloud-upload-outline"
+            label="SNIRA"
+            value={animal.comunicadoSnira === false ? 'Por comunicar' : animal.comunicadoSnira ? 'Comunicado' : '—'}
+            valueTone={animal.comunicadoSnira === false ? colors.danger : undefined}
+            last
+          />
+        </Card>
+
+        {/* Nascimento e genealogia */}
+        <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+          Nascimento e genealogia
+        </Text>
+        <Card>
+          <InfoField icon="cake-variant" label="Data de nascimento" value={formatDataPt(animal.dataNascimento)} />
+          <InfoField icon="clock-outline" label="Idade" value={idadeExtenso(animal.dataNascimento)} />
+          <InfoField icon="palette-outline" label="Raça / pelagem" value={[animal.raca, animal.corPelagem].filter(Boolean).join(' · ') || '—'} />
+          <GenealogiaRow label="Mãe" nome={mae?.nome} onPress={mae ? () => router.push(`/animal/${mae.id}`) : undefined} />
+          <GenealogiaRow label="Pai" nome={pai?.nome} onPress={pai ? () => router.push(`/animal/${pai.id}`) : undefined} last />
+        </Card>
+
+        {/* Localização */}
+        <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+          Localização
+        </Text>
+        <Card>
+          <InfoField icon="barn" label="Exploração" value={exploracao?.nome ?? '—'} />
+          <InfoField icon="map-marker" label="Terreno atual" value={terreno?.nome ?? 'Sem terreno'} last />
+        </Card>
+
+        {/* Histórico */}
+        <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+          Histórico ({eventos.length})
+        </Text>
+        {eventos.length === 0 ? (
+          <Card>
+            <Text variant="body" color={colors.textSecondary}>
+              Ainda não há eventos registados para este animal.
+            </Text>
+          </Card>
+        ) : (
+          <Card padded={false}>
+            <View style={{ paddingHorizontal: spacing.md }}>
+              {eventos.map((ev, i) => (
+                <View
+                  key={ev.id}
+                  style={{
+                    flexDirection: 'row',
+                    gap: spacing.sm,
+                    paddingVertical: spacing.sm,
+                    borderBottomWidth: i < eventos.length - 1 ? 1 : 0,
+                    borderBottomColor: colors.border,
+                  }}>
+                  <IconBadge name={eventoIcone[ev.tipo]} color={colors.primary} background={colors.primaryTint} size={40} iconSize={20} />
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.xs }}>
+                      <Text variant="bodyStrong" style={{ flex: 1 }} numberOfLines={2}>
+                        {ev.descricao}
+                      </Text>
+                      <Text variant="caption" color={colors.textMuted}>
+                        {formatDataPt(ev.data)}
+                      </Text>
+                    </View>
+                    {ev.detalhe ? (
+                      <Text variant="secondary" color={colors.textSecondary}>
+                        {ev.detalhe}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </Card>
+        )}
+
+        {/* Ações */}
+        <View style={{ gap: spacing.sm, marginTop: spacing.xl }}>
+          <Button
+            label="Registar evento"
+            icon="plus"
+            variant="secondary"
+            onPress={() => router.push({ pathname: '/evento/novo', params: { animalId: animal.id } })}
+          />
+          <Button
+            label="Eliminar animal"
+            icon="trash-can-outline"
+            variant="ghost"
+            onPress={() =>
+              confirmarEliminar(animal.nome ?? 'este animal', () => {
+                deleteAnimal(animal.id);
+                router.back();
+              })
+            }
+          />
+        </View>
+      </Screen>
+    </View>
+  );
+}
+
+function HeroChip({ icon, label }: { icon: IconName; label: string }) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: 'rgba(255,255,255,0.16)',
+        borderRadius: radii.pill,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 6,
+      }}>
+      <Icon name={icon} size={15} color={colors.textOnDark} />
+      <Text variant="caption" color={colors.textOnDark}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function InfoField({
+  icon,
+  label,
+  value,
+  valueTone,
+  last,
+}: {
+  icon: IconName;
+  label: string;
+  value: string;
+  valueTone?: string;
+  last?: boolean;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        paddingVertical: spacing.sm,
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: colors.border,
+      }}>
+      <Icon name={icon} size="md" color={colors.textMuted} />
+      <Text variant="body" color={colors.textSecondary} style={{ flex: 1 }}>
+        {label}
+      </Text>
+      <Text variant="bodyStrong" color={valueTone ?? colors.text} style={{ maxWidth: '55%', textAlign: 'right' }}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function GenealogiaRow({
+  label,
+  nome,
+  onPress,
+  last,
+}: {
+  label: string;
+  nome?: string;
+  onPress?: () => void;
+  last?: boolean;
+}) {
+  const content = (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        paddingVertical: spacing.sm,
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: colors.border,
+      }}>
+      <Icon name="family-tree" size="md" color={colors.textMuted} />
+      <Text variant="body" color={colors.textSecondary} style={{ flex: 1 }}>
+        {label}
+      </Text>
+      {nome ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Text variant="bodyStrong" color={onPress ? colors.primary : colors.text}>
+            {nome}
+          </Text>
+          {onPress ? <Icon name="chevron-right" size="sm" color={colors.primary} /> : null}
+        </View>
+      ) : (
+        <Text variant="bodyStrong" color={colors.textMuted}>
+          —
+        </Text>
+      )}
+    </View>
+  );
+
+  if (!onPress) return content;
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${label}: ${nome}`}>
+      {content}
+    </Pressable>
+  );
+}

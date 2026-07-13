@@ -1,0 +1,104 @@
+import { Tabs } from 'expo-router';
+import { Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Icon, type IconName, Text } from '@/components/ui';
+import { colors, radii, shadow, spacing } from '@/theme';
+
+/** Forma mínima das props do tabBar que usamos (evita dependência direta). */
+type TabBarProps = {
+  state: { index: number; routes: { key: string; name: string }[] };
+  navigation: {
+    emit: (event: { type: 'tabPress'; target: string; canPreventDefault: true }) => {
+      defaultPrevented: boolean;
+    };
+    navigate: (name: string) => void;
+  };
+};
+
+const TABS: Record<string, { label: string; icon: IconName }> = {
+  index: { label: 'Início', icon: 'home-variant' },
+  animais: { label: 'Animais', icon: 'cow' },
+  exploracoes: { label: 'Explorações', icon: 'barn' },
+  perfil: { label: 'Perfil', icon: 'account' },
+};
+
+function TabBar({ state, navigation }: TabBarProps) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      style={[
+        {
+          flexDirection: 'row',
+          backgroundColor: colors.surface,
+          paddingTop: spacing.sm,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.sm,
+          paddingHorizontal: spacing.xs,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+          borderTopLeftRadius: radii.xl,
+          borderTopRightRadius: radii.xl,
+        },
+        shadow.lg,
+      ]}>
+      {state.routes.map((route, index) => {
+        const cfg = TABS[route.name];
+        if (!cfg) return null;
+        const focused = state.index === index;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+        };
+
+        return (
+          <Pressable
+            key={route.key}
+            onPress={onPress}
+            accessibilityRole="button"
+            accessibilityState={{ selected: focused }}
+            accessibilityLabel={cfg.label}
+            style={{ flex: 1, alignItems: 'center', gap: 4, paddingVertical: 2 }}>
+            <View
+              style={{
+                width: 56,
+                height: 34,
+                borderRadius: radii.pill,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: focused ? colors.primaryTint : 'transparent',
+              }}>
+              <Icon
+                name={cfg.icon}
+                size={26}
+                color={focused ? colors.primary : colors.textMuted}
+              />
+            </View>
+            <Text
+              variant="caption"
+              color={focused ? colors.primaryDark : colors.textMuted}>
+              {cfg.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+export default function TabsLayout() {
+  return (
+    <Tabs
+      tabBar={(props) => <TabBar {...props} />}
+      screenOptions={{ headerShown: false }}>
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="animais" />
+      <Tabs.Screen name="exploracoes" />
+      <Tabs.Screen name="perfil" />
+    </Tabs>
+  );
+}
