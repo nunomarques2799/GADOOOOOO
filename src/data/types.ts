@@ -8,6 +8,40 @@ export type Especie = 'Bovino' | 'Equídeo' | 'Ovino' | 'Caprino' | 'Suíno';
 export type Sexo = 'Macho' | 'Fêmea';
 export type TipoTerreno = 'Pastagem' | 'Cultivo' | 'Misto' | 'Outro';
 
+/** Papel de um utilizador dentro de uma exploração (multi-tenant). */
+export type RoleMembro = 'admin' | 'trabalhador' | 'veterinario';
+
+/** Estado do perfil (aprovação de cliente pelo superadmin). */
+export type EstadoPerfil = 'pendente' | 'ativo';
+
+export interface MembroExploracao {
+  id: string;
+  userId: string;
+  exploracaoId: string;
+  role: RoleMembro;
+  criadoEm?: string;
+}
+
+export interface Convite {
+  codigo: string;
+  exploracaoId: string;
+  role: RoleMembro;
+  criadoPor: string;
+  criadoEm?: string;
+  expiraEm?: string;
+  usadoPor?: string;
+  usadoEm?: string;
+  descricao?: string;
+}
+
+export interface UtilizadorPendente {
+  id: string;
+  nome: string;
+  email: string;
+  telefone?: string;
+  nif?: string;
+}
+
 export type EventoTipo =
   | 'Parto'
   | 'Vacinação'

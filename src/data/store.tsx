@@ -11,14 +11,18 @@ import {
 import { Platform } from 'react-native';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { useAuth } from './auth';
 import { abrirBd, inicializarBd } from './db/database';
 import {
   carregarTudo,
   carregarUtilizador,
   eliminarAnimal as bdEliminarAnimal,
+  eliminarExploracao as bdEliminarExploracao,
+  eliminarTerreno as bdEliminarTerreno,
   guardarAnimal,
   guardarEvento,
   guardarExploracao,
+  guardarTerreno,
 } from './db/repository';
 import { computeAlertas } from './helpers';
 import {
@@ -28,6 +32,17 @@ import {
   terrenosSeed,
   utilizadorSeed,
 } from './seed';
+import { supabaseConfigurado } from './supabase';
+import {
+  carregarTudoSupabase,
+  eliminarAnimalSupabase,
+  eliminarExploracaoSupabase,
+  eliminarTerrenoSupabase,
+  upsertAnimalSupabase,
+  upsertEventoSupabase,
+  upsertExploracaoSupabase,
+  upsertTerrenoSupabase,
+} from './supabaseRepo';
 import type {
   Alerta,
   Animal,
@@ -37,14 +52,14 @@ import type {
   Terreno,
   Utilizador,
 } from './types';
-import { fetchMeteorologia, type LocalMeteo } from './weather';
 
 /**
- * A persistência SQLite (expo-sqlite) só corre em iOS/Android. Na web,
- * onde não há motor nativo, a app usa os dados de exemplo em memória —
- * suficiente para pré-visualizar os ecrãs no browser.
+ * Persistência:
+ *   - Com sessão Supabase iniciada → Supabase é a fonte da verdade.
+ *   - Sem Supabase (offline puro) e no nativo → SQLite local (expo-sqlite).
+ *   - Sem Supabase e na web → dados de exemplo em memória.
  */
-const USA_BD = Platform.OS !== 'web';
+const USA_SQLITE_LOCAL = Platform.OS !== 'web' && !supabaseConfigurado;
 
 /** Gerador de ID simples (UUID v4 quando disponível). */
 function novoId(prefixo = 'id'): string {
@@ -67,9 +82,6 @@ const meteorologiaFallback: Meteorologia = {
   conselho: 'Bom dia para verificar os bebedouros — calor à tarde.',
 };
 
-/** Coordenadas de recurso (Idanha-a-Nova) se a exploração não tiver terrenos com GPS. */
-const LOCAL_FALLBACK: LocalMeteo = { latitude: 39.92, longitude: -7.24, local: 'Idanha-a-Nova' };
-
 /** Estado da obtenção de meteorologia — para a UI mostrar "offline" se falhar. */
 export type MeteoEstado = 'a-carregar' | 'atual' | 'offline';
 
@@ -82,9 +94,22 @@ type Snapshot = {
   eventos: Evento[];
 };
 
-/** Carrega o estado inicial: da BD no nativo, dos dados de exemplo na web. */
-function carregarSnapshot(): Snapshot {
-  if (!USA_BD) {
+/** Snapshot inicial síncrono (SQLite local ou seed). */
+function snapshotSincrono(): Snapshot {
+  if (USA_SQLITE_LOCAL) {
+    const db = inicializarBd();
+    const { exploracoes, terrenos, animais, eventos } = carregarTudo(db);
+    return {
+      utilizador: carregarUtilizador(db) ?? utilizadorSeed,
+      exploracoes,
+      terrenos,
+      animais,
+      eventos,
+    };
+  }
+  // Web sem Supabase → seed em memória. Web com Supabase → vazio (carrega
+  // depois em useEffect assíncrono).
+  if (!supabaseConfigurado) {
     return {
       utilizador: utilizadorSeed,
       exploracoes: exploracoesSeed,
@@ -93,15 +118,7 @@ function carregarSnapshot(): Snapshot {
       eventos: eventosSeed,
     };
   }
-  const db = inicializarBd();
-  const { exploracoes, terrenos, animais, eventos } = carregarTudo(db);
-  return {
-    utilizador: carregarUtilizador(db) ?? utilizadorSeed,
-    exploracoes,
-    terrenos,
-    animais,
-    eventos,
-  };
+  return { utilizador: utilizadorSeed, exploracoes: [], terrenos: [], animais: [], eventos: [] };
 }
 
 type GadoContext = {
@@ -120,72 +137,81 @@ type GadoContext = {
   animaisByExploracao: (id: string) => Animal[];
   terrenosByExploracao: (id: string) => Terreno[];
   eventosByAnimal: (id: string) => Evento[];
-  // ações
-  addAnimal: (a: Omit<Animal, 'id'>) => Animal;
-  updateAnimal: (id: string, patch: Partial<Animal>) => void;
-  deleteAnimal: (id: string) => void;
-  addExploracao: (e: Omit<Exploracao, 'id' | 'utilizadorId'>) => Exploracao;
-  addEvento: (e: Omit<Evento, 'id'>) => Evento;
+  // ações (async quando batem no Supabase; devolvem o objeto criado)
+  addAnimal: (a: Omit<Animal, 'id'>) => Promise<Animal>;
+  updateAnimal: (id: string, patch: Partial<Animal>) => Promise<void>;
+  deleteAnimal: (id: string) => Promise<void>;
+  addExploracao: (e: Omit<Exploracao, 'id' | 'utilizadorId'>) => Promise<Exploracao>;
+  updateExploracao: (id: string, patch: Partial<Exploracao>) => Promise<void>;
+  deleteExploracao: (id: string) => Promise<void>;
+  addTerreno: (t: Omit<Terreno, 'id'>) => Promise<Terreno>;
+  updateTerreno: (id: string, patch: Partial<Terreno>) => Promise<void>;
+  deleteTerreno: (id: string) => Promise<void>;
+  addEvento: (e: Omit<Evento, 'id'>) => Promise<Evento>;
+  recarregar: () => Promise<void>;
   recarregarMeteo: () => void;
 };
 
 const Ctx = createContext<GadoContext | null>(null);
 
 export function GadoProvider({ children }: { children: ReactNode }) {
-  // Carrega a BD/seed uma única vez (padrão de inicialização preguiçosa).
+  const { sessao } = useAuth();
+  const usaSupabase = supabaseConfigurado && !!sessao;
+
   const bootRef = useRef<Snapshot | null>(null);
-  if (bootRef.current === null) bootRef.current = carregarSnapshot();
+  if (bootRef.current === null) bootRef.current = snapshotSincrono();
   const boot = bootRef.current;
 
   const [utilizador] = useState<Utilizador>(boot.utilizador);
   const [exploracoes, setExploracoes] = useState<Exploracao[]>(boot.exploracoes);
-  const [terrenos] = useState<Terreno[]>(boot.terrenos);
+  const [terrenos, setTerrenos] = useState<Terreno[]>(boot.terrenos);
   const [animais, setAnimais] = useState<Animal[]>(boot.animais);
   const [eventos, setEventos] = useState<Evento[]>(boot.eventos);
 
   // Espelho sempre atual do efetivo, para ler dentro das ações sem o incluir nas dependências.
   const animaisRef = useRef(animais);
   animaisRef.current = animais;
+  const exploracoesRef = useRef(exploracoes);
+  exploracoesRef.current = exploracoes;
+  const terrenosRef = useRef(terrenos);
+  terrenosRef.current = terrenos;
 
   const [meteorologia, setMeteorologia] = useState<Meteorologia>(meteorologiaFallback);
   const [meteoEstado, setMeteoEstado] = useState<MeteoEstado>('a-carregar');
 
   const alertas = useMemo(() => computeAlertas(animais), [animais]);
 
-  /** Executa uma escrita na BD apenas no nativo (na web é no-op). */
-  const gravar = useCallback((fn: (db: SQLiteDatabase) => void) => {
-    if (USA_BD) fn(abrirBd());
+  /** Escrita local SQLite (só no nativo sem Supabase). */
+  const gravarSqlite = useCallback((fn: (db: SQLiteDatabase) => void) => {
+    if (USA_SQLITE_LOCAL) fn(abrirBd());
   }, []);
 
-  /* ---- Meteorologia real (Open-Meteo) ---- */
+  /** Recarrega tudo do Supabase (usado após criar exploração/convite/aprovação). */
+  const recarregar = useCallback(async () => {
+    if (!usaSupabase) return;
+    const snap = await carregarTudoSupabase();
+    setExploracoes(snap.exploracoes);
+    setTerrenos(snap.terrenos);
+    setAnimais(snap.animais);
+    setEventos(snap.eventos);
+  }, [usaSupabase]);
 
-  const localMeteo = useMemo<LocalMeteo>(() => {
-    const terreno = terrenos.find((t) => t.latitude != null && t.longitude != null);
-    const nomeLocal = exploracoes[0]?.localizacao?.split(',')[0]?.trim();
-    if (terreno?.latitude != null && terreno.longitude != null) {
-      return { latitude: terreno.latitude, longitude: terreno.longitude, local: nomeLocal || terreno.nome };
-    }
-    return LOCAL_FALLBACK;
-  }, [terrenos, exploracoes]);
+  // Carrega do Supabase quando arranca com sessão iniciada.
+  useEffect(() => {
+    if (usaSupabase) void recarregar();
+  }, [usaSupabase, recarregar]);
+
+  /* ---- Meteorologia (ecrã principal — mantém como fallback global) ---- */
 
   const recarregarMeteo = useCallback(() => {
-    const controlador = new AbortController();
-    setMeteoEstado('a-carregar');
-    fetchMeteorologia(localMeteo, controlador.signal)
-      .then((m) => {
-        setMeteorologia(m);
-        setMeteoEstado('atual');
-      })
-      .catch((e: unknown) => {
-        if ((e as { name?: string })?.name !== 'AbortError') setMeteoEstado('offline');
-      });
-    return controlador;
-  }, [localMeteo]);
+    // A meteorologia por exploração é obtida em useMeteorologia; aqui só
+    // mantemos o estado para retro-compatibilidade dos consumers antigos.
+    setMeteoEstado('atual');
+  }, []);
 
   useEffect(() => {
-    const controlador = recarregarMeteo();
-    return () => controlador.abort();
-  }, [recarregarMeteo]);
+    setMeteoEstado('atual');
+  }, []);
 
   /* ---- Seletores ---- */
 
@@ -211,56 +237,165 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     [eventos],
   );
 
-  /* ---- Ações (escrevem na BD e atualizam o estado) ---- */
+  /* ---- Ações ---- */
 
   const addAnimal = useCallback(
-    (a: Omit<Animal, 'id'>) => {
+    async (a: Omit<Animal, 'id'>): Promise<Animal> => {
       const novo: Animal = { ...a, id: novoId('an') };
-      gravar((db) => guardarAnimal(db, novo));
+      if (usaSupabase) {
+        const erro = await upsertAnimalSupabase(novo);
+        if (erro) throw new Error(erro);
+      } else {
+        gravarSqlite((db) => guardarAnimal(db, novo));
+      }
       setAnimais((prev) => [novo, ...prev]);
       return novo;
     },
-    [gravar],
+    [usaSupabase, gravarSqlite],
   );
 
   const updateAnimal = useCallback(
-    (id: string, patch: Partial<Animal>) => {
+    async (id: string, patch: Partial<Animal>): Promise<void> => {
       const atual = animaisRef.current.find((a) => a.id === id);
       if (!atual) return;
       const atualizado: Animal = { ...atual, ...patch };
-      gravar((db) => guardarAnimal(db, atualizado));
+      if (usaSupabase) {
+        const erro = await upsertAnimalSupabase(atualizado);
+        if (erro) throw new Error(erro);
+      } else {
+        gravarSqlite((db) => guardarAnimal(db, atualizado));
+      }
       setAnimais((prev) => prev.map((a) => (a.id === id ? atualizado : a)));
     },
-    [gravar],
+    [usaSupabase, gravarSqlite],
   );
 
   const deleteAnimal = useCallback(
-    (id: string) => {
-      gravar((db) => bdEliminarAnimal(db, id));
+    async (id: string): Promise<void> => {
+      if (usaSupabase) {
+        const erro = await eliminarAnimalSupabase(id);
+        if (erro) throw new Error(erro);
+      } else {
+        gravarSqlite((db) => bdEliminarAnimal(db, id));
+      }
       setAnimais((prev) => prev.filter((a) => a.id !== id));
       setEventos((prev) => prev.filter((e) => e.animalId !== id));
     },
-    [gravar],
+    [usaSupabase, gravarSqlite],
   );
 
   const addExploracao = useCallback(
-    (e: Omit<Exploracao, 'id' | 'utilizadorId'>) => {
+    async (e: Omit<Exploracao, 'id' | 'utilizadorId'>): Promise<Exploracao> => {
       const nova: Exploracao = { ...e, id: novoId('exp'), utilizadorId: utilizador.id };
-      gravar((db) => guardarExploracao(db, nova));
-      setExploracoes((prev) => [...prev, nova]);
+      if (usaSupabase) {
+        const erro = await upsertExploracaoSupabase(nova);
+        if (erro) throw new Error(erro);
+        // O trigger no Supabase cria membro admin. Recarregamos para apanhar
+        // o utilizador_id real (auth.uid) atribuído pelo default.
+        await recarregar();
+      } else {
+        gravarSqlite((db) => guardarExploracao(db, nova));
+        setExploracoes((prev) => [...prev, nova]);
+      }
       return nova;
     },
-    [gravar, utilizador.id],
+    [usaSupabase, gravarSqlite, recarregar, utilizador.id],
+  );
+
+  const updateExploracao = useCallback(
+    async (id: string, patch: Partial<Exploracao>): Promise<void> => {
+      const atual = exploracoesRef.current.find((e) => e.id === id);
+      if (!atual) return;
+      const atualizada: Exploracao = { ...atual, ...patch, id, utilizadorId: atual.utilizadorId };
+      if (usaSupabase) {
+        const erro = await upsertExploracaoSupabase(atualizada);
+        if (erro) throw new Error(erro);
+      } else {
+        gravarSqlite((db) => guardarExploracao(db, atualizada));
+      }
+      setExploracoes((prev) => prev.map((e) => (e.id === id ? atualizada : e)));
+    },
+    [usaSupabase, gravarSqlite],
+  );
+
+  const deleteExploracao = useCallback(
+    async (id: string): Promise<void> => {
+      if (usaSupabase) {
+        const erro = await eliminarExploracaoSupabase(id);
+        if (erro) throw new Error(erro);
+        await recarregar();
+        return;
+      }
+      gravarSqlite((db) => bdEliminarExploracao(db, id));
+      const animaisRemovidos = new Set(
+        animaisRef.current.filter((a) => a.exploracaoId === id).map((a) => a.id),
+      );
+      setEventos((prev) => prev.filter((e) => !animaisRemovidos.has(e.animalId)));
+      setAnimais((prev) => prev.filter((a) => a.exploracaoId !== id));
+      setTerrenos((prev) => prev.filter((t) => t.exploracaoId !== id));
+      setExploracoes((prev) => prev.filter((e) => e.id !== id));
+    },
+    [usaSupabase, gravarSqlite, recarregar],
+  );
+
+  const addTerreno = useCallback(
+    async (t: Omit<Terreno, 'id'>): Promise<Terreno> => {
+      const novo: Terreno = { ...t, id: novoId('ter') };
+      if (usaSupabase) {
+        const erro = await upsertTerrenoSupabase(novo);
+        if (erro) throw new Error(erro);
+      } else {
+        gravarSqlite((db) => guardarTerreno(db, novo));
+      }
+      setTerrenos((prev) => [...prev, novo]);
+      return novo;
+    },
+    [usaSupabase, gravarSqlite],
+  );
+
+  const updateTerreno = useCallback(
+    async (id: string, patch: Partial<Terreno>): Promise<void> => {
+      const atual = terrenosRef.current.find((t) => t.id === id);
+      if (!atual) return;
+      const atualizado: Terreno = { ...atual, ...patch, id, exploracaoId: atual.exploracaoId };
+      if (usaSupabase) {
+        const erro = await upsertTerrenoSupabase(atualizado);
+        if (erro) throw new Error(erro);
+      } else {
+        gravarSqlite((db) => guardarTerreno(db, atualizado));
+      }
+      setTerrenos((prev) => prev.map((t) => (t.id === id ? atualizado : t)));
+    },
+    [usaSupabase, gravarSqlite],
+  );
+
+  const deleteTerreno = useCallback(
+    async (id: string): Promise<void> => {
+      if (usaSupabase) {
+        const erro = await eliminarTerrenoSupabase(id);
+        if (erro) throw new Error(erro);
+      } else {
+        gravarSqlite((db) => bdEliminarTerreno(db, id));
+      }
+      setAnimais((prev) => prev.map((a) => (a.terrenoId === id ? { ...a, terrenoId: undefined } : a)));
+      setTerrenos((prev) => prev.filter((t) => t.id !== id));
+    },
+    [usaSupabase, gravarSqlite],
   );
 
   const addEvento = useCallback(
-    (e: Omit<Evento, 'id'>) => {
+    async (e: Omit<Evento, 'id'>): Promise<Evento> => {
       const novo: Evento = { ...e, id: novoId('ev') };
-      gravar((db) => guardarEvento(db, novo));
+      if (usaSupabase) {
+        const erro = await upsertEventoSupabase(novo);
+        if (erro) throw new Error(erro);
+      } else {
+        gravarSqlite((db) => guardarEvento(db, novo));
+      }
       setEventos((prev) => [novo, ...prev]);
       return novo;
     },
-    [gravar],
+    [usaSupabase, gravarSqlite],
   );
 
   const value = useMemo<GadoContext>(
@@ -283,7 +418,13 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       updateAnimal,
       deleteAnimal,
       addExploracao,
+      updateExploracao,
+      deleteExploracao,
+      addTerreno,
+      updateTerreno,
+      deleteTerreno,
       addEvento,
+      recarregar,
       recarregarMeteo,
     }),
     [
@@ -291,7 +432,9 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       meteorologia, meteoEstado,
       exploracaoById, animalById, terrenoById, animaisByExploracao,
       terrenosByExploracao, eventosByAnimal, addAnimal, updateAnimal,
-      deleteAnimal, addExploracao, addEvento, recarregarMeteo,
+      deleteAnimal, addExploracao, updateExploracao, deleteExploracao,
+      addTerreno, updateTerreno, deleteTerreno, addEvento,
+      recarregar, recarregarMeteo,
     ],
   );
 

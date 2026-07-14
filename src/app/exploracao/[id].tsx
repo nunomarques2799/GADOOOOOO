@@ -1,8 +1,9 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { AnimalRow } from '@/components/AnimalRow';
+import { WeatherCard } from '@/components/WeatherCard';
 import {
   Button,
   Card,
@@ -15,13 +16,19 @@ import {
   Text,
 } from '@/components/ui';
 import { tipoTerrenoMeta } from '@/data/constants';
+import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import type { EstadoMeteo } from '@/data/useMeteorologia';
+import { useMeteorologia } from '@/data/useMeteorologia';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 export default function ExploracaoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { exploracaoById, terrenosByExploracao, animaisByExploracao } = useGado();
+  const { roleEm, isSuperadmin } = useMembros();
+  const { meteo, estado, recarregar } = useMeteorologia(id);
+  const podeGerirEquipa = id ? roleEm(id) === 'admin' || isSuperadmin : false;
 
   const exploracao = exploracaoById(id);
 
@@ -40,7 +47,11 @@ export default function ExploracaoDetalheScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title={exploracao.nome} actionIcon="pencil-outline" onAction={() => {}} />
+      <Header
+        title={exploracao.nome}
+        actionIcon="pencil-outline"
+        onAction={() => router.push(`/exploracao/editar/${exploracao.id}`)}
+      />
       <Screen>
         {/* Hero */}
         <LinearGradient
@@ -87,6 +98,38 @@ export default function ExploracaoDetalheScreen() {
           </View>
         </LinearGradient>
 
+        {/* Meteorologia local */}
+        <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+          Meteorologia local
+        </Text>
+        {meteo ? (
+          <WeatherCard meteo={meteo} estado={mapEstado(estado)} onRecarregar={recarregar} />
+        ) : (
+          <Card>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <Icon
+                name={estado === 'sem-local' ? 'map-marker-off' : 'cloud-off-outline'}
+                size="lg"
+                color={colors.textMuted}
+              />
+              <View style={{ flex: 1 }}>
+                <Text variant="body">
+                  {estado === 'a-carregar'
+                    ? 'A obter meteorologia…'
+                    : estado === 'sem-local'
+                    ? 'Sem localização definida.'
+                    : 'Sem ligação à meteorologia.'}
+                </Text>
+                {estado === 'sem-local' ? (
+                  <Text variant="secondary" color={colors.textSecondary}>
+                    Adicione coordenadas a um terreno ou preencha a localização da exploração.
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          </Card>
+        )}
+
         {/* Dados oficiais */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
           Dados da exploração
@@ -96,31 +139,39 @@ export default function ExploracaoDetalheScreen() {
           <InfoField icon="card-account-details-outline" label="NIF do detentor" value={exploracao.nifDetentor} last />
         </Card>
 
-        {/* Mapa (placeholder — Fase 1: flutter_map/Google Maps com polígonos) */}
-        <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-          Mapa dos terrenos
-        </Text>
-        <Card padded={false}>
-          <View
-            style={{
-              height: 150,
-              borderRadius: radii.xl,
-              backgroundColor: colors.surfaceSunken,
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: spacing.xs,
-            }}>
-            <Icon name="map-outline" size={40} color={colors.primary} />
-            <Text variant="secondary" color={colors.textSecondary}>
-              Mapa com limites dos terrenos
-            </Text>
-          </View>
-        </Card>
+        {/* Equipa (só admin desta exploração) */}
+        {podeGerirEquipa ? (
+          <Button
+            label="Gerir equipa e convites"
+            icon="account-multiple-plus"
+            variant="secondary"
+            onPress={() => router.push(`/exploracao/equipa/${exploracao.id}`)}
+            style={{ marginTop: spacing.md }}
+          />
+        ) : null}
 
         {/* Terrenos */}
-        <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-          Terrenos ({terrenos.length})
-        </Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: spacing.xl,
+            marginBottom: spacing.xs,
+          }}>
+          <Text variant="h3">Terrenos ({terrenos.length})</Text>
+          <Pressable
+            onPress={() => router.push({ pathname: '/terreno/novo', params: { exploracaoId: exploracao.id } })}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar terreno">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Icon name="plus-circle" size="md" color={colors.primary} />
+              <Text variant="bodyStrong" color={colors.primary}>Adicionar</Text>
+            </View>
+          </Pressable>
+        </View>
+
         {terrenos.length === 0 ? (
           <Card>
             <Text variant="body" color={colors.textSecondary}>
@@ -133,25 +184,32 @@ export default function ExploracaoDetalheScreen() {
               {terrenos.map((t, i) => {
                 const meta = tipoTerrenoMeta[t.tipo ?? 'Outro'];
                 return (
-                  <View
+                  <Pressable
                     key={t.id}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing.sm,
-                      paddingVertical: spacing.sm,
-                      borderBottomWidth: i < terrenos.length - 1 ? 1 : 0,
-                      borderBottomColor: colors.border,
-                    }}>
+                    onPress={() => router.push(`/terreno/${t.id}`)}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: spacing.sm,
+                        paddingVertical: spacing.sm,
+                        borderBottomWidth: i < terrenos.length - 1 ? 1 : 0,
+                        borderBottomColor: colors.border,
+                      },
+                      pressed && { opacity: 0.6 },
+                    ]}>
                     <IconBadge name={meta.icon} color={meta.cor} background={colors.primaryTint} size={44} iconSize={22} />
                     <View style={{ flex: 1 }}>
                       <Text variant="bodyStrong">{t.nome}</Text>
                       <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
                         {t.tipo ?? 'Outro'}
                         {t.area ? ` · ${t.area} ha` : ''}
+                        {t.latitude != null && t.longitude != null ? ' · GPS' : ''}
                       </Text>
                     </View>
-                  </View>
+                    <Icon name="chevron-right" size="md" color={colors.textMuted} />
+                  </Pressable>
                 );
               })}
             </View>
@@ -177,6 +235,13 @@ export default function ExploracaoDetalheScreen() {
       </Screen>
     </View>
   );
+}
+
+/** Converte o estado do hook para o que o WeatherCard espera (só sabe 3 estados). */
+function mapEstado(e: EstadoMeteo): 'a-carregar' | 'atual' | 'offline' {
+  if (e === 'atual') return 'atual';
+  if (e === 'a-carregar') return 'a-carregar';
+  return 'offline';
 }
 
 function HeroStat({ value, label }: { value: string | number; label: string }) {

@@ -1,23 +1,27 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlertItem } from '@/components/AlertItem';
+import { ExploracaoRow } from '@/components/ExploracaoRow';
 import { QuickAction } from '@/components/QuickAction';
 import { StatCard } from '@/components/StatCard';
-import { WeatherCard } from '@/components/WeatherCard';
 import { Avatar, Badge, Card, Icon, SectionHeader, Text } from '@/components/ui';
 import { dataExtensa, saudacao } from '@/data/helpers';
+import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { colors, radii, spacing } from '@/theme';
 
 export default function InicioScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { utilizador, exploracoes, terrenos, animais, alertas, meteorologia, meteoEstado, recarregarMeteo } =
-    useGado();
+  const { isSuperadmin } = useMembros();
+  const { utilizador, exploracoes, terrenos, animais, alertas } = useGado();
+
+  // Superadmin não gere gado — vai direto para o painel de clientes.
+  if (isSuperadmin) return <Redirect href="/(superadmin)/clientes" />;
 
   const primeiroNome = utilizador.nome.split(' ')[0];
   const iniciais = utilizador.nome
@@ -71,8 +75,6 @@ export default function InicioScreen() {
 
         {/* Conteúdo */}
         <View style={{ paddingHorizontal: spacing.lg, marginTop: -spacing.xxxl }}>
-          <WeatherCard meteo={meteorologia} estado={meteoEstado} onRecarregar={recarregarMeteo} />
-
           {/* Alertas */}
           <SectionHeader
             title="Precisa da sua atenção"
@@ -107,7 +109,7 @@ export default function InicioScreen() {
           )}
 
           {/* Estatísticas */}
-          <SectionHeader title="A minha exploração" />
+          <SectionHeader title="Resumo" />
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <StatCard
               icon="cow"
@@ -124,6 +126,25 @@ export default function InicioScreen() {
             />
             <StatCard icon="grass" value={terrenos.length} label="Terrenos" tint={colors.success} />
           </View>
+
+          {/* Explorações — meteorologia dentro de cada uma */}
+          <SectionHeader
+            title="As minhas explorações"
+            actionLabel="Ver todas"
+            onAction={() => router.push('/exploracoes')}
+          />
+          {exploracoes.length === 0 ? (
+            <Card>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Icon name="barn" size="lg" color={colors.primary} />
+                <Text variant="body" style={{ flex: 1 }}>
+                  Ainda não tem explorações. Crie uma para começar a registar animais.
+                </Text>
+              </View>
+            </Card>
+          ) : (
+            exploracoes.slice(0, 3).map((e) => <ExploracaoRow key={e.id} exploracao={e} />)
+          )}
 
           {/* Ações rápidas */}
           <SectionHeader title="Ações rápidas" />

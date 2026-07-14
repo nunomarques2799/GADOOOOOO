@@ -193,6 +193,25 @@ export function eliminarAnimal(db: SQLiteDatabase, id: string): void {
   });
 }
 
+/** Elimina um terreno (os animais lá afetos ficam sem terreno atribuído). */
+export function eliminarTerreno(db: SQLiteDatabase, id: string): void {
+  db.withTransactionSync(() => {
+    db.runSync('UPDATE animal SET terrenoId = NULL WHERE terrenoId = ?', [id]);
+    db.runSync('DELETE FROM terreno WHERE id = ?', [id]);
+  });
+}
+
+/** Elimina uma exploração inteira: terrenos, animais e eventos. */
+export function eliminarExploracao(db: SQLiteDatabase, id: string): void {
+  db.withTransactionSync(() => {
+    const animais = db.getAllSync<Row>('SELECT id FROM animal WHERE exploracaoId = ?', [id]);
+    animais.forEach((a) => db.runSync('DELETE FROM evento WHERE animalId = ?', [String(a.id)]));
+    db.runSync('DELETE FROM animal WHERE exploracaoId = ?', [id]);
+    db.runSync('DELETE FROM terreno WHERE exploracaoId = ?', [id]);
+    db.runSync('DELETE FROM exploracao WHERE id = ?', [id]);
+  });
+}
+
 /* ------------------------------------------------------------------ *
  *  Semear — 1.ª execução (BD vazia) com os dados de exemplo
  * ------------------------------------------------------------------ */

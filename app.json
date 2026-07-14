@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "gestao-gado",
+    "name": "Gestão de Gado",
     "slug": "gestao-gado",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "gestaogado",
     "userInterfaceStyle": "automatic",
@@ -23,8 +23,16 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "name": "Gestão de Gado",
+      "shortName": "Gado",
+      "description": "Gestão pecuária offline-first para criadores em Portugal.",
+      "themeColor": "#0f7d33",
+      "backgroundColor": "#f4f1e8",
+      "display": "standalone",
+      "startUrl": "/",
+      "orientation": "any"
     },
     "plugins": [
       "expo-router",

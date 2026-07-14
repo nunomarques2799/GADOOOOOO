@@ -2,13 +2,19 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, Badge, Card, Icon, type IconName, Text } from '@/components/ui';
+import { useAuth } from '@/data/auth';
 import { useGado } from '@/data/store';
 import { colors, radii, spacing } from '@/theme';
 
 export default function PerfilScreen() {
   const insets = useSafeAreaInsets();
   const { utilizador, animais, exploracoes } = useGado();
-  const iniciais = utilizador.nome.split(' ').map((p) => p[0]).slice(0, 2).join('');
+  const { utilizador: conta, sair, configurado } = useAuth();
+
+  // Com sessão iniciada, mostra os dados da conta; senão, o utilizador local.
+  const nome = (conta?.user_metadata?.nome as string | undefined)?.trim() || utilizador.nome;
+  const email = conta?.email ?? utilizador.email;
+  const iniciais = (nome || email).split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -28,10 +34,10 @@ export default function PerfilScreen() {
             <Avatar initials={iniciais} size={64} />
             <View style={{ flex: 1 }}>
               <Text variant="h2" numberOfLines={1}>
-                {utilizador.nome}
+                {nome}
               </Text>
               <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
-                {utilizador.email}
+                {email}
               </Text>
               <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs }}>
                 <Badge tone="brand" icon="cow" label={`${animais.length} animais`} />
@@ -73,10 +79,12 @@ export default function PerfilScreen() {
           <SettingRow icon="help-circle-outline" label="Ajuda e apoio" last />
         </Card>
 
-        {/* Terminar sessão — separado das definições */}
-        <Card padded={false}>
-          <SettingRow icon="logout" label="Terminar sessão" tint={colors.danger} last />
-        </Card>
+        {/* Terminar sessão — separado das definições (só com Supabase/sessão) */}
+        {configurado ? (
+          <Card padded={false}>
+            <SettingRow icon="logout" label="Terminar sessão" tint={colors.danger} onPress={sair} last />
+          </Card>
+        ) : null}
 
         <Text variant="caption" color={colors.textMuted} center style={{ marginTop: spacing.xs }}>
           Gestão de Gado · versão 0.1.0
@@ -91,16 +99,19 @@ function SettingRow({
   label,
   trailing,
   tint = colors.text,
+  onPress,
   last,
 }: {
   icon: IconName;
   label: string;
   trailing?: string;
   tint?: string;
+  onPress?: () => void;
   last?: boolean;
 }) {
   return (
     <Pressable
+      onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       style={({ pressed }) => [

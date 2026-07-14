@@ -38,6 +38,14 @@ jobs:
         run: npm ci
 
       - name: Gerar o build web (Expo)
+        # As chaves do Supabase têm de estar presentes no build, senão a app
+        # sai em modo demo offline (dados de exemplo, sem login). O .env está
+        # no .gitignore, por isso não chega ao CI — injetamo-las aqui. A chave
+        # é a PUBLISHABLE (segura para o cliente, protegida por RLS); já fica
+        # embutida no .zip distribuído, logo não há segredo a proteger.
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://qmkafibxlmgouslybafy.supabase.co
+          EXPO_PUBLIC_SUPABASE_KEY: sb_publishable_6bjhd0CNIAglOPGmBt9Zlw_2gE4tr_r
         run: npx expo export --platform web
 
       - name: Copiar o build web para o desktop

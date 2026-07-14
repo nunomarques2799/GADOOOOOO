@@ -38,20 +38,25 @@ export default function NovoAnimalScreen() {
 
   const dataNascimento = isoDaysAgo(diasNasc);
 
-  function guardar() {
-    const novo = addAnimal({
-      exploracaoId,
-      terrenoId,
-      especie,
-      sexo,
-      dataNascimento,
-      nome: nome.trim() || undefined,
-      numeroIdentificacao: brinco.trim() || undefined,
-      raca: raca.trim() || undefined,
-      comunicadoSnira: brinco.trim() ? false : undefined,
-      dataIdentificacao: brinco.trim() ? isoDaysAgo(0) : undefined,
-    });
-    router.replace(`/animal/${novo.id}`);
+  async function guardar() {
+    try {
+      const novo = await addAnimal({
+        exploracaoId,
+        terrenoId,
+        especie,
+        sexo,
+        dataNascimento,
+        nome: nome.trim() || undefined,
+        numeroIdentificacao: brinco.trim() || undefined,
+        raca: raca.trim() || undefined,
+        comunicadoSnira: brinco.trim() ? false : undefined,
+        dataIdentificacao: brinco.trim() ? isoDaysAgo(0) : undefined,
+      });
+      router.replace(`/animal/${novo.id}`);
+    } catch (e) {
+      // Mostra erro no botão? Por agora, log — a UI vai receber via reject.
+      console.warn('Erro a criar animal', e);
+    }
   }
 
   return (
