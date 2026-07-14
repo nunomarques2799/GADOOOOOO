@@ -52,6 +52,14 @@ function serveFile(res, filePath) {
   stream.on('error', () => send(res, 500, 'Erro ao ler o ficheiro'));
 }
 
+// Porta FIXA (não 0/aleatória). O localStorage do Chromium é isolado por
+// origem (esquema://host:porta); uma porta diferente a cada arranque criava
+// uma "origem" nova e a sessão Supabase e a cache offline não persistiam entre
+// aberturas. Com porta fixa a origem é sempre a mesma → tudo persiste. O lock
+// de instância única (ver fundo do ficheiro) garante que não há conflito com a
+// própria app.
+const PORTA_FIXA = 41279;
+
 function createServer() {
   return new Promise((resolve) => {
     const server = http.createServer((req, res) => {
@@ -76,7 +84,10 @@ function createServer() {
         send(res, 404, 'Nao encontrado');
       });
     });
-    server.listen(0, '127.0.0.1', () => resolve(server));
+    // Se a porta fixa estiver ocupada por outra app (raro), cai para uma porta
+    // livre só para a app abrir — nessa sessão a persistência não fica garantida.
+    server.once('error', () => server.listen(0, '127.0.0.1', () => resolve(server)));
+    server.listen(PORTA_FIXA, '127.0.0.1', () => resolve(server));
   });
 }
 
@@ -123,7 +134,20 @@ async function createWindow() {
 // Minimal PT menu (mostly hidden; Ctrl+Q/refresh still handy).
 Menu.setApplicationMenu(null);
 
-app.whenReady().then(createWindow);
+// Instância única: com a porta fixa, uma 2.ª cópia da app colidiria na porta.
+// Em vez disso, focamos a janela já aberta e não abrimos outra.
+const temLock = app.requestSingleInstanceLock();
+if (!temLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+  app.whenReady().then(createWindow);
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
