@@ -18,7 +18,7 @@ export default function InicioScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isSuperadmin } = useMembros();
-  const { utilizador, exploracoes, terrenos, animais, alertas } = useGado();
+  const { utilizador, exploracoes, terrenos, animais, alertas, online, pendentesSinc } = useGado();
 
   // Superadmin não gere gado — vai direto para o painel de clientes.
   if (isSuperadmin) return <Redirect href="/(superadmin)/clientes" />;
@@ -75,6 +75,26 @@ export default function InicioScreen() {
 
         {/* Conteúdo */}
         <View style={{ paddingHorizontal: spacing.lg, marginTop: -spacing.xxxl }}>
+          {/* Estado de sincronização — só aparece offline ou com pendentes */}
+          {!online || pendentesSinc > 0 ? (
+            <Card style={{ marginBottom: spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Icon
+                  name={online ? 'cloud-sync-outline' : 'cloud-off-outline'}
+                  size="lg"
+                  color={online ? colors.info : colors.warning}
+                />
+                <Text variant="body" style={{ flex: 1 }}>
+                  {online
+                    ? `A sincronizar ${pendentesSinc} alteração${pendentesSinc > 1 ? 'ões' : ''}…`
+                    : pendentesSinc > 0
+                      ? `Sem ligação. ${pendentesSinc} alteração${pendentesSinc > 1 ? 'ões' : ''} guardada${pendentesSinc > 1 ? 's' : ''} — envio automático quando houver rede.`
+                      : 'Sem ligação. Está a trabalhar offline; os dados estão guardados no dispositivo.'}
+                </Text>
+              </View>
+            </Card>
+          ) : null}
+
           {/* Alertas */}
           <SectionHeader
             title="Precisa da sua atenção"

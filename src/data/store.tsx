@@ -24,6 +24,16 @@ import {
   guardarExploracao,
   guardarTerreno,
 } from './db/repository';
+import {
+  adicionarOutbox,
+  cacheDisponivel,
+  guardarCache,
+  guardarOutbox,
+  lerCache,
+  lerOutbox,
+  pareceErroDeRede,
+  type OpPendente,
+} from './cacheLocal';
 import { computeAlertas } from './helpers';
 import {
   animaisSeed,
@@ -55,11 +65,39 @@ import type {
 
 /**
  * Persistência:
- *   - Com sessão Supabase iniciada → Supabase é a fonte da verdade.
+ *   - Com sessão Supabase iniciada → offline-first: a cache local (localStorage,
+ *     na web/Electron) é a fonte para a UI; as escritas são otimistas e vão ao
+ *     Supabase quando há rede, ou ficam numa fila (outbox) até a rede voltar.
  *   - Sem Supabase (offline puro) e no nativo → SQLite local (expo-sqlite).
  *   - Sem Supabase e na web → dados de exemplo em memória.
  */
 const USA_SQLITE_LOCAL = Platform.OS !== 'web' && !supabaseConfigurado;
+
+/** Envia uma operação da fila ao Supabase. Devolve msg de erro ou null. */
+async function enviarOp(op: OpPendente): Promise<string | null> {
+  if (op.op === 'delete') {
+    switch (op.entidade) {
+      case 'exploracao':
+        return eliminarExploracaoSupabase(op.id);
+      case 'terreno':
+        return eliminarTerrenoSupabase(op.id);
+      case 'animal':
+        return eliminarAnimalSupabase(op.id);
+      case 'evento':
+        return null; // sem eliminação de eventos no domínio atual
+    }
+  }
+  switch (op.entidade) {
+    case 'exploracao':
+      return upsertExploracaoSupabase(op.dados as Exploracao);
+    case 'terreno':
+      return upsertTerrenoSupabase(op.dados as Terreno);
+    case 'animal':
+      return upsertAnimalSupabase(op.dados as Animal);
+    case 'evento':
+      return upsertEventoSupabase(op.dados as Evento);
+  }
+}
 
 /** Gerador de ID simples (UUID v4 quando disponível). */
 function novoId(prefixo = 'id'): string {
@@ -107,8 +145,7 @@ function snapshotSincrono(): Snapshot {
       eventos,
     };
   }
-  // Web sem Supabase → seed em memória. Web com Supabase → vazio (carrega
-  // depois em useEffect assíncrono).
+  // Web sem Supabase → seed em memória.
   if (!supabaseConfigurado) {
     return {
       utilizador: utilizadorSeed,
@@ -117,6 +154,12 @@ function snapshotSincrono(): Snapshot {
       animais: animaisSeed,
       eventos: eventosSeed,
     };
+  }
+  // Web/Electron com Supabase → arranca da cache local (funciona offline).
+  // A sincronização com o servidor acontece depois, num useEffect.
+  const cache = lerCache();
+  if (cache) {
+    return { utilizador: utilizadorSeed, ...cache };
   }
   return { utilizador: utilizadorSeed, exploracoes: [], terrenos: [], animais: [], eventos: [] };
 }
@@ -130,6 +173,10 @@ type GadoContext = {
   alertas: Alerta[];
   meteorologia: Meteorologia;
   meteoEstado: MeteoEstado;
+  /** Há ligação para sincronizar com o servidor? (offline-first) */
+  online: boolean;
+  /** Nº de alterações locais ainda por enviar ao Supabase. */
+  pendentesSinc: number;
   // seletores
   exploracaoById: (id: string) => Exploracao | undefined;
   animalById: (id: string) => Animal | undefined;
@@ -181,25 +228,123 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
   const alertas = useMemo(() => computeAlertas(animais), [animais]);
 
+  const [online, setOnline] = useState<boolean>(
+    typeof navigator !== 'undefined' ? navigator.onLine !== false : true,
+  );
+  const [pendentesSinc, setPendentesSinc] = useState<number>(
+    cacheDisponivel ? lerOutbox().length : 0,
+  );
+
   /** Escrita local SQLite (só no nativo sem Supabase). */
   const gravarSqlite = useCallback((fn: (db: SQLiteDatabase) => void) => {
     if (USA_SQLITE_LOCAL) fn(abrirBd());
   }, []);
 
-  /** Recarrega tudo do Supabase (usado após criar exploração/convite/aprovação). */
-  const recarregar = useCallback(async () => {
-    if (!usaSupabase) return;
-    const snap = await carregarTudoSupabase();
-    setExploracoes(snap.exploracoes);
-    setTerrenos(snap.terrenos);
-    setAnimais(snap.animais);
-    setEventos(snap.eventos);
-  }, [usaSupabase]);
-
-  // Carrega do Supabase quando arranca com sessão iniciada.
+  // Mantém a cache local sempre a espelhar o que está no ecrã, para reabrir
+  // offline com os dados atuais. Só com Supabase + armazenamento disponível.
   useEffect(() => {
-    if (usaSupabase) void recarregar();
-  }, [usaSupabase, recarregar]);
+    if (usaSupabase && cacheDisponivel) {
+      guardarCache({ exploracoes, terrenos, animais, eventos });
+    }
+  }, [usaSupabase, exploracoes, terrenos, animais, eventos]);
+
+  /** Puxa a verdade do servidor. Devolve false (mantendo a cache) se falhar. */
+  const puxarDoServidor = useCallback(async (): Promise<boolean> => {
+    try {
+      const snap = await carregarTudoSupabase();
+      setExploracoes(snap.exploracoes);
+      setTerrenos(snap.terrenos);
+      setAnimais(snap.animais);
+      setEventos(snap.eventos);
+      return true;
+    } catch {
+      return false; // offline — fica com o que está em cache
+    }
+  }, []);
+
+  /**
+   * Envia uma alteração ao Supabase. Se falhar por falta de rede, guarda-a na
+   * fila para reenviar depois (não propaga erro — a UI já atualizou). Devolve
+   * true se ficou efetivamente enviada. Erros lógicos do servidor propagam.
+   */
+  const empurrar = useCallback(async (op: OpPendente): Promise<boolean> => {
+    if (!cacheDisponivel) {
+      // Sem cache local (nativo): comportamento antigo — envia e propaga erro.
+      const erro = await enviarOp(op);
+      if (erro) throw new Error(erro);
+      return true;
+    }
+    let erro: string | null = null;
+    try {
+      erro = await enviarOp(op);
+    } catch (e) {
+      erro = e instanceof Error ? e.message : String(e);
+    }
+    if (!erro) {
+      setOnline(true);
+      return true;
+    }
+    if (pareceErroDeRede(erro)) {
+      setPendentesSinc(adicionarOutbox(op));
+      setOnline(false);
+      return false;
+    }
+    throw new Error(erro); // erro real de validação/RLS → mostra na UI
+  }, []);
+
+  /** Esvazia a fila por ordem e, se conseguir, puxa a verdade do servidor. */
+  const sincronizar = useCallback(async () => {
+    if (!usaSupabase || !cacheDisponivel) return;
+    let ops = lerOutbox();
+    while (ops.length > 0) {
+      const [proxima, ...resto] = ops;
+      let erro: string | null = null;
+      try {
+        erro = await enviarOp(proxima);
+      } catch (e) {
+        erro = e instanceof Error ? e.message : String(e);
+      }
+      if (erro && pareceErroDeRede(erro)) {
+        setOnline(false);
+        break; // continua offline — tenta na próxima vez
+      }
+      // Sucesso, ou erro lógico (descarta a op para não bloquear a fila).
+      ops = resto;
+      guardarOutbox(ops);
+      setPendentesSinc(ops.length);
+    }
+    if (ops.length === 0) {
+      setOnline(true);
+      await puxarDoServidor();
+    }
+  }, [usaSupabase, puxarDoServidor]);
+
+  /** Recarrega tudo do Supabase (envia pendentes + puxa o servidor). */
+  const recarregar = useCallback(async () => {
+    await sincronizar();
+  }, [sincronizar]);
+
+  // Ao arrancar com sessão iniciada: sincroniza (envia pendentes + puxa servidor).
+  useEffect(() => {
+    if (usaSupabase) void sincronizar();
+  }, [usaSupabase, sincronizar]);
+
+  // Sincroniza automaticamente quando a ligação à rede volta.
+  useEffect(() => {
+    if (!usaSupabase || !cacheDisponivel) return;
+    if (typeof window === 'undefined' || !window.addEventListener) return;
+    const aoVoltar = () => {
+      setOnline(true);
+      void sincronizar();
+    };
+    const aoPerder = () => setOnline(false);
+    window.addEventListener('online', aoVoltar);
+    window.addEventListener('offline', aoPerder);
+    return () => {
+      window.removeEventListener('online', aoVoltar);
+      window.removeEventListener('offline', aoPerder);
+    };
+  }, [usaSupabase, sincronizar]);
 
   /* ---- Meteorologia (ecrã principal — mantém como fallback global) ---- */
 
@@ -242,16 +387,12 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   const addAnimal = useCallback(
     async (a: Omit<Animal, 'id'>): Promise<Animal> => {
       const novo: Animal = { ...a, id: novoId('an') };
-      if (usaSupabase) {
-        const erro = await upsertAnimalSupabase(novo);
-        if (erro) throw new Error(erro);
-      } else {
-        gravarSqlite((db) => guardarAnimal(db, novo));
-      }
-      setAnimais((prev) => [novo, ...prev]);
+      setAnimais((prev) => [novo, ...prev]); // otimista — aparece já, mesmo offline
+      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'animal', dados: novo });
+      else gravarSqlite((db) => guardarAnimal(db, novo));
       return novo;
     },
-    [usaSupabase, gravarSqlite],
+    [usaSupabase, gravarSqlite, empurrar],
   );
 
   const updateAnimal = useCallback(
@@ -259,47 +400,38 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       const atual = animaisRef.current.find((a) => a.id === id);
       if (!atual) return;
       const atualizado: Animal = { ...atual, ...patch };
-      if (usaSupabase) {
-        const erro = await upsertAnimalSupabase(atualizado);
-        if (erro) throw new Error(erro);
-      } else {
-        gravarSqlite((db) => guardarAnimal(db, atualizado));
-      }
       setAnimais((prev) => prev.map((a) => (a.id === id ? atualizado : a)));
+      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'animal', dados: atualizado });
+      else gravarSqlite((db) => guardarAnimal(db, atualizado));
     },
-    [usaSupabase, gravarSqlite],
+    [usaSupabase, gravarSqlite, empurrar],
   );
 
   const deleteAnimal = useCallback(
     async (id: string): Promise<void> => {
-      if (usaSupabase) {
-        const erro = await eliminarAnimalSupabase(id);
-        if (erro) throw new Error(erro);
-      } else {
-        gravarSqlite((db) => bdEliminarAnimal(db, id));
-      }
       setAnimais((prev) => prev.filter((a) => a.id !== id));
       setEventos((prev) => prev.filter((e) => e.animalId !== id));
+      if (usaSupabase) await empurrar({ op: 'delete', entidade: 'animal', id });
+      else gravarSqlite((db) => bdEliminarAnimal(db, id));
     },
-    [usaSupabase, gravarSqlite],
+    [usaSupabase, gravarSqlite, empurrar],
   );
 
   const addExploracao = useCallback(
     async (e: Omit<Exploracao, 'id' | 'utilizadorId'>): Promise<Exploracao> => {
       const nova: Exploracao = { ...e, id: novoId('exp'), utilizadorId: utilizador.id };
+      setExploracoes((prev) => [...prev, nova]); // otimista
       if (usaSupabase) {
-        const erro = await upsertExploracaoSupabase(nova);
-        if (erro) throw new Error(erro);
-        // O trigger no Supabase cria membro admin. Recarregamos para apanhar
-        // o utilizador_id real (auth.uid) atribuído pelo default.
-        await recarregar();
+        const enviado = await empurrar({ op: 'upsert', entidade: 'exploracao', dados: nova });
+        // O trigger no Supabase cria o membro admin e atribui o user_id real
+        // (auth.uid). Puxa para apanhar esses valores — só se foi mesmo enviado.
+        if (enviado) await puxarDoServidor();
       } else {
         gravarSqlite((db) => guardarExploracao(db, nova));
-        setExploracoes((prev) => [...prev, nova]);
       }
       return nova;
     },
-    [usaSupabase, gravarSqlite, recarregar, utilizador.id],
+    [usaSupabase, gravarSqlite, empurrar, puxarDoServidor, utilizador.id],
   );
 
   const updateExploracao = useCallback(
@@ -307,26 +439,16 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       const atual = exploracoesRef.current.find((e) => e.id === id);
       if (!atual) return;
       const atualizada: Exploracao = { ...atual, ...patch, id, utilizadorId: atual.utilizadorId };
-      if (usaSupabase) {
-        const erro = await upsertExploracaoSupabase(atualizada);
-        if (erro) throw new Error(erro);
-      } else {
-        gravarSqlite((db) => guardarExploracao(db, atualizada));
-      }
       setExploracoes((prev) => prev.map((e) => (e.id === id ? atualizada : e)));
+      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'exploracao', dados: atualizada });
+      else gravarSqlite((db) => guardarExploracao(db, atualizada));
     },
-    [usaSupabase, gravarSqlite],
+    [usaSupabase, gravarSqlite, empurrar],
   );
 
   const deleteExploracao = useCallback(
     async (id: string): Promise<void> => {
-      if (usaSupabase) {
-        const erro = await eliminarExploracaoSupabase(id);
-        if (erro) throw new Error(erro);
-        await recarregar();
-        return;
-      }
-      gravarSqlite((db) => bdEliminarExploracao(db, id));
+      // Cascata local (funciona offline). O servidor faz a sua própria cascata.
       const animaisRemovidos = new Set(
         animaisRef.current.filter((a) => a.exploracaoId === id).map((a) => a.id),
       );
@@ -334,23 +456,25 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       setAnimais((prev) => prev.filter((a) => a.exploracaoId !== id));
       setTerrenos((prev) => prev.filter((t) => t.exploracaoId !== id));
       setExploracoes((prev) => prev.filter((e) => e.id !== id));
+      if (usaSupabase) {
+        const enviado = await empurrar({ op: 'delete', entidade: 'exploracao', id });
+        if (enviado) await puxarDoServidor();
+      } else {
+        gravarSqlite((db) => bdEliminarExploracao(db, id));
+      }
     },
-    [usaSupabase, gravarSqlite, recarregar],
+    [usaSupabase, gravarSqlite, empurrar, puxarDoServidor],
   );
 
   const addTerreno = useCallback(
     async (t: Omit<Terreno, 'id'>): Promise<Terreno> => {
       const novo: Terreno = { ...t, id: novoId('ter') };
-      if (usaSupabase) {
-        const erro = await upsertTerrenoSupabase(novo);
-        if (erro) throw new Error(erro);
-      } else {
-        gravarSqlite((db) => guardarTerreno(db, novo));
-      }
       setTerrenos((prev) => [...prev, novo]);
+      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'terreno', dados: novo });
+      else gravarSqlite((db) => guardarTerreno(db, novo));
       return novo;
     },
-    [usaSupabase, gravarSqlite],
+    [usaSupabase, gravarSqlite, empurrar],
   );
 
   const updateTerreno = useCallback(
@@ -358,44 +482,32 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       const atual = terrenosRef.current.find((t) => t.id === id);
       if (!atual) return;
       const atualizado: Terreno = { ...atual, ...patch, id, exploracaoId: atual.exploracaoId };
-      if (usaSupabase) {
-        const erro = await upsertTerrenoSupabase(atualizado);
-        if (erro) throw new Error(erro);
-      } else {
-        gravarSqlite((db) => guardarTerreno(db, atualizado));
-      }
       setTerrenos((prev) => prev.map((t) => (t.id === id ? atualizado : t)));
+      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'terreno', dados: atualizado });
+      else gravarSqlite((db) => guardarTerreno(db, atualizado));
     },
-    [usaSupabase, gravarSqlite],
+    [usaSupabase, gravarSqlite, empurrar],
   );
 
   const deleteTerreno = useCallback(
     async (id: string): Promise<void> => {
-      if (usaSupabase) {
-        const erro = await eliminarTerrenoSupabase(id);
-        if (erro) throw new Error(erro);
-      } else {
-        gravarSqlite((db) => bdEliminarTerreno(db, id));
-      }
       setAnimais((prev) => prev.map((a) => (a.terrenoId === id ? { ...a, terrenoId: undefined } : a)));
       setTerrenos((prev) => prev.filter((t) => t.id !== id));
+      if (usaSupabase) await empurrar({ op: 'delete', entidade: 'terreno', id });
+      else gravarSqlite((db) => bdEliminarTerreno(db, id));
     },
-    [usaSupabase, gravarSqlite],
+    [usaSupabase, gravarSqlite, empurrar],
   );
 
   const addEvento = useCallback(
     async (e: Omit<Evento, 'id'>): Promise<Evento> => {
       const novo: Evento = { ...e, id: novoId('ev') };
-      if (usaSupabase) {
-        const erro = await upsertEventoSupabase(novo);
-        if (erro) throw new Error(erro);
-      } else {
-        gravarSqlite((db) => guardarEvento(db, novo));
-      }
       setEventos((prev) => [novo, ...prev]);
+      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'evento', dados: novo });
+      else gravarSqlite((db) => guardarEvento(db, novo));
       return novo;
     },
-    [usaSupabase, gravarSqlite],
+    [usaSupabase, gravarSqlite, empurrar],
   );
 
   const value = useMemo<GadoContext>(
@@ -408,6 +520,8 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       alertas,
       meteorologia,
       meteoEstado,
+      online,
+      pendentesSinc,
       exploracaoById,
       animalById,
       terrenoById,
@@ -429,7 +543,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     }),
     [
       utilizador, exploracoes, terrenos, animais, eventos, alertas,
-      meteorologia, meteoEstado,
+      meteorologia, meteoEstado, online, pendentesSinc,
       exploracaoById, animalById, terrenoById, animaisByExploracao,
       terrenosByExploracao, eventosByAnimal, addAnimal, updateAnimal,
       deleteAnimal, addExploracao, updateExploracao, deleteExploracao,

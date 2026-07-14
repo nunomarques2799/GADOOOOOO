@@ -194,6 +194,11 @@ export async function carregarTudoSupabase(): Promise<Snapshot> {
     supabase.from('animal').select('*'),
     supabase.from('evento').select('*').order('data', { ascending: false }),
   ]);
+  // Falhar em vez de devolver listas vazias: sem esta guarda, um erro de rede
+  // (estar offline) devolveria tudo vazio e apagaria a cache local. Quem chama
+  // trata o erro mantendo os dados que já tem em cache.
+  const erro = expRes.error ?? terRes.error ?? aniRes.error ?? evtRes.error;
+  if (erro) throw new Error(erro.message);
   return {
     exploracoes: ((expRes.data ?? []) as ExploracaoRow[]).map(toExploracao),
     terrenos: ((terRes.data ?? []) as TerrenoRow[]).map(toTerreno),
