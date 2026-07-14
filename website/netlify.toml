@@ -1,0 +1,14 @@
+# Configuração do Netlify — Gestão de Gado (site estático)
+# A pasta "website" é publicada tal como está.
+
+[build]
+  publish = "."
+
+# O instalador é servido pelo GitHub Releases (link no botão de download),
+# por isso não pesa no tráfego do Netlify.
+
+# Cache dos ficheiros estáticos
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"

@@ -1,0 +1,45 @@
+{
+  "name": "gestao-gado-desktop",
+  "productName": "Gestao de Gado",
+  "version": "1.0.0",
+  "description": "Gestao de Gado — app de gestao de exploracoes pecuarias (versao Windows).",
+  "author": "Gestao de Gado",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.gestaogado.desktop",
+    "productName": "Gestao de Gado",
+    "files": [
+      "main.js"
+    ],
+    "extraResources": [
+      {
+        "from": "web",
+        "to": "web"
+      }
+    ],
+    "directories": {
+      "output": "dist-build",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "artifactName": "GestaoDeGado-Windows-${version}.${ext}"
+  }
+}

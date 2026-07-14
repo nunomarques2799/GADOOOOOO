@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestão de Gado — a sua exploração pecuária, simples como deve ser</title>
+  <meta name="description" content="App portuguesa para gerir explorações pecuárias: animais, terrenos, eventos sanitários e prazos legais do SNIRA. Simples, offline e em português. Descarregue para Windows." />
+  <meta name="theme-color" content="#166B3D" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <meta property="og:title" content="Gestão de Gado — a sua exploração, simples como deve ser" />
+  <meta property="og:description" content="Gerir animais, terrenos, eventos e prazos legais do SNIRA. Simples, offline e em português." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ================= NAV ================= -->
+  <header class="nav" id="nav">
+    <div class="container">
+      <a class="brand" href="#top" aria-label="Gestão de Gado — início">
+        <img src="assets/logo.svg" alt="" width="40" height="40" />
+        <span>Gestão de Gado</span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="#funcionalidades">Funcionalidades</a>
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#para-quem">Para quem é</a>
+        <a href="#precos">Preços</a>
+        <a href="#faq">Perguntas</a>
+      </nav>
+      <div class="nav-cta">
+        <a href="#faq" class="btn btn-ghost">Saber mais</a>
+        <a href="#descarregar" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          Descarregar
+        </a>
+        <button class="nav-toggle" id="navToggle" aria-label="Abrir menu"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </header>
+
+  <span id="top"></span>
+
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-copy reveal">
+        <span class="eyebrow"><span class="dot"></span> Feito em Portugal · para o campo</span>
+        <h1>A sua exploração,<br /><span class="hl">simples</span> como deve ser.</h1>
+        <p class="lead">Registe animais, terrenos e tratamentos em segundos. A app trata dos prazos legais do SNIRA por si — e funciona mesmo sem rede, no meio do pasto.</p>
+        <div class="hero-actions">
+          <a href="#descarregar" class="btn btn-primary btn-lg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            Descarregar para Windows
+          </a>
+          <a href="#funcionalidades" class="btn btn-ghost btn-lg">Ver funcionalidades</a>
+        </div>
+        <div class="hero-trust">
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> 100% offline</span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Português de Portugal</span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Prazos do SNIRA</span>
+        </div>
+      </div>
+
+      <!-- Phone mockup: recriação do ecrã Início da app -->
+      <div class="mock-wrap reveal">
+        <div class="mock-glow"></div>
+        <div class="phone" role="img" aria-label="Ecrã inicial da app Gestão de Gado">
+          <div class="phone-screen">
+            <div class="app-header">
+              <div class="hi">Bom dia,</div>
+              <div class="name">Sr. Joaquim</div>
+              <div class="weather-chip">
+                <div>
+                  <div class="temp">18°</div>
+                  <div class="wx-t">Lameiro Grande · Céu limpo</div>
+                </div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#FFD86B" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"/></svg>
+              </div>
+            </div>
+            <div class="app-body">
+              <div class="app-section-t">A precisar de atenção</div>
+              <div class="mini-card">
+                <div class="alert-row">
+                  <div class="alert-ic danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01"/><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>
+                  <div>
+                    <div class="a-t">Comunicar nascimento</div>
+                    <div class="a-s">Vitelo PT 4471 · faltam 2 dias</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mini-card">
+                <div class="alert-row">
+                  <div class="alert-ic warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+                  <div>
+                    <div class="a-t">Vacinação prevista</div>
+                    <div class="a-s">Lote das novilhas · esta semana</div>
+                  </div>
+                </div>
+              </div>
+              <div class="app-section-t">O meu efetivo</div>
+              <div class="stat-grid">
+                <div class="stat">
+                  <div class="n">42</div>
+                  <div class="l"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9c-.6 0-1 .5-1 1s.4 1 1 1c0 2.2 1.8 4 4 4h.6c.5.6 1.2 1 2 1h.8c.8 0 1.5-.4 2-1H16c2.2 0 4-1.8 4-4 .6 0 1-.5 1-1s-.4-1-1-1c0-.9-.7-1.6-1.6-1.6-.4 0-.8.2-1.1.4A3.6 3.6 0 0 0 14.6 7h-5.2c-1 0-1.9.4-2.5 1a1.6 1.6 0 0 0-2.5 1z"/></svg>Bovinos</div>
+                </div>
+                <div class="stat">
+                  <div class="n">3</div>
+                  <div class="l"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-7-10a7 7 0 0 1 14 0c0 5.5-7 10-7 10z"/><circle cx="12" cy="11" r="2.4"/></svg>Terrenos</div>
+                </div>
+              </div>
+              <div class="mini-card" style="display:flex;align-items:center;gap:12px;background:var(--green-600);border-color:transparent;color:#fff;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:22px;height:22px;"><path d="M12 5v14m-7-7h14"/></svg>
+                <b style="font-size:0.95rem;">Registar animal</b>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TRUST BAR ================= -->
+  <section class="trustbar">
+    <div class="container">
+      <div class="t-item reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+        <div><b>Conforme à lei</b><span>Prazos DGAV / IFAP / SNIRA</span></div>
+      </div>
+      <div class="t-item reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.8A16 16 0 0 1 22 8.8"/><path d="M5 12.5a11 11 0 0 1 14 0"/><path d="M8.5 16a6 6 0 0 1 7 0"/><path d="m2 2 20 20" stroke-width="2.4"/></svg>
+        <div><b>Sem internet</b><span>Funciona no meio do campo</span></div>
+      </div>
+      <div class="t-item reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+        <div><b>Simples para todos</b><span>Pensada até para os 82 anos</span></div>
+      </div>
+      <div class="t-item reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 3-3 3 3 5-6"/></svg>
+        <div><b>Tudo num sítio</b><span>Animais, terrenos e contas</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PROBLEMA / FUNCIONALIDADES ================= -->
+  <section class="section" id="funcionalidades">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow"><span class="dot"></span> Funcionalidades</span>
+        <h2>Chega de cadernos e folhas de cálculo</h2>
+        <p>Tudo o que precisa para gerir a exploração, organizado e sempre à mão — do registo do vitelo ao livro de medicamentos.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature reveal">
+          <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9c-.6 0-1 .5-1 1s.4 1 1 1c0 2.4 2 4.4 4.4 4.4h.4c.5.7 1.4 1.2 2.3 1.2h1c.9 0 1.8-.5 2.3-1.2h.4c2.4 0 4.4-2 4.4-4.4.6 0 1-.5 1-1s-.4-1-1-1c0-1-.8-1.8-1.8-1.8-.5 0-.9.2-1.3.5A4 4 0 0 0 14.4 7H9.6a4 4 0 0 0-2.7 1.2 1.8 1.8 0 0 0-2.9.8z"/><path d="M10 11h.01M14 11h.01"/></svg></div>
+          <h3>Ficha de cada animal</h3>
+          <p>Brinco, espécie, raça, sexo e datas oficiais do SNIRA. Genealogia navegável (mãe, pai, descendentes) e histórico completo de eventos.</p>
+        </div>
+        <div class="feature reveal">
+          <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg></div>
+          <h3>Explorações e terrenos</h3>
+          <p>Marca de exploração, NIF do detentor e vários terrenos por exploração — com localização, área e os animais associados a cada um.</p>
+        </div>
+        <div class="feature reveal accent">
+          <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+          <h3>Alertas de prazos legais</h3>
+          <p>A app calcula sozinha: identificação até 20 dias, comunicação ao SNIRA em 7 dias, partos previstos e intervalos de segurança. Nunca mais uma coima por esquecimento.</p>
+        </div>
+        <div class="feature reveal">
+          <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m19 14-7 7-7-7a5 5 0 0 1 7-7 5 5 0 0 1 7 7z" opacity="0"/><path d="M18 2 9.5 10.5"/><path d="m14 6 4 4"/><path d="M11.5 8.5 4 16a3 3 0 0 0 4 4l7.5-7.5"/><circle cx="6.5" cy="17.5" r="1"/></svg></div>
+          <h3>Eventos e sanidade</h3>
+          <p>Partos, vacinações, medicamentos, pesagens e movimentações. Regista o livro de medicamentos obrigatório com dose, intervalo de segurança e veterinário.</p>
+        </div>
+        <div class="feature reveal">
+          <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"/></svg></div>
+          <h3>Meteorologia por terreno</h3>
+          <p>Tempo em tempo real e previsão a 7 dias, pela localização GPS de cada terreno, com conselhos práticos para o dia de trabalho.</p>
+        </div>
+        <div class="feature reveal">
+          <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 3-3 3 3 5-6"/></svg></div>
+          <h3>Contas da exploração</h3>
+          <p>Despesas e receitas, custo por animal e ganho médio diário (GMD) calculado automaticamente a partir das pesagens. Saiba onde está o dinheiro.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COMO FUNCIONA ================= -->
+  <section class="section" id="como-funciona" style="background:var(--surface-alt);">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow"><span class="dot"></span> Como funciona</span>
+        <h2>Começar leva menos de cinco minutos</h2>
+        <p>Sem manuais, sem formação. Instale, registe a exploração e está a usar.</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <div class="num"></div>
+          <h3>Descarregue e instale</h3>
+          <p>Um só ficheiro para Windows. Abre e está pronto — sem criar conta nem configurar servidores.</p>
+        </div>
+        <div class="step reveal">
+          <div class="num"></div>
+          <h3>Registe a sua exploração</h3>
+          <p>Marca de exploração, terrenos e os seus animais. Campos pré-preenchidos para poucos toques.</p>
+        </div>
+        <div class="step reveal">
+          <div class="num"></div>
+          <h3>A app avisa-o dos prazos</h3>
+          <p>Nascimentos, identificações e vacinas. Recebe os alertas a tempo e evita coimas do SNIRA.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PARA QUEM / ACESSIBILIDADE ================= -->
+  <section class="section" id="para-quem">
+    <div class="container">
+      <div class="split">
+        <div class="split-copy reveal">
+          <span class="eyebrow"><span class="dot"></span> Para quem é</span>
+          <h2>Feita para o campo, não para informáticos</h2>
+          <p>O nosso primeiro utilizador tem 82 anos e gere as suas vacas sozinho. Se ele consegue usar sem ajuda, o produto está validado. Esse é o padrão de simplicidade de toda a aplicação.</p>
+          <ul class="check-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Letras e botões grandes, alto contraste para visão reduzida</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Linguagem do sector: exploração, efetivo, brinco, vitelo</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Registar um parto em menos de 30 segundos</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Funciona no telemóvel no campo e no computador em casa</li>
+          </ul>
+        </div>
+        <div class="split-media reveal">
+          <div class="media-card">
+            <div class="quote">“Se o meu avô consegue registar as vacas sozinho, então a app está bem feita.”</div>
+            <div class="quote-who">
+              <div class="av">JG</div>
+              <div>
+                <div class="w-n">Exploração real de bovinos</div>
+                <div class="w-s">Primeiro caso de teste · criador de 82 anos</div>
+              </div>
+            </div>
+            <div class="big-stats">
+              <div class="bs"><div class="n">5</div><div class="l">Espécies pecuárias</div></div>
+              <div class="bs"><div class="n">&lt;30s</div><div class="l">Para registar</div></div>
+              <div class="bs"><div class="n">0€</div><div class="l">Durante os testes</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PREÇOS ================= -->
+  <section class="section" id="precos" style="background:var(--surface-alt);">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow"><span class="dot"></span> Preços</span>
+        <h2>Transparente, sem surpresas</h2>
+        <p>As soluções que existem em Portugal são caras e de preços "sob consulta". A nossa é o contrário: durante a fase de testes, é grátis.</p>
+      </div>
+      <div class="price-card reveal">
+        <div class="ribbon">Fase de testes</div>
+        <h3 style="color:var(--text-2);font-weight:800;">Plano Criador</h3>
+        <div class="amount">0€ <small>/ mês</small></div>
+        <div class="sub">Acesso completo enquanto ajudamos a validar a app no terreno.</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Animais, terrenos e explorações sem limite</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Alertas automáticos de prazos legais</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Eventos, livro de medicamentos e GMD</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Meteorologia e modo offline</li>
+        </ul>
+        <a href="#descarregar" class="btn btn-primary btn-lg btn-block">Descarregar grátis</a>
+        <div class="price-note">Sem cartão de crédito. Os planos futuros serão sempre com preços públicos e claros.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FAQ ================= -->
+  <section class="section" id="faq">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow"><span class="dot"></span> Perguntas frequentes</span>
+        <h2>Tudo o que precisa de saber</h2>
+      </div>
+      <div class="faq">
+        <div class="faq-item reveal">
+          <button class="faq-q">A app comunica sozinha com o SNIRA / iDigital?<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="faq-a"><div class="faq-a-inner">Nesta fase, a app organiza e valida todos os dados e avisa-o dos prazos, mas a submissão no iDigital é feita por si — com todos os campos já preparados. A integração direta com os sistemas do IFAP está no plano de evolução.</div></div>
+        </div>
+        <div class="faq-item reveal">
+          <button class="faq-q">Preciso de internet para usar?<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="faq-a"><div class="faq-a-inner">Não. Todas as operações de registo e consulta funcionam 100% offline. Os dados ficam guardados no seu dispositivo e sincronizam quando houver rede disponível.</div></div>
+        </div>
+        <div class="faq-item reveal">
+          <button class="faq-q">Em que dispositivos funciona?<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="faq-a"><div class="faq-a-inner">Esta página disponibiliza a versão para <b>computador Windows</b>, que descarrega e instala num instante. A app foi desenhada mobile-first, por isso as versões para telemóvel (Android e iOS) estão a caminho.</div></div>
+        </div>
+        <div class="faq-item reveal">
+          <button class="faq-q">Os meus dados estão seguros?<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="faq-a"><div class="faq-a-inner">Sim. Os dados vivem no seu próprio dispositivo. Quando ativar a sincronização na nuvem, cada utilizador só acede aos seus dados (segurança ao nível de cada linha na base de dados).</div></div>
+        </div>
+        <div class="faq-item reveal">
+          <button class="faq-q">Quanto custa?<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="faq-a"><div class="faq-a-inner">Durante a fase de testes é totalmente grátis e sem limites. Quando existirem planos pagos, os preços serão sempre públicos e transparentes — ao contrário da maioria da concorrência.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DOWNLOAD CTA ================= -->
+  <section class="section" id="descarregar">
+    <div class="container">
+      <div class="cta-band reveal">
+        <span class="eyebrow" style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.2);color:#fff;"><span class="dot" style="background:var(--lime);"></span> Pronto a instalar</span>
+        <h2 style="margin-top:18px;">Descarregue e comece hoje</h2>
+        <p>A versão para Windows num único ficheiro. Sem conta, sem compromissos — abra e comece a gerir a sua exploração.</p>
+        <div class="btn-row">
+          <a href="https://github.com/nunomarques2799/GADOOOOOO/releases/download/windows/GestaoDeGado-Windows.zip" class="btn btn-lime btn-lg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            Descarregar para Windows (.zip)
+          </a>
+        </div>
+        <div class="cta-meta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 8h18M8 21h8"/></svg>
+          Windows 10/11 (64 bits) · Descompacte o ZIP e abra <b>Gestao de Gado.exe</b>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="footer">
+    <div class="container">
+      <div class="grid">
+        <div class="about">
+          <a class="brand" href="#top"><img src="assets/logo.svg" alt="" width="40" height="40" /><span>Gestão de Gado</span></a>
+          <p>A modernizar a gestão de explorações pecuárias em Portugal. Simples, offline e em português — pensada para a realidade do campo.</p>
+        </div>
+        <div>
+          <h4>Produto</h4>
+          <ul>
+            <li><a href="#funcionalidades">Funcionalidades</a></li>
+            <li><a href="#como-funciona">Como funciona</a></li>
+            <li><a href="#precos">Preços</a></li>
+            <li><a href="#descarregar">Descarregar</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Recursos</h4>
+          <ul>
+            <li><a href="#faq">Perguntas frequentes</a></li>
+            <li><a href="#para-quem">Para quem é</a></li>
+            <li><a href="#descarregar">Windows</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© <span id="year"></span> Gestão de Gado. Feito em Portugal.</span>
+        <span>DGAV · IFAP · SNIRA — terminologia e prazos do sector pecuário nacional.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

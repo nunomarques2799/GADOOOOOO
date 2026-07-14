@@ -1,0 +1,8 @@
+# dependências
+node_modules/
+
+# build web copiado do Expo (gerado no CI)
+web/
+
+# saída do electron-builder
+dist-build/

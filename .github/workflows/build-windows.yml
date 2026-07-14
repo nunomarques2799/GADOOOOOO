@@ -1,0 +1,81 @@
+name: Build Windows app
+
+# Reconstrói a app para Windows e publica-a no GitHub Release "windows"
+# sempre que houver alterações à app. O site aponta para o download desse
+# release, por isso a versão nova fica disponível sem tocar no site.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "assets/**"
+      - "app.json"
+      - "package.json"
+      - "package-lock.json"
+      - "desktop/**"
+      - ".github/workflows/build-windows.yml"
+  workflow_dispatch: {} # permite correr à mão no separador "Actions"
+
+permissions:
+  contents: write # necessário para criar/atualizar o Release
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências da app
+        run: npm ci
+
+      - name: Gerar o build web (Expo)
+        run: npx expo export --platform web
+
+      - name: Copiar o build web para o desktop
+        shell: bash
+        run: |
+          rm -rf desktop/web
+          cp -r dist desktop/web
+
+      - name: Instalar dependências do desktop
+        working-directory: desktop
+        run: npm ci
+
+      - name: Empacotar a app Windows (Electron)
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false" # sem assinatura de código
+        run: npx electron-builder --win --dir
+
+      - name: Criar o ZIP
+        working-directory: desktop
+        shell: bash
+        run: |
+          cd dist-build
+          mv "win-unpacked" "Gestao de Gado"
+          cp ../LEIA-ME.txt "Gestao de Gado/"
+          7z a -tzip -mx=7 "GestaoDeGado-Windows.zip" "Gestao de Gado"
+
+      - name: Publicar no GitHub Release
+        working-directory: desktop
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ZIP="dist-build/GestaoDeGado-Windows.zip"
+          if ! gh release view windows >/dev/null 2>&1; then
+            gh release create windows \
+              --title "Gestão de Gado — Windows" \
+              --notes "Versão mais recente da app para Windows. Descarregue o ZIP, extraia a pasta e abra 'Gestao de Gado.exe'. Atualizado automaticamente a cada alteração."
+          fi
+          gh release upload windows "$ZIP" --clobber
+          echo "Release 'windows' atualizado com o novo ZIP."

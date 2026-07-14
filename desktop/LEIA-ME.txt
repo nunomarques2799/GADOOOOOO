@@ -1,0 +1,18 @@
+GESTAO DE GADO — versao para Windows
+=====================================
+
+Como abrir:
+1. Descompacte esta pasta (clique direito no ZIP > "Extrair tudo").
+2. Abra a pasta "Gestao de Gado".
+3. Faca duplo clique em "Gestao de Gado.exe".
+
+Nota sobre o aviso do Windows:
+Como a aplicacao ainda nao esta assinada digitalmente, o Windows pode
+mostrar um aviso azul do "Windows Defender SmartScreen". E normal para
+aplicacoes novas. Clique em "Mais informacoes" e depois em "Executar
+mesmo assim".
+
+A aplicacao funciona sem internet. Os seus dados ficam guardados no
+proprio computador.
+
+Requisitos: Windows 10 ou 11 (64 bits).
