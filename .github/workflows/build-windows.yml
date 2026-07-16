@@ -89,10 +89,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ZIP="dist-build/GestaoDeGado-Windows.zip"
-          if ! gh release view windows >/dev/null 2>&1; then
-            gh release create windows \
-              --title "Gestão de Gado — Windows" \
-              --notes "Versão mais recente da app para Windows. Descarregue o ZIP, extraia a pasta e abra 'Gestao de Gado.exe'. Atualizado automaticamente a cada alteração."
-          fi
-          gh release upload windows "$ZIP" --clobber
+          # Cria o release "windows" se ainda não existir. Ignora o erro
+          # "tag_name already exists" (acontece em todas as execuções depois da
+          # primeira) — antes, um hiccup no `gh release view` fazia o script
+          # tentar criar um release que já existe e abortar antes do upload.
+          gh release create windows -R "$GITHUB_REPOSITORY" \
+            --title "Gestão de Gado — Windows" \
+            --notes "Versão mais recente da app para Windows. Descarregue o ZIP, extraia a pasta e abra 'Gestao de Gado.exe'. Atualizado automaticamente a cada alteração." \
+            2>/dev/null || true
+          # Envia (ou substitui) o ZIP. É este passo que atualiza o download.
+          gh release upload windows -R "$GITHUB_REPOSITORY" "$ZIP" --clobber
           echo "Release 'windows' atualizado com o novo ZIP."
