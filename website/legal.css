@@ -1,0 +1,40 @@
+/* ==================================================================
+   Gestão de Gado — estilo das páginas legais (privacidade, termos)
+   Documento legível, na mesma paleta da app (verde folha, Nunito).
+   ================================================================== */
+:root {
+  --green-800: #124d2e; --green-700: #166b3d; --green-600: #1b7a48; --green-50: #eef8f1;
+  --bg: #f3f6f2; --surface: #fff; --text: #15251c; --text-2: #54655b; --text-muted: #869184;
+  --border: #e3eae0; --warning-tint: #fbf0dc; --warning: #9a6a12;
+  --r-md: 16px; --maxw: 760px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Nunito", system-ui, sans-serif; background: var(--bg); color: var(--text);
+  line-height: 1.65; -webkit-font-smoothing: antialiased;
+}
+.topbar {
+  background: linear-gradient(135deg, var(--green-800), var(--green-600)); color: #fff;
+}
+.topbar .inner { max-width: var(--maxw); margin: 0 auto; padding: 18px 24px; display: flex; align-items: center; gap: 12px; }
+.topbar a { color: #fff; text-decoration: none; display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.05rem; }
+.topbar img { width: 34px; height: 34px; }
+.topbar .back { margin-left: auto; font-weight: 600; font-size: .9rem; opacity: .9; }
+main { max-width: var(--maxw); margin: 0 auto; padding: 40px 24px 64px; }
+h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 800; letter-spacing: -.02em; margin-bottom: 6px; }
+.updated { color: var(--text-muted); font-weight: 600; font-size: .9rem; margin-bottom: 28px; }
+h2 { font-size: 1.25rem; font-weight: 800; margin: 32px 0 10px; }
+h2 .num { color: var(--green-600); font-variant-numeric: tabular-nums; margin-right: 8px; }
+p, li { color: var(--text-2); font-size: 1rem; }
+p { margin-bottom: 12px; }
+ul, ol { margin: 0 0 14px 22px; }
+li { margin-bottom: 6px; }
+strong { color: var(--text); }
+a.link { color: var(--green-600); font-weight: 700; }
+.nota {
+  background: var(--warning-tint); border-left: 4px solid var(--warning); border-radius: var(--r-md);
+  padding: 14px 16px; margin: 0 0 28px; font-size: .92rem; color: #6b4d0e; font-weight: 600;
+}
+.placeholder { background: var(--green-50); border: 1px dashed var(--green-600); border-radius: 6px; padding: 1px 6px; font-weight: 700; color: var(--green-700); }
+footer.legal { max-width: var(--maxw); margin: 0 auto; padding: 24px; color: var(--text-muted); font-size: .85rem; border-top: 1px solid var(--border); }
+footer.legal a { color: var(--green-600); font-weight: 700; text-decoration: none; }

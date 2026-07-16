@@ -12,3 +12,21 @@
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=86400"
+
+# Página de recuperação de palavra-passe: /recuperar serve recuperar.html
+# (o link do email de reposição aponta para https://gestaogado.netlify.app/recuperar).
+[[redirects]]
+  from = "/recuperar"
+  to = "/recuperar.html"
+  status = 200
+
+# Páginas legais (RGPD) com URLs limpos.
+[[redirects]]
+  from = "/privacidade"
+  to = "/privacidade.html"
+  status = 200
+
+[[redirects]]
+  from = "/termos"
+  to = "/termos.html"
+  status = 200

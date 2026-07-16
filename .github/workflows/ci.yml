@@ -1,0 +1,31 @@
+name: Qualidade (tsc)
+
+# Porta de qualidade: verifica os tipos antes de qualquer merge/build.
+# Corre em todos os pushes e pull requests. É rápido (~1 min) e apanha nomes
+# de ícones inválidos, imports partidos e erros de rotas do expo-router — foi
+# assim que 3 erros de compilação tinham chegado ao repositório.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Verificar tipos (tsc)
+        run: npx tsc --noEmit

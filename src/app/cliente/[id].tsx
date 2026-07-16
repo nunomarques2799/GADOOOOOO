@@ -183,7 +183,7 @@ export default function ClienteDetalheScreen() {
             <Card
               key={e.id}
               style={{ marginBottom: spacing.sm }}
-              onPress={() => router.push(`/inspecionar/exploracao/${e.id}`)}
+              onPress={() => router.push({ pathname: '/inspecionar/exploracao/[id]', params: { id: e.id } })}
               accessibilityLabel={`Ver dados de ${e.nome}`}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <View

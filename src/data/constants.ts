@@ -14,6 +14,16 @@ export const PrazosLegais = {
   idadeMinPaiMeses: 18,
 } as const;
 
+/** Prazos sanitários (dias) — orientação prática, não prazo legal rígido. */
+export const PrazosSanitarios = {
+  /** Vacinação anual: alerta de revacinação passado ~1 ano da última. */
+  revacinacao: 365,
+  /** Só sugere "sem registo de vacinação" a partir desta idade (evita ruído nos recém-nascidos). */
+  idadeMinVacinacaoDias: 180,
+  /** Antecedência com que se avisa antes de a vacinação expirar. */
+  avisoRevacinacaoDias: 30,
+} as const;
+
 export const especies: Especie[] = ['Bovino', 'Equídeo', 'Ovino', 'Caprino', 'Suíno'];
 export const sexos: Sexo[] = ['Fêmea', 'Macho'];
 export const tiposTerreno: TipoTerreno[] = ['Pastagem', 'Cultivo', 'Misto', 'Outro'];

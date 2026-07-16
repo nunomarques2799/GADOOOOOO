@@ -7,12 +7,12 @@ import { Button, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
-type Modo = 'entrar' | 'registar';
+type Modo = 'entrar' | 'registar' | 'recuperar';
 
 /** Ecrã de entrada — mostrado quando há Supabase configurado mas sem sessão. */
 export function EcraLogin() {
   const insets = useSafeAreaInsets();
-  const { entrar, registar } = useAuth();
+  const { entrar, registar, recuperarPalavra } = useAuth();
 
   const [modo, setModo] = useState<Modo>('entrar');
   const [nome, setNome] = useState('');
@@ -21,18 +21,25 @@ export function EcraLogin() {
   const [aProcessar, setAProcessar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [confirmacao, setConfirmacao] = useState(false);
+  const [recuperado, setRecuperado] = useState(false);
 
   const registo = modo === 'registar';
+  const recuperar = modo === 'recuperar';
   const valido =
     email.trim().length > 3 &&
     email.includes('@') &&
-    palavra.length >= 6 &&
+    (recuperar || palavra.length >= 6) &&
     (!registo || nome.trim().length > 0);
 
-  function trocarModo() {
-    setModo(registo ? 'entrar' : 'registar');
+  function irPara(novo: Modo) {
+    setModo(novo);
     setErro(null);
     setConfirmacao(false);
+    setRecuperado(false);
+  }
+
+  function trocarModo() {
+    irPara(registo ? 'entrar' : 'registar');
   }
 
   async function submeter() {
@@ -40,8 +47,13 @@ export function EcraLogin() {
     setAProcessar(true);
     setErro(null);
     setConfirmacao(false);
+    setRecuperado(false);
 
-    if (registo) {
+    if (recuperar) {
+      const e = await recuperarPalavra(email);
+      if (e) setErro(e);
+      else setRecuperado(true);
+    } else if (registo) {
       const r = await registar(email, palavra, nome);
       if ('erro' in r) setErro(r.erro);
       else if (r.confirmarEmail) setConfirmacao(true);
@@ -91,7 +103,7 @@ export function EcraLogin() {
               Gestão de Gado
             </Text>
             <Text variant="body" color={colors.textOnDarkMuted} style={{ marginTop: 2 }}>
-              {registo ? 'Criar a sua conta' : 'Entrar na sua conta'}
+              {recuperar ? 'Recuperar o acesso' : registo ? 'Criar a sua conta' : 'Entrar na sua conta'}
             </Text>
           </LinearGradient>
 
@@ -116,14 +128,31 @@ export function EcraLogin() {
               autoCapitalize="none"
               keyboardType="email-address"
             />
-            <Campo
-              label="Palavra-passe"
-              icon="lock-outline"
-              value={palavra}
-              onChangeText={setPalavra}
-              placeholder="Mínimo 6 caracteres"
-              secureTextEntry
-            />
+            {!recuperar ? (
+              <Campo
+                label="Palavra-passe"
+                icon="lock-outline"
+                value={palavra}
+                onChangeText={setPalavra}
+                placeholder="Mínimo 6 caracteres"
+                secureTextEntry
+              />
+            ) : (
+              <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.lg }}>
+                Enviamos-lhe um email com um link para definir uma nova palavra-passe.
+              </Text>
+            )}
+
+            {modo === 'entrar' ? (
+              <Pressable
+                onPress={() => irPara('recuperar')}
+                accessibilityRole="button"
+                style={{ marginTop: -spacing.sm, marginBottom: spacing.md, alignSelf: 'flex-start', paddingVertical: spacing.xs }}>
+                <Text variant="secondary" color={colors.primary}>
+                  Esqueci-me da palavra-passe
+                </Text>
+              </Pressable>
+            ) : null}
 
             {erro ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md }}>
@@ -134,7 +163,7 @@ export function EcraLogin() {
               </View>
             ) : null}
 
-            {confirmacao ? (
+            {confirmacao || recuperado ? (
               <View
                 style={{
                   flexDirection: 'row',
@@ -147,30 +176,43 @@ export function EcraLogin() {
                 }}>
                 <Icon name="email-check-outline" size="md" color={colors.success} />
                 <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
-                  Conta criada. Enviámos um email de confirmação — confirme e depois entre.
+                  {recuperado
+                    ? 'Se existir uma conta com este email, enviámos um link para redefinir a palavra-passe. Verifique a caixa de entrada.'
+                    : 'Conta criada. Enviámos um email de confirmação — confirme e depois entre.'}
                 </Text>
               </View>
             ) : null}
 
             <Button
-              label={registo ? 'Criar conta' : 'Entrar'}
-              icon={registo ? 'account-plus' : 'login'}
+              label={recuperar ? 'Enviar link de recuperação' : registo ? 'Criar conta' : 'Entrar'}
+              icon={recuperar ? 'email-fast-outline' : registo ? 'account-plus' : 'login'}
               onPress={submeter}
               disabled={!valido}
               loading={aProcessar}
             />
 
-            <Pressable
-              onPress={trocarModo}
-              accessibilityRole="button"
-              style={{ marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.xs }}>
-              <Text variant="body" color={colors.textSecondary}>
-                {registo ? 'Já tem conta? ' : 'Ainda não tem conta? '}
-                <Text variant="bodyStrong" color={colors.primary}>
-                  {registo ? 'Entrar' : 'Criar conta'}
+            {recuperar ? (
+              <Pressable
+                onPress={() => irPara('entrar')}
+                accessibilityRole="button"
+                style={{ marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.xs }}>
+                <Text variant="body" color={colors.primary}>
+                  Voltar a entrar
                 </Text>
-              </Text>
-            </Pressable>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={trocarModo}
+                accessibilityRole="button"
+                style={{ marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.xs }}>
+                <Text variant="body" color={colors.textSecondary}>
+                  {registo ? 'Já tem conta? ' : 'Ainda não tem conta? '}
+                  <Text variant="bodyStrong" color={colors.primary}>
+                    {registo ? 'Entrar' : 'Criar conta'}
+                  </Text>
+                </Text>
+              </Pressable>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

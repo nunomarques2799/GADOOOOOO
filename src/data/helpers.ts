@@ -1,5 +1,5 @@
-import { PrazosLegais } from './constants';
-import type { Alerta, Animal } from './types';
+import { PrazosLegais, PrazosSanitarios } from './constants';
+import type { Alerta, Animal, Evento } from './types';
 
 const MESES_PT = [
   'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
@@ -63,8 +63,18 @@ export function idadeExtenso(iso: string): string {
 }
 
 /* ---- Cálculo de alertas legais ---- */
-export function computeAlertas(animais: Animal[]): Alerta[] {
+export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alerta[] {
   const out: Alerta[] = [];
+
+  // Data da última vacinação por animal (ms), para os alertas de revacinação.
+  const ultimaVacinacao = new Map<string, number>();
+  for (const e of eventos) {
+    if (e.tipo !== 'Vacinação') continue;
+    const t = new Date(e.data).getTime();
+    if (Number.isNaN(t)) continue;
+    const anterior = ultimaVacinacao.get(e.animalId);
+    if (anterior === undefined || t > anterior) ultimaVacinacao.set(e.animalId, t);
+  }
 
   for (const a of animais) {
     const rotulo = a.nome ?? a.numeroIdentificacao ?? 'Sem nome';
@@ -136,6 +146,37 @@ export function computeAlertas(animais: Animal[]): Alerta[] {
           diasRestantes: dias,
         });
       }
+    }
+
+    // Vacinação — revacinação anual (ou falta de registo em adultos).
+    const idade = idadeDias(a.dataNascimento);
+    const ultima = ultimaVacinacao.get(a.id);
+    if (ultima !== undefined) {
+      const diasDesde = Math.floor((Date.now() - ultima) / MS_DIA);
+      const restam = PrazosSanitarios.revacinacao - diasDesde;
+      if (restam <= PrazosSanitarios.avisoRevacinacaoDias) {
+        out.push({
+          id: `vac-${a.id}`,
+          categoria: 'vacinacao',
+          animalId: a.id,
+          gravidade: restam <= 0 ? 'aviso' : 'info',
+          titulo: restam <= 0 ? 'Revacinação em atraso' : 'Revacinação a aproximar-se',
+          descricao:
+            restam <= 0
+              ? `${rotulo}: passou ~1 ano da última vacinação. Prazo excedido há ${Math.abs(restam)} dia(s).`
+              : `${rotulo}: revacinar em ${restam} dia(s) (última há ${diasDesde} dias).`,
+          diasRestantes: restam,
+        });
+      }
+    } else if (idade >= PrazosSanitarios.idadeMinVacinacaoDias) {
+      out.push({
+        id: `vac-${a.id}`,
+        categoria: 'vacinacao',
+        animalId: a.id,
+        gravidade: 'info',
+        titulo: 'Sem registo de vacinação',
+        descricao: `${rotulo} não tem nenhuma vacinação registada. Registe a última para acompanhar o plano.`,
+      });
     }
   }
 

@@ -10,9 +10,11 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, type ReactNode } from 'react';
+import { Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { EcraLogin } from '@/components/EcraLogin';
+import { EcraNovaPalavra } from '@/components/EcraNovaPalavra';
 import { EcraPendente } from '@/components/EcraPendente';
 import { AuthProvider, useAuth } from '@/data/auth';
 import { MembrosProvider, useMembros } from '@/data/membros';
@@ -22,13 +24,41 @@ import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
+/** Largura máxima da "coluna" da app em ecrãs largos (desktop/web). */
+const LARGURA_MAX = 560;
+
+/**
+ * Em ecrãs largos (Electron/browser) a app foi desenhada para telemóvel, por
+ * isso centramos o conteúdo numa coluna de largura fixa, com o fundo da app
+ * a preencher as margens. No telemóvel ocupa a largura toda, como antes.
+ */
+function ColunaApp({ children }: { children: ReactNode }) {
+  if (Platform.OS !== 'web') return <>{children}</>;
+  return (
+    <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceSunken }}>
+      <View
+        style={{
+          flex: 1,
+          width: '100%',
+          maxWidth: LARGURA_MAX,
+          backgroundColor: colors.background,
+        }}>
+        {children}
+      </View>
+    </View>
+  );
+}
+
 /**
  * Portão de autenticação: com Supabase configurado, exige sessão iniciada
  * (mostra o ecrã de entrada). Sem Supabase, a app segue offline como antes.
  */
 function PortaoAuth({ children }: { children: ReactNode }) {
-  const { aCarregar, sessao } = useAuth();
+  const { aCarregar, sessao, emRecuperacao } = useAuth();
   if (aCarregar) return null; // mantém o splash até saber se há sessão
+  // O link de recuperação abre uma sessão especial — pede a nova palavra-passe
+  // antes de deixar entrar na app.
+  if (supabaseConfigurado && emRecuperacao) return <EcraNovaPalavra />;
   if (supabaseConfigurado && !sessao) return <EcraLogin />;
   return <>{children}</>;
 }
@@ -67,6 +97,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <AuthProvider>
+        <ColunaApp>
         <PortaoAuth>
           <MembrosProvider>
             <AppRouter>
@@ -88,6 +119,8 @@ export default function RootLayout() {
                   <Stack.Screen name="exploracao/editar/[id]" />
                   <Stack.Screen name="terreno/novo" options={{ animation: 'slide_from_bottom' }} />
                   <Stack.Screen name="terreno/[id]" />
+                  <Stack.Screen name="terreno/editar/[id]" />
+                  <Stack.Screen name="terreno/animais/[id]" options={{ animation: 'slide_from_bottom' }} />
                   <Stack.Screen name="exploracao/equipa/[id]" />
                   <Stack.Screen name="cliente/[id]" />
                   <Stack.Screen name="inspecionar/exploracao/[id]" />
@@ -97,6 +130,7 @@ export default function RootLayout() {
             </AppRouter>
           </MembrosProvider>
         </PortaoAuth>
+        </ColunaApp>
       </AuthProvider>
     </SafeAreaProvider>
   );

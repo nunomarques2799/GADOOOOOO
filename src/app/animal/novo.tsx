@@ -4,7 +4,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
 import { especieMeta, especies, sexos } from '@/data/constants';
-import { formatDataPt, isoDaysAgo } from '@/data/helpers';
+import { formatDataPt, idadeDias, idadeExtenso, isoDaysAgo } from '@/data/helpers';
 import { useGado } from '@/data/store';
 import type { Especie, Sexo } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
@@ -13,9 +13,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const opcoesData = [
   { label: 'Hoje', dias: 0 },
   { label: 'Ontem', dias: 1 },
-  { label: 'Há 2 dias', dias: 2 },
   { label: 'Há 1 semana', dias: 7 },
+  { label: '~1 ano', dias: 365 },
+  { label: '~2 anos', dias: 730 },
+  { label: '~5 anos', dias: 1826 },
 ];
+
+/** Converte "dd/mm/aaaa" (ou dd-mm-aaaa) numa data ISO, ou null se inválida. */
+function parseDataPt(texto: string): string | null {
+  const m = texto.trim().match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
+  if (!m) return null;
+  const dia = Number(m[1]);
+  const mes = Number(m[2]);
+  const ano = Number(m[3]);
+  if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
+  const d = new Date(ano, mes - 1, dia, 12, 0, 0);
+  // Rejeita datas impossíveis (ex.: 31/02) e datas no futuro.
+  if (d.getFullYear() !== ano || d.getMonth() !== mes - 1 || d.getDate() !== dia) return null;
+  if (d.getTime() > Date.now()) return null;
+  return d.toISOString();
+}
 
 export default function NovoAnimalScreen() {
   const router = useRouter();
@@ -24,22 +41,37 @@ export default function NovoAnimalScreen() {
 
   const [especie, setEspecie] = useState<Especie>('Bovino');
   const [sexo, setSexo] = useState<Sexo>('Fêmea');
-  const [diasNasc, setDiasNasc] = useState(0);
+  const [diasNasc, setDiasNasc] = useState<number | null>(0);
+  const [dataManual, setDataManual] = useState('');
   const [nome, setNome] = useState('');
   const [brinco, setBrinco] = useState('');
   const [raca, setRaca] = useState('');
   const [exploracaoId, setExploracaoId] = useState(exploracoes[0]?.id ?? '');
   const [terrenoId, setTerrenoId] = useState<string | undefined>(undefined);
+  const [erroGuardar, setErroGuardar] = useState<string | null>(null);
 
   const terrenos = useMemo(
     () => (exploracaoId ? terrenosByExploracao(exploracaoId) : []),
     [exploracaoId, terrenosByExploracao],
   );
 
-  const dataNascimento = isoDaysAgo(diasNasc);
+  const dataManualIso = dataManual.trim() ? parseDataPt(dataManual) : null;
+  const dataManualInvalida = dataManual.trim().length > 0 && !dataManualIso;
+  const dataNascimento = dataManualIso ?? isoDaysAgo(diasNasc ?? 0);
 
   async function guardar() {
+    if (dataManualInvalida) return;
+    if (!exploracaoId) {
+      setErroGuardar('Escolha uma exploração para o animal.');
+      return;
+    }
+    setErroGuardar(null);
     try {
+      // Animal recém-nascido → gera prazos SNIRA/identificação. Animal já
+      // crescido (pré-existente, registado com data antiga) → assume-se já
+      // regularizado, para não criar alertas de "comunicar nascimento" falsos.
+      const recemNascido = idadeDias(dataNascimento) <= 30;
+      const temBrinco = brinco.trim().length > 0;
       const novo = await addAnimal({
         exploracaoId,
         terrenoId,
@@ -49,13 +81,14 @@ export default function NovoAnimalScreen() {
         nome: nome.trim() || undefined,
         numeroIdentificacao: brinco.trim() || undefined,
         raca: raca.trim() || undefined,
-        comunicadoSnira: brinco.trim() ? false : undefined,
-        dataIdentificacao: brinco.trim() ? isoDaysAgo(0) : undefined,
+        comunicadoSnira: temBrinco ? (recemNascido ? false : true) : undefined,
+        dataIdentificacao: temBrinco ? (recemNascido ? isoDaysAgo(0) : dataNascimento) : undefined,
       });
       router.replace(`/animal/${novo.id}`);
     } catch (e) {
-      // Mostra erro no botão? Por agora, log — a UI vai receber via reject.
-      console.warn('Erro a criar animal', e);
+      // Falha ao persistir (ex.: sem permissão para esta exploração). Mostra o
+      // erro em vez de deixar o animal só no estado local (que nunca sincroniza).
+      setErroGuardar(e instanceof Error ? e.message : 'Não foi possível guardar o animal.');
     }
   }
 
@@ -98,13 +131,42 @@ export default function NovoAnimalScreen() {
         <Field label="Data de nascimento" obrigatorio>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
             {opcoesData.map((o) => (
-              <Chip key={o.dias} label={o.label} selected={diasNasc === o.dias} onPress={() => setDiasNasc(o.dias)} />
+              <Chip
+                key={o.dias}
+                label={o.label}
+                selected={!dataManualIso && diasNasc === o.dias}
+                onPress={() => {
+                  setDiasNasc(o.dias);
+                  setDataManual('');
+                }}
+              />
             ))}
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.xs }}>
+
+          <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm, marginBottom: 4 }}>
+            Ou data exata (dd/mm/aaaa) — útil para animais já crescidos
+          </Text>
+          <TextField
+            value={dataManual}
+            onChangeText={(t) => {
+              setDataManual(t);
+              if (t.trim()) setDiasNasc(null);
+              else setDiasNasc(0);
+            }}
+            placeholder="Ex: 15/03/2021"
+            icon="calendar-edit"
+            keyboardType="number-pad"
+          />
+          {dataManualInvalida ? (
+            <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
+              Data inválida. Use o formato dd/mm/aaaa e uma data não futura.
+            </Text>
+          ) : null}
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm }}>
             <Icon name="calendar-check" size="sm" color={colors.primary} />
             <Text variant="secondary" color={colors.textSecondary}>
-              {formatDataPt(dataNascimento)}
+              {formatDataPt(dataNascimento)} · {idadeExtenso(dataNascimento)}
             </Text>
           </View>
         </Field>
@@ -135,20 +197,26 @@ export default function NovoAnimalScreen() {
 
         {/* Exploração */}
         <Field label="Exploração" obrigatorio>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-            {exploracoes.map((e) => (
-              <Chip
-                key={e.id}
-                label={e.nome}
-                icon="barn"
-                selected={exploracaoId === e.id}
-                onPress={() => {
-                  setExploracaoId(e.id);
-                  setTerrenoId(undefined);
-                }}
-              />
-            ))}
-          </View>
+          {exploracoes.length === 0 ? (
+            <Text variant="secondary" color={colors.danger}>
+              Ainda não tem explorações. Crie uma exploração antes de registar animais.
+            </Text>
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+              {exploracoes.map((e) => (
+                <Chip
+                  key={e.id}
+                  label={e.nome}
+                  icon="barn"
+                  selected={exploracaoId === e.id}
+                  onPress={() => {
+                    setExploracaoId(e.id);
+                    setTerrenoId(undefined);
+                  }}
+                />
+              ))}
+            </View>
+          )}
         </Field>
 
         {/* Terreno */}
@@ -186,7 +254,20 @@ export default function NovoAnimalScreen() {
           },
           shadow.lg,
         ]}>
-        <Button label="Guardar animal" icon="check" onPress={guardar} />
+        {erroGuardar ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm }}>
+            <Icon name="alert-circle-outline" size="sm" color={colors.danger} />
+            <Text variant="secondary" color={colors.danger} style={{ flex: 1 }}>
+              {erroGuardar}
+            </Text>
+          </View>
+        ) : null}
+        <Button
+          label="Guardar animal"
+          icon="check"
+          onPress={guardar}
+          disabled={dataManualInvalida || exploracoes.length === 0}
+        />
       </View>
     </View>
   );
@@ -225,12 +306,14 @@ function TextField({
   placeholder,
   icon,
   autoCapitalize,
+  keyboardType,
 }: {
   value: string;
   onChangeText: (t: string) => void;
   placeholder: string;
   icon: IconName;
   autoCapitalize?: 'none' | 'characters' | 'words' | 'sentences';
+  keyboardType?: 'default' | 'number-pad' | 'decimal-pad';
 }) {
   return (
     <View
@@ -252,6 +335,7 @@ function TextField({
         placeholder={placeholder}
         placeholderTextColor={colors.textMuted}
         autoCapitalize={autoCapitalize}
+        keyboardType={keyboardType}
         style={{ flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 17, color: colors.text }}
       />
     </View>

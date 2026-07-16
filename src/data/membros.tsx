@@ -164,9 +164,10 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
 
   const listarPendentes = useCallback(async (): Promise<UtilizadorPendente[]> => {
     if (!supabase) return [];
-    const { data, error } = await supabase
-      .from('utilizadores_pendentes')
-      .select('id, nome, email, telefone, nif');
+    // RPC SECURITY DEFINER (valida eh_superadmin no servidor). Substitui a
+    // antiga view `utilizadores_pendentes`, que ignorava o RLS e expunha os
+    // emails/NIF de todos os pendentes a qualquer utilizador autenticado.
+    const { data, error } = await supabase.rpc('superadmin_listar_pendentes');
     if (error || !data) return [];
     return data as UtilizadorPendente[];
   }, []);

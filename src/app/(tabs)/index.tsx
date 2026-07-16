@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlertItem } from '@/components/AlertItem';
+import { BannerAtualizacao } from '@/components/BannerAtualizacao';
 import { ExploracaoRow } from '@/components/ExploracaoRow';
 import { QuickAction } from '@/components/QuickAction';
 import { StatCard } from '@/components/StatCard';
@@ -75,6 +76,9 @@ export default function InicioScreen() {
 
         {/* Conteúdo */}
         <View style={{ paddingHorizontal: spacing.lg, marginTop: -spacing.xxxl }}>
+          {/* Aviso de nova versão — só na app desktop quando há atualização */}
+          <BannerAtualizacao />
+
           {/* Estado de sincronização — só aparece offline ou com pendentes */}
           {!online || pendentesSinc > 0 ? (
             <Card style={{ marginBottom: spacing.md }}>

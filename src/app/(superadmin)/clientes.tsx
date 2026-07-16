@@ -216,7 +216,7 @@ export default function ClientesScreen() {
               <ClienteCard
                 key={c.userId}
                 cliente={c}
-                onPress={() => router.push(`/cliente/${c.userId}`)}
+                onPress={() => router.push({ pathname: '/cliente/[id]', params: { id: c.userId } })}
                 onAprovar={() => aprovarInline(c.userId)}
                 aProcessar={aProcessar === c.userId}
               />

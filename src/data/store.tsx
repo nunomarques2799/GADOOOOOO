@@ -226,7 +226,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   const [meteorologia, setMeteorologia] = useState<Meteorologia>(meteorologiaFallback);
   const [meteoEstado, setMeteoEstado] = useState<MeteoEstado>('a-carregar');
 
-  const alertas = useMemo(() => computeAlertas(animais), [animais]);
+  const alertas = useMemo(() => computeAlertas(animais, eventos), [animais, eventos]);
 
   const [online, setOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine !== false : true,

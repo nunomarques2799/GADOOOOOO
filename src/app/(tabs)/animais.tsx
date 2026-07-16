@@ -15,10 +15,17 @@ type Filtro = 'Todos' | Especie;
 export default function AnimaisScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { animais } = useGado();
+  const { animais, alertas } = useGado();
 
   const [query, setQuery] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('Todos');
+  const [soAlertas, setSoAlertas] = useState(false);
+
+  // Conjunto de animais com pelo menos um alerta pendente.
+  const idsComAlerta = useMemo(
+    () => new Set(alertas.map((al) => al.animalId).filter((id): id is string => !!id)),
+    [alertas],
+  );
 
   // Espécies efetivamente presentes no efetivo
   const filtrosDisponiveis = useMemo<Filtro[]>(() => {
@@ -30,6 +37,7 @@ export default function AnimaisScreen() {
     const q = query.trim().toLowerCase();
     return animais
       .filter((a) => filtro === 'Todos' || a.especie === filtro)
+      .filter((a) => !soAlertas || idsComAlerta.has(a.id))
       .filter((a) => {
         if (!q) return true;
         return (
@@ -39,7 +47,7 @@ export default function AnimaisScreen() {
         );
       })
       .sort((a, b) => (a.nome ?? '').localeCompare(b.nome ?? ''));
-  }, [animais, filtro, query]);
+  }, [animais, filtro, query, soAlertas, idsComAlerta]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -92,6 +100,18 @@ export default function AnimaisScreen() {
               />
             </View>
 
+            {/* Filtro rápido: só animais com alertas pendentes */}
+            {idsComAlerta.size > 0 ? (
+              <View style={{ marginBottom: spacing.sm }}>
+                <Chip
+                  label={`Com alertas (${idsComAlerta.size})`}
+                  icon="alert-circle-outline"
+                  selected={soAlertas}
+                  onPress={() => setSoAlertas((v) => !v)}
+                />
+              </View>
+            ) : null}
+
             {/* Filtros por espécie */}
             <FlatList
               horizontal
@@ -115,11 +135,11 @@ export default function AnimaisScreen() {
             icon="cow-off"
             title="Nenhum animal encontrado"
             message={
-              query || filtro !== 'Todos'
+              query || filtro !== 'Todos' || soAlertas
                 ? 'Experimente ajustar a pesquisa ou os filtros.'
                 : 'Ainda não há animais registados. Comece por adicionar o primeiro.'
             }
-            actionLabel={!query && filtro === 'Todos' ? 'Registar animal' : undefined}
+            actionLabel={!query && filtro === 'Todos' && !soAlertas ? 'Registar animal' : undefined}
             onAction={() => router.push('/animal/novo')}
           />
         }

@@ -383,13 +383,15 @@ grant execute on function public.criar_convite(text, public.role_membro, text, i
 grant execute on function public.resgatar_convite(text) to authenticated;
 
 -- ==================================================================
--- View: pendentes de aprovação (só superadmin lê, via policy do perfil)
+-- Pendentes de aprovação
 -- ==================================================================
-create or replace view public.utilizadores_pendentes as
-  select p.id, p.nome, p.telefone, p.nif, p.updated_at, u.email
-  from public.perfil p
-  join auth.users u on u.id = p.id
-  where p.estado = 'pendente' and not p.is_superadmin;
+-- NOTA DE SEGURANÇA: aqui existia uma view `utilizadores_pendentes` que
+-- juntava auth.users (emails) + perfil (NIF/telefone). Como as views normais
+-- NÃO respeitam o RLS das tabelas de origem, qualquer utilizador autenticado
+-- conseguia ler os dados pessoais de todos os pendentes. Foi substituída pelo
+-- RPC `superadmin_listar_pendentes()` (SECURITY DEFINER, valida eh_superadmin)
+-- definido em `schema_seguranca.sql`. Se a view antiga ainda existir, esse
+-- ficheiro faz `drop view` dela.
 
 -- ==================================================================
 -- BOOTSTRAP: marcar o superadmin (executar UMA vez com o teu email)

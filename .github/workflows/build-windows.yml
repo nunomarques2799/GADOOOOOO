@@ -37,6 +37,14 @@ jobs:
       - name: Instalar dependências da app
         run: npm ci
 
+      - name: Marca temporal do build
+        # Embutida na app para o aviso de "nova versão": comparada com a data do
+        # ZIP publicado no Release. Só se anuncia atualização se o ZIP for
+        # bastante mais recente do que a data aqui gravada.
+        id: buildmeta
+        shell: bash
+        run: echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Gerar o build web (Expo)
         # As chaves do Supabase têm de estar presentes no build, senão a app
         # sai em modo demo offline (dados de exemplo, sem login). O .env está
@@ -46,6 +54,7 @@ jobs:
         env:
           EXPO_PUBLIC_SUPABASE_URL: https://qmkafibxlmgouslybafy.supabase.co
           EXPO_PUBLIC_SUPABASE_KEY: sb_publishable_6bjhd0CNIAglOPGmBt9Zlw_2gE4tr_r
+          EXPO_PUBLIC_BUILD_TIME: ${{ steps.buildmeta.outputs.time }}
         run: npx expo export --platform web
 
       - name: Copiar o build web para o desktop

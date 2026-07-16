@@ -117,7 +117,7 @@ export default function InspecionarExploracaoScreen() {
           animais.map((a) => (
             <Pressable
               key={a.id}
-              onPress={() => router.push(`/inspecionar/animal/${a.id}`)}
+              onPress={() => router.push({ pathname: '/inspecionar/animal/[id]', params: { id: a.id } })}
               accessibilityRole="button"
               accessibilityLabel={a.nome ?? 'Animal'}
               style={({ pressed }) => [

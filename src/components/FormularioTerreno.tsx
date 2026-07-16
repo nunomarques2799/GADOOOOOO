@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, ScrollView, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
+import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
 import { tiposTerreno, tipoTerrenoMeta } from '@/data/constants';
 import { useGado } from '@/data/store';
 import type { Terreno, TipoTerreno } from '@/data/types';
@@ -28,6 +29,7 @@ export function FormularioTerreno({
   const [descricao, setDescricao] = useState(terreno?.descricao ?? '');
   const [latitude, setLatitude] = useState(terreno?.latitude != null ? String(terreno.latitude) : '');
   const [longitude, setLongitude] = useState(terreno?.longitude != null ? String(terreno.longitude) : '');
+  const [manual, setManual] = useState(false);
 
   const exploracao = exploracaoById(exploracaoId);
   const valido = nome.trim().length > 0;
@@ -39,6 +41,15 @@ export function FormularioTerreno({
     return Number.isFinite(n) ? n : undefined;
   }
 
+  const latNum = parseNum(latitude);
+  const lngNum = parseNum(longitude);
+  const temCoords = latNum != null && lngNum != null;
+
+  function limparLocalizacao() {
+    setLatitude('');
+    setLongitude('');
+  }
+
   function guardar() {
     if (!valido) return;
     const dados = {
@@ -46,8 +57,8 @@ export function FormularioTerreno({
       tipo,
       area: parseNum(area),
       descricao: descricao.trim() || undefined,
-      latitude: parseNum(latitude),
-      longitude: parseNum(longitude),
+      latitude: latNum,
+      longitude: lngNum,
     };
     if (editar && terreno) {
       updateTerreno(terreno.id, dados);
@@ -129,30 +140,73 @@ export function FormularioTerreno({
         </Field>
 
         <Text variant="label" style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
-          Coordenadas GPS <Text variant="caption" color={colors.textMuted}>opcional — usadas para meteorologia</Text>
+          Localização no mapa{' '}
+          <Text variant="caption" color={colors.textMuted}>opcional — para direções e meteorologia</Text>
         </Text>
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <View style={{ flex: 1 }}>
-            <Text variant="caption" color={colors.textMuted} style={{ marginBottom: 4 }}>Latitude</Text>
-            <TextField
-              value={latitude}
-              onChangeText={setLatitude}
-              placeholder="39.92"
-              icon="latitude"
-              keyboardType="decimal-pad"
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text variant="caption" color={colors.textMuted} style={{ marginBottom: 4 }}>Longitude</Text>
-            <TextField
-              value={longitude}
-              onChangeText={setLongitude}
-              placeholder="-7.24"
-              icon="longitude"
-              keyboardType="decimal-pad"
-            />
-          </View>
+        <MapaLocalizacao
+          latitude={latNum}
+          longitude={lngNum}
+          selecionavel
+          altura={240}
+          onEscolher={(lat, lng) => {
+            setLatitude(lat.toFixed(6));
+            setLongitude(lng.toFixed(6));
+          }}
+        />
+
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            marginTop: spacing.xs,
+          }}>
+          <Icon name={temCoords ? 'map-marker-check' : 'map-marker-question'} size="sm" color={temCoords ? colors.primary : colors.textMuted} />
+          <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
+            {temCoords
+              ? `Marcado: ${latNum!.toFixed(5)}, ${lngNum!.toFixed(5)}`
+              : 'Toque no mapa para marcar o terreno.'}
+          </Text>
+          {temCoords ? (
+            <Pressable onPress={limparLocalizacao} hitSlop={8} accessibilityRole="button" accessibilityLabel="Limpar localização">
+              <Text variant="bodyStrong" color={colors.danger}>Limpar</Text>
+            </Pressable>
+          ) : null}
         </View>
+
+        <Pressable
+          onPress={() => setManual((m) => !m)}
+          hitSlop={6}
+          accessibilityRole="button"
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.sm }}>
+          <Icon name={manual ? 'chevron-up' : 'chevron-down'} size="sm" color={colors.textSecondary} />
+          <Text variant="secondary" color={colors.textSecondary}>Introduzir coordenadas manualmente</Text>
+        </Pressable>
+
+        {manual ? (
+          <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+            <View style={{ flex: 1 }}>
+              <Text variant="caption" color={colors.textMuted} style={{ marginBottom: 4 }}>Latitude</Text>
+              <TextField
+                value={latitude}
+                onChangeText={setLatitude}
+                placeholder="39.92"
+                icon="latitude"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="caption" color={colors.textMuted} style={{ marginBottom: 4 }}>Longitude</Text>
+              <TextField
+                value={longitude}
+                onChangeText={setLongitude}
+                placeholder="-7.24"
+                icon="longitude"
+                keyboardType="decimal-pad"
+              />
+            </View>
+          </View>
+        ) : null}
 
         {editar ? (
           <Button

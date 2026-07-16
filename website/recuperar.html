@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recuperar palavra-passe — Gestão de Gado</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#166B3D" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --green-800: #124d2e; --green-700: #166b3d; --green-600: #1b7a48; --green-50: #eef8f1;
+      --bg: #f3f6f2; --surface: #fff; --text: #15251c; --text-2: #54655b; --text-muted: #869184;
+      --border: #e3eae0; --danger: #d45b3b; --danger-tint: #fbe7e0; --success: #2e9e5b; --success-tint: #e4f5ea;
+      --r-md: 16px; --r-lg: 22px; --r-pill: 999px;
+      --shadow-lg: 0 18px 44px rgba(12, 58, 34, 0.14);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Nunito", system-ui, sans-serif; background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .card {
+      width: 100%; max-width: 440px; background: var(--surface); border-radius: var(--r-lg);
+      box-shadow: var(--shadow-lg); overflow: hidden;
+    }
+    .head {
+      background: linear-gradient(135deg, var(--green-800), var(--green-600));
+      padding: 36px 28px 30px; text-align: center; color: #fff;
+    }
+    .head .logo {
+      width: 76px; height: 76px; border-radius: var(--r-pill); background: rgba(255,255,255,.16);
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;
+    }
+    .head h1 { font-size: 1.55rem; font-weight: 800; letter-spacing: -.02em; }
+    .head p { font-weight: 500; opacity: .85; margin-top: 3px; }
+    .body { padding: 28px; }
+    label { display: block; font-weight: 700; font-size: .92rem; margin-bottom: 7px; }
+    .field {
+      display: flex; align-items: center; gap: 10px; height: 56px; border: 1.5px solid var(--border);
+      border-radius: var(--r-md); background: var(--surface); padding: 0 16px; margin-bottom: 18px;
+    }
+    .field:focus-within { border-color: var(--green-600); }
+    .field svg { flex: none; color: var(--text-muted); }
+    .field input { flex: 1; border: none; outline: none; font-family: inherit; font-size: 1.05rem; font-weight: 600; color: var(--text); background: transparent; }
+    button.primary {
+      width: 100%; height: 56px; border: none; border-radius: var(--r-md); cursor: pointer;
+      background: var(--green-600); color: #fff; font-family: inherit; font-weight: 800; font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center; gap: 8px; transition: background .15s, opacity .15s;
+    }
+    button.primary:hover:not(:disabled) { background: var(--green-700); }
+    button.primary:disabled { opacity: .5; cursor: not-allowed; }
+    .msg { display: flex; gap: 10px; align-items: flex-start; padding: 13px 15px; border-radius: var(--r-md); font-weight: 600; font-size: .95rem; margin-bottom: 18px; line-height: 1.4; }
+    .msg.err { background: var(--danger-tint); color: var(--danger); }
+    .msg.ok { background: var(--success-tint); color: var(--success); }
+    .msg svg { flex: none; margin-top: 1px; }
+    .center { text-align: center; color: var(--text-2); font-weight: 600; padding: 8px 0 4px; }
+    .hint { font-size: .85rem; color: var(--text-muted); font-weight: 600; margin-top: 6px; }
+    a.back { display: block; text-align: center; margin-top: 18px; color: var(--green-600); font-weight: 700; text-decoration: none; }
+    .hidden { display: none !important; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="head">
+      <div class="logo">
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8a5 5 0 0 0-5-5H8" /><path d="M6 8a5 5 0 0 1 5-5" />
+          <path d="M4 8c0 3 2 5 4 5m8-5c0 3-2 5-4 5" /><circle cx="12" cy="17" r="4" />
+          <path d="M10.5 16.5h.01M13.5 16.5h.01" />
+        </svg>
+      </div>
+      <h1>Nova palavra-passe</h1>
+      <p>Gestão de Gado</p>
+    </div>
+
+    <div class="body">
+      <!-- Estado: a validar o link -->
+      <div id="estado-carregar">
+        <p class="center">
+          <svg class="spin" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#54655b" stroke-width="2.4" stroke-linecap="round" style="vertical-align:-4px;margin-right:6px">
+            <path d="M21 12a9 9 0 1 1-6.2-8.5" />
+          </svg>
+          A validar o link…
+        </p>
+      </div>
+
+      <!-- Estado: link inválido -->
+      <div id="estado-invalido" class="hidden">
+        <div class="msg err">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg>
+          <span>Este link é inválido ou já expirou. Abra a app Gestão de Gado e peça um novo em <b>“Esqueci-me da palavra-passe”</b>.</span>
+        </div>
+        <a class="back" href="/">Voltar ao site</a>
+      </div>
+
+      <!-- Estado: formulário -->
+      <form id="estado-form" class="hidden">
+        <label for="p1">Nova palavra-passe</label>
+        <div class="field">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <input id="p1" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+        </div>
+        <label for="p2">Confirmar palavra-passe</label>
+        <div class="field">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="m9 15.5 2 2 4-4"/></svg>
+          <input id="p2" type="password" placeholder="Repita a palavra-passe" autocomplete="new-password" />
+        </div>
+        <div id="form-erro" class="msg err hidden"><span></span></div>
+        <button type="submit" class="primary" id="btn">Guardar palavra-passe</button>
+        <p class="hint">Depois de guardar, volte à app e entre com a nova palavra-passe.</p>
+      </form>
+
+      <!-- Estado: sucesso -->
+      <div id="estado-ok" class="hidden">
+        <div class="msg ok">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
+          <span><b>Palavra-passe alterada!</b> Volte à app Gestão de Gado e entre com a palavra-passe nova.</span>
+        </div>
+        <a class="back" href="/">Voltar ao site</a>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    // Chave PUBLISHABLE (a mesma da app/CI) — segura no cliente, protegida por RLS.
+    const SUPABASE_URL = 'https://qmkafibxlmgouslybafy.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_6bjhd0CNIAglOPGmBt9Zlw_2gE4tr_r';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { detectSessionInUrl: true, flowType: 'implicit', persistSession: false },
+    });
+
+    const el = (id) => document.getElementById(id);
+    const mostrar = (id) => {
+      ['estado-carregar', 'estado-invalido', 'estado-form', 'estado-ok'].forEach((e) =>
+        el(e).classList.toggle('hidden', e !== id));
+    };
+
+    let pronto = false;
+    function ativarForm() { if (!pronto) { pronto = true; mostrar('estado-form'); } }
+
+    // O link de recuperação abre a sessão de recuperação → evento PASSWORD_RECOVERY.
+    supabase.auth.onAuthStateChange((evento, sessao) => {
+      if (evento === 'PASSWORD_RECOVERY' || (evento === 'SIGNED_IN' && sessao)) ativarForm();
+    });
+
+    // Fallback: se o token já foi processado antes do listener, confirma a sessão.
+    (async () => {
+      const temToken = window.location.hash.includes('access_token') ||
+                       window.location.search.includes('code=');
+      const { data } = await supabase.auth.getSession();
+      if (data.session) { ativarForm(); return; }
+      // Dá um instante ao detectSessionInUrl; se não houver token nenhum, é inválido.
+      setTimeout(async () => {
+        if (pronto) return;
+        const { data: d2 } = await supabase.auth.getSession();
+        if (d2.session) ativarForm();
+        else mostrar(temToken ? 'estado-invalido' : 'estado-invalido');
+      }, 1600);
+    })();
+
+    // Submeter a nova palavra-passe.
+    el('estado-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const p1 = el('p1').value, p2 = el('p2').value;
+      const erroBox = el('form-erro');
+      const setErro = (t) => { erroBox.querySelector('span').textContent = t; erroBox.classList.remove('hidden'); };
+      erroBox.classList.add('hidden');
+      if (p1.length < 6) return setErro('A palavra-passe deve ter pelo menos 6 caracteres.');
+      if (p1 !== p2) return setErro('As palavras-passe não coincidem.');
+
+      el('btn').disabled = true;
+      el('btn').textContent = 'A guardar…';
+      const { error } = await supabase.auth.updateUser({ password: p1 });
+      if (error) {
+        el('btn').disabled = false;
+        el('btn').textContent = 'Guardar palavra-passe';
+        return setErro(error.message || 'Não foi possível guardar. Tente novamente.');
+      }
+      await supabase.auth.signOut();
+      mostrar('estado-ok');
+    });
+  </script>
+</body>
+</html>
