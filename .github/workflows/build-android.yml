@@ -1,0 +1,81 @@
+name: Build Android app
+
+# Constrói o APK/AAB para Android via EAS Build (nuvem da Expo — não precisa de
+# Android SDK no runner). O APK do perfil "preview" pode ser instalado
+# diretamente no telemóvel (fora da Play Store); o AAB do perfil "production" é
+# o que se submete à Play Store.
+#
+# Requer o secret EXPO_TOKEN (Perfil Expo → Access Tokens → criar token robô).
+#
+# Corre em push para main (nos mesmos paths do build Windows) e manualmente.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "assets/**"
+      - "app.json"
+      - "eas.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/build-android.yml"
+  workflow_dispatch:
+    inputs:
+      perfil:
+        description: "Perfil EAS a construir"
+        required: true
+        default: "preview"
+        type: choice
+        options:
+          - preview
+          - production
+
+jobs:
+  build:
+    name: Build Android (EAS)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Instalar dependências da app
+        run: npm ci
+
+      - name: Escolher perfil
+        id: perfil
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "nome=${{ github.event.inputs.perfil }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "nome=preview" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Construir Android (não-interativo)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # Mesmo motivo do build Windows: sem estas variáveis a app sai em
+          # modo demo offline (dados de seed, sem login). Chave publishable.
+          EXPO_PUBLIC_SUPABASE_URL: https://qmkafibxlmgouslybafy.supabase.co
+          EXPO_PUBLIC_SUPABASE_KEY: sb_publishable_6bjhd0CNIAglOPGmBt9Zlw_2gE4tr_r
+        run: |
+          eas build \
+            --platform android \
+            --profile ${{ steps.perfil.outputs.nome }} \
+            --non-interactive \
+            --no-wait
+
+      - name: Onde ver o artefacto
+        run: |
+          echo "Build submetido para EAS. Segue em https://expo.dev/accounts/<a-tua-conta>/projects/gestao-gado/builds"
+          echo "Quando terminar, descarrega o APK/AAB da página do build ou por 'eas build:list'."
