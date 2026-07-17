@@ -1,13 +1,15 @@
 name: Build Android app
 
-# Constrói o APK/AAB para Android via EAS Build (nuvem da Expo — não precisa de
-# Android SDK no runner). O APK do perfil "preview" pode ser instalado
-# diretamente no telemóvel (fora da Play Store); o AAB do perfil "production" é
-# o que se submete à Play Store.
+# Constrói o APK para Android via EAS Build (nuvem da Expo — não precisa de
+# Android SDK no runner) e publica-o num GitHub Release fixo (tag
+# "android-latest") para que o site possa apontar sempre para o mesmo URL:
+#   releases/download/android-latest/GestaoDeGado-Android.apk
 #
 # Requer o secret EXPO_TOKEN (Perfil Expo → Access Tokens → criar token robô).
 #
-# Corre em push para main (nos mesmos paths do build Windows) e manualmente.
+# Corre em push para main e manualmente. O AAB (production, para a Play Store)
+# tem de ser gerado manualmente com `eas build --platform android --profile
+# production` ou via workflow_dispatch com perfil=production.
 
 on:
   push:
@@ -30,6 +32,9 @@ on:
         options:
           - preview
           - production
+
+permissions:
+  contents: write # criar/atualizar o Release android-latest
 
 jobs:
   build:
@@ -61,11 +66,11 @@ jobs:
             echo "nome=preview" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Construir Android (não-interativo)
+      - name: Construir Android (espera a conclusão)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          # Mesmo motivo do build Windows: sem estas variáveis a app sai em
-          # modo demo offline (dados de seed, sem login). Chave publishable.
+          # Sem estas variáveis a app sai em modo demo offline. Chave publishable
+          # (segura para o cliente, protegida por RLS).
           EXPO_PUBLIC_SUPABASE_URL: https://qmkafibxlmgouslybafy.supabase.co
           EXPO_PUBLIC_SUPABASE_KEY: sb_publishable_6bjhd0CNIAglOPGmBt9Zlw_2gE4tr_r
         run: |
@@ -73,9 +78,40 @@ jobs:
             --platform android \
             --profile ${{ steps.perfil.outputs.nome }} \
             --non-interactive \
-            --no-wait
+            --wait
 
-      - name: Onde ver o artefacto
+      - name: Descarregar o artefacto do último build
+        # Só publicamos APK (perfil preview). Production gera AAB e é para a
+        # Play Store, não faz sentido pôr num link direto.
+        if: steps.perfil.outputs.nome == 'preview'
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          echo "Build submetido para EAS. Segue em https://expo.dev/accounts/<a-tua-conta>/projects/gestao-gado/builds"
-          echo "Quando terminar, descarrega o APK/AAB da página do build ou por 'eas build:list'."
+          set -euo pipefail
+          URL=$(eas build:list \
+            --platform android \
+            --status finished \
+            --limit 1 \
+            --json \
+            --non-interactive \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{const b=JSON.parse(d)[0];console.log(b.artifacts.buildUrl||b.artifacts.applicationArchiveUrl);});")
+          echo "URL do APK: $URL"
+          curl -L -o GestaoDeGado-Android.apk "$URL"
+          ls -lh GestaoDeGado-Android.apk
+
+      - name: Publicar no Release fixo (android-latest)
+        # Um único Release cuja tag nunca muda: o site aponta para este URL fixo
+        # e o APK é sempre substituído em cada push. Assim, o botão do site
+        # nunca precisa de ser tocado.
+        if: steps.perfil.outputs.nome == 'preview'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view android-latest >/dev/null 2>&1; then
+            gh release upload android-latest GestaoDeGado-Android.apk --clobber
+          else
+            gh release create android-latest GestaoDeGado-Android.apk \
+              --title "App Android (mais recente)" \
+              --notes "APK mais recente da app para Android. Instale abrindo o ficheiro no telemóvel (talvez seja preciso permitir 'origens desconhecidas')."
+          fi
