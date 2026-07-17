@@ -1,12 +1,15 @@
-import { Alert, Linking, Platform, Pressable, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, Badge, Card, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
+import { avisar, confirmar } from '@/data/avisos';
 import {
   csvAnimais,
   csvEventos,
   guardarFicheiro,
+  guardarRelatorio,
   hojeISO,
   htmlRelatorioPrazos,
   imprimirRelatorio,
@@ -15,9 +18,12 @@ import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
 
+const TITULO_PRAZOS = 'Relatório de prazos — Gestão de Gado';
+
 export default function PerfilScreen() {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
+  const router = useRouter();
   const { utilizador, animais, eventos, exploracoes, terrenos, alertas } = useGado();
   const { utilizador: conta, sair, configurado, apagarConta } = useAuth();
 
@@ -27,37 +33,44 @@ export default function PerfilScreen() {
   async function exportarEventos() {
     await guardarFicheiro(`eventos-${hojeISO()}.csv`, csvEventos(eventos, animais));
   }
-  function exportarPrazos() {
-    const ok = imprimirRelatorio('Relatório de prazos — Gestão de Gado', htmlRelatorioPrazos(alertas));
+  function imprimirPrazos() {
+    const ok = imprimirRelatorio(TITULO_PRAZOS, htmlRelatorioPrazos(alertas));
     if (!ok) {
-      Alert.alert('Indisponível', 'O relatório em PDF está disponível na versão de computador.');
+      avisar('Indisponível', 'A impressão do relatório está disponível na versão de computador.');
     }
   }
 
-  function confirmarApagarConta() {
-    const msg =
-      'Vai apagar a sua conta e TODOS os dados (explorações, animais, terrenos e histórico). ' +
-      'Esta ação é permanente e não pode ser desfeita. Tem a certeza?';
-    const executar = async () => {
-      const erro = await apagarConta();
-      if (erro) {
-        const texto = `Não foi possível apagar a conta: ${erro}`;
-        if (Platform.OS === 'web') {
-          if (typeof window !== 'undefined') window.alert(texto);
-        } else {
-          Alert.alert('Erro', texto);
-        }
-      }
-      // Em caso de sucesso, a sessão é limpa e o portão de auth volta ao login.
-    };
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(msg)) void executar();
+  async function descarregarPrazos() {
+    const r = await guardarRelatorio(TITULO_PRAZOS, htmlRelatorioPrazos(alertas), `prazos-${hojeISO()}`);
+    if (r.estado === 'guardado' || r.estado === 'cancelado') return; // o diálogo já falou por si
+    if (r.estado === 'html') {
+      avisar(
+        'Relatório descarregado',
+        'Guardámos o relatório como página web. Para o ter em PDF, abra-o e use Imprimir → Guardar como PDF. ' +
+          'Na app de computador o relatório é guardado logo em PDF.',
+      );
       return;
     }
-    Alert.alert('Apagar a minha conta', msg, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Apagar tudo', style: 'destructive', onPress: () => void executar() },
-    ]);
+    if (r.estado === 'indisponivel') {
+      avisar('Indisponível', 'Descarregar o relatório está disponível na versão de computador.');
+      return;
+    }
+    avisar('Não foi possível guardar', r.motivo);
+  }
+
+  function confirmarApagarConta() {
+    const executar = async () => {
+      const erro = await apagarConta();
+      if (erro) avisar('Erro', `Não foi possível apagar a conta: ${erro}`);
+      // Em caso de sucesso, a sessão é limpa e o portão de auth volta ao login.
+    };
+    confirmar(
+      'Apagar a minha conta',
+      'Vai apagar a sua conta e TODOS os dados (explorações, animais, terrenos e histórico). ' +
+        'Esta ação é permanente e não pode ser desfeita. Tem a certeza?',
+      () => void executar(),
+      { rotuloConfirmar: 'Apagar tudo', destrutivo: true },
+    );
   }
 
   // Com sessão iniciada, mostra os dados da conta; senão, o utilizador local.
@@ -76,118 +89,160 @@ export default function PerfilScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View
-        style={{
-          ...colunaPerfil,
-          paddingTop: insets.top + spacing.md,
-          paddingBottom: spacing.lg,
+      {/* A lista de opções é mais alta do que a janela — sem ScrollView o fim
+          (terminar sessão, apagar conta) ficava fora de alcance. */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          alignItems: 'center',
+          paddingBottom: insets.bottom + spacing.xxl,
         }}>
-        <Text variant="display">Perfil</Text>
-      </View>
-
-      <View style={{ ...colunaPerfil, gap: spacing.md }}>
-        {/* Cartão do utilizador */}
-        <Card>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-            <Avatar initials={iniciais} size={64} />
-            <View style={{ flex: 1 }}>
-              <Text variant="h2" numberOfLines={1}>
-                {nome}
-              </Text>
-              <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
-                {email}
-              </Text>
-              <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs }}>
-                <Badge tone="brand" icon="cow" label={`${animais.length} animais`} />
-                <Badge tone="neutral" icon="barn" label={`${exploracoes.length} explor.`} />
-              </View>
-            </View>
-          </View>
-        </Card>
-
-        {/* Estado de sincronização (offline-first) */}
-        <Card>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: radii.pill,
-                backgroundColor: colors.successTint,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Icon name="cloud-check-outline" size="md" color={colors.success} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="bodyStrong">Dados guardados no dispositivo</Text>
-              <Text variant="secondary" color={colors.textSecondary}>
-                Funciona sem internet. Sincroniza quando houver rede.
-              </Text>
-            </View>
-          </View>
-        </Card>
-
-        {/* Exportar e relatórios */}
-        <View>
-          <Text variant="label" color={colors.textSecondary} style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-            EXPORTAR E RELATÓRIOS
-          </Text>
-          <Card padded={false}>
-            <SettingRow
-              icon="cow"
-              label="Exportar animais (CSV)"
-              trailing={String(animais.length)}
-              onPress={exportarAnimais}
-            />
-            <SettingRow
-              icon="calendar-text-outline"
-              label="Exportar eventos (CSV)"
-              trailing={String(eventos.length)}
-              onPress={exportarEventos}
-            />
-            <SettingRow
-              icon="file-chart-outline"
-              label="Relatório de prazos (PDF)"
-              trailing={String(alertas.length)}
-              onPress={exportarPrazos}
-              last
-            />
-          </Card>
+        <View
+          style={{
+            ...colunaPerfil,
+            paddingTop: insets.top + spacing.md,
+            paddingBottom: spacing.lg,
+          }}>
+          <Text variant="display">Perfil</Text>
         </View>
 
-        {/* Definições */}
-        <Card padded={false}>
-          <SettingRow icon="account-edit" label="Editar dados pessoais" />
-          <SettingRow icon="cloud-sync-outline" label="Sincronização e cópia de segurança" />
-          <SettingRow icon="file-export-outline" label="Exportar para o iDigital" trailing="Fase 2" />
-          <SettingRow icon="bell-outline" label="Notificações e alertas" />
-          <SettingRow
-            icon="shield-account-outline"
-            label="Privacidade e termos"
-            onPress={() => void Linking.openURL('https://gestaogado.netlify.app/privacidade')}
-          />
-          <SettingRow icon="help-circle-outline" label="Ajuda e apoio" last />
-        </Card>
+        <View style={{ ...colunaPerfil, gap: spacing.md }}>
+          {/* Cartão do utilizador */}
+          <Card>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <Avatar initials={iniciais} size={64} />
+              <View style={{ flex: 1 }}>
+                <Text variant="h2" numberOfLines={1}>
+                  {nome}
+                </Text>
+                <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
+                  {email}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs }}>
+                  <Badge tone="brand" icon="cow" label={`${animais.length} animais`} />
+                  <Badge tone="neutral" icon="barn" label={`${exploracoes.length} explor.`} />
+                </View>
+              </View>
+            </View>
+          </Card>
 
-        {/* Conta — sessão e apagamento RGPD (só com Supabase/sessão) */}
-        {configurado ? (
+          {/* Estado de sincronização (offline-first) */}
+          <Card>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: radii.pill,
+                  backgroundColor: colors.successTint,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Icon name="cloud-check-outline" size="md" color={colors.success} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyStrong">Dados guardados no dispositivo</Text>
+                <Text variant="secondary" color={colors.textSecondary}>
+                  Funciona sem internet. Sincroniza quando houver rede.
+                </Text>
+              </View>
+            </View>
+          </Card>
+
+          {/* Exportar e relatórios */}
+          <View>
+            <Text variant="label" color={colors.textSecondary} style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
+              EXPORTAR E RELATÓRIOS
+            </Text>
+            <Card padded={false}>
+              <SettingRow
+                icon="cow"
+                label="Exportar animais (CSV)"
+                trailing={String(animais.length)}
+                onPress={exportarAnimais}
+              />
+              <SettingRow
+                icon="calendar-text-outline"
+                label="Exportar eventos (CSV)"
+                trailing={String(eventos.length)}
+                onPress={exportarEventos}
+              />
+              <SettingRow
+                icon="printer-outline"
+                label="Imprimir relatório de prazos"
+                trailing={String(alertas.length)}
+                onPress={imprimirPrazos}
+              />
+              <SettingRow
+                icon="file-download-outline"
+                label="Descarregar relatório (PDF)"
+                trailing={String(alertas.length)}
+                onPress={() => void descarregarPrazos()}
+                last
+              />
+            </Card>
+          </View>
+
+          {/* Definições */}
           <Card padded={false}>
-            <SettingRow icon="logout" label="Terminar sessão" tint={colors.danger} onPress={sair} />
             <SettingRow
-              icon="delete-outline"
-              label="Apagar a minha conta"
-              tint={colors.danger}
-              onPress={confirmarApagarConta}
+              icon="account-edit"
+              label="Editar dados pessoais"
+              onPress={() => router.push('/conta/editar')}
+            />
+            <SettingRow
+              icon="cloud-sync-outline"
+              label="Sincronização e cópia de segurança"
+              onPress={() => router.push('/conta/sincronizacao')}
+            />
+            <SettingRow
+              icon="file-export-outline"
+              label="Exportar para o iDigital"
+              trailing="Fase 2"
+              onPress={() =>
+                avisar(
+                  'Ainda em desenvolvimento',
+                  'A exportação para o iDigital chega numa próxima versão. Entretanto pode usar o "Descarregar relatório (PDF)" ou o "Exportar animais (CSV)".',
+                )
+              }
+            />
+            <SettingRow
+              icon="bell-outline"
+              label="Notificações e alertas"
+              onPress={() => router.push('/conta/notificacoes')}
+            />
+            <SettingRow
+              icon="shield-account-outline"
+              label="Privacidade e termos"
+              onPress={() => void Linking.openURL('https://gestaogado.netlify.app/privacidade')}
+            />
+            <SettingRow
+              icon="help-circle-outline"
+              label="Ajuda e apoio"
+              onPress={() => router.push('/conta/ajuda')}
               last
             />
           </Card>
-        ) : null}
 
-        <Text variant="caption" color={colors.textMuted} center style={{ marginTop: spacing.xs }}>
-          Gestão de Gado · versão 0.1.0
-        </Text>
-      </View>
+          {/* Conta — sessão e apagamento RGPD (só com Supabase/sessão) */}
+          {configurado ? (
+            <Card padded={false}>
+              <SettingRow icon="logout" label="Terminar sessão" tint={colors.danger} onPress={sair} />
+              <SettingRow
+                icon="delete-outline"
+                label="Apagar a minha conta"
+                tint={colors.danger}
+                onPress={confirmarApagarConta}
+                last
+              />
+            </Card>
+          ) : null}
+
+          <Text variant="caption" color={colors.textMuted} center style={{ marginTop: spacing.xs }}>
+            Gestão de Gado · versão 0.1.0
+          </Text>
+        </View>
+      </ScrollView>
     </View>
   );
 }

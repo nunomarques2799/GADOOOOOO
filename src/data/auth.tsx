@@ -28,6 +28,9 @@ function traduzErro(msg: string): string {
 /** Resultado de registo: erro, ou aviso de confirmação de email pendente. */
 export type ResultadoRegisto = { erro: string } | { confirmarEmail: boolean };
 
+/** Resultado de atualizar perfil: erro, ou confirmação pendente (se mudou o email). */
+export type ResultadoPerfil = { erro: string } | { confirmarEmail: boolean };
+
 type AuthContext = {
   sessao: Session | null;
   utilizador: User | null;
@@ -41,6 +44,8 @@ type AuthContext = {
   recuperarPalavra: (email: string) => Promise<string | null>;
   /** Define a nova palavra-passe (durante a recuperação). Erro ou null. */
   definirNovaPalavra: (palavra: string) => Promise<string | null>;
+  /** Muda nome/email da conta. Se mudou o email, o Supabase pede confirmação. */
+  atualizarPerfil: (nome: string, email: string) => Promise<ResultadoPerfil>;
   /** RGPD: apaga a conta e todos os dados do utilizador. Erro ou null. */
   apagarConta: () => Promise<string | null>;
   sair: () => Promise<void>;
@@ -112,6 +117,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   }, []);
 
+  /**
+   * Atualiza nome e/ou email da conta. Mudar de email não é imediato: o
+   * Supabase envia confirmação para o endereço novo e só troca quando o
+   * utilizador clicar — daí devolvermos se ficou à espera de confirmação.
+   */
+  const atualizarPerfil = useCallback(
+    async (nome: string, email: string): Promise<ResultadoPerfil> => {
+      if (!supabase) return { erro: 'Supabase não configurado.' };
+      const emailAtual = sessao?.user.email ?? '';
+      const mudouEmail = email.trim().toLowerCase() !== emailAtual.toLowerCase();
+
+      const { error } = await supabase.auth.updateUser({
+        data: { nome: nome.trim() },
+        ...(mudouEmail ? { email: email.trim() } : {}),
+      });
+      if (error) return { erro: traduzErro(error.message) };
+      return { confirmarEmail: mudouEmail };
+    },
+    [sessao],
+  );
+
   const apagarConta = useCallback(async (): Promise<string | null> => {
     if (!supabase) return 'Supabase não configurado.';
     const { error } = await supabase.rpc('apagar_a_minha_conta');
@@ -136,12 +162,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       registar,
       recuperarPalavra,
       definirNovaPalavra,
+      atualizarPerfil,
       apagarConta,
       sair,
     }),
     [
       sessao, aCarregar, emRecuperacao, entrar, registar,
-      recuperarPalavra, definirNovaPalavra, apagarConta, sair,
+      recuperarPalavra, definirNovaPalavra, atualizarPerfil, apagarConta, sair,
     ],
   );
 

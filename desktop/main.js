@@ -4,7 +4,7 @@
 // file://) is required because the SPA references assets with absolute paths
 // and uses client-side (history) routing.
 
-const { app, BrowserWindow, shell, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, Menu, ipcMain, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const http = require('http');
 const fs = require('fs');
@@ -178,6 +178,46 @@ ipcMain.handle('atualizacao-instalar', () => {
   // (isSilent: sem janelas do instalador; isForceRunAfter: reabre a app.)
   setImmediate(() => autoUpdater.quitAndInstall(true, true));
   return true;
+});
+
+/**
+ * Gera um PDF a partir do HTML de um relatório e pergunta onde o guardar.
+ * O renderer não pode escrever no disco (contextIsolation), e o browser só
+ * sabe "imprimir"; aqui usamos o printToPDF do Chromium numa janela oculta,
+ * o que dá um PDF verdadeiro sem depender do diálogo de impressão.
+ *
+ * Devolve: 'guardado' | 'cancelado' | 'erro: <motivo>'.
+ */
+ipcMain.handle('relatorio-guardar-pdf', async (_evento, { html, nomeSugerido }) => {
+  let janela = null;
+  try {
+    janela = new BrowserWindow({
+      show: false,
+      webPreferences: { offscreen: true, javascript: false },
+    });
+    // data: URL em vez de ficheiro temporário — o HTML é gerado pela própria
+    // app e não precisa de tocar no disco antes de virar PDF.
+    await janela.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    const pdf = await janela.webContents.printToPDF({
+      printBackground: true,
+      pageSize: 'A4',
+      margins: { marginType: 'default' },
+    });
+
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Guardar relatório',
+      defaultPath: nomeSugerido,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    });
+    if (canceled || !filePath) return 'cancelado';
+
+    await fs.promises.writeFile(filePath, pdf);
+    return 'guardado';
+  } catch (erro) {
+    return `erro: ${erro && erro.message ? erro.message : String(erro)}`;
+  } finally {
+    if (janela) janela.destroy();
+  }
 });
 
 // Minimal PT menu (mostly hidden; Ctrl+Q/refresh still handy).

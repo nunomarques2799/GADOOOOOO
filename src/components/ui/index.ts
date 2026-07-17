@@ -10,4 +10,5 @@ export { SectionHeader } from './SectionHeader';
 export { FAB } from './FAB';
 export { Avatar } from './Avatar';
 export { EmptyState } from './EmptyState';
+export { Field, TextField } from './FormField';
 export { Header } from './Header';

@@ -1,6 +1,6 @@
-// Ponte entre a app (renderer) e o processo principal, só para a atualização.
-// Expõe três funções e mais nada — o renderer continua sem acesso ao Node
-// (contextIsolation ligado, nodeIntegration desligado).
+// Ponte entre a app (renderer) e o processo principal: atualização e gravação
+// de relatórios em PDF. Expõe apenas estas funções — o renderer continua sem
+// acesso ao Node (contextIsolation ligado, nodeIntegration desligado).
 
 const { contextBridge, ipcRenderer } = require('electron');
 
@@ -17,4 +17,13 @@ contextBridge.exposeInMainWorld('gadoAtualizacao', {
     ipcRenderer.on('atualizacao-pronta', handler);
     return () => ipcRenderer.removeListener('atualizacao-pronta', handler);
   },
+});
+
+contextBridge.exposeInMainWorld('gadoRelatorio', {
+  /**
+   * Converte o HTML do relatório em PDF e abre o diálogo "Guardar como".
+   * Devolve 'guardado' | 'cancelado' | 'erro: <motivo>'.
+   */
+  guardarPdf: (html, nomeSugerido) =>
+    ipcRenderer.invoke('relatorio-guardar-pdf', { html, nomeSugerido }),
 });

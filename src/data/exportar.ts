@@ -179,7 +179,76 @@ export function imprimirRelatorio(titulo: string, corpoHtml: string): boolean {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
   const win = window.open('', '_blank');
   if (!win) return false;
-  win.document.write(`<!doctype html>
+  win.document.write(documentoRelatorio(titulo, corpoHtml, { comBotaoImprimir: true }));
+  win.document.close();
+  return true;
+}
+
+/**
+ * Ponte para o PDF do Electron (ver desktop/preload.js). Só existe na app de
+ * computador; no browser e no telemóvel é undefined.
+ */
+type PonteRelatorio = {
+  guardarPdf: (html: string, nomeSugerido: string) => Promise<string>;
+};
+
+function ponteRelatorio(): PonteRelatorio | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return (window as unknown as { gadoRelatorio?: PonteRelatorio }).gadoRelatorio;
+}
+
+/** Resultado de guardar um relatório, para quem chama poder informar o utilizador. */
+export type ResultadoGuardar =
+  | { estado: 'guardado' }
+  | { estado: 'cancelado' }
+  | { estado: 'html' } // sem Electron: descarregou a página em vez do PDF
+  | { estado: 'indisponivel' } // nativo: não há descarregamento de ficheiros
+  | { estado: 'erro'; motivo: string };
+
+/**
+ * Guarda o relatório como ficheiro. Na app de computador gera um PDF verdadeiro
+ * (Chromium printToPDF, com diálogo "Guardar como"); no browser não há acesso ao
+ * disco, por isso descarrega o mesmo relatório em HTML — abre em qualquer lado e
+ * imprime para PDF a partir daí.
+ */
+export async function guardarRelatorio(
+  titulo: string,
+  corpoHtml: string,
+  nomeBase: string,
+): Promise<ResultadoGuardar> {
+  const html = documentoRelatorio(titulo, corpoHtml, { comBotaoImprimir: false });
+
+  const ponte = ponteRelatorio();
+  if (ponte) {
+    const r = await ponte.guardarPdf(html, `${nomeBase}.pdf`);
+    if (r === 'guardado') return { estado: 'guardado' };
+    if (r === 'cancelado') return { estado: 'cancelado' };
+    return { estado: 'erro', motivo: r.replace(/^erro:\s*/, '') };
+  }
+
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    await guardarFicheiro(`${nomeBase}.html`, html, 'text/html');
+    return { estado: 'html' };
+  }
+  return { estado: 'indisponivel' };
+}
+
+/** Documento HTML completo do relatório — partilhado pela impressão e pelo PDF. */
+function documentoRelatorio(
+  titulo: string,
+  corpoHtml: string,
+  { comBotaoImprimir }: { comBotaoImprimir: boolean },
+): string {
+  // O botão e o auto-print só fazem sentido na janela de impressão; no PDF
+  // seriam um botão morto desenhado no ficheiro.
+  const botao = comBotaoImprimir
+    ? '<button class="btn-print" onclick="window.print()">Imprimir / Guardar PDF</button>'
+    : '';
+  const autoPrint = comBotaoImprimir
+    ? "<script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 300); });<\/script>"
+    : '';
+
+  return `<!doctype html>
 <html lang="pt-PT"><head><meta charset="utf-8" />
 <title>${escaparHtml(titulo)}</title>
 <style>
@@ -206,10 +275,8 @@ export function imprimirRelatorio(titulo: string, corpoHtml: string): boolean {
   @media print { .btn-print { display: none; } body { margin: 0; } }
 </style></head>
 <body>
-<button class="btn-print" onclick="window.print()">Imprimir / Guardar PDF</button>
+${botao}
 ${corpoHtml}
-<script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 300); });</script>
-</body></html>`);
-  win.document.close();
-  return true;
+${autoPrint}
+</body></html>`;
 }

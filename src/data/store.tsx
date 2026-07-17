@@ -35,6 +35,7 @@ import {
   type OpPendente,
 } from './cacheLocal';
 import { computeAlertas } from './helpers';
+import { filtrarAlertas, useNotificacoes } from './notificacoes';
 import {
   animaisSeed,
   eventosSeed,
@@ -226,7 +227,13 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   const [meteorologia, setMeteorologia] = useState<Meteorologia>(meteorologiaFallback);
   const [meteoEstado, setMeteoEstado] = useState<MeteoEstado>('a-carregar');
 
-  const alertas = useMemo(() => computeAlertas(animais, eventos), [animais, eventos]);
+  // Todos os alertas possíveis; as preferências do utilizador (ecrã
+  // "Notificações e alertas") filtram categorias e antecedência.
+  const { preferencias: prefsNotif } = useNotificacoes();
+  const alertas = useMemo(
+    () => filtrarAlertas(computeAlertas(animais, eventos), prefsNotif),
+    [animais, eventos, prefsNotif],
+  );
 
   const [online, setOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine !== false : true,

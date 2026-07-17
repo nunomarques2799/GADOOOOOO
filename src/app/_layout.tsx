@@ -18,6 +18,7 @@ import { EcraNovaPalavra } from '@/components/EcraNovaPalavra';
 import { EcraPendente } from '@/components/EcraPendente';
 import { AuthProvider, useAuth } from '@/data/auth';
 import { MembrosProvider, useMembros } from '@/data/membros';
+import { NotificacoesProvider } from '@/data/notificacoes';
 import { GadoProvider } from '@/data/store';
 import { supabaseConfigurado } from '@/data/supabase';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -141,7 +142,8 @@ export default function RootLayout() {
         <PortaoAuth>
           <MembrosProvider>
             <AppRouter>
-              <GadoProvider>
+              <NotificacoesProvider>
+                <GadoProvider>
                 <Stack
                   screenOptions={{
                     headerShown: false,
@@ -165,10 +167,15 @@ export default function RootLayout() {
                   <Stack.Screen name="terreno/animais/[id]" options={{ animation: 'slide_from_bottom' }} />
                   <Stack.Screen name="exploracao/equipa/[id]" />
                   <Stack.Screen name="cliente/[id]" />
+                  <Stack.Screen name="conta/editar" />
+                  <Stack.Screen name="conta/sincronizacao" />
+                  <Stack.Screen name="conta/notificacoes" />
+                  <Stack.Screen name="conta/ajuda" />
                   <Stack.Screen name="inspecionar/exploracao/[id]" />
                   <Stack.Screen name="inspecionar/animal/[id]" />
                 </Stack>
-              </GadoProvider>
+                </GadoProvider>
+              </NotificacoesProvider>
             </AppRouter>
           </MembrosProvider>
         </PortaoAuth>
