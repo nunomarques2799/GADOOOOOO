@@ -113,6 +113,8 @@ export default function RootLayout() {
                   <Stack.Screen name="alertas" />
                   <Stack.Screen name="animal/[id]" />
                   <Stack.Screen name="animal/novo" options={{ animation: 'slide_from_bottom' }} />
+                  <Stack.Screen name="animal/editar/[id]" />
+                  <Stack.Screen name="animal/genealogia/[id]" />
                   <Stack.Screen name="evento/novo" options={{ animation: 'slide_from_bottom' }} />
                   <Stack.Screen name="exploracao/[id]" />
                   <Stack.Screen name="exploracao/nova" options={{ animation: 'slide_from_bottom' }} />

@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Platform, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { AlertItem } from '@/components/AlertItem';
 import {
@@ -16,6 +16,7 @@ import {
   Text,
 } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
+import { filhosDe, rotuloAnimal } from '@/data/genealogia';
 import { formatDataPt, idadeExtenso } from '@/data/helpers';
 import { useGado } from '@/data/store';
 import type { EventoTipo } from '@/data/types';
@@ -32,25 +33,10 @@ const eventoIcone: Record<EventoTipo, IconName> = {
   Morte: 'grave-stone',
 };
 
-function confirmarEliminar(nome: string, onYes: () => void) {
-  const msg = `Eliminar "${nome}"? Esta ação não pode ser anulada.`;
-  if (Platform.OS === 'web') {
-    // eslint-disable-next-line no-alert
-    if (typeof window !== 'undefined' && window.confirm(msg)) onYes();
-  } else {
-    // Import dinâmico para não afetar a web
-    const { Alert } = require('react-native');
-    Alert.alert('Eliminar animal', msg, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: onYes },
-    ]);
-  }
-}
-
 export default function AnimalDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { animalById, terrenoById, exploracaoById, eventosByAnimal, alertas, deleteAnimal } = useGado();
+  const { animais, animalById, terrenoById, exploracaoById, eventosByAnimal, alertas } = useGado();
 
   const animal = animalById(id);
 
@@ -68,12 +54,17 @@ export default function AnimalDetalheScreen() {
   const exploracao = exploracaoById(animal.exploracaoId);
   const mae = animal.maeId ? animalById(animal.maeId) : undefined;
   const pai = animal.paiId ? animalById(animal.paiId) : undefined;
+  const crias = filhosDe(animais, animal.id);
   const eventos = eventosByAnimal(animal.id);
   const meusAlertas = alertas.filter((a) => a.animalId === animal.id);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title={animal.nome ?? 'Animal'} />
+      <Header
+        title={animal.nome ?? 'Animal'}
+        actionIcon="pencil-outline"
+        onAction={() => router.push(`/animal/editar/${animal.id}`)}
+      />
       <Screen>
         {/* Hero */}
         <LinearGradient
@@ -146,9 +137,16 @@ export default function AnimalDetalheScreen() {
           <InfoField icon="cake-variant" label="Data de nascimento" value={formatDataPt(animal.dataNascimento)} />
           <InfoField icon="clock-outline" label="Idade" value={idadeExtenso(animal.dataNascimento)} />
           <InfoField icon="palette-outline" label="Raça / pelagem" value={[animal.raca, animal.corPelagem].filter(Boolean).join(' · ') || '—'} />
-          <GenealogiaRow label="Mãe" nome={mae?.nome} onPress={mae ? () => router.push(`/animal/${mae.id}`) : undefined} />
-          <GenealogiaRow label="Pai" nome={pai?.nome} onPress={pai ? () => router.push(`/animal/${pai.id}`) : undefined} last />
+          <GenealogiaRow label="Mãe" nome={mae ? rotuloAnimal(mae) : undefined} onPress={mae ? () => router.push(`/animal/${mae.id}`) : undefined} />
+          <GenealogiaRow label="Pai" nome={pai ? rotuloAnimal(pai) : undefined} onPress={pai ? () => router.push(`/animal/${pai.id}`) : undefined} last />
         </Card>
+        <Button
+          label={`Ver árvore genealógica${crias.length > 0 ? ` (${crias.length} cria${crias.length === 1 ? '' : 's'})` : ''}`}
+          icon="family-tree"
+          variant="secondary"
+          onPress={() => router.push(`/animal/genealogia/${animal.id}`)}
+          style={{ marginTop: spacing.sm }}
+        />
 
         {/* Localização */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
@@ -213,15 +211,10 @@ export default function AnimalDetalheScreen() {
             onPress={() => router.push({ pathname: '/evento/novo', params: { animalId: animal.id } })}
           />
           <Button
-            label="Eliminar animal"
-            icon="trash-can-outline"
+            label="Editar dados do animal"
+            icon="pencil-outline"
             variant="ghost"
-            onPress={() =>
-              confirmarEliminar(animal.nome ?? 'este animal', () => {
-                deleteAnimal(animal.id);
-                router.back();
-              })
-            }
+            onPress={() => router.push(`/animal/editar/${animal.id}`)}
           />
         </View>
       </Screen>
