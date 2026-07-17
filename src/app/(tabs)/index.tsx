@@ -157,7 +157,11 @@ export default function InicioScreen() {
           end={{ x: 1, y: 1 }}
           style={{
             paddingTop: insets.top + (desktop ? spacing.xl : spacing.md),
-            paddingBottom: spacing.xxxl + spacing.lg,
+            // No telemóvel o cabeçalho é fundo e o conteúdo sobe por cima
+            // dele; em desktop as colunas começam com títulos em texto
+            // escuro, que sobre o verde ficavam ilegíveis — aqui o conteúdo
+            // fica abaixo, e o cabeçalho não precisa de folga extra.
+            paddingBottom: desktop ? spacing.xl : spacing.xxxl + spacing.lg,
             paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
             // Em desktop encosta à barra lateral — cantos redondos aqui
             // abririam uma fresta de fundo entre as duas.
@@ -203,7 +207,7 @@ export default function InicioScreen() {
             maxWidth: desktop ? layout.conteudoDesktop : undefined,
             alignSelf: 'center',
             paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
-            marginTop: -spacing.xxxl,
+            marginTop: desktop ? spacing.lg : -spacing.xxxl,
           }}>
           {/* Aviso de nova versão — só na app desktop quando há atualização */}
           <BannerAtualizacao />
