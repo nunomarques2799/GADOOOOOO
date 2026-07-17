@@ -60,7 +60,6 @@ import type {
   EstadoAnimal,
   Evento,
   Exploracao,
-  Meteorologia,
   Terreno,
   Utilizador,
 } from './types';
@@ -101,28 +100,22 @@ async function enviarOp(op: OpPendente): Promise<string | null> {
   }
 }
 
-/** Gerador de ID simples (UUID v4 quando disponível). */
-function novoId(prefixo = 'id'): string {
+/**
+ * Gerador de ID. Devolve sempre um UUID v4 — o formato que as colunas `id` do
+ * Postgres (Supabase) esperam. Usa `crypto.randomUUID` quando existe e, em
+ * ambientes sem ele, gera um UUID v4 válido à mão (não um id textual, que faria
+ * o upsert falhar com erro de validação em vez de sincronizar).
+ */
+function novoId(): string {
   const g = globalThis as { crypto?: { randomUUID?: () => string } };
   if (g.crypto?.randomUUID) return g.crypto.randomUUID();
-  return `${prefixo}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
 }
 
-/** Meteorologia de recurso — mostrada enquanto carrega ou se não houver rede. */
-const meteorologiaFallback: Meteorologia = {
-  local: 'Idanha-a-Nova',
-  temperatura: 24,
-  condicao: 'Sol com nuvens',
-  icone: 'weather-partly-cloudy',
-  humidade: 48,
-  vento: 12,
-  precipitacao: 0,
-  maxima: 29,
-  minima: 16,
-  conselho: 'Bom dia para verificar os bebedouros — calor à tarde.',
-};
-
-/** Estado da obtenção de meteorologia — para a UI mostrar "offline" se falhar. */
+/** Estado da obtenção de meteorologia (usado pelo WeatherCard por exploração). */
 export type MeteoEstado = 'a-carregar' | 'atual' | 'offline';
 
 /** Instantâneo de todos os dados carregados no arranque (BD ou seed). */
@@ -173,8 +166,6 @@ type GadoContext = {
   animais: Animal[];
   eventos: Evento[];
   alertas: Alerta[];
-  meteorologia: Meteorologia;
-  meteoEstado: MeteoEstado;
   /** Há ligação para sincronizar com o servidor? (offline-first) */
   online: boolean;
   /** Nº de alterações locais ainda por enviar ao Supabase. */
@@ -214,7 +205,6 @@ type GadoContext = {
   deleteTerreno: (id: string) => Promise<void>;
   addEvento: (e: Omit<Evento, 'id'>) => Promise<Evento>;
   recarregar: () => Promise<void>;
-  recarregarMeteo: () => void;
 };
 
 const Ctx = createContext<GadoContext | null>(null);
@@ -227,7 +217,14 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   if (bootRef.current === null) bootRef.current = snapshotSincrono();
   const boot = bootRef.current;
 
-  const [utilizador] = useState<Utilizador>(boot.utilizador);
+  // Com sessão Supabase, o perfil vem da conta autenticada — não do seed (que
+  // só serve o modo offline/demo). Sem sessão, fica o utilizador local.
+  const utilizador = useMemo<Utilizador>(() => {
+    const u = sessao?.user;
+    if (!u) return boot.utilizador;
+    const nome = (u.user_metadata?.nome as string | undefined)?.trim();
+    return { id: u.id, nome: nome || (u.email ?? boot.utilizador.nome), email: u.email ?? boot.utilizador.email };
+  }, [sessao, boot.utilizador]);
   const [exploracoes, setExploracoes] = useState<Exploracao[]>(boot.exploracoes);
   const [terrenos, setTerrenos] = useState<Terreno[]>(boot.terrenos);
   const [animais, setAnimais] = useState<Animal[]>(boot.animais);
@@ -240,9 +237,6 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   exploracoesRef.current = exploracoes;
   const terrenosRef = useRef(terrenos);
   terrenosRef.current = terrenos;
-
-  const [meteorologia, setMeteorologia] = useState<Meteorologia>(meteorologiaFallback);
-  const [meteoEstado, setMeteoEstado] = useState<MeteoEstado>('a-carregar');
 
   // Todos os alertas possíveis; as preferências do utilizador (ecrã
   // "Notificações e alertas") filtram categorias e antecedência.
@@ -370,18 +364,6 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     };
   }, [usaSupabase, sincronizar]);
 
-  /* ---- Meteorologia (ecrã principal — mantém como fallback global) ---- */
-
-  const recarregarMeteo = useCallback(() => {
-    // A meteorologia por exploração é obtida em useMeteorologia; aqui só
-    // mantemos o estado para retro-compatibilidade dos consumers antigos.
-    setMeteoEstado('atual');
-  }, []);
-
-  useEffect(() => {
-    setMeteoEstado('atual');
-  }, []);
-
   /* ---- Seletores ---- */
 
   const exploracaoById = useCallback(
@@ -417,7 +399,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
   const addAnimal = useCallback(
     async (a: Omit<Animal, 'id'>): Promise<Animal> => {
-      const novo: Animal = { ...a, id: novoId('an') };
+      const novo: Animal = { ...a, id: novoId() };
       setAnimais((prev) => [novo, ...prev]); // otimista — aparece já, mesmo offline
       if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'animal', dados: novo });
       else gravarSqlite((db) => guardarAnimal(db, novo));
@@ -468,7 +450,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       const descricao =
         estado === 'falecido' ? 'Animal registado como falecido.' : 'Animal saiu por venda.';
       const evento: Evento = {
-        id: novoId('ev'),
+        id: novoId(),
         animalId: id,
         tipo,
         data,
@@ -509,7 +491,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
   const addExploracao = useCallback(
     async (e: Omit<Exploracao, 'id' | 'utilizadorId'>): Promise<Exploracao> => {
-      const nova: Exploracao = { ...e, id: novoId('exp'), utilizadorId: utilizador.id };
+      const nova: Exploracao = { ...e, id: novoId(), utilizadorId: utilizador.id };
       setExploracoes((prev) => [...prev, nova]); // otimista
       if (usaSupabase) {
         const enviado = await empurrar({ op: 'upsert', entidade: 'exploracao', dados: nova });
@@ -558,7 +540,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
   const addTerreno = useCallback(
     async (t: Omit<Terreno, 'id'>): Promise<Terreno> => {
-      const novo: Terreno = { ...t, id: novoId('ter') };
+      const novo: Terreno = { ...t, id: novoId() };
       setTerrenos((prev) => [...prev, novo]);
       if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'terreno', dados: novo });
       else gravarSqlite((db) => guardarTerreno(db, novo));
@@ -591,7 +573,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
   const addEvento = useCallback(
     async (e: Omit<Evento, 'id'>): Promise<Evento> => {
-      const novo: Evento = { ...e, id: novoId('ev') };
+      const novo: Evento = { ...e, id: novoId() };
       setEventos((prev) => [novo, ...prev]);
       if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'evento', dados: novo });
       else gravarSqlite((db) => guardarEvento(db, novo));
@@ -608,8 +590,6 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       animais,
       eventos,
       alertas,
-      meteorologia,
-      meteoEstado,
       online,
       pendentesSinc,
       exploracaoById,
@@ -632,18 +612,17 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       deleteTerreno,
       addEvento,
       recarregar,
-      recarregarMeteo,
     }),
     [
       utilizador, exploracoes, terrenos, animais, eventos, alertas,
-      meteorologia, meteoEstado, online, pendentesSinc,
+      online, pendentesSinc,
       exploracaoById, animalById, terrenoById, animaisByExploracao,
       animaisByExploracaoIncluindoSaidos,
       terrenosByExploracao, eventosByAnimal, addAnimal, updateAnimal,
       deleteAnimal, marcarSaida, reativarAnimal,
       addExploracao, updateExploracao, deleteExploracao,
       addTerreno, updateTerreno, deleteTerreno, addEvento,
-      recarregar, recarregarMeteo,
+      recarregar,
     ],
   );
 

@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, Badge, Card, Icon, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
+import { VERSAO_APP } from '@/data/versao';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
 
@@ -101,7 +102,7 @@ export default function SuperadminPerfilScreen() {
           </Card>
 
           <Text variant="caption" color={colors.textMuted} center style={{ marginTop: spacing.xs }}>
-            Gestão de Gado · superadmin · v0.1.0
+            Gestão de Gado · superadmin · v{VERSAO_APP}
           </Text>
         </View>
       </ScrollView>

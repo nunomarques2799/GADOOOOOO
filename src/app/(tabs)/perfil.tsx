@@ -15,6 +15,7 @@ import {
   imprimirRelatorio,
 } from '@/data/exportar';
 import { useGado } from '@/data/store';
+import { VERSAO_APP } from '@/data/versao';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
 
@@ -239,7 +240,7 @@ export default function PerfilScreen() {
           ) : null}
 
           <Text variant="caption" color={colors.textMuted} center style={{ marginTop: spacing.xs }}>
-            Gestão de Gado · versão 0.1.0
+            Gestão de Gado · versão {VERSAO_APP}
           </Text>
         </View>
       </ScrollView>

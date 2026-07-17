@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
+import { confirmar } from '@/data/avisos';
 import { PrazosLegais, especieMeta, especies, sexos } from '@/data/constants';
 import { formatDataCurta, formatDataPt, idadeDias, idadeExtenso, isoDaysAgo, parseDataPt } from '@/data/helpers';
 import { rotuloAnimal } from '@/data/genealogia';
@@ -162,19 +163,15 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
   function confirmarEliminar() {
     if (!animal) return;
     const rotulo = rotuloAnimal(animal);
-    const msg = `Eliminar "${rotulo}"? Esta ação não pode ser anulada.`;
-    const executar = () => {
-      void deleteAnimal(animal.id);
-      router.dismissTo('/(tabs)/animais');
-    };
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(msg)) executar();
-      return;
-    }
-    Alert.alert('Eliminar animal', msg, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: executar },
-    ]);
+    confirmar(
+      'Eliminar animal',
+      `Eliminar "${rotulo}"? Esta ação não pode ser anulada.`,
+      () => {
+        void deleteAnimal(animal.id);
+        router.dismissTo('/(tabs)/animais');
+      },
+      { rotuloConfirmar: 'Eliminar', destrutivo: true },
+    );
   }
 
   return (

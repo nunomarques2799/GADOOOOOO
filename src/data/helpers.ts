@@ -178,7 +178,7 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
           id: `vac-${a.id}`,
           categoria: 'vacinacao',
           animalId: a.id,
-          gravidade: restam <= 0 ? 'aviso' : 'info',
+          gravidade: restam <= 0 ? 'urgente' : 'info',
           titulo: restam <= 0 ? 'Revacinação em atraso' : 'Revacinação a aproximar-se',
           descricao:
             restam <= 0
