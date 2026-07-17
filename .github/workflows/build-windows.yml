@@ -1,8 +1,13 @@
 name: Build Windows app
 
-# Reconstrói a app para Windows e publica-a no GitHub Release "windows"
-# sempre que houver alterações à app. O site aponta para o download desse
-# release, por isso a versão nova fica disponível sem tocar no site.
+# Reconstrói a app para Windows e publica o instalador num GitHub Release novo
+# (tag v1.0.<n>) sempre que houver alterações à app.
+#
+# O instalador tem nome fixo, por isso o site aponta sempre para
+# .../releases/latest/download/GestaoDeGado-Setup.exe e nunca precisa de ser
+# tocado. Ao lado vai um latest.yml, que é o que as apps já instaladas leem para
+# se atualizarem sozinhas (electron-updater) — daí a versão ter de subir a cada
+# publicação, senão o updater não reconhece o build como mais recente.
 
 on:
   push:
@@ -37,13 +42,18 @@ jobs:
       - name: Instalar dependências da app
         run: npm ci
 
-      - name: Marca temporal do build
-        # Embutida na app para o aviso de "nova versão". A data serve apenas de
-        # recurso para builds antigos: o que vale é o commit (EXPO_PUBLIC_BUILD_SHA),
-        # comparado com o commit anunciado no corpo do Release.
-        id: buildmeta
+      - name: Definir a versão desta publicação
+        # O electron-updater compara versões semver: a app só se atualiza se a
+        # versão publicada for MAIOR do que a instalada. github.run_number é
+        # sempre crescente, o que dá 1.0.1, 1.0.2, ... sem ninguém ter de mexer.
+        id: versao
         shell: bash
-        run: echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+        working-directory: desktop
+        run: |
+          VERSAO="1.0.${{ github.run_number }}"
+          npm version "$VERSAO" --no-git-tag-version --allow-same-version
+          echo "versao=$VERSAO" >> "$GITHUB_OUTPUT"
+          echo "A publicar a versão $VERSAO"
 
       - name: Gerar o build web (Expo)
         # As chaves do Supabase têm de estar presentes no build, senão a app
@@ -54,8 +64,6 @@ jobs:
         env:
           EXPO_PUBLIC_SUPABASE_URL: https://qmkafibxlmgouslybafy.supabase.co
           EXPO_PUBLIC_SUPABASE_KEY: sb_publishable_6bjhd0CNIAglOPGmBt9Zlw_2gE4tr_r
-          EXPO_PUBLIC_BUILD_TIME: ${{ steps.buildmeta.outputs.time }}
-          EXPO_PUBLIC_BUILD_SHA: ${{ github.sha }}
         run: npx expo export --platform web
 
       - name: Copiar o build web para o desktop
@@ -68,35 +76,13 @@ jobs:
         working-directory: desktop
         run: npm ci
 
-      - name: Empacotar a app Windows (Electron)
+      - name: Empacotar e publicar o instalador (Electron)
+        # O --publish always faz o electron-builder criar o Release v<versão> e
+        # enviar para lá o instalador E o latest.yml (os metadados que as apps
+        # instaladas leem para se atualizarem). Fazer o upload à mão partiria a
+        # atualização automática, por faltar o latest.yml.
         working-directory: desktop
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false" # sem assinatura de código
-        run: npx electron-builder --win --dir
-
-      - name: Criar o ZIP
-        working-directory: desktop
-        shell: bash
-        run: |
-          cd dist-build
-          mv "win-unpacked" "Gestao de Gado"
-          cp ../LEIA-ME.txt "Gestao de Gado/"
-          7z a -tzip -mx=7 "GestaoDeGado-Windows.zip" "Gestao de Gado"
-
-      - name: Publicar no GitHub Release
-        # Antes usava o `gh` CLI, mas o `gh release view` falhava de forma
-        # intermitente no runner: o script concluía que o release não existia,
-        # tentava criá-lo, e o GitHub respondia 422 "tag_name already exists" —
-        # abortando antes do upload do ZIP. Esta action fala com a API
-        # diretamente e faz criar-ou-atualizar + substituir o ficheiro num passo.
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: windows
-          name: Gestão de Gado — Windows
-          # A linha "commit:" é lida pela app (useAtualizacao.ts) para saber se o
-          # ZIP publicado corresponde ao build instalado. Não a remover.
-          body: |
-            Versão mais recente da app para Windows. Descarregue o ZIP, extraia a pasta e abra 'Gestao de Gado.exe'. Atualizado automaticamente a cada alteração.
-
-            commit: ${{ github.sha }}
-          files: desktop/dist-build/GestaoDeGado-Windows.zip
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # o electron-builder publica com este token
+        run: npx electron-builder --win --x64 --publish always

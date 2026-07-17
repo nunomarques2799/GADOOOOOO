@@ -4,7 +4,8 @@
 // file://) is required because the SPA references assets with absolute paths
 // and uses client-side (history) routing.
 
-const { app, BrowserWindow, shell, Menu } = require('electron');
+const { app, BrowserWindow, shell, Menu, ipcMain } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -110,6 +111,7 @@ async function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
@@ -131,6 +133,53 @@ async function createWindow() {
   });
 }
 
+/* ---------------- Atualização automática ---------------- */
+// A app procura versões novas no GitHub Release, descarrega-as em fundo e só
+// depois avisa a app (banner). Quem decide o momento de instalar é o utilizador
+// — clicar em "Atualizar agora" instala e reabre a app já na versão nova. Se
+// fechar sem instalar, o electron-updater instala na saída (autoInstallOnAppQuit).
+
+/** Já há uma versão descarregada, à espera de ser instalada? */
+let atualizacaoPronta = false;
+
+/** De quanto em quanto tempo se procura, para quem deixa a app sempre aberta. */
+const INTERVALO_PROCURA_MS = 6 * 60 * 60 * 1000;
+
+function ligarAtualizador() {
+  // Em desenvolvimento não há release nem assinatura — não faz sentido procurar.
+  if (!app.isPackaged) return;
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-downloaded', () => {
+    atualizacaoPronta = true;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('atualizacao-pronta');
+    }
+  });
+
+  // Sem rede, GitHub em baixo ou release ainda sem metadados: não há nada a
+  // fazer nem a dizer ao utilizador — a app funciona downstream à mesma.
+  autoUpdater.on('error', (erro) => {
+    console.error('Procura de atualização falhou:', erro?.message ?? erro);
+  });
+
+  const procurar = () => autoUpdater.checkForUpdates().catch(() => {});
+  procurar();
+  setInterval(procurar, INTERVALO_PROCURA_MS);
+}
+
+ipcMain.handle('atualizacao-estado', () => atualizacaoPronta);
+
+ipcMain.handle('atualizacao-instalar', () => {
+  if (!atualizacaoPronta) return false;
+  // Fora do handler, para o IPC responder antes de a app fechar.
+  // (isSilent: sem janelas do instalador; isForceRunAfter: reabre a app.)
+  setImmediate(() => autoUpdater.quitAndInstall(true, true));
+  return true;
+});
+
 // Minimal PT menu (mostly hidden; Ctrl+Q/refresh still handy).
 Menu.setApplicationMenu(null);
 
@@ -146,7 +195,10 @@ if (!temLock) {
       mainWindow.focus();
     }
   });
-  app.whenReady().then(createWindow);
+  app.whenReady().then(async () => {
+    await createWindow();
+    ligarAtualizador();
+  });
 }
 
 app.on('window-all-closed', () => {

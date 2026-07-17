@@ -1,41 +1,49 @@
 import { useState } from 'react';
-import { Linking, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Card, Icon, Text } from '@/components/ui';
-import { URL_DESCARREGAR, useAtualizacaoDesktop } from '@/data/useAtualizacao';
+import { useAtualizacaoDesktop } from '@/data/useAtualizacao';
 import { colors, radii, spacing } from '@/theme';
 
 /**
- * Banner mostrado na app desktop quando há uma versão mais recente publicada.
- * Não instala nada — leva o utilizador à página de download do site.
+ * Banner na app desktop quando já há uma versão nova descarregada. Um clique
+ * instala e reabre a app — não há nada para descarregar à mão.
  */
 export function BannerAtualizacao() {
-  const disponivel = useAtualizacaoDesktop();
+  const { pronta, instalar } = useAtualizacaoDesktop();
   const [fechado, setFechado] = useState(false);
-  if (!disponivel || fechado) return null;
+  const [aInstalar, setAInstalar] = useState(false);
+  if (!pronta || fechado) return null;
 
   return (
     <Card style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.info }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
         <Icon name="download-circle-outline" size="lg" color={colors.info} />
         <View style={{ flex: 1 }}>
-          <Text variant="bodyStrong">Nova versão disponível</Text>
+          <Text variant="bodyStrong">Nova versão pronta</Text>
           <Text variant="secondary" color={colors.textSecondary}>
-            Há uma atualização da app para Windows.
+            Já está descarregada. A app fecha e volta a abrir sozinha.
           </Text>
         </View>
-        <Pressable
-          onPress={() => setFechado(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Dispensar"
-          hitSlop={8}>
-          <Icon name="close" size="md" color={colors.textMuted} />
-        </Pressable>
+        {aInstalar ? null : (
+          <Pressable
+            onPress={() => setFechado(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Dispensar"
+            hitSlop={8}>
+            <Icon name="close" size="md" color={colors.textMuted} />
+          </Pressable>
+        )}
       </View>
       <Pressable
-        onPress={() => void Linking.openURL(URL_DESCARREGAR)}
+        onPress={() => {
+          setAInstalar(true);
+          instalar();
+        }}
+        disabled={aInstalar}
         accessibilityRole="button"
-        accessibilityLabel="Descarregar nova versão"
+        accessibilityLabel="Atualizar agora"
+        accessibilityState={{ disabled: aInstalar }}
         style={({ pressed }) => [
           {
             marginTop: spacing.sm,
@@ -47,11 +55,11 @@ export function BannerAtualizacao() {
             flexDirection: 'row',
             gap: spacing.xs,
           },
-          pressed && { opacity: 0.85 },
+          (pressed || aInstalar) && { opacity: 0.85 },
         ]}>
-        <Icon name="download" size="sm" color={colors.onPrimary} />
+        <Icon name={aInstalar ? 'progress-download' : 'download'} size="sm" color={colors.onPrimary} />
         <Text variant="button" color={colors.onPrimary} style={{ fontSize: 16 }}>
-          Descarregar
+          {aInstalar ? 'A atualizar…' : 'Atualizar agora'}
         </Text>
       </Pressable>
     </Card>

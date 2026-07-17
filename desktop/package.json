@@ -9,6 +9,9 @@
     "start": "electron .",
     "dist": "electron-builder --win --x64"
   },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
   "devDependencies": {
     "electron": "^33.4.11",
     "electron-builder": "^25.1.8"
@@ -17,7 +20,8 @@
     "appId": "com.gestaogado.desktop",
     "productName": "Gestao de Gado",
     "files": [
-      "main.js"
+      "main.js",
+      "preload.js"
     ],
     "extraResources": [
       {
@@ -32,7 +36,7 @@
     "win": {
       "target": [
         {
-          "target": "zip",
+          "target": "nsis",
           "arch": [
             "x64"
           ]
@@ -40,6 +44,23 @@
       ],
       "icon": "build/icon.png"
     },
-    "artifactName": "GestaoDeGado-Windows-${version}.${ext}"
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Gestao de Gado",
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "nunomarques2799",
+        "repo": "GADOOOOOO",
+        "releaseType": "release"
+      }
+    ],
+    "artifactName": "GestaoDeGado-Setup.${ext}"
   }
 }

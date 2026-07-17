@@ -1,100 +1,63 @@
 /**
- * Aviso de nova versão da app desktop (Windows).
+ * Atualização da app desktop (Windows).
  * ------------------------------------------------------------------
- * Só corre dentro do Electron (app desktop). No telemóvel/web fica inerte.
+ * O processo Electron procura versões novas no GitHub Release e descarrega-as
+ * em fundo (ver desktop/main.js). Quando uma fica pronta, avisa por esta ponte
+ * e a app mostra o banner: o utilizador clica em "Atualizar agora", a app
+ * instala e reabre já na versão nova — sem descarregar nada à mão.
  *
- * Compara o COMMIT deste build (EXPO_PUBLIC_BUILD_SHA, injetado no CI) com o
- * commit anunciado no corpo do GitHub Release. Commits diferentes = há versão
- * nova. É exato: não depende de relógios nem de janelas de tolerância.
- *
- * Builds antigos (anteriores a esta mudança) não têm commit gravado; para esses
- * mantém-se a comparação por datas, que exige que o ZIP seja mais recente do que
- * o build por uma margem — ver MARGEM_MS.
- *
- * Não instala nada — apenas avisa. A distribuição continua a ser o mesmo ZIP.
+ * A ponte só existe dentro do Electron (desktop/preload.js). No telemóvel e na
+ * web fica tudo inerte, que é o que se quer: aí não há nada para atualizar.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-const REPO = 'nunomarques2799/GADOOOOOO';
-const API_RELEASE = `https://api.github.com/repos/${REPO}/releases/tags/windows`;
+/** API exposta pelo preload do Electron. */
+type PonteAtualizacao = {
+  estado: () => Promise<boolean>;
+  instalar: () => Promise<boolean>;
+  aoFicarPronta: (callback: () => void) => () => void;
+};
 
-/** Página do site com o botão de descarregar e as instruções. */
-export const URL_DESCARREGAR = 'https://gestaogado.netlify.app/#descarregar';
-
-/** Commit em que este build foi gerado. Injetado pelo CI no export. */
-const BUILD_SHA = process.env.EXPO_PUBLIC_BUILD_SHA;
-
-/** Data em que este build foi gerado (ISO). Injetada pelo CI no export. */
-const BUILD_TIME = process.env.EXPO_PUBLIC_BUILD_TIME;
-
-/**
- * Só usada no recurso por datas (builds sem commit gravado): margem para o
- * intervalo entre exportar o build e publicar o ZIP no MESMO arranque do CI.
- * Evita que a versão acabada de instalar se anuncie como desatualizada — mas
- * também cega o aviso quando duas publicações ficam a menos de meia hora uma da
- * outra, que é a razão de o commit ser agora o critério principal.
- */
-const MARGEM_MS = 30 * 60 * 1000;
-
-/** true se a app está a correr dentro do Electron (app desktop). */
-function ehDesktop(): boolean {
-  return typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent);
+function ponte(): PonteAtualizacao | undefined {
+  return (globalThis as { gadoAtualizacao?: PonteAtualizacao }).gadoAtualizacao;
 }
 
-/** Lê o commit anunciado no corpo do Release (linha "commit: <sha>"). */
-function shaDoCorpo(corpo?: string): string | undefined {
-  return corpo?.match(/commit:\s*([0-9a-f]{7,40})/i)?.[1];
-}
+export type EstadoAtualizacao = {
+  /** Há uma versão nova descarregada, à espera de instalar? */
+  pronta: boolean;
+  /** Instala e reinicia a app. */
+  instalar: () => void;
+};
 
-/** Devolve true quando há uma versão desktop mais recente publicada. */
-export function useAtualizacaoDesktop(): boolean {
-  const [disponivel, setDisponivel] = useState(false);
+export function useAtualizacaoDesktop(): EstadoAtualizacao {
+  const [pronta, setPronta] = useState(false);
 
   useEffect(() => {
-    if (!ehDesktop()) return;
-    if (!BUILD_SHA && !BUILD_TIME) return;
+    const p = ponte();
+    if (!p) return; // web/telemóvel — nada a fazer
 
     let cancelado = false;
-    (async () => {
-      try {
-        const resp = await fetch(API_RELEASE, {
-          headers: { Accept: 'application/vnd.github+json' },
-        });
-        if (!resp.ok) return;
-        const dados = (await resp.json()) as {
-          body?: string;
-          published_at?: string;
-          assets?: { name: string; updated_at: string }[];
-        };
 
-        // Critério principal: o commit publicado difere do que está instalado.
-        const shaPublicado = shaDoCorpo(dados.body);
-        if (BUILD_SHA && shaPublicado) {
-          if (!cancelado && shaPublicado !== BUILD_SHA) setDisponivel(true);
-          return;
-        }
+    // Pode já ter sido descarregada antes deste ecrã abrir.
+    void p.estado().then((ja) => {
+      if (ja && !cancelado) setPronta(true);
+    });
 
-        // Recurso para builds sem commit gravado: comparação por datas.
-        if (!BUILD_TIME) return;
-        const buildMs = Date.parse(BUILD_TIME);
-        if (Number.isNaN(buildMs)) return;
-        const zip = dados.assets?.find((a) => /\.zip$/i.test(a.name));
-        const quando = zip?.updated_at ?? dados.published_at;
-        if (!quando) return;
-        const releaseMs = Date.parse(quando);
-        if (!Number.isNaN(releaseMs) && !cancelado && releaseMs - buildMs > MARGEM_MS) {
-          setDisponivel(true);
-        }
-      } catch {
-        /* offline ou API indisponível — não mostra nada */
-      }
-    })();
+    // ...ou ficar pronta com a app aberta.
+    const deixarDeOuvir = p.aoFicarPronta(() => {
+      if (!cancelado) setPronta(true);
+    });
 
     return () => {
       cancelado = true;
+      deixarDeOuvir();
     };
   }, []);
 
-  return disponivel;
+  const instalar = useCallback(() => {
+    void ponte()?.instalar();
+  }, []);
+
+  return { pronta, instalar };
 }
