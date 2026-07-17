@@ -69,6 +69,29 @@ sistema (Dynamic Type).
 
 ---
 
+## Telemóvel vs. desktop
+
+A app tem **dois desenhos**, escolhidos pela largura da janela — não é o desenho
+de telemóvel esticado. O interruptor é `useDesktop()` (`src/hooks/useDesktop.ts`):
+`true` só na web/Electron com janela ≥ `900px`. No nativo é sempre `false`.
+
+|                | Telemóvel (e web estreita)              | Desktop (≥ 900px)                                    |
+| -------------- | --------------------------------------- | ---------------------------------------------------- |
+| Navegação      | Barra de separadores em baixo (polegar) | Barra lateral fixa à esquerda, 248px, com etiquetas  |
+| Largura        | Ecrã todo; na web, coluna de 560px      | Janela toda, conteúdo até `layout.conteudoDesktop`   |
+| Início         | Secções empilhadas                      | Duas colunas: ação à esquerda, números/atalhos à dir. |
+| Listas         | Um cartão por linha                     | Grelha de 2 colunas (`numColumns`)                    |
+| Perfil / login | Ecrã todo                               | Coluna única centrada (`conteudoEstreito` / 560px)    |
+
+Larguras em `layout` (`src/theme/tokens.ts`): `colunaMobile 560 ·
+conteudoEstreito 760 · conteudoDesktop 1180 · barraLateral 248`.
+
+Ao criar um ecrã novo: se usa `<Screen>`, a coluna de desktop já vem tratada.
+Se monta o seu próprio `ScrollView`/`FlatList`, aplica ao `contentContainerStyle`
+`width: '100%'`, `maxWidth` (do `layout`) e `alignSelf: 'center'`.
+
+---
+
 ## Ícones
 
 Set **único**: `MaterialCommunityIcons` (via `@expo/vector-icons`), acedido pelo

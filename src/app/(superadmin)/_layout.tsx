@@ -2,8 +2,10 @@ import { Redirect, Tabs } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BarraLateral, type ItemNav } from '@/components/BarraLateral';
 import { Icon, type IconName, Text } from '@/components/ui';
 import { useMembros } from '@/data/membros';
+import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 type TabBarProps = {
@@ -76,14 +78,32 @@ function TabBar({ state, navigation }: TabBarProps) {
   );
 }
 
+const NAV_DESKTOP: ItemNav[] = [
+  { rota: '/clientes', label: 'Clientes', icon: TABS.clientes.icon },
+  { rota: '/perfil', label: 'Perfil', icon: TABS.perfil.icon },
+];
+
 export default function SuperadminTabsLayout() {
+  const desktop = useDesktop();
   const { isSuperadmin, aCarregar } = useMembros();
   if (aCarregar) return null;
   if (!isSuperadmin) return <Redirect href="/" />;
-  return (
-    <Tabs tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false }}>
+
+  const ecrans = (
+    <Tabs
+      tabBar={desktop ? () => null : (props) => <TabBar {...props} />}
+      screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="clientes" />
       <Tabs.Screen name="perfil" />
     </Tabs>
+  );
+
+  if (!desktop) return ecrans;
+
+  return (
+    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
+      <BarraLateral itens={NAV_DESKTOP} />
+      <View style={{ flex: 1 }}>{ecrans}</View>
+    </View>
   );
 }

@@ -12,10 +12,12 @@ import {
   imprimirRelatorio,
 } from '@/data/exportar';
 import { useGado } from '@/data/store';
-import { colors, radii, spacing } from '@/theme';
+import { useDesktop } from '@/hooks/useDesktop';
+import { colors, layout, radii, spacing } from '@/theme';
 
 export default function PerfilScreen() {
   const insets = useSafeAreaInsets();
+  const desktop = useDesktop();
   const { utilizador, animais, eventos, exploracoes, terrenos, alertas } = useGado();
   const { utilizador: conta, sair, configurado, apagarConta } = useAuth();
 
@@ -63,18 +65,27 @@ export default function PerfilScreen() {
   const email = conta?.email ?? utilizador.email;
   const iniciais = (nome || email).split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
+  // Uma lista de opções não ganha em esticar por um ecrã largo — em desktop
+  // fica numa coluna única centrada.
+  const colunaPerfil = {
+    width: '100%',
+    maxWidth: desktop ? layout.conteudoEstreito : undefined,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.lg,
+  } as const;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View
         style={{
+          ...colunaPerfil,
           paddingTop: insets.top + spacing.md,
-          paddingHorizontal: spacing.lg,
           paddingBottom: spacing.lg,
         }}>
         <Text variant="display">Perfil</Text>
       </View>
 
-      <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
+      <View style={{ ...colunaPerfil, gap: spacing.md }}>
         {/* Cartão do utilizador */}
         <Card>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>

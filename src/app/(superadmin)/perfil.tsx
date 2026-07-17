@@ -3,28 +3,38 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, Badge, Card, Icon, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
-import { colors, radii, spacing } from '@/theme';
+import { useDesktop } from '@/hooks/useDesktop';
+import { colors, layout, radii, spacing } from '@/theme';
 
 export default function SuperadminPerfilScreen() {
   const insets = useSafeAreaInsets();
+  const desktop = useDesktop();
   const { utilizador, sair } = useAuth();
 
   const nome = (utilizador?.user_metadata?.nome as string | undefined)?.trim() || 'Superadmin';
   const email = utilizador?.email ?? '';
   const iniciais = (nome || email).split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
+  // Ver nota em (tabs)/perfil.tsx: coluna única centrada em desktop.
+  const colunaPerfil = {
+    width: '100%',
+    maxWidth: desktop ? layout.conteudoEstreito : undefined,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.lg,
+  } as const;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View
         style={{
+          ...colunaPerfil,
           paddingTop: insets.top + spacing.md,
-          paddingHorizontal: spacing.lg,
           paddingBottom: spacing.lg,
         }}>
         <Text variant="display">Perfil</Text>
       </View>
 
-      <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
+      <View style={{ ...colunaPerfil, gap: spacing.md }}>
         <Card>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
             <Avatar initials={iniciais} size={64} />

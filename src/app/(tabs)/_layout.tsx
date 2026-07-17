@@ -2,7 +2,9 @@ import { Tabs } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BarraLateral, type ItemNav } from '@/components/BarraLateral';
 import { Icon, type IconName, Text } from '@/components/ui';
+import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 /** Forma mínima das props do tabBar que usamos (evita dependência direta). */
@@ -90,15 +92,34 @@ function TabBar({ state, navigation }: TabBarProps) {
   );
 }
 
+/** Mesmos destinos da barra inferior, na ordem em que aparecem na lateral. */
+const NAV_DESKTOP: ItemNav[] = [
+  { rota: '/', label: 'Início', icon: TABS.index.icon },
+  { rota: '/animais', label: 'Animais', icon: TABS.animais.icon },
+  { rota: '/exploracoes', label: 'Explorações', icon: TABS.exploracoes.icon },
+  { rota: '/perfil', label: 'Perfil', icon: TABS.perfil.icon },
+];
+
 export default function TabsLayout() {
-  return (
+  const desktop = useDesktop();
+
+  const ecrans = (
     <Tabs
-      tabBar={(props) => <TabBar {...props} />}
+      tabBar={desktop ? () => null : (props) => <TabBar {...props} />}
       screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="index" />
       <Tabs.Screen name="animais" />
       <Tabs.Screen name="exploracoes" />
       <Tabs.Screen name="perfil" />
     </Tabs>
+  );
+
+  if (!desktop) return ecrans;
+
+  return (
+    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
+      <BarraLateral itens={NAV_DESKTOP} />
+      <View style={{ flex: 1 }}>{ecrans}</View>
+    </View>
   );
 }

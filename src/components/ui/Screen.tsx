@@ -8,7 +8,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, spacing } from '@/theme';
+import { useDesktop } from '@/hooks/useDesktop';
+import { colors, layout, spacing } from '@/theme';
 
 type Props = {
   children: ReactNode;
@@ -40,16 +41,23 @@ export function Screen({
   ...scrollProps
 }: Props) {
   const insets = useSafeAreaInsets();
+  const desktop = useDesktop();
 
   const paddingTop = topInset ? insets.top : 0;
   const paddingBottom = insets.bottom + spacing.xxl;
-  const paddingHorizontal = padded ? spacing.lg : 0;
+  const paddingHorizontal = padded ? (desktop ? spacing.xxl : spacing.lg) : 0;
+
+  // Em desktop o conteúdo não estica até à borda da janela: linhas de texto
+  // muito longas cansam a leitura, por isso limitamos e centramos a coluna.
+  const coluna: ViewStyle = desktop
+    ? { width: '100%', maxWidth: layout.conteudoDesktop, alignSelf: 'center' }
+    : { width: '100%' };
 
   if (!scroll) {
     return (
       <View style={[{ flex: 1, backgroundColor: background, paddingTop }, style]}>
-        <View style={[{ flex: 1, paddingHorizontal }, contentStyle]}>
-          {children}
+        <View style={[{ flex: 1, paddingHorizontal, alignItems: 'center' }, contentStyle]}>
+          <View style={[{ flex: 1 }, coluna]}>{children}</View>
         </View>
       </View>
     );
@@ -59,13 +67,13 @@ export function Screen({
     <ScrollView
       style={[{ flex: 1, backgroundColor: background }, style]}
       contentContainerStyle={[
-        { paddingTop, paddingBottom, paddingHorizontal },
+        { paddingTop, paddingBottom, paddingHorizontal, alignItems: 'center' },
         contentStyle,
       ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       {...scrollProps}>
-      {children}
+      <View style={coluna}>{children}</View>
     </ScrollView>
   );
 }

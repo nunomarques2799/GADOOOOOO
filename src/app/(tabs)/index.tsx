@@ -13,11 +13,13 @@ import { Avatar, Badge, Card, Icon, SectionHeader, Text } from '@/components/ui'
 import { dataExtensa, saudacao } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
-import { colors, radii, spacing } from '@/theme';
+import { useDesktop } from '@/hooks/useDesktop';
+import { colors, layout, radii, spacing } from '@/theme';
 
 export default function InicioScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const desktop = useDesktop();
   const { isSuperadmin } = useMembros();
   const { utilizador, exploracoes, terrenos, animais, alertas, online, pendentesSinc } = useGado();
 
@@ -32,6 +34,116 @@ export default function InicioScreen() {
     .join('');
   const urgentes = alertas.filter((a) => a.gravidade === 'urgente').length;
 
+  const secaoAlertas = (
+    <>
+      <SectionHeader
+        title="Precisa da sua atenção"
+        actionLabel="Ver todos"
+        onAction={() => router.push('/alertas')}
+      />
+      {alertas.length === 0 ? (
+        <Card>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Icon name="check-circle" size="lg" color={colors.success} />
+            <Text variant="body" style={{ flex: 1 }}>
+              Tudo em dia. Não há prazos a cumprir.
+            </Text>
+          </View>
+        </Card>
+      ) : (
+        <Card padded={false}>
+          <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
+            {urgentes > 0 ? (
+              <Badge
+                tone="danger"
+                icon="alert"
+                label={`${urgentes} urgente${urgentes > 1 ? 's' : ''}`}
+                style={{ marginVertical: spacing.xs }}
+              />
+            ) : null}
+            {alertas.slice(0, 3).map((a, i) => (
+              <AlertItem key={a.id} alerta={a} divider={i < Math.min(alertas.length, 3) - 1} />
+            ))}
+          </View>
+        </Card>
+      )}
+    </>
+  );
+
+  const secaoResumo = (
+    <>
+      <SectionHeader title="Resumo" />
+      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        <StatCard
+          icon="cow"
+          value={animais.length}
+          label="Animais"
+          onPress={() => router.push('/animais')}
+        />
+        <StatCard
+          icon="barn"
+          value={exploracoes.length}
+          label="Explorações"
+          tint={colors.caprino}
+          onPress={() => router.push('/exploracoes')}
+        />
+        <StatCard icon="grass" value={terrenos.length} label="Terrenos" tint={colors.success} />
+      </View>
+    </>
+  );
+
+  const secaoExploracoes = (
+    <>
+      <SectionHeader
+        title="As minhas explorações"
+        actionLabel="Ver todas"
+        onAction={() => router.push('/exploracoes')}
+      />
+      {exploracoes.length === 0 ? (
+        <Card>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Icon name="barn" size="lg" color={colors.primary} />
+            <Text variant="body" style={{ flex: 1 }}>
+              Ainda não tem explorações. Crie uma para começar a registar animais.
+            </Text>
+          </View>
+        </Card>
+      ) : (
+        exploracoes.slice(0, 3).map((e) => <ExploracaoRow key={e.id} exploracao={e} />)
+      )}
+    </>
+  );
+
+  const secaoAcoes = (
+    <>
+      <SectionHeader title="Ações rápidas" />
+      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        <QuickAction icon="plus-circle" label="Novo animal" onPress={() => router.push('/animal/novo')} />
+        <QuickAction
+          icon="baby-bottle-outline"
+          label="Parto"
+          color={colors.info}
+          tint={colors.infoTint}
+          onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Parto' } })}
+        />
+        <QuickAction
+          icon="medical-bag"
+          label="Medicamento"
+          color={colors.danger}
+          tint={colors.dangerTint}
+          onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Medicamento' } })}
+        />
+        <QuickAction
+          icon="scale"
+          label="Pesagem"
+          color={colors.warning}
+          tint={colors.warningTint}
+          onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Pesagem' } })}
+        />
+      </View>
+    </>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar style="light" />
@@ -44,13 +156,23 @@ export default function InicioScreen() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
-            paddingTop: insets.top + spacing.md,
+            paddingTop: insets.top + (desktop ? spacing.xl : spacing.md),
             paddingBottom: spacing.xxxl + spacing.lg,
-            paddingHorizontal: spacing.lg,
-            borderBottomLeftRadius: radii.xl,
-            borderBottomRightRadius: radii.xl,
+            paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
+            // Em desktop encosta à barra lateral — cantos redondos aqui
+            // abririam uma fresta de fundo entre as duas.
+            borderBottomLeftRadius: desktop ? 0 : radii.xl,
+            borderBottomRightRadius: desktop ? 0 : radii.xl,
           }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              maxWidth: desktop ? layout.conteudoDesktop - spacing.xxl * 2 : undefined,
+              alignSelf: 'center',
+            }}>
             <View style={{ flex: 1 }}>
               <Text variant="bodyLg" color={colors.textOnDarkMuted}>
                 {saudacao()},
@@ -75,7 +197,14 @@ export default function InicioScreen() {
         </LinearGradient>
 
         {/* Conteúdo */}
-        <View style={{ paddingHorizontal: spacing.lg, marginTop: -spacing.xxxl }}>
+        <View
+          style={{
+            width: '100%',
+            maxWidth: desktop ? layout.conteudoDesktop : undefined,
+            alignSelf: 'center',
+            paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
+            marginTop: -spacing.xxxl,
+          }}>
           {/* Aviso de nova versão — só na app desktop quando há atualização */}
           <BannerAtualizacao />
 
@@ -99,103 +228,28 @@ export default function InicioScreen() {
             </Card>
           ) : null}
 
-          {/* Alertas */}
-          <SectionHeader
-            title="Precisa da sua atenção"
-            actionLabel="Ver todos"
-            onAction={() => router.push('/alertas')}
-          />
-          {alertas.length === 0 ? (
-            <Card>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Icon name="check-circle" size="lg" color={colors.success} />
-                <Text variant="body" style={{ flex: 1 }}>
-                  Tudo em dia. Não há prazos a cumprir.
-                </Text>
+          {/* Em desktop há largura para duas colunas: o que exige ação à
+              esquerda, os números e atalhos à direita. No telemóvel segue
+              tudo em pilha, pela mesma ordem de importância. */}
+          {desktop ? (
+            <View style={{ flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' }}>
+              <View style={{ flex: 3 }}>
+                {secaoAlertas}
+                {secaoExploracoes}
               </View>
-            </Card>
+              <View style={{ flex: 2 }}>
+                {secaoResumo}
+                {secaoAcoes}
+              </View>
+            </View>
           ) : (
-            <Card padded={false}>
-              <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
-                {urgentes > 0 ? (
-                  <Badge
-                    tone="danger"
-                    icon="alert"
-                    label={`${urgentes} urgente${urgentes > 1 ? 's' : ''}`}
-                    style={{ marginVertical: spacing.xs }}
-                  />
-                ) : null}
-                {alertas.slice(0, 3).map((a, i) => (
-                  <AlertItem key={a.id} alerta={a} divider={i < Math.min(alertas.length, 3) - 1} />
-                ))}
-              </View>
-            </Card>
+            <>
+              {secaoAlertas}
+              {secaoResumo}
+              {secaoExploracoes}
+              {secaoAcoes}
+            </>
           )}
-
-          {/* Estatísticas */}
-          <SectionHeader title="Resumo" />
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            <StatCard
-              icon="cow"
-              value={animais.length}
-              label="Animais"
-              onPress={() => router.push('/animais')}
-            />
-            <StatCard
-              icon="barn"
-              value={exploracoes.length}
-              label="Explorações"
-              tint={colors.caprino}
-              onPress={() => router.push('/exploracoes')}
-            />
-            <StatCard icon="grass" value={terrenos.length} label="Terrenos" tint={colors.success} />
-          </View>
-
-          {/* Explorações — meteorologia dentro de cada uma */}
-          <SectionHeader
-            title="As minhas explorações"
-            actionLabel="Ver todas"
-            onAction={() => router.push('/exploracoes')}
-          />
-          {exploracoes.length === 0 ? (
-            <Card>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Icon name="barn" size="lg" color={colors.primary} />
-                <Text variant="body" style={{ flex: 1 }}>
-                  Ainda não tem explorações. Crie uma para começar a registar animais.
-                </Text>
-              </View>
-            </Card>
-          ) : (
-            exploracoes.slice(0, 3).map((e) => <ExploracaoRow key={e.id} exploracao={e} />)
-          )}
-
-          {/* Ações rápidas */}
-          <SectionHeader title="Ações rápidas" />
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            <QuickAction icon="plus-circle" label="Novo animal" onPress={() => router.push('/animal/novo')} />
-            <QuickAction
-              icon="baby-bottle-outline"
-              label="Parto"
-              color={colors.info}
-              tint={colors.infoTint}
-              onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Parto' } })}
-            />
-            <QuickAction
-              icon="medical-bag"
-              label="Medicamento"
-              color={colors.danger}
-              tint={colors.dangerTint}
-              onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Medicamento' } })}
-            />
-            <QuickAction
-              icon="scale"
-              label="Pesagem"
-              color={colors.warning}
-              tint={colors.warningTint}
-              onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Pesagem' } })}
-            />
-          </View>
         </View>
       </ScrollView>
     </View>

@@ -128,6 +128,21 @@ export const sizes = {
 } as const;
 
 /* ------------------------------------------------------------------ *
+ *  LAYOUT — larguras do desenho de telemóvel vs. desktop
+ * ------------------------------------------------------------------ */
+
+export const layout = {
+  /** Coluna central em janelas de web estreitas (mantém o desenho móvel). */
+  colunaMobile: 560,
+  /** Largura máxima do conteúdo em desktop (evita linhas demasiado longas). */
+  conteudoDesktop: 1180,
+  /** Coluna única para ecrãs de lista de opções (perfil, definições). */
+  conteudoEstreito: 760,
+  /** Barra lateral de navegação do desktop. */
+  barraLateral: 248,
+} as const;
+
+/* ------------------------------------------------------------------ *
  *  TIPOGRAFIA — Nunito (arredondada, altamente legível). Fonte grande.
  * ------------------------------------------------------------------ */
 

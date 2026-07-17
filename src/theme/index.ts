@@ -3,6 +3,7 @@ export {
   spacing,
   radii,
   sizes,
+  layout,
   type,
   fontFamily,
   shadow,

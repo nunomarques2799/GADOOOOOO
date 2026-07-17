@@ -6,11 +6,13 @@ import { ExploracaoRow } from '@/components/ExploracaoRow';
 import { EmptyState, FAB, Text } from '@/components/ui';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
-import { colors, spacing } from '@/theme';
+import { useDesktop } from '@/hooks/useDesktop';
+import { colors, layout, spacing } from '@/theme';
 
 export default function ExploracoesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const desktop = useDesktop();
   const { exploracoes } = useGado();
   const { estadoPerfil, isSuperadmin } = useMembros();
   // Só clientes aprovados (perfil ativo) podem criar explorações. Membros por
@@ -20,12 +22,27 @@ export default function ExploracoesScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <FlatList
+        // Ver nota em animais.tsx: numColumns exige remontar a lista.
+        key={desktop ? 'grelha' : 'pilha'}
         data={exploracoes}
         keyExtractor={(e) => e.id}
-        renderItem={({ item }) => <ExploracaoRow exploracao={item} />}
+        numColumns={desktop ? 2 : 1}
+        columnWrapperStyle={desktop ? { gap: spacing.sm } : undefined}
+        renderItem={({ item }) =>
+          desktop ? (
+            <View style={{ flex: 1 }}>
+              <ExploracaoRow exploracao={item} />
+            </View>
+          ) : (
+            <ExploracaoRow exploracao={item} />
+          )
+        }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingHorizontal: spacing.lg,
+          width: '100%',
+          maxWidth: desktop ? layout.conteudoDesktop : undefined,
+          alignSelf: 'center',
+          paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
           paddingBottom: spacing.huge + 40,
         }}
         ListHeaderComponent={

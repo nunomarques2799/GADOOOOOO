@@ -8,13 +8,15 @@ import { Chip, EmptyState, FAB, Icon, Text } from '@/components/ui';
 import { especieMeta, especies } from '@/data/constants';
 import { useGado } from '@/data/store';
 import type { Especie } from '@/data/types';
-import { colors, radii, spacing } from '@/theme';
+import { useDesktop } from '@/hooks/useDesktop';
+import { colors, layout, radii, spacing } from '@/theme';
 
 type Filtro = 'Todos' | Especie;
 
 export default function AnimaisScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const desktop = useDesktop();
   const { animais, alertas } = useGado();
 
   const [query, setQuery] = useState('');
@@ -52,12 +54,28 @@ export default function AnimaisScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <FlatList
+        // numColumns não muda a quente — a key força a lista a remontar
+        // quando se passa de telemóvel (pilha) para desktop (grelha).
+        key={desktop ? 'grelha' : 'pilha'}
         data={lista}
         keyExtractor={(a) => a.id}
-        renderItem={({ item }) => <AnimalRow animal={item} />}
+        numColumns={desktop ? 2 : 1}
+        columnWrapperStyle={desktop ? { gap: spacing.sm } : undefined}
+        renderItem={({ item }) =>
+          desktop ? (
+            <View style={{ flex: 1 }}>
+              <AnimalRow animal={item} />
+            </View>
+          ) : (
+            <AnimalRow animal={item} />
+          )
+        }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingHorizontal: spacing.lg,
+          width: '100%',
+          maxWidth: desktop ? layout.conteudoDesktop : undefined,
+          alignSelf: 'center',
+          paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
           paddingBottom: spacing.huge + 40,
         }}
         ListHeaderComponent={

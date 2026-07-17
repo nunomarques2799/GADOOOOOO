@@ -14,12 +14,14 @@ import {
   type EstadoSubscricao,
   type MetricasMensais,
 } from '@/data/superadminApi';
-import { colors, radii, spacing } from '@/theme';
+import { useDesktop } from '@/hooks/useDesktop';
+import { colors, layout, radii, spacing } from '@/theme';
 
 type Filtro = 'todos' | 'pendentes' | 'ativos';
 
 export default function ClientesScreen() {
   const insets = useSafeAreaInsets();
+  const desktop = useDesktop();
   const router = useRouter();
   const { aprovarCliente } = useMembros();
 
@@ -97,14 +99,19 @@ export default function ClientesScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: spacing.huge + 40 }}>
+        contentContainerStyle={{
+          width: '100%',
+          maxWidth: desktop ? layout.conteudoDesktop : undefined,
+          alignSelf: 'center',
+          paddingBottom: spacing.huge + 40,
+        }}>
         {/* Cabeçalho */}
         <LinearGradient
           colors={[colors.headerFrom, colors.headerTo]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
-            paddingTop: insets.top + spacing.md,
+            paddingTop: insets.top + (desktop ? spacing.xl : spacing.md),
             paddingBottom: spacing.xxl,
             paddingHorizontal: spacing.lg,
             borderBottomLeftRadius: radii.xl,

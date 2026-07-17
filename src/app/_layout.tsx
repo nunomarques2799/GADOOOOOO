@@ -20,27 +20,52 @@ import { AuthProvider, useAuth } from '@/data/auth';
 import { MembrosProvider, useMembros } from '@/data/membros';
 import { GadoProvider } from '@/data/store';
 import { supabaseConfigurado } from '@/data/supabase';
-import { colors } from '@/theme';
+import { useDesktop } from '@/hooks/useDesktop';
+import { colors, layout } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
-/** Largura máxima da "coluna" da app em ecrãs largos (desktop/web). */
-const LARGURA_MAX = 560;
-
 /**
- * Em ecrãs largos (Electron/browser) a app foi desenhada para telemóvel, por
- * isso centramos o conteúdo numa coluna de largura fixa, com o fundo da app
- * a preencher as margens. No telemóvel ocupa a largura toda, como antes.
+ * Em janelas largas (Electron/browser) a app usa o desenho de desktop — barra
+ * lateral e conteúdo em grelha — e ocupa a janela toda. Em janelas de web
+ * estreitas mantém-se o desenho de telemóvel, centrado numa coluna, com o
+ * fundo a preencher as margens. No telemóvel ocupa a largura toda.
  */
 function ColunaApp({ children }: { children: ReactNode }) {
+  const desktop = useDesktop();
   if (Platform.OS !== 'web') return <>{children}</>;
+  if (desktop) {
+    return <View style={{ flex: 1, backgroundColor: colors.background }}>{children}</View>;
+  }
   return (
     <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceSunken }}>
       <View
         style={{
           flex: 1,
           width: '100%',
-          maxWidth: LARGURA_MAX,
+          maxWidth: layout.colunaMobile,
+          backgroundColor: colors.background,
+        }}>
+        {children}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Coluna estreita para os ecrãs de entrada/espera: um formulário curto não
+ * ganha nada em esticar por uma janela de desktop, ganha em ficar centrado.
+ */
+function ColunaEstreita({ children }: { children: ReactNode }) {
+  const desktop = useDesktop();
+  if (!desktop) return <>{children}</>;
+  return (
+    <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceSunken }}>
+      <View
+        style={{
+          flex: 1,
+          width: '100%',
+          maxWidth: layout.colunaMobile,
           backgroundColor: colors.background,
         }}>
         {children}
@@ -58,8 +83,18 @@ function PortaoAuth({ children }: { children: ReactNode }) {
   if (aCarregar) return null; // mantém o splash até saber se há sessão
   // O link de recuperação abre uma sessão especial — pede a nova palavra-passe
   // antes de deixar entrar na app.
-  if (supabaseConfigurado && emRecuperacao) return <EcraNovaPalavra />;
-  if (supabaseConfigurado && !sessao) return <EcraLogin />;
+  if (supabaseConfigurado && emRecuperacao)
+    return (
+      <ColunaEstreita>
+        <EcraNovaPalavra />
+      </ColunaEstreita>
+    );
+  if (supabaseConfigurado && !sessao)
+    return (
+      <ColunaEstreita>
+        <EcraLogin />
+      </ColunaEstreita>
+    );
   return <>{children}</>;
 }
 
@@ -74,7 +109,12 @@ function AppRouter({ children }: { children: ReactNode }) {
   if (!supabaseConfigurado || !sessao) return <>{children}</>;
   if (aCarregar) return null;
   if (isSuperadmin) return <>{children}</>;
-  if (membros.length === 0) return <EcraPendente />;
+  if (membros.length === 0)
+    return (
+      <ColunaEstreita>
+        <EcraPendente />
+      </ColunaEstreita>
+    );
   return <>{children}</>;
 }
 
