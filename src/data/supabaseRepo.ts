@@ -13,6 +13,7 @@ import { supabase } from './supabase';
 import type {
   Animal,
   Especie,
+  EstadoAnimal,
   Evento,
   EventoTipo,
   Exploracao,
@@ -61,6 +62,9 @@ type AnimalRow = {
   fim_intervalo_seguranca?: string | null;
   data_prevista_parto?: string | null;
   comunicado_snira?: boolean | null;
+  estado?: string | null;
+  data_saida?: string | null;
+  motivo_saida?: string | null;
 };
 
 type EventoRow = {
@@ -114,6 +118,9 @@ const toAnimal = (r: AnimalRow): Animal => ({
   fimIntervaloSeguranca: r.fim_intervalo_seguranca ?? undefined,
   dataPrevistaParto: r.data_prevista_parto ?? undefined,
   comunicadoSnira: r.comunicado_snira ?? undefined,
+  estado: (r.estado as EstadoAnimal | null) ?? undefined,
+  dataSaida: r.data_saida ?? undefined,
+  motivoSaida: r.motivo_saida ?? undefined,
 });
 
 const toEvento = (r: EventoRow): Evento => ({
@@ -166,6 +173,9 @@ const animalPayload = (a: Animal) => ({
   fim_intervalo_seguranca: a.fimIntervaloSeguranca ?? null,
   data_prevista_parto: a.dataPrevistaParto ?? null,
   comunicado_snira: a.comunicadoSnira ?? null,
+  estado: a.estado ?? null,
+  data_saida: a.dataSaida ?? null,
+  motivo_saida: a.motivoSaida ?? null,
 });
 
 const eventoPayload = (e: Evento) => ({

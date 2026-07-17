@@ -57,6 +57,7 @@ import {
 import type {
   Alerta,
   Animal,
+  EstadoAnimal,
   Evento,
   Exploracao,
   Meteorologia,
@@ -182,13 +183,29 @@ type GadoContext = {
   exploracaoById: (id: string) => Exploracao | undefined;
   animalById: (id: string) => Animal | undefined;
   terrenoById: (id: string) => Terreno | undefined;
+  /** Efetivo ativo da exploração (exclui falecidos/vendidos). */
   animaisByExploracao: (id: string) => Animal[];
+  /** Todos os registos ligados a uma exploração, incluindo os que saíram. */
+  animaisByExploracaoIncluindoSaidos: (id: string) => Animal[];
   terrenosByExploracao: (id: string) => Terreno[];
   eventosByAnimal: (id: string) => Evento[];
   // ações (async quando batem no Supabase; devolvem o objeto criado)
   addAnimal: (a: Omit<Animal, 'id'>) => Promise<Animal>;
   updateAnimal: (id: string, patch: Partial<Animal>) => Promise<void>;
   deleteAnimal: (id: string) => Promise<void>;
+  /**
+   * Marca um animal como falecido/vendido: guarda o estado no próprio registo
+   * (para a árvore genealógica continuar completa) e cria automaticamente um
+   * evento `Morte` ou `Venda`.
+   */
+  marcarSaida: (
+    id: string,
+    estado: Exclude<EstadoAnimal, 'ativo'>,
+    data: string,
+    motivo?: string,
+  ) => Promise<void>;
+  /** Anula uma saída — volta a colocar o animal como ativo. */
+  reativarAnimal: (id: string) => Promise<void>;
   addExploracao: (e: Omit<Exploracao, 'id' | 'utilizadorId'>) => Promise<Exploracao>;
   updateExploracao: (id: string, patch: Partial<Exploracao>) => Promise<void>;
   deleteExploracao: (id: string) => Promise<void>;
@@ -374,6 +391,13 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   const animalById = useCallback((id: string) => animais.find((a) => a.id === id), [animais]);
   const terrenoById = useCallback((id: string) => terrenos.find((t) => t.id === id), [terrenos]);
   const animaisByExploracao = useCallback(
+    (id: string) =>
+      animais.filter(
+        (a) => a.exploracaoId === id && (!a.estado || a.estado === 'ativo'),
+      ),
+    [animais],
+  );
+  const animaisByExploracaoIncluindoSaidos = useCallback(
     (id: string) => animais.filter((a) => a.exploracaoId === id),
     [animais],
   );
@@ -420,6 +444,65 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       setEventos((prev) => prev.filter((e) => e.animalId !== id));
       if (usaSupabase) await empurrar({ op: 'delete', entidade: 'animal', id });
       else gravarSqlite((db) => bdEliminarAnimal(db, id));
+    },
+    [usaSupabase, gravarSqlite, empurrar],
+  );
+
+  const marcarSaida = useCallback(
+    async (
+      id: string,
+      estado: Exclude<EstadoAnimal, 'ativo'>,
+      data: string,
+      motivo?: string,
+    ): Promise<void> => {
+      const atual = animaisRef.current.find((a) => a.id === id);
+      if (!atual) return;
+      const atualizado: Animal = {
+        ...atual,
+        estado,
+        dataSaida: data,
+        motivoSaida: motivo,
+        terrenoId: undefined, // deixa de ocupar um terreno
+      };
+      const tipo = estado === 'falecido' ? 'Morte' : 'Venda';
+      const descricao =
+        estado === 'falecido' ? 'Animal registado como falecido.' : 'Animal saiu por venda.';
+      const evento: Evento = {
+        id: novoId('ev'),
+        animalId: id,
+        tipo,
+        data,
+        descricao,
+        detalhe: motivo,
+      };
+      setAnimais((prev) => prev.map((a) => (a.id === id ? atualizado : a)));
+      setEventos((prev) => [evento, ...prev]);
+      if (usaSupabase) {
+        await empurrar({ op: 'upsert', entidade: 'animal', dados: atualizado });
+        await empurrar({ op: 'upsert', entidade: 'evento', dados: evento });
+      } else {
+        gravarSqlite((db) => {
+          guardarAnimal(db, atualizado);
+          guardarEvento(db, evento);
+        });
+      }
+    },
+    [usaSupabase, gravarSqlite, empurrar],
+  );
+
+  const reativarAnimal = useCallback(
+    async (id: string): Promise<void> => {
+      const atual = animaisRef.current.find((a) => a.id === id);
+      if (!atual) return;
+      const atualizado: Animal = {
+        ...atual,
+        estado: 'ativo',
+        dataSaida: undefined,
+        motivoSaida: undefined,
+      };
+      setAnimais((prev) => prev.map((a) => (a.id === id ? atualizado : a)));
+      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'animal', dados: atualizado });
+      else gravarSqlite((db) => guardarAnimal(db, atualizado));
     },
     [usaSupabase, gravarSqlite, empurrar],
   );
@@ -533,11 +616,14 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       animalById,
       terrenoById,
       animaisByExploracao,
+      animaisByExploracaoIncluindoSaidos,
       terrenosByExploracao,
       eventosByAnimal,
       addAnimal,
       updateAnimal,
       deleteAnimal,
+      marcarSaida,
+      reativarAnimal,
       addExploracao,
       updateExploracao,
       deleteExploracao,
@@ -552,8 +638,10 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       utilizador, exploracoes, terrenos, animais, eventos, alertas,
       meteorologia, meteoEstado, online, pendentesSinc,
       exploracaoById, animalById, terrenoById, animaisByExploracao,
+      animaisByExploracaoIncluindoSaidos,
       terrenosByExploracao, eventosByAnimal, addAnimal, updateAnimal,
-      deleteAnimal, addExploracao, updateExploracao, deleteExploracao,
+      deleteAnimal, marcarSaida, reativarAnimal,
+      addExploracao, updateExploracao, deleteExploracao,
       addTerreno, updateTerreno, deleteTerreno, addEvento,
       recarregar, recarregarMeteo,
     ],

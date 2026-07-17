@@ -8,6 +8,13 @@ export type Especie = 'Bovino' | 'Equídeo' | 'Ovino' | 'Caprino' | 'Suíno';
 export type Sexo = 'Macho' | 'Fêmea';
 export type TipoTerreno = 'Pastagem' | 'Cultivo' | 'Misto' | 'Outro';
 
+/**
+ * Estado do animal no efetivo. `falecido` e `vendido` mantêm o registo em BD
+ * (para preservar a árvore genealógica dos descendentes) mas ficam ocultos
+ * das listas do dia-a-dia e não geram alertas.
+ */
+export type EstadoAnimal = 'ativo' | 'falecido' | 'vendido';
+
 /** Papel de um utilizador dentro de uma exploração (multi-tenant). */
 export type RoleMembro = 'admin' | 'trabalhador' | 'veterinario';
 
@@ -104,6 +111,16 @@ export interface Animal {
   dataPrevistaParto?: string;
   /** Já comunicado ao SNIRA? (nascimentos) */
   comunicadoSnira?: boolean;
+  /**
+   * Estado do animal. Ausente = considera-se `ativo` (compatível com registos
+   * antigos). Fica preservado na BD mesmo quando falecido/vendido para a
+   * árvore genealógica continuar a funcionar.
+   */
+  estado?: EstadoAnimal;
+  /** Data em que saiu do efetivo (falecimento ou venda). ISO. */
+  dataSaida?: string;
+  /** Nota livre: causa da morte, comprador, matadouro, etc. */
+  motivoSaida?: string;
 }
 
 export interface Evento {

@@ -22,6 +22,7 @@ export default function AnimaisScreen() {
   const [query, setQuery] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('Todos');
   const [soAlertas, setSoAlertas] = useState(false);
+  const [incluirSaidos, setIncluirSaidos] = useState(false);
 
   // Conjunto de animais com pelo menos um alerta pendente.
   const idsComAlerta = useMemo(
@@ -29,15 +30,25 @@ export default function AnimaisScreen() {
     [alertas],
   );
 
-  // Espécies efetivamente presentes no efetivo
+  const ativos = useMemo(
+    () => animais.filter((a) => !a.estado || a.estado === 'ativo'),
+    [animais],
+  );
+  const saidos = useMemo(
+    () => animais.filter((a) => a.estado === 'falecido' || a.estado === 'vendido'),
+    [animais],
+  );
+  const universo = incluirSaidos ? animais : ativos;
+
+  // Espécies efetivamente presentes no efetivo (só ativos, para não sujar o filtro)
   const filtrosDisponiveis = useMemo<Filtro[]>(() => {
-    const presentes = especies.filter((e) => animais.some((a) => a.especie === e));
+    const presentes = especies.filter((e) => ativos.some((a) => a.especie === e));
     return ['Todos', ...presentes];
-  }, [animais]);
+  }, [ativos]);
 
   const lista = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return animais
+    return universo
       .filter((a) => filtro === 'Todos' || a.especie === filtro)
       .filter((a) => !soAlertas || idsComAlerta.has(a.id))
       .filter((a) => {
@@ -49,7 +60,7 @@ export default function AnimaisScreen() {
         );
       })
       .sort((a, b) => (a.nome ?? '').localeCompare(b.nome ?? ''));
-  }, [animais, filtro, query, soAlertas, idsComAlerta]);
+  }, [universo, filtro, query, soAlertas, idsComAlerta]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -83,7 +94,7 @@ export default function AnimaisScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: spacing.md }}>
               <Text variant="display">Animais</Text>
               <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 6 }}>
-                {animais.length} no efetivo
+                {ativos.length} no efetivo
               </Text>
             </View>
 
@@ -118,15 +129,25 @@ export default function AnimaisScreen() {
               />
             </View>
 
-            {/* Filtro rápido: só animais com alertas pendentes */}
-            {idsComAlerta.size > 0 ? (
-              <View style={{ marginBottom: spacing.sm }}>
-                <Chip
-                  label={`Com alertas (${idsComAlerta.size})`}
-                  icon="alert-circle-outline"
-                  selected={soAlertas}
-                  onPress={() => setSoAlertas((v) => !v)}
-                />
+            {/* Filtros rápidos: alertas e arquivo (falecidos/vendidos) */}
+            {idsComAlerta.size > 0 || saidos.length > 0 ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm }}>
+                {idsComAlerta.size > 0 ? (
+                  <Chip
+                    label={`Com alertas (${idsComAlerta.size})`}
+                    icon="alert-circle-outline"
+                    selected={soAlertas}
+                    onPress={() => setSoAlertas((v) => !v)}
+                  />
+                ) : null}
+                {saidos.length > 0 ? (
+                  <Chip
+                    label={`Mostrar arquivo (${saidos.length})`}
+                    icon="archive-outline"
+                    selected={incluirSaidos}
+                    onPress={() => setIncluirSaidos((v) => !v)}
+                  />
+                ) : null}
               </View>
             ) : null}
 

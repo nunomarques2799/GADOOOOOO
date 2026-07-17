@@ -31,6 +31,23 @@ export function isoInDays(n: number): string {
   return new Date(Date.now() + n * MS_DIA).toISOString();
 }
 
+/**
+ * Converte "dd/mm/aaaa" (ou dd-mm-aaaa) numa data ISO ao meio-dia.
+ * Devolve null se inválida ou no futuro.
+ */
+export function parseDataPt(texto: string): string | null {
+  const m = texto.trim().match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
+  if (!m) return null;
+  const dia = Number(m[1]);
+  const mes = Number(m[2]);
+  const ano = Number(m[3]);
+  if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
+  const d = new Date(ano, mes - 1, dia, 12, 0, 0);
+  if (d.getFullYear() !== ano || d.getMonth() !== mes - 1 || d.getDate() !== dia) return null;
+  if (d.getTime() > Date.now()) return null;
+  return d.toISOString();
+}
+
 /* ---- Formatação PT ---- */
 export function formatDataPt(iso: string): string {
   const d = new Date(iso);
@@ -77,6 +94,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
   }
 
   for (const a of animais) {
+    // Animais que já saíram do efetivo (falecidos/vendidos) não geram alertas.
+    if (a.estado && a.estado !== 'ativo') continue;
     const rotulo = a.nome ?? a.numeroIdentificacao ?? 'Sem nome';
 
     // Identificação (brinco) até 20 dias de vida — bovinos

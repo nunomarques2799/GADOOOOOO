@@ -68,8 +68,16 @@ create table if not exists public.animal (
   fim_intervalo_seguranca text,
   data_prevista_parto text,
   comunicado_snira boolean,
+  estado text default 'ativo',
+  data_saida text,
+  motivo_saida text,
   updated_at timestamptz default now()
 );
+
+-- Migração idempotente para bases já criadas (v1 → v2: estado do animal).
+alter table public.animal add column if not exists estado text default 'ativo';
+alter table public.animal add column if not exists data_saida text;
+alter table public.animal add column if not exists motivo_saida text;
 
 -- ---- Evento ----
 create table if not exists public.evento (

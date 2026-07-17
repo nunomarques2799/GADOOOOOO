@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
 import { PrazosLegais, especieMeta, especies, sexos } from '@/data/constants';
-import { formatDataCurta, formatDataPt, idadeDias, idadeExtenso, isoDaysAgo } from '@/data/helpers';
+import { formatDataCurta, formatDataPt, idadeDias, idadeExtenso, isoDaysAgo, parseDataPt } from '@/data/helpers';
 import { rotuloAnimal } from '@/data/genealogia';
 import { useGado } from '@/data/store';
 import type { Animal, Especie, Sexo } from '@/data/types';
@@ -21,21 +21,6 @@ const opcoesData = [
 ];
 
 const MS_MES = 30.44 * 86_400_000;
-
-/** Converte "dd/mm/aaaa" (ou dd-mm-aaaa) numa data ISO, ou null se inválida. */
-function parseDataPt(texto: string): string | null {
-  const m = texto.trim().match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
-  if (!m) return null;
-  const dia = Number(m[1]);
-  const mes = Number(m[2]);
-  const ano = Number(m[3]);
-  if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
-  const d = new Date(ano, mes - 1, dia, 12, 0, 0);
-  // Rejeita datas impossíveis (ex.: 31/02) e datas no futuro.
-  if (d.getFullYear() !== ano || d.getMonth() !== mes - 1 || d.getDate() !== dia) return null;
-  if (d.getTime() > Date.now()) return null;
-  return d.toISOString();
-}
 
 /** Ids de todos os descendentes de um animal — não podem ser seus progenitores. */
 function idsDescendentes(animais: Animal[], raizId: string): Set<string> {

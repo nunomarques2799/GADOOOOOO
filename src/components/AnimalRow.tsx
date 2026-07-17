@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 
-import { Card, Icon, IconBadge, Text } from '@/components/ui';
+import { Badge, Card, Icon, IconBadge, Text } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
 import { idadeExtenso } from '@/data/helpers';
 import { useGado } from '@/data/store';
@@ -14,6 +14,7 @@ export function AnimalRow({ animal }: { animal: Animal }) {
   const meta = especieMeta[animal.especie];
   const terreno = animal.terrenoId ? terrenoById(animal.terrenoId) : undefined;
   const semBrinco = animal.especie === 'Bovino' && !animal.numeroIdentificacao;
+  const saiu = animal.estado === 'falecido' || animal.estado === 'vendido';
 
   const sexoCor = animal.sexo === 'Fêmea' ? '#C2568A' : '#3B7BC4';
   const sexoIcon = animal.sexo === 'Fêmea' ? 'gender-female' : 'gender-male';
@@ -22,7 +23,7 @@ export function AnimalRow({ animal }: { animal: Animal }) {
     <Card
       onPress={() => router.push(`/animal/${animal.id}`)}
       accessibilityLabel={`${animal.nome ?? 'Animal'}, ${animal.especie}, ${idadeExtenso(animal.dataNascimento)}`}
-      style={{ marginBottom: spacing.sm }}
+      style={{ marginBottom: spacing.sm, opacity: saiu ? 0.7 : 1 }}
       padded={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.sm }}>
         <View>
@@ -50,6 +51,12 @@ export function AnimalRow({ animal }: { animal: Animal }) {
               {animal.nome ?? 'Sem nome'}
             </Text>
             <Icon name={sexoIcon} size={16} color={sexoCor} />
+            {animal.estado === 'falecido' ? (
+              <Badge tone="neutral" icon="grave-stone" label="Falecido" />
+            ) : null}
+            {animal.estado === 'vendido' ? (
+              <Badge tone="info" icon="cash" label="Vendido" />
+            ) : null}
           </View>
           <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
             {animal.numeroIdentificacao ?? 'Sem brinco'}

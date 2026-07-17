@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { AlertItem } from '@/components/AlertItem';
@@ -7,6 +8,7 @@ import {
   Badge,
   Button,
   Card,
+  Chip,
   EmptyState,
   Header,
   Icon,
@@ -14,12 +16,14 @@ import {
   IconBadge,
   Screen,
   Text,
+  TextField,
 } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
+import { avisar, confirmar } from '@/data/avisos';
 import { filhosDe, rotuloAnimal } from '@/data/genealogia';
-import { formatDataPt, idadeExtenso } from '@/data/helpers';
+import { formatDataCurta, formatDataPt, idadeExtenso, parseDataPt } from '@/data/helpers';
 import { useGado } from '@/data/store';
-import type { EventoTipo } from '@/data/types';
+import type { EstadoAnimal, EventoTipo } from '@/data/types';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 const eventoIcone: Record<EventoTipo, IconName> = {
@@ -36,9 +40,26 @@ const eventoIcone: Record<EventoTipo, IconName> = {
 export default function AnimalDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { animais, animalById, terrenoById, exploracaoById, eventosByAnimal, alertas } = useGado();
+  const {
+    animais,
+    animalById,
+    terrenoById,
+    exploracaoById,
+    eventosByAnimal,
+    alertas,
+    marcarSaida,
+    reativarAnimal,
+  } = useGado();
 
   const animal = animalById(id);
+
+  // Formulário inline "Marcar saída" — só visível quando o utilizador o abre.
+  const [saidaOpen, setSaidaOpen] = useState(false);
+  const [saidaTipo, setSaidaTipo] = useState<Exclude<EstadoAnimal, 'ativo'>>('vendido');
+  const [saidaData, setSaidaData] = useState(formatDataCurta(new Date().toISOString()));
+  const [saidaMotivo, setSaidaMotivo] = useState('');
+  const [saidaErro, setSaidaErro] = useState<string | null>(null);
+  const [aGuardar, setAGuardar] = useState(false);
 
   if (!animal) {
     return (
@@ -57,6 +78,37 @@ export default function AnimalDetalheScreen() {
   const crias = filhosDe(animais, animal.id);
   const eventos = eventosByAnimal(animal.id);
   const meusAlertas = alertas.filter((a) => a.animalId === animal.id);
+  const saiu = animal.estado === 'falecido' || animal.estado === 'vendido';
+
+  async function confirmarSaida() {
+    const iso = parseDataPt(saidaData);
+    if (!iso) {
+      setSaidaErro('Data inválida — use o formato dd/mm/aaaa.');
+      return;
+    }
+    setSaidaErro(null);
+    setAGuardar(true);
+    try {
+      await marcarSaida(animal!.id, saidaTipo, iso, saidaMotivo.trim() || undefined);
+      setSaidaOpen(false);
+      setSaidaMotivo('');
+    } catch (e) {
+      avisar('Não foi possível guardar', e instanceof Error ? e.message : String(e));
+    } finally {
+      setAGuardar(false);
+    }
+  }
+
+  function pedirReativar() {
+    confirmar(
+      'Voltar a ativar?',
+      'O animal vai voltar a aparecer no efetivo. O evento anterior (Morte/Venda) permanece no histórico.',
+      () => {
+        void reativarAnimal(animal!.id);
+      },
+      { rotuloConfirmar: 'Reativar' },
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -94,8 +146,44 @@ export default function AnimalDetalheScreen() {
             <HeroChip icon={meta.icon} label={animal.especie} />
             <HeroChip icon={animal.sexo === 'Fêmea' ? 'gender-female' : 'gender-male'} label={animal.sexo} />
             <HeroChip icon="cake-variant" label={idadeExtenso(animal.dataNascimento)} />
+            {animal.estado === 'falecido' ? (
+              <HeroChip icon="grave-stone" label="Falecido" />
+            ) : null}
+            {animal.estado === 'vendido' ? (
+              <HeroChip icon="cash" label="Vendido" />
+            ) : null}
           </View>
         </LinearGradient>
+
+        {/* Aviso: animal já não está no efetivo */}
+        {saiu ? (
+          <>
+            <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+              Saída do efetivo
+            </Text>
+            <Card>
+              <InfoField
+                icon={animal.estado === 'falecido' ? 'grave-stone' : 'cash'}
+                label="Motivo"
+                value={animal.estado === 'falecido' ? 'Falecimento' : 'Venda'}
+              />
+              <InfoField
+                icon="calendar"
+                label="Data"
+                value={animal.dataSaida ? formatDataPt(animal.dataSaida) : '—'}
+              />
+              <InfoField
+                icon="note-text-outline"
+                label="Nota"
+                value={animal.motivoSaida ?? '—'}
+                last
+              />
+            </Card>
+            <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
+              O registo permanece guardado para preservar a árvore genealógica dos descendentes.
+            </Text>
+          </>
+        ) : null}
 
         {/* Alertas do animal */}
         {meusAlertas.length > 0 ? (
@@ -204,21 +292,147 @@ export default function AnimalDetalheScreen() {
 
         {/* Ações */}
         <View style={{ gap: spacing.sm, marginTop: spacing.xl }}>
-          <Button
-            label="Registar evento"
-            icon="plus"
-            variant="secondary"
-            onPress={() => router.push({ pathname: '/evento/novo', params: { animalId: animal.id } })}
-          />
-          <Button
-            label="Editar dados do animal"
-            icon="pencil-outline"
-            variant="ghost"
-            onPress={() => router.push(`/animal/editar/${animal.id}`)}
-          />
+          {!saiu ? (
+            <>
+              <Button
+                label="Registar evento"
+                icon="plus"
+                variant="secondary"
+                onPress={() => router.push({ pathname: '/evento/novo', params: { animalId: animal.id } })}
+              />
+              <Button
+                label="Editar dados do animal"
+                icon="pencil-outline"
+                variant="ghost"
+                onPress={() => router.push(`/animal/editar/${animal.id}`)}
+              />
+              {!saidaOpen ? (
+                <Button
+                  label="Marcar como falecido / vendido"
+                  icon="archive-outline"
+                  variant="ghost"
+                  onPress={() => setSaidaOpen(true)}
+                />
+              ) : (
+                <FormularioSaida
+                  tipo={saidaTipo}
+                  data={saidaData}
+                  motivo={saidaMotivo}
+                  erro={saidaErro}
+                  aGuardar={aGuardar}
+                  onChangeTipo={setSaidaTipo}
+                  onChangeData={setSaidaData}
+                  onChangeMotivo={setSaidaMotivo}
+                  onCancelar={() => {
+                    setSaidaOpen(false);
+                    setSaidaErro(null);
+                  }}
+                  onConfirmar={confirmarSaida}
+                />
+              )}
+            </>
+          ) : (
+            <Button
+              label="Voltar a ativar o animal"
+              icon="restore"
+              variant="secondary"
+              onPress={pedirReativar}
+            />
+          )}
         </View>
       </Screen>
     </View>
+  );
+}
+
+function FormularioSaida({
+  tipo,
+  data,
+  motivo,
+  erro,
+  aGuardar,
+  onChangeTipo,
+  onChangeData,
+  onChangeMotivo,
+  onCancelar,
+  onConfirmar,
+}: {
+  tipo: Exclude<EstadoAnimal, 'ativo'>;
+  data: string;
+  motivo: string;
+  erro: string | null;
+  aGuardar: boolean;
+  onChangeTipo: (t: Exclude<EstadoAnimal, 'ativo'>) => void;
+  onChangeData: (t: string) => void;
+  onChangeMotivo: (t: string) => void;
+  onCancelar: () => void;
+  onConfirmar: () => void;
+}) {
+  return (
+    <Card>
+      <Text variant="h3" style={{ marginBottom: spacing.sm }}>
+        Marcar saída do efetivo
+      </Text>
+      <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
+        <Chip
+          label="Vendido"
+          icon="cash"
+          selected={tipo === 'vendido'}
+          onPress={() => onChangeTipo('vendido')}
+        />
+        <Chip
+          label="Falecido"
+          icon="grave-stone"
+          selected={tipo === 'falecido'}
+          onPress={() => onChangeTipo('falecido')}
+        />
+      </View>
+      <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 4 }}>
+        Data (dd/mm/aaaa)
+      </Text>
+      <View style={{ marginBottom: spacing.md }}>
+        <TextField
+          value={data}
+          onChangeText={onChangeData}
+          placeholder="dd/mm/aaaa"
+          icon="calendar"
+          keyboardType="numbers-and-punctuation"
+        />
+      </View>
+      <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 4 }}>
+        Nota (opcional) — comprador, matadouro, causa, etc.
+      </Text>
+      <View style={{ marginBottom: spacing.md }}>
+        <TextField
+          value={motivo}
+          onChangeText={onChangeMotivo}
+          placeholder={tipo === 'vendido' ? 'Ex.: vendido ao Sr. Silva' : 'Ex.: doença'}
+          icon="note-text-outline"
+        />
+      </View>
+      {erro ? (
+        <Text variant="secondary" color={colors.danger} style={{ marginBottom: spacing.sm }}>
+          {erro}
+        </Text>
+      ) : null}
+      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        <View style={{ flex: 1 }}>
+          <Button label="Cancelar" variant="ghost" onPress={onCancelar} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button
+            label={aGuardar ? 'A guardar…' : 'Confirmar'}
+            icon="check"
+            variant="primary"
+            onPress={onConfirmar}
+            disabled={aGuardar}
+          />
+        </View>
+      </View>
+      <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm }}>
+        Fica um evento de {tipo === 'vendido' ? 'Venda' : 'Morte'} registado no histórico.
+      </Text>
+    </Card>
   );
 }
 

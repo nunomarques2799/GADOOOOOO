@@ -20,7 +20,17 @@ import {
   terrenosSeed,
   utilizadorSeed,
 } from '../seed';
-import type { Animal, Especie, Evento, Exploracao, Sexo, Terreno, TipoTerreno, Utilizador } from '../types';
+import type {
+  Animal,
+  Especie,
+  EstadoAnimal,
+  Evento,
+  Exploracao,
+  Sexo,
+  Terreno,
+  TipoTerreno,
+  Utilizador,
+} from '../types';
 
 /** Linha genérica devolvida pelo SQLite. */
 type Row = Record<string, string | number | null>;
@@ -96,6 +106,9 @@ function toAnimal(r: Row): Animal {
     fimIntervaloSeguranca: asStr(r.fimIntervaloSeguranca),
     dataPrevistaParto: asStr(r.dataPrevistaParto),
     comunicadoSnira: asBool(r.comunicadoSnira),
+    estado: asStr(r.estado) as EstadoAnimal | undefined,
+    dataSaida: asStr(r.dataSaida),
+    motivoSaida: asStr(r.motivoSaida),
   };
 }
 
@@ -166,13 +179,13 @@ export function guardarAnimal(db: SQLiteDatabase, a: Animal): void {
     `INSERT OR REPLACE INTO animal
      (id, exploracaoId, terrenoId, maeId, paiId, nome, especie, sexo, dataNascimento, raca, corPelagem,
       numeroIdentificacao, dataIdentificacao, tipoIdentificacao, fotografia, fimIntervaloSeguranca,
-      dataPrevistaParto, comunicadoSnira, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      dataPrevistaParto, comunicadoSnira, estado, dataSaida, motivoSaida, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       a.id, a.exploracaoId, txt(a.terrenoId), txt(a.maeId), txt(a.paiId), txt(a.nome), a.especie, a.sexo,
       a.dataNascimento, txt(a.raca), txt(a.corPelagem), txt(a.numeroIdentificacao), txt(a.dataIdentificacao),
       txt(a.tipoIdentificacao), txt(a.fotografia), txt(a.fimIntervaloSeguranca), txt(a.dataPrevistaParto),
-      bool(a.comunicadoSnira), agora(),
+      bool(a.comunicadoSnira), txt(a.estado), txt(a.dataSaida), txt(a.motivoSaida), agora(),
     ],
   );
 }
