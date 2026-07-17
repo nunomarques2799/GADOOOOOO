@@ -55,6 +55,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d1db860e-ee1e-49fe-8c0d-793304effca4"
+      }
+    },
+    "owner": "otariodoing"
   }
 }
