@@ -83,20 +83,14 @@ jobs:
           7z a -tzip -mx=7 "GestaoDeGado-Windows.zip" "Gestao de Gado"
 
       - name: Publicar no GitHub Release
-        working-directory: desktop
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ZIP="dist-build/GestaoDeGado-Windows.zip"
-          # Cria o release "windows" se ainda não existir. Ignora o erro
-          # "tag_name already exists" (acontece em todas as execuções depois da
-          # primeira) — antes, um hiccup no `gh release view` fazia o script
-          # tentar criar um release que já existe e abortar antes do upload.
-          gh release create windows -R "$GITHUB_REPOSITORY" \
-            --title "Gestão de Gado — Windows" \
-            --notes "Versão mais recente da app para Windows. Descarregue o ZIP, extraia a pasta e abra 'Gestao de Gado.exe'. Atualizado automaticamente a cada alteração." \
-            2>/dev/null || true
-          # Envia (ou substitui) o ZIP. É este passo que atualiza o download.
-          gh release upload windows -R "$GITHUB_REPOSITORY" "$ZIP" --clobber
-          echo "Release 'windows' atualizado com o novo ZIP."
+        # Antes usava o `gh` CLI, mas o `gh release view` falhava de forma
+        # intermitente no runner: o script concluía que o release não existia,
+        # tentava criá-lo, e o GitHub respondia 422 "tag_name already exists" —
+        # abortando antes do upload do ZIP. Esta action fala com a API
+        # diretamente e faz criar-ou-atualizar + substituir o ficheiro num passo.
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows
+          name: Gestão de Gado — Windows
+          body: "Versão mais recente da app para Windows. Descarregue o ZIP, extraia a pasta e abra 'Gestao de Gado.exe'. Atualizado automaticamente a cada alteração."
+          files: desktop/dist-build/GestaoDeGado-Windows.zip
