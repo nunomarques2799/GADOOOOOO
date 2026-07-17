@@ -1,3 +1,5 @@
+import { describe, expect, it } from '@jest/globals';
+
 import type { Animal, Evento } from '../types';
 import {
   computeAlertas,
