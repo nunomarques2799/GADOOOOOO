@@ -7,6 +7,7 @@ import { avisar, confirmar } from '@/data/avisos';
 import { descreverOp, lerCache } from '@/data/cacheLocal';
 import { guardarFicheiro, hojeISO } from '@/data/exportar';
 import { formatDataHora } from '@/data/helpers';
+import { mensagemLegivel } from '@/data/supabaseRepo';
 import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
@@ -32,6 +33,8 @@ export default function SincronizacaoScreen() {
   } = useGado();
 
   const [aSincronizar, setASincronizar] = useState(false);
+
+  const nConflitos = falhadas.filter((f) => f.motivo === 'conflito').length;
 
   function confirmarLimparFalhadas() {
     confirmar(
@@ -157,7 +160,7 @@ export default function SincronizacaoScreen() {
                 variant="label"
                 color={colors.textSecondary}
                 style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-                NÃO FOI POSSÍVEL GRAVAR
+                {nConflitos > 0 ? 'ALTERAÇÕES PERDIDAS' : 'NÃO FOI POSSÍVEL GRAVAR'}
               </Text>
               <Card>
                 <View style={{ gap: spacing.sm }}>
@@ -165,38 +168,55 @@ export default function SincronizacaoScreen() {
                     <Icon name="alert-circle-outline" size="lg" color={colors.danger} />
                     <View style={{ flex: 1 }}>
                       <Text variant="bodyStrong">
-                        {falhadas.length} alteraç{falhadas.length > 1 ? 'ões' : 'ão'} recusada
-                        {falhadas.length > 1 ? 's' : ''}
+                        {falhadas.length} alteraç{falhadas.length > 1 ? 'ões' : 'ão'} não
+                        guardada{falhadas.length > 1 ? 's' : ''}
                       </Text>
                       <Text variant="secondary" color={colors.textSecondary}>
-                        Foram feitas sem ligação e o servidor não as aceitou — normalmente por
-                        não ter permissão para essa exploração. Não ficaram guardadas.
+                        {nConflitos > 0
+                          ? 'Foram feitas sem ligação e não chegaram ao servidor. Confira o que está em falta e volte a registar o que ainda fizer sentido.'
+                          : 'Foram feitas sem ligação e o servidor não as aceitou — normalmente por não ter permissão para essa exploração.'}
                       </Text>
                     </View>
                   </View>
 
                   <View>
-                    {falhadas.map((f, i) => (
-                      <View
-                        key={`${f.em}-${i}`}
-                        style={{
-                          paddingVertical: spacing.sm,
-                          borderTopWidth: 1,
-                          borderTopColor: colors.border,
-                        }}>
-                        <Text variant="bodyStrong">{descreverOp(f.op)}</Text>
-                        <Text variant="caption" color={colors.textSecondary}>
-                          {formatDataHora(f.em)}
-                        </Text>
-                        <Text
-                          variant="caption"
-                          color={colors.danger}
-                          style={{ marginTop: 2 }}
-                          numberOfLines={3}>
-                          {f.erro}
-                        </Text>
-                      </View>
-                    ))}
+                    {falhadas.map((f, i) => {
+                      const conflito = f.motivo === 'conflito';
+                      return (
+                        <View
+                          key={`${f.em}-${i}`}
+                          style={{
+                            paddingVertical: spacing.sm,
+                            borderTopWidth: 1,
+                            borderTopColor: colors.border,
+                          }}>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: spacing.xs,
+                              flexWrap: 'wrap',
+                            }}>
+                            <Text variant="bodyStrong">{descreverOp(f.op)}</Text>
+                            <Badge
+                              tone={conflito ? 'warning' : 'danger'}
+                              icon={conflito ? 'account-sync-outline' : 'lock-outline'}
+                              label={conflito ? 'alterado por outra pessoa' : 'sem permissão'}
+                            />
+                          </View>
+                          <Text variant="caption" color={colors.textSecondary}>
+                            {formatDataHora(f.em)}
+                          </Text>
+                          <Text
+                            variant="caption"
+                            color={conflito ? colors.warning : colors.danger}
+                            style={{ marginTop: 2 }}
+                            numberOfLines={3}>
+                            {mensagemLegivel(f.erro)}
+                          </Text>
+                        </View>
+                      );
+                    })}
                   </View>
 
                   <Button

@@ -64,6 +64,8 @@ import {
 import { supabaseConfigurado } from './supabase';
 import {
   carregarTudoSupabase,
+  eConflito,
+  mensagemLegivel,
   eliminarAnimalSupabase,
   eliminarExploracaoSupabase,
   eliminarTerrenoSupabase,
@@ -395,12 +397,17 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       setOnline(true);
       return true;
     }
-    if (pareceErroDeRede(erro)) {
+    // Mesma ordem que em `sincronizar`: um conflito nunca é falha de rede,
+    // por muito que a mensagem fale de ligação. Pô-lo na fila só o faria
+    // repetir-se sem fim.
+    if (!eConflito(erro) && pareceErroDeRede(erro)) {
       setPendentesSinc(adicionarOutbox(op));
       setOnline(false);
       return false;
     }
-    throw new Error(erro); // erro real de validação/RLS → mostra na UI
+    // Erro real de validação/RLS/conflito → mostra na UI. Sem o marcador
+    // técnico à frente: quem lê isto é o criador, não o código.
+    throw new Error(mensagemLegivel(erro));
   }, []);
 
   /** Esvazia a fila por ordem e, se conseguir, puxa a verdade do servidor. */
@@ -415,16 +422,21 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         erro = e instanceof Error ? e.message : String(e);
       }
-      if (erro && pareceErroDeRede(erro)) {
+      // O conflito é verificado ANTES da heurística de rede: a sua mensagem
+      // fala de ligação, e `pareceErroDeRede` pesca por palavras. Sem esta
+      // ordem, um conflito voltava à fila e ficava a repetir-se para sempre,
+      // porque a versão do servidor nunca mais recuaria.
+      if (erro && !eConflito(erro) && pareceErroDeRede(erro)) {
         setOnline(false);
         break; // continua offline — tenta na próxima vez
       }
       if (erro) {
-        // Erro lógico (RLS, validação): repetir daria o mesmo e a fila ficava
-        // presa para sempre. Sai da fila, mas fica registada — esta alteração
-        // já apareceu ao criador como gravada e não pode sumir em silêncio.
-        // O estado local corrige-se sozinho no `puxarDoServidor()` do fim.
-        registarFalhada(proxima, erro);
+        // Erro lógico (RLS, validação) ou conflito de versão: repetir daria o
+        // mesmo e a fila ficava presa para sempre. Sai da fila, mas fica
+        // registada — esta alteração já apareceu ao criador como gravada e não
+        // pode sumir em silêncio. O estado local corrige-se sozinho no
+        // `puxarDoServidor()` do fim, que traz a versão vencedora.
+        registarFalhada(proxima, erro, eConflito(erro) ? 'conflito' : 'recusada');
         setFalhadas(lerFalhadas());
       }
       ops = resto;

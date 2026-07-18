@@ -68,7 +68,21 @@ export interface Utilizador {
   fotografia?: string;
 }
 
-export interface Exploracao {
+/**
+ * Versão da linha tal como o servidor a devolveu (`updated_at`), usada para
+ * detetar que outra pessoa alterou o mesmo registo enquanto estávamos sem
+ * rede. Ausente = nunca veio do servidor (criado localmente e ainda por
+ * sincronizar), e nesse caso não há com quem colidir.
+ *
+ * Nunca é escrita pelo cliente: quem a mantém é o trigger `toca_updated_at`
+ * (ver `supabase/schema_versoes.sql`). Um relógio mal acertado num telemóvel
+ * não pode ter voto na versão.
+ */
+export interface ComVersao {
+  atualizadoEm?: string;
+}
+
+export interface Exploracao extends ComVersao {
   id: string;
   utilizadorId: string;
   nome: string;
@@ -78,7 +92,7 @@ export interface Exploracao {
   fotografia?: string;
 }
 
-export interface Terreno {
+export interface Terreno extends ComVersao {
   id: string;
   exploracaoId: string;
   nome: string;
@@ -89,7 +103,7 @@ export interface Terreno {
   tipo?: TipoTerreno;
 }
 
-export interface Animal {
+export interface Animal extends ComVersao {
   id: string;
   exploracaoId: string;
   terrenoId?: string;
@@ -123,7 +137,7 @@ export interface Animal {
   motivoSaida?: string;
 }
 
-export interface Evento {
+export interface Evento extends ComVersao {
   id: string;
   animalId: string;
   tipo: EventoTipo;

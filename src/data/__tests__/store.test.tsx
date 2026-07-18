@@ -90,6 +90,15 @@ jest.mock('../supabaseRepo', () => ({
   eliminarAnimalSupabase: async (id: string) => mockRespostaEscrita(`delete:animal:${id}`),
   eliminarExploracaoSupabase: async (id: string) => mockRespostaEscrita(`delete:exploracao:${id}`),
   eliminarTerrenoSupabase: async (id: string) => mockRespostaEscrita(`delete:terreno:${id}`),
+  // Classificação de erros: o store usa-as para separar conflito de recusa e
+  // para limpar o marcador técnico antes de a mensagem chegar ao ecrã. Aqui
+  // mantêm-se com o comportamento real, que é puro.
+  ERRO_CONFLITO: 'CONFLITO_DE_VERSAO',
+  eConflito: (msg: string) => msg.startsWith('CONFLITO_DE_VERSAO'),
+  mensagemLegivel: (msg: string) =>
+    msg.startsWith('CONFLITO_DE_VERSAO')
+      ? msg.slice('CONFLITO_DE_VERSAO'.length).replace(/^:\s*/, '')
+      : msg,
 }));
 
 import { lerOutbox } from '../cacheLocal';
@@ -282,6 +291,67 @@ describe('sincronização da fila', () => {
 
     expect(ctx().pendentesSinc).toBe(0);
     expect(mockServidor.recebidas).toHaveLength(1); // só a segunda passou
+  });
+
+  it('a operação descartada fica registada, não desaparece', async () => {
+    // Descartar é preciso para a fila não encravar, mas a alteração já tinha
+    // sido mostrada ao criador como gravada. Sumir sem uma palavra foi o que
+    // fez um veterinário perder registos feitos no mato.
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Network request failed';
+    await act(async () => {
+      await ctx().addAnimal(animal('perdido') as Omit<Animal, 'id'>);
+    });
+
+    mockServidor.erroSeguinte = 'new row violates row-level security policy';
+    await act(async () => {
+      await ctx().recarregar();
+    });
+
+    expect(ctx().falhadas).toHaveLength(1);
+    expect(ctx().falhadas[0].motivo).toBe('recusada');
+    expect(ctx().falhadas[0].erro).toContain('row-level security');
+  });
+
+  it('distingue um conflito de versão de uma recusa por permissão', async () => {
+    // As duas saem da fila da mesma maneira, mas dizem coisas opostas ao
+    // criador: uma é "não podes", a outra é "outra pessoa chegou primeiro".
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Network request failed';
+    await act(async () => {
+      await ctx().addAnimal(animal('colidido') as Omit<Animal, 'id'>);
+    });
+
+    mockServidor.erroSeguinte =
+      'CONFLITO_DE_VERSAO: outra pessoa alterou este registo enquanto esteve sem ligação.';
+    await act(async () => {
+      await ctx().recarregar();
+    });
+
+    expect(ctx().falhadas).toHaveLength(1);
+    expect(ctx().falhadas[0].motivo).toBe('conflito');
+  });
+
+  it('limpar a lista de falhadas esvazia-a', async () => {
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Network request failed';
+    await act(async () => {
+      await ctx().addAnimal(animal('x') as Omit<Animal, 'id'>);
+    });
+    mockServidor.erroSeguinte = 'invalid input syntax for type uuid';
+    await act(async () => {
+      await ctx().recarregar();
+    });
+    expect(ctx().falhadas).toHaveLength(1);
+
+    await act(async () => {
+      ctx().limparFalhadas();
+    });
+
+    expect(ctx().falhadas).toEqual([]);
   });
 });
 

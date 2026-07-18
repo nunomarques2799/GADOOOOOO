@@ -29,17 +29,31 @@
 -- ------------------------------------------------------------------
 -- ANTES DE CORRER: ver quem vai ficar congelado
 -- ------------------------------------------------------------------
--- Esta consulta lista as explorações cujo dono NÃO está 'ativo' — são as
--- que ficam só de leitura no instante em que este ficheiro correr. Se
--- aparecer aqui um cliente que devia estar a trabalhar, aprova-o primeiro
--- (`select public.superadmin_aprovar_cliente('<uuid>')`).
+-- Esta consulta lista as explorações que ficam só de leitura no instante em
+-- que este ficheiro correr. É o inverso exato da condição de
+-- `exploracao_ativa()`, por isso apanha os DOIS casos:
+--   - dono por aprovar  → `select public.superadmin_aprovar_cliente('<uuid>')`
+--   - exploração órfã, sem admin nenhum (o `handle_new_exploracao` não existia
+--     quando foi criada, ou a linha de membro foi apagada) → é preciso repor o
+--     admin antes de aplicar, senão congela e ninguém lhe consegue tocar.
 --
---   select e.id, e.nome, u.email as dono, p.estado
+-- ATENÇÃO: um `join` interno em `role = 'admin'` NÃO serve aqui — as órfãs não
+-- teriam linha para juntar e passariam despercebidas. Daí o `not exists`.
+--
+--   select e.id,
+--          e.nome,
+--          coalesce(u.email, '— sem admin —') as dono,
+--          coalesce(p.estado, '—')            as estado_do_dono
 --     from public.exploracao e
---     join public.membro_exploracao m on m.exploracao_id = e.id and m.role = 'admin'
---     join public.perfil p on p.id = m.user_id
---     join auth.users u on u.id = p.id
---    where p.estado is distinct from 'ativo';
+--     left join public.membro_exploracao m on m.exploracao_id = e.id and m.role = 'admin'
+--     left join public.perfil p on p.id = m.user_id
+--     left join auth.users  u on u.id = p.id
+--    where not exists (
+--      select 1 from public.membro_exploracao m2
+--        join public.perfil p2 on p2.id = m2.user_id
+--       where m2.exploracao_id = e.id and m2.role = 'admin' and p2.estado = 'ativo'
+--    )
+--    order by e.nome;
 
 
 -- ------------------------------------------------------------------

@@ -31,13 +31,23 @@ export type OpPendente =
   | { op: 'upsert'; entidade: Entidade; dados: Exploracao | Terreno | Animal | Evento }
   | { op: 'delete'; entidade: Entidade; id: string };
 
-/** Uma operação que o servidor recusou, guardada para o criador poder vê-la. */
+/**
+ * Porque é que a operação não passou. Muda a mensagem e o que se pode fazer:
+ *   - `recusada` — o servidor disse que não (RLS, validação). Não há volta.
+ *   - `conflito` — outra pessoa alterou o mesmo registo enquanto estávamos
+ *     sem rede. A alteração dela está lá; a nossa é que se perdeu.
+ */
+export type MotivoFalha = 'recusada' | 'conflito';
+
+/** Uma operação que o servidor não aceitou, guardada para o criador a ver. */
 export type OpFalhada = {
   op: OpPendente;
-  /** Mensagem do servidor (RLS, validação) tal como veio. */
+  /** Mensagem do servidor (RLS, validação, conflito) tal como veio. */
   erro: string;
   /** Momento em que a tentativa falhou, em ISO. */
   em: string;
+  /** Ausente nos registos gravados antes de esta distinção existir. */
+  motivo?: MotivoFalha;
 };
 
 const CHAVE_CACHE = 'gado.cache.v1';
@@ -112,9 +122,13 @@ export function lerFalhadas(): OpFalhada[] {
   }
 }
 
-/** Regista uma recusa e devolve o novo total. Mantém as mais recentes. */
-export function registarFalhada(op: OpPendente, erro: string): number {
-  const lista = [{ op, erro, em: new Date().toISOString() }, ...lerFalhadas()].slice(
+/** Regista uma falha e devolve o novo total. Mantém as mais recentes. */
+export function registarFalhada(
+  op: OpPendente,
+  erro: string,
+  motivo: MotivoFalha = 'recusada',
+): number {
+  const lista = [{ op, erro, em: new Date().toISOString(), motivo }, ...lerFalhadas()].slice(
     0,
     MAX_FALHADAS,
   );

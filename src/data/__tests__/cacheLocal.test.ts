@@ -239,4 +239,21 @@ describe('pareceErroDeRede — decide entre reenviar e descartar', () => {
   it('é indiferente a maiúsculas', () => {
     expect(pareceErroDeRede('NETWORK REQUEST FAILED')).toBe(true);
   });
+
+  it('ARMADILHA: uma mensagem de conflito pode falar de "ligação" e enganá-la', () => {
+    // Esta heurística pesca por palavras, e o texto natural de um conflito
+    // ("outra pessoa alterou isto enquanto esteve sem ligação") cai na rede.
+    // Aconteceu mesmo, e o efeito era mau: o conflito voltava à fila e ficava
+    // a repetir-se para sempre, porque a versão do servidor nunca recuaria.
+    expect(pareceErroDeRede('outra pessoa alterou isto enquanto esteve sem ligação')).toBe(true);
+
+    // Por isso o store verifica `eConflito()` ANTES de chamar esta função, e a
+    // mensagem real evita as palavras-armadilha. Se alguém reescrever o texto
+    // do conflito, este teste lembra porquê.
+    expect(
+      pareceErroDeRede(
+        'CONFLITO_DE_VERSAO: outra pessoa alterou este registo antes de esta alteração chegar ao servidor.',
+      ),
+    ).toBe(false);
+  });
 });

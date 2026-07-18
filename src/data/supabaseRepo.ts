@@ -22,7 +22,30 @@ import type {
   TipoTerreno,
 } from './types';
 
-type ExploracaoRow = {
+/**
+ * Erro devolvido quando outra pessoa alterou a linha desde a versão que
+ * tínhamos. Reconhecido por `eConflito()` — o store trata-o à parte, porque
+ * repetir não adianta (a versão do servidor continuaria à frente) e descartar
+ * em silêncio seria perder trabalho.
+ */
+export const ERRO_CONFLITO = 'CONFLITO_DE_VERSAO';
+
+export function eConflito(msg: string): boolean {
+  return msg.startsWith(ERRO_CONFLITO);
+}
+
+/**
+ * Tira o marcador técnico da frente da mensagem, para o criador ler só a
+ * explicação. O marcador serve o código; a pessoa não tem nada com ele.
+ */
+export function mensagemLegivel(msg: string): string {
+  return eConflito(msg) ? msg.slice(ERRO_CONFLITO.length).replace(/^:\s*/, '') : msg;
+}
+
+/** Todas as tabelas trazem a versão da linha (mantida pelo trigger). */
+type ComUpdatedAt = { updated_at?: string | null };
+
+type ExploracaoRow = ComUpdatedAt & {
   id: string;
   user_id: string;
   nome: string;
@@ -32,7 +55,7 @@ type ExploracaoRow = {
   fotografia?: string | null;
 };
 
-type TerrenoRow = {
+type TerrenoRow = ComUpdatedAt & {
   id: string;
   exploracao_id: string;
   nome: string;
@@ -43,7 +66,7 @@ type TerrenoRow = {
   tipo?: string | null;
 };
 
-type AnimalRow = {
+type AnimalRow = ComUpdatedAt & {
   id: string;
   exploracao_id: string;
   terreno_id?: string | null;
@@ -67,7 +90,7 @@ type AnimalRow = {
   motivo_saida?: string | null;
 };
 
-type EventoRow = {
+type EventoRow = ComUpdatedAt & {
   id: string;
   animal_id: string;
   tipo: string;
@@ -80,6 +103,7 @@ type EventoRow = {
 /* ---- Mapeadores linha ↔ domínio ---- */
 
 const toExploracao = (r: ExploracaoRow): Exploracao => ({
+  atualizadoEm: r.updated_at ?? undefined,
   id: r.id,
   utilizadorId: r.user_id,
   nome: r.nome,
@@ -90,6 +114,7 @@ const toExploracao = (r: ExploracaoRow): Exploracao => ({
 });
 
 const toTerreno = (r: TerrenoRow): Terreno => ({
+  atualizadoEm: r.updated_at ?? undefined,
   id: r.id,
   exploracaoId: r.exploracao_id,
   nome: r.nome,
@@ -101,6 +126,7 @@ const toTerreno = (r: TerrenoRow): Terreno => ({
 });
 
 const toAnimal = (r: AnimalRow): Animal => ({
+  atualizadoEm: r.updated_at ?? undefined,
   id: r.id,
   exploracaoId: r.exploracao_id,
   terrenoId: r.terreno_id ?? undefined,
@@ -125,6 +151,7 @@ const toAnimal = (r: AnimalRow): Animal => ({
 });
 
 const toEvento = (r: EventoRow): Evento => ({
+  atualizadoEm: r.updated_at ?? undefined,
   id: r.id,
   animalId: r.animal_id,
   tipo: r.tipo as EventoTipo,
@@ -222,10 +249,75 @@ export async function carregarTudoSupabase(): Promise<Snapshot> {
 
 /* ---- Writes ---- */
 
-export async function upsertExploracaoSupabase(e: Exploracao): Promise<string | null> {
+/**
+ * Grava uma linha só se o servidor ainda estiver na versão que vimos.
+ *
+ * Sem esta guarda, dois aparelhos na mesma exploração sobrepunham-se em
+ * silêncio: as escritas são da linha inteira, portanto quem sincroniza por
+ * último repõe TODOS os campos com os valores que tinha em cache — incluindo
+ * os que a outra pessoa entretanto corrigiu. Estando um deles offline umas
+ * horas, a janela para isso não é de milissegundos, é de uma manhã.
+ *
+ * Nota sobre o zero-linhas: um UPDATE recusado pela RLS também devolve zero
+ * linhas afetadas, sem erro. Confundir isso com conflito daria a mensagem
+ * errada ao criador ("alguém alterou" quando na verdade é falta de
+ * permissão), por isso, quando nada é gravado, vamos ler a linha para
+ * perceber qual dos dois casos é.
+ */
+async function gravarComVersao(
+  tabela: 'exploracao' | 'terreno' | 'animal' | 'evento',
+  id: string,
+  versaoConhecida: string | undefined,
+  payload: Record<string, unknown>,
+): Promise<string | null> {
   if (!supabase) return null;
-  const { error } = await supabase.from('exploracao').upsert(exploracaoPayload(e));
-  return error?.message ?? null;
+
+  // Sem versão conhecida, a linha nunca veio do servidor: foi criada neste
+  // aparelho e ainda não sincronizou. Não há outro autor com quem colidir.
+  if (!versaoConhecida) {
+    const { error } = await supabase.from(tabela).upsert(payload);
+    return error?.message ?? null;
+  }
+
+  const { data, error } = await supabase
+    .from(tabela)
+    .update(payload)
+    .eq('id', id)
+    .lte('updated_at', versaoConhecida)
+    .select('id');
+  if (error) return error.message;
+  if (data && data.length > 0) return null;
+
+  // Nada foi gravado — descobrir porquê.
+  const { data: atual, error: erroLeitura } = await supabase
+    .from(tabela)
+    .select('updated_at')
+    .eq('id', id)
+    .maybeSingle();
+  if (erroLeitura) return erroLeitura.message;
+
+  if (!atual) {
+    // Ou foi eliminada por outra pessoa, ou a RLS nem sequer no-la deixa ver.
+    // Recriá-la seria ressuscitar um registo que alguém apagou de propósito.
+    return `${ERRO_CONFLITO}: o registo já não existe no servidor — foi eliminado por outra pessoa.`;
+  }
+
+  const versaoServidor = (atual as ComUpdatedAt).updated_at;
+  const mudou =
+    !!versaoServidor && Date.parse(versaoServidor) > Date.parse(versaoConhecida);
+  if (!mudou) {
+    // A versão não avançou, logo o que bloqueou não foi a versão: foi a RLS.
+    return 'Não tem permissão para alterar este registo.';
+  }
+  // Cuidado com as palavras: `pareceErroDeRede` procura expressões como
+  // "sem ligação", e uma mensagem de conflito que as contenha seria tomada
+  // por falha de rede e devolvida à fila para sempre. O `eConflito` é
+  // verificado antes dessa heurística, mas não convém depender só disso.
+  return `${ERRO_CONFLITO}: outra pessoa alterou este registo antes de esta alteração chegar ao servidor.`;
+}
+
+export async function upsertExploracaoSupabase(e: Exploracao): Promise<string | null> {
+  return gravarComVersao('exploracao', e.id, e.atualizadoEm, exploracaoPayload(e));
 }
 
 export async function eliminarExploracaoSupabase(id: string): Promise<string | null> {
@@ -235,9 +327,7 @@ export async function eliminarExploracaoSupabase(id: string): Promise<string | n
 }
 
 export async function upsertTerrenoSupabase(t: Terreno): Promise<string | null> {
-  if (!supabase) return null;
-  const { error } = await supabase.from('terreno').upsert(terrenoPayload(t));
-  return error?.message ?? null;
+  return gravarComVersao('terreno', t.id, t.atualizadoEm, terrenoPayload(t));
 }
 
 export async function eliminarTerrenoSupabase(id: string): Promise<string | null> {
@@ -247,9 +337,7 @@ export async function eliminarTerrenoSupabase(id: string): Promise<string | null
 }
 
 export async function upsertAnimalSupabase(a: Animal): Promise<string | null> {
-  if (!supabase) return null;
-  const { error } = await supabase.from('animal').upsert(animalPayload(a));
-  return error?.message ?? null;
+  return gravarComVersao('animal', a.id, a.atualizadoEm, animalPayload(a));
 }
 
 export async function eliminarAnimalSupabase(id: string): Promise<string | null> {
@@ -259,7 +347,5 @@ export async function eliminarAnimalSupabase(id: string): Promise<string | null>
 }
 
 export async function upsertEventoSupabase(e: Evento): Promise<string | null> {
-  if (!supabase) return null;
-  const { error } = await supabase.from('evento').upsert(eventoPayload(e));
-  return error?.message ?? null;
+  return gravarComVersao('evento', e.id, e.atualizadoEm, eventoPayload(e));
 }
