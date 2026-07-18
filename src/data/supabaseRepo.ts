@@ -340,9 +340,15 @@ export async function upsertAnimalSupabase(a: Animal): Promise<string | null> {
   return gravarComVersao('animal', a.id, a.atualizadoEm, animalPayload(a));
 }
 
+/**
+ * Elimina pelo RPC, não por `delete` direto: o privilégio de DELETE na tabela
+ * `animal` foi retirado ao papel `authenticated` (ver
+ * `supabase/schema_eliminar.sql`), e o RPC é o único caminho. É ele que recusa
+ * eliminar um animal com eventos ou com crias, devolvendo a razão em PT-PT.
+ */
 export async function eliminarAnimalSupabase(id: string): Promise<string | null> {
   if (!supabase) return null;
-  const { error } = await supabase.from('animal').delete().eq('id', id);
+  const { error } = await supabase.rpc('eliminar_animal', { animal_id: id });
   return error?.message ?? null;
 }
 

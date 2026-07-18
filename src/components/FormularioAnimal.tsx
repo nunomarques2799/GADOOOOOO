@@ -3,8 +3,8 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
-import { confirmar } from '@/data/avisos';
+import { Button, Card, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
+import { avisar, confirmar } from '@/data/avisos';
 import { GestacaoDias, PrazosLegais, especieMeta, especies, sexos } from '@/data/constants';
 import {
   diasAte,
@@ -16,7 +16,7 @@ import {
   isoMaisDias,
   parseDataPt,
 } from '@/data/helpers';
-import { rotuloAnimal } from '@/data/genealogia';
+import { impedimentoParaEliminar, rotuloAnimal } from '@/data/genealogia';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import type { Animal, Especie, Sexo } from '@/data/types';
@@ -56,10 +56,13 @@ function idsDescendentes(animais: Animal[], raizId: string): Set<string> {
 export function FormularioAnimal({ animal }: { animal?: Animal }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { animais, exploracoes, terrenosByExploracao, addAnimal, updateAnimal, deleteAnimal } = useGado();
+  const { animais, eventos, exploracoes, terrenosByExploracao, addAnimal, updateAnimal, deleteAnimal } = useGado();
   const { pode } = useMembros();
 
   const editar = !!animal;
+  // Um animal com histórico não se elimina — marca-se a saída. O servidor
+  // recusa na mesma (RPC `eliminar_animal`); isto evita oferecer o botão.
+  const impedimento = animal ? impedimentoParaEliminar(animal, eventos, animais) : null;
 
   const [especie, setEspecie] = useState<Especie>(animal?.especie ?? 'Bovino');
   const [sexo, setSexo] = useState<Sexo>(animal?.sexo ?? 'Fêmea');
@@ -202,13 +205,20 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
   function confirmarEliminar() {
     if (!animal) return;
     const rotulo = rotuloAnimal(animal);
+    // Sair do ecrã antes de saber o resultado escondia as recusas: a app
+    // navegava para a lista e o criador ficava a pensar que tinha eliminado.
+    const executar = async () => {
+      try {
+        await deleteAnimal(animal.id);
+        router.dismissTo('/(tabs)/animais');
+      } catch (e) {
+        avisar('Não foi possível eliminar', e instanceof Error ? e.message : String(e));
+      }
+    };
     confirmar(
       'Eliminar animal',
       `Eliminar "${rotulo}"? Esta ação não pode ser anulada.`,
-      () => {
-        void deleteAnimal(animal.id);
-        router.dismissTo('/(tabs)/animais');
-      },
+      () => void executar(),
       { rotuloConfirmar: 'Eliminar', destrutivo: true },
     );
   }
@@ -485,13 +495,39 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
         />
 
         {editar && podeEliminar ? (
-          <Button
-            label="Eliminar animal"
-            icon="trash-can-outline"
-            variant="danger"
-            onPress={confirmarEliminar}
-            style={{ marginTop: spacing.xl }}
-          />
+          impedimento ? (
+            // Com histórico, eliminar destruiria os eventos por cascata —
+            // incluindo os que outra pessoa registou. O caminho certo é a
+            // saída, que preserva a árvore genealógica dos descendentes.
+            <Card style={{ marginTop: spacing.xl }}>
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <Icon name="information-outline" size="lg" color={colors.info} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyStrong">Não é possível eliminar</Text>
+                  <Text variant="secondary" color={colors.textSecondary}>
+                    {impedimento} Eliminar apagaria também esse histórico. Se o animal saiu
+                    do efetivo, marque-o como falecido ou vendido — o registo mantém-se e a
+                    árvore genealógica continua completa.
+                  </Text>
+                </View>
+              </View>
+              <Button
+                label="Marcar saída do efetivo"
+                icon="archive-outline"
+                variant="secondary"
+                onPress={() => router.replace(`/animal/${animal.id}`)}
+                style={{ marginTop: spacing.sm }}
+              />
+            </Card>
+          ) : (
+            <Button
+              label="Eliminar animal"
+              icon="trash-can-outline"
+              variant="danger"
+              onPress={confirmarEliminar}
+              style={{ marginTop: spacing.xl }}
+            />
+          )
         ) : null}
       </ScrollView>
 

@@ -274,6 +274,8 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   exploracoesRef.current = exploracoes;
   const terrenosRef = useRef(terrenos);
   terrenosRef.current = terrenos;
+  const eventosRef = useRef(eventos);
+  eventosRef.current = eventos;
 
   // Todos os alertas possíveis; as preferências do utilizador (ecrã
   // "Notificações e alertas") filtram categorias e antecedência, e o que o
@@ -548,10 +550,28 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
   const deleteAnimal = useCallback(
     async (id: string): Promise<void> => {
+      // Guarda o que se vai remover, para poder repor se o servidor recusar.
+      // Ao contrário das outras escritas otimistas, aqui a recusa é provável:
+      // o servidor não elimina animais com histórico (ver `schema_eliminar.sql`),
+      // e sem reposição o animal desaparecia do ecrã à mesma, para só voltar na
+      // sincronização seguinte — o criador via-o sumir e depois ressuscitar.
+      const animalRemovido = animaisRef.current.find((a) => a.id === id);
+      const eventosRemovidos = eventosRef.current.filter((e) => e.animalId === id);
+
       setAnimais((prev) => prev.filter((a) => a.id !== id));
       setEventos((prev) => prev.filter((e) => e.animalId !== id));
-      if (usaSupabase) await empurrar({ op: 'delete', entidade: 'animal', id });
-      else gravarSqlite((db) => bdEliminarAnimal(db, id));
+
+      if (!usaSupabase) {
+        gravarSqlite((db) => bdEliminarAnimal(db, id));
+        return;
+      }
+      try {
+        await empurrar({ op: 'delete', entidade: 'animal', id });
+      } catch (e) {
+        if (animalRemovido) setAnimais((prev) => [animalRemovido, ...prev]);
+        if (eventosRemovidos.length > 0) setEventos((prev) => [...eventosRemovidos, ...prev]);
+        throw e; // quem chamou mostra a razão da recusa
+      }
     },
     [usaSupabase, gravarSqlite, empurrar],
   );

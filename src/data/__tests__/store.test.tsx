@@ -334,6 +334,32 @@ describe('sincronização da fila', () => {
     expect(ctx().falhadas[0].motivo).toBe('conflito');
   });
 
+  it('uma eliminação recusada repõe o animal e o seu histórico', async () => {
+    // O servidor recusa eliminar animais com histórico. Sem reposição, o
+    // animal desaparecia do ecrã à mesma e só voltava na sincronização
+    // seguinte — o criador via-o sumir e depois ressuscitar.
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [],
+      animais: [animal('a1')],
+      eventos: [
+        { id: 'e1', animalId: 'a1', tipo: 'Pesagem', data: '2026-01-01', descricao: '' },
+      ],
+    };
+    const { ctx } = await montar();
+    expect(ctx().animais).toHaveLength(1);
+
+    mockServidor.erroSeguinte = 'Este animal tem 1 registo(s) no histórico.';
+    await expect(
+      act(async () => {
+        await ctx().deleteAnimal('a1');
+      }),
+    ).rejects.toThrow(/histórico/);
+
+    expect(ctx().animais.map((a) => a.id)).toEqual(['a1']);
+    expect(ctx().eventos.map((e) => e.id)).toEqual(['e1']);
+  });
+
   it('limpar a lista de falhadas esvazia-a', async () => {
     const { ctx } = await montar();
 
