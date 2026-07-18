@@ -19,6 +19,7 @@ import {
 } from 'react';
 
 import { useAuth } from './auth';
+import { cacheDisponivel, guardarAcesso, lerAcesso } from './cacheLocal';
 import { podeEscrever, type Capacidade } from './permissoes';
 import { supabase, supabaseConfigurado } from './supabase';
 import type {
@@ -125,10 +126,21 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
   const { sessao } = useAuth();
   const userId = sessao?.user.id ?? null;
 
-  const [membros, setMembros] = useState<MembroExploracao[]>([]);
-  const [isSuperadmin, setIsSuperadmin] = useState(false);
-  const [estadoPerfil, setEstadoPerfil] = useState<EstadoPerfil | null>(null);
-  const [aCarregar, setACarregar] = useState(true);
+  // Arranca do último acesso conhecido, como o store faz com os dados. Sem
+  // isto, abrir a app sem rede dava `membros: []` e `estadoPerfil: 'pendente'`,
+  // e o `AppRouter` mandava o criador para o ecrã de "aguarda aprovação" em vez
+  // da sua exploração — a promessa de funcionar sem internet caía logo no
+  // portão, antes sequer de chegar à cache.
+  const acessoInicial = cacheDisponivel ? lerAcesso() : null;
+
+  const [membros, setMembros] = useState<MembroExploracao[]>(
+    (acessoInicial?.membros as MembroExploracao[] | undefined) ?? [],
+  );
+  const [isSuperadmin, setIsSuperadmin] = useState(acessoInicial?.isSuperadmin ?? false);
+  const [estadoPerfil, setEstadoPerfil] = useState<EstadoPerfil | null>(
+    acessoInicial?.estadoPerfil ?? null,
+  );
+  const [aCarregar, setACarregar] = useState(!acessoInicial);
 
   const recarregar = useCallback(async () => {
     if (!supabase || !userId) {
@@ -141,21 +153,45 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     setACarregar(true);
 
     // Perfil (estado + flag superadmin).
-    const { data: perfil } = await supabase
+    const { data: perfil, error: erroPerfil } = await supabase
       .from('perfil')
       .select('estado, is_superadmin')
       .eq('id', userId)
       .maybeSingle();
+
+    // Sem resposta do servidor (offline) fica-se com o que já se sabia. Tratar
+    // a falha como "não tem perfil" transformava cada arranque sem rede numa
+    // conta suspensa: app só de leitura e aviso de suspensão a mentir.
+    if (erroPerfil) {
+      setACarregar(false);
+      return;
+    }
+
     const perfilLinha = perfil as { estado?: EstadoPerfil; is_superadmin?: boolean } | null;
-    setIsSuperadmin(!!perfilLinha?.is_superadmin);
-    setEstadoPerfil(perfilLinha?.estado ?? 'pendente');
+    const novoSuperadmin = !!perfilLinha?.is_superadmin;
+    const novoEstado: EstadoPerfil = perfilLinha?.estado ?? 'pendente';
+    setIsSuperadmin(novoSuperadmin);
+    setEstadoPerfil(novoEstado);
 
     // Membros do próprio user (para saber a que explorações pertence).
-    const { data: rows } = await supabase
+    const { data: rows, error: erroMembros } = await supabase
       .from('membro_exploracao')
       .select('id, user_id, exploracao_id, role, criado_em')
       .eq('user_id', userId);
-    setMembros(((rows ?? []) as RowMembro[]).map(toMembro));
+    if (erroMembros) {
+      setACarregar(false);
+      return; // mesma razão: não apagar os membros por causa de uma falha de rede
+    }
+    const novosMembros = ((rows ?? []) as RowMembro[]).map(toMembro);
+    setMembros(novosMembros);
+
+    if (cacheDisponivel) {
+      guardarAcesso({
+        estadoPerfil: novoEstado,
+        isSuperadmin: novoSuperadmin,
+        membros: novosMembros,
+      });
+    }
 
     setACarregar(false);
   }, [userId]);

@@ -26,6 +26,8 @@ jest.mock('../armazenamento', () => ({
 import {
   adicionarOutbox,
   descreverOp,
+  guardarAcesso,
+  lerAcesso,
   guardarCache,
   guardarOutbox,
   lerCache,
@@ -139,6 +141,53 @@ describe('limparCache — ao terminar sessão', () => {
     expect(lerCache()).toBeNull();
     expect(lerOutbox()).toEqual([]);
     expect(lerFalhadas()).toEqual([]);
+  });
+});
+
+describe('acesso — quem sou e onde pertenço, para a app abrir sem rede', () => {
+  // Sem isto, arrancar offline dava `membros: []` e `estadoPerfil: 'pendente'`,
+  // e o portão da app mandava o criador para o ecrã de "aguarda aprovação" em
+  // vez da sua exploração. A promessa de funcionar sem internet caía antes
+  // sequer de se chegar à cache dos dados.
+  it('devolve null enquanto nunca houve resposta do servidor', () => {
+    expect(lerAcesso()).toBeNull();
+  });
+
+  it('faz ida e volta sem perder nada', () => {
+    const acesso = {
+      estadoPerfil: 'ativo' as const,
+      isSuperadmin: false,
+      membros: [{ id: 'm1', userId: 'u1', exploracaoId: 'exp-1', role: 'admin' }],
+    };
+    guardarAcesso(acesso);
+    expect(lerAcesso()).toEqual(acesso);
+  });
+
+  it('trata lixo como "não sei", em vez de inventar um estado', () => {
+    // Afirmar 'ativo' ou 'superadmin' a partir de dados corrompidos seria
+    // conceder acesso por acidente.
+    mockMapa.set('gado.acesso.v1', 'não é json');
+    expect(lerAcesso()).toBeNull();
+  });
+
+  it('recusa um estado de perfil que não reconhece', () => {
+    mockMapa.set('gado.acesso.v1', JSON.stringify({ estadoPerfil: 'deus', isSuperadmin: true }));
+    expect(lerAcesso()).toBeNull();
+  });
+
+  it('aguenta membros em falta ou com forma errada', () => {
+    mockMapa.set(
+      'gado.acesso.v1',
+      JSON.stringify({ estadoPerfil: 'ativo', isSuperadmin: false, membros: 'nada disto' }),
+    );
+    expect(lerAcesso()?.membros).toEqual([]);
+  });
+
+  it('sai do dispositivo quando a sessão termina', () => {
+    // Senão o próximo a entrar herdava os papéis do anterior durante o arranque.
+    guardarAcesso({ estadoPerfil: 'ativo', isSuperadmin: true, membros: [] });
+    limparCache();
+    expect(lerAcesso()).toBeNull();
   });
 });
 

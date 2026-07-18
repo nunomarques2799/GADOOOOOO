@@ -50,9 +50,21 @@ export type OpFalhada = {
   motivo?: MotivoFalha;
 };
 
+/**
+ * Quem sou e a que explorações pertenço, tal como o servidor respondeu da
+ * última vez. Guardado porque isto decide se a app abre — e sem ele, arrancar
+ * sem rede fazia parecer que o utilizador não tinha acesso a nada.
+ */
+export type AcessoLocal = {
+  estadoPerfil: 'pendente' | 'ativo';
+  isSuperadmin: boolean;
+  membros: unknown[];
+};
+
 const CHAVE_CACHE = 'gado.cache.v1';
 const CHAVE_OUTBOX = 'gado.outbox.v1';
 const CHAVE_FALHADAS = 'gado.falhadas.v1';
+const CHAVE_ACESSO = 'gado.acesso.v1';
 
 /** Teto da lista de falhadas — é um registo para ler, não um arquivo. */
 const MAX_FALHADAS = 50;
@@ -98,6 +110,29 @@ export function adicionarOutbox(op: OpPendente): number {
   const ops = [...lerOutbox(), op];
   guardarOutbox(ops);
   return ops.length;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Acesso (perfil + membros) — para a app abrir sem rede
+ * ------------------------------------------------------------------ */
+
+/** Último acesso conhecido, ou null se nunca chegou a haver um. */
+export function lerAcesso(): AcessoLocal | null {
+  const bruto = ler(CHAVE_ACESSO);
+  if (!bruto) return null;
+  try {
+    const a = JSON.parse(bruto) as AcessoLocal;
+    // Um valor corrompido não pode virar acesso: melhor não saber nada do que
+    // afirmar 'ativo' ou 'superadmin' a partir de lixo.
+    if (!a || (a.estadoPerfil !== 'ativo' && a.estadoPerfil !== 'pendente')) return null;
+    return { ...a, membros: Array.isArray(a.membros) ? a.membros : [] };
+  } catch {
+    return null;
+  }
+}
+
+export function guardarAcesso(a: AcessoLocal): void {
+  guardar(CHAVE_ACESSO, JSON.stringify(a));
 }
 
 /* ------------------------------------------------------------------ *
@@ -166,6 +201,9 @@ export function limparCache(): void {
   remover(CHAVE_CACHE);
   remover(CHAVE_OUTBOX);
   remover(CHAVE_FALHADAS);
+  // O acesso pertence à conta que saiu. Deixá-lo cá daria ao próximo a entrar
+  // os papéis do anterior durante o arranque, antes de o servidor responder.
+  remover(CHAVE_ACESSO);
 }
 
 /**
