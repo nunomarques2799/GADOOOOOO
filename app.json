@@ -14,7 +14,6 @@
     },
     "android": {
       "package": "com.gestaogado.app",
-      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -71,6 +70,12 @@
         "projectId": "d1db860e-ee1e-49fe-8c0d-793304effca4"
       }
     },
-    "owner": "otariodoing"
+    "owner": "otariodoing",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d1db860e-ee1e-49fe-8c0d-793304effca4"
+    }
   }
 }

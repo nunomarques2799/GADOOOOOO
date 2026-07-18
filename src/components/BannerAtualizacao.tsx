@@ -2,15 +2,16 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { Card, Icon, Text } from '@/components/ui';
-import { useAtualizacaoDesktop } from '@/data/useAtualizacao';
+import { useAtualizacao } from '@/data/useAtualizacao';
 import { colors, radii, spacing } from '@/theme';
 
 /**
- * Banner na app desktop quando já há uma versão nova descarregada. Um clique
- * instala e reabre a app — não há nada para descarregar à mão.
+ * Banner quando já há uma versão nova descarregada — no desktop (instalador
+ * do Electron) ou no telemóvel (EAS Update). Um clique aplica-a e a app reabre
+ * já na versão nova; não há nada para ir buscar à mão.
  */
 export function BannerAtualizacao() {
-  const { pronta, instalar } = useAtualizacaoDesktop();
+  const { pronta, instalar } = useAtualizacao();
   const [fechado, setFechado] = useState(false);
   const [aInstalar, setAInstalar] = useState(false);
   if (!pronta || fechado) return null;
