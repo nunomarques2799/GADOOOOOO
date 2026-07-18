@@ -66,6 +66,11 @@ export function inicializarBd(): SQLiteDatabase {
     garantirColuna(db, 'animal', 'motivoSaida', 'TEXT');
   }
 
+  // v2 → v3: valor (€) no evento, para a gestão económica.
+  if (versao < 3) {
+    garantirColuna(db, 'evento', 'valor', 'REAL');
+  }
+
   if (versao < SCHEMA_VERSION) {
     db.execSync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   }

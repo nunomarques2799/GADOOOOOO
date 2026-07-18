@@ -52,11 +52,11 @@ export const animaisSeed: Animal[] = [
     dataIdentificacao: isoDaysAgo(365 * 4 + 105), comunicadoSnira: true,
   },
   {
-    id: 'an-3', exploracaoId: 'exp-1', terrenoId: 'ter-2', nome: 'Boneca',
+    id: 'an-3', exploracaoId: 'exp-1', nome: 'Boneca',
     especie: 'Bovino', sexo: 'Fêmea', dataNascimento: isoDaysAgo(365 * 6 + 10),
     raca: 'Mertolenga', corPelagem: 'Vermelha', numeroIdentificacao: 'PT 6120 0011 2203',
     dataIdentificacao: isoDaysAgo(365 * 6), comunicadoSnira: true,
-    dataPrevistaParto: isoInDays(2),
+    estado: 'vendido', dataSaida: isoDaysAgo(10), motivoSaida: 'Vendida no matadouro de Elvas',
   },
   {
     id: 'an-4', exploracaoId: 'exp-1', terrenoId: 'ter-2', nome: 'Rosa',
@@ -140,9 +140,10 @@ export const animaisSeed: Animal[] = [
 
 export const eventosSeed: Evento[] = [
   { id: 'ev-1', animalId: 'an-1', tipo: 'Parto', data: isoDaysAgo(15), descricao: 'Parto normal — vitelo macho (Trovão)', detalhe: 'Sem complicações' },
-  { id: 'ev-2', animalId: 'an-1', tipo: 'Vacinação', data: isoDaysAgo(120), descricao: 'Vacina da língua azul', detalhe: 'Lote 4471 · próxima dose em 6 meses' },
-  { id: 'ev-3', animalId: 'an-7', tipo: 'Medicamento', data: isoDaysAgo(2), descricao: 'Antibiótico — mastite', detalhe: 'Dose 20ml · Vet. Dr. Sousa · segurança 10 dias' },
+  { id: 'ev-2', animalId: 'an-1', tipo: 'Vacinação', data: isoDaysAgo(120), descricao: 'Vacina da língua azul', detalhe: 'Lote 4471 · próxima dose em 6 meses', valor: 18 },
+  { id: 'ev-3', animalId: 'an-7', tipo: 'Medicamento', data: isoDaysAgo(2), descricao: 'Antibiótico — mastite', detalhe: 'Dose 20ml · Vet. Dr. Sousa · segurança 10 dias', valor: 45 },
   { id: 'ev-4', animalId: 'an-6', tipo: 'Parto', data: isoDaysAgo(25), descricao: 'Parto normal — vitela fêmea (Aurora)', detalhe: 'Sem complicações' },
   { id: 'ev-5', animalId: 'an-3', tipo: 'Pesagem', data: isoDaysAgo(30), descricao: 'Pesagem: 520 kg', detalhe: 'GMD 0,9 kg/dia' },
-  { id: 'ev-6', animalId: 'an-13', tipo: 'Compra', data: isoDaysAgo(365), descricao: 'Compra — Feira de Nisa', detalhe: '1 350 € · origem PT 44 552 1100' },
+  { id: 'ev-6', animalId: 'an-13', tipo: 'Compra', data: isoDaysAgo(365), descricao: 'Compra — Feira de Nisa', detalhe: 'origem PT 44 552 1100', valor: 1350 },
+  { id: 'ev-7', animalId: 'an-3', tipo: 'Venda', data: isoDaysAgo(10), descricao: 'Animal saiu por venda.', detalhe: 'Vendido no matadouro de Elvas', valor: 1580 },
 ];

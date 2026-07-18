@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
-import { formatDataPt, isoDaysAgo, isoInDays } from '@/data/helpers';
+import { formatDataPt, isoDaysAgo, isoInDays, paraEuro } from '@/data/helpers';
 import { useGado } from '@/data/store';
 import type { EventoTipo, Sexo } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
@@ -84,6 +84,9 @@ export default function NovoEventoScreen() {
   // Pesagem
   const [peso, setPeso] = useState('');
 
+  // Custo (€) — vacinação e medicamento
+  const [custo, setCusto] = useState('');
+
   // Comum
   const [notas, setNotas] = useState('');
 
@@ -154,7 +157,14 @@ export default function NovoEventoScreen() {
     if (notas.trim()) partes.push(notas.trim());
     const detalhe = partes.join(' · ') || undefined;
 
-    addEvento({ animalId, tipo, data, descricao, detalhe });
+    // Custo (€) — só faz sentido em vacinação/medicamento.
+    let valor: number | undefined;
+    if (tipo === 'Vacinação' || tipo === 'Medicamento') {
+      const n = paraEuro(custo);
+      if (Number.isFinite(n) && n > 0) valor = n;
+    }
+
+    addEvento({ animalId, tipo, data, descricao, detalhe, valor });
 
     // Efeitos secundários no animal
     if (tipo === 'Medicamento' && seguranca > 0) {
@@ -357,6 +367,13 @@ export default function NovoEventoScreen() {
         {tipo === 'Pesagem' ? (
           <Field label="Peso (kg)" obrigatorio>
             <TextField value={peso} onChangeText={setPeso} placeholder="Ex: 520" icon="weight-kilogram" keyboardType="decimal-pad" />
+          </Field>
+        ) : null}
+
+        {/* Custo — vacinação e medicamento (entra na gestão económica) */}
+        {tipo === 'Vacinação' || tipo === 'Medicamento' ? (
+          <Field label="Custo (€)" opcional>
+            <TextField value={custo} onChangeText={setCusto} placeholder="Ex: 45" icon="cash" keyboardType="decimal-pad" />
           </Field>
         ) : null}
 

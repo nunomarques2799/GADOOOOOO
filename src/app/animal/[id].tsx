@@ -21,7 +21,8 @@ import {
 import { especieMeta } from '@/data/constants';
 import { avisar, confirmar } from '@/data/avisos';
 import { filhosDe, rotuloAnimal } from '@/data/genealogia';
-import { formatDataCurta, formatDataPt, idadeExtenso, parseDataPt } from '@/data/helpers';
+import { balancoAnimal } from '@/data/financas';
+import { formatDataCurta, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
 import { useGado } from '@/data/store';
 import type { EstadoAnimal, EventoTipo } from '@/data/types';
 import { colors, radii, shadow, spacing } from '@/theme';
@@ -58,6 +59,7 @@ export default function AnimalDetalheScreen() {
   const [saidaTipo, setSaidaTipo] = useState<Exclude<EstadoAnimal, 'ativo'>>('vendido');
   const [saidaData, setSaidaData] = useState(formatDataCurta(new Date().toISOString()));
   const [saidaMotivo, setSaidaMotivo] = useState('');
+  const [saidaPreco, setSaidaPreco] = useState('');
   const [saidaErro, setSaidaErro] = useState<string | null>(null);
   const [aGuardar, setAGuardar] = useState(false);
 
@@ -77,6 +79,7 @@ export default function AnimalDetalheScreen() {
   const pai = animal.paiId ? animalById(animal.paiId) : undefined;
   const crias = filhosDe(animais, animal.id);
   const eventos = eventosByAnimal(animal.id);
+  const balanco = balancoAnimal(eventos);
   const meusAlertas = alertas.filter((a) => a.animalId === animal.id);
   const saiu = animal.estado === 'falecido' || animal.estado === 'vendido';
 
@@ -89,9 +92,12 @@ export default function AnimalDetalheScreen() {
     setSaidaErro(null);
     setAGuardar(true);
     try {
-      await marcarSaida(animal!.id, saidaTipo, iso, saidaMotivo.trim() || undefined);
+      const preco = saidaTipo === 'vendido' ? paraEuro(saidaPreco) : NaN;
+      const valor = Number.isFinite(preco) && preco > 0 ? preco : undefined;
+      await marcarSaida(animal!.id, saidaTipo, iso, saidaMotivo.trim() || undefined, valor);
       setSaidaOpen(false);
       setSaidaMotivo('');
+      setSaidaPreco('');
     } catch (e) {
       avisar('Não foi possível guardar', e instanceof Error ? e.message : String(e));
     } finally {
@@ -245,6 +251,30 @@ export default function AnimalDetalheScreen() {
           <InfoField icon="map-marker" label="Terreno atual" value={terreno?.nome ?? 'Sem terreno'} last />
         </Card>
 
+        {/* Balanço económico — só quando há valores registados */}
+        {balanco.temDados ? (
+          <>
+            <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+              Balanço
+            </Text>
+            <Card>
+              <View style={{ gap: spacing.xs }}>
+                <BalancoLinha label="Receita (venda)" valor={balanco.receita} cor={colors.success} sinal="+" />
+                <BalancoLinha label="Custos (compra, tratamentos)" valor={balanco.custos} cor={colors.danger} sinal="−" />
+                <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 4 }} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text variant="bodyStrong">Resultado</Text>
+                  <Text
+                    variant="h3"
+                    color={balanco.resultado >= 0 ? colors.success : colors.danger}>
+                    {formatEuro(balanco.resultado)}
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          </>
+        ) : null}
+
         {/* Histórico */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
           Histórico ({eventos.length})
@@ -318,11 +348,13 @@ export default function AnimalDetalheScreen() {
                   tipo={saidaTipo}
                   data={saidaData}
                   motivo={saidaMotivo}
+                  preco={saidaPreco}
                   erro={saidaErro}
                   aGuardar={aGuardar}
                   onChangeTipo={setSaidaTipo}
                   onChangeData={setSaidaData}
                   onChangeMotivo={setSaidaMotivo}
+                  onChangePreco={setSaidaPreco}
                   onCancelar={() => {
                     setSaidaOpen(false);
                     setSaidaErro(null);
@@ -349,22 +381,26 @@ function FormularioSaida({
   tipo,
   data,
   motivo,
+  preco,
   erro,
   aGuardar,
   onChangeTipo,
   onChangeData,
   onChangeMotivo,
+  onChangePreco,
   onCancelar,
   onConfirmar,
 }: {
   tipo: Exclude<EstadoAnimal, 'ativo'>;
   data: string;
   motivo: string;
+  preco: string;
   erro: string | null;
   aGuardar: boolean;
   onChangeTipo: (t: Exclude<EstadoAnimal, 'ativo'>) => void;
   onChangeData: (t: string) => void;
   onChangeMotivo: (t: string) => void;
+  onChangePreco: (t: string) => void;
   onCancelar: () => void;
   onConfirmar: () => void;
 }) {
@@ -399,6 +435,22 @@ function FormularioSaida({
           keyboardType="numbers-and-punctuation"
         />
       </View>
+      {tipo === 'vendido' ? (
+        <>
+          <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 4 }}>
+            Preço de venda (€) — opcional
+          </Text>
+          <View style={{ marginBottom: spacing.md }}>
+            <TextField
+              value={preco}
+              onChangeText={onChangePreco}
+              placeholder="Ex.: 1350"
+              icon="cash"
+              keyboardType="decimal-pad"
+            />
+          </View>
+        </>
+      ) : null}
       <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 4 }}>
         Nota (opcional) — comprador, matadouro, causa, etc.
       </Text>
@@ -485,6 +537,30 @@ function InfoField({
       </Text>
       <Text variant="bodyStrong" color={valueTone ?? colors.text} style={{ maxWidth: '55%', textAlign: 'right' }}>
         {value}
+      </Text>
+    </View>
+  );
+}
+
+function BalancoLinha({
+  label,
+  valor,
+  cor,
+  sinal,
+}: {
+  label: string;
+  valor: number;
+  cor: string;
+  sinal: '+' | '−';
+}) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text variant="body" color={colors.textSecondary}>
+        {label}
+      </Text>
+      <Text variant="bodyStrong" color={cor}>
+        {sinal}
+        {formatEuro(valor, 0)}
       </Text>
     </View>
   );

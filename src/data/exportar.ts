@@ -9,6 +9,7 @@
 
 import { Platform, Share } from 'react-native';
 
+import { direcaoDoEvento, eventoTemValor } from './financas';
 import { formatDataPt } from './helpers';
 import type { Alerta, Animal, Evento, Exploracao, Terreno } from './types';
 
@@ -100,6 +101,29 @@ export function csvEventos(eventos: Evento[], animais: Animal[]): string {
       formatDataPt(e.data),
       e.descricao,
       e.detalhe ?? '',
+    ]);
+  return construirCSV(cabecalhos, linhas);
+}
+
+/** CSV das movimentações financeiras (receitas e despesas com valor). */
+export function csvFinancas(eventos: Evento[], animais: Animal[]): string {
+  const rotulo = new Map(
+    animais.map((a) => [a.id, a.nome ?? a.numeroIdentificacao ?? a.id]),
+  );
+  const cabecalhos = ['Data', 'Animal', 'Tipo', 'Movimento', 'Valor (€)', 'Descrição'];
+  const linhas = eventos
+    .filter(eventoTemValor)
+    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+    .map((e) => [
+      formatDataPt(e.data),
+      rotulo.get(e.animalId) ?? '',
+      e.tipo,
+      direcaoDoEvento(e.tipo) === 'receita' ? 'Receita' : 'Despesa',
+      // Valor com vírgula decimal (Excel PT) e sinal negativo nas despesas.
+      `${direcaoDoEvento(e.tipo) === 'receita' ? '' : '-'}${(e.valor ?? 0)
+        .toFixed(2)
+        .replace('.', ',')}`,
+      e.descricao,
     ]);
   return construirCSV(cabecalhos, linhas);
 }

@@ -88,6 +88,7 @@ create table if not exists public.evento (
   data text not null,
   descricao text not null,
   detalhe text,
+  valor numeric,
   updated_at timestamptz default now()
 );
 

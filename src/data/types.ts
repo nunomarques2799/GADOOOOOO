@@ -130,6 +130,12 @@ export interface Evento {
   data: string; // ISO
   descricao: string;
   detalhe?: string; // ex: medicamento, dose, veterinário
+  /**
+   * Valor em euros associado ao evento (sempre positivo). O sentido —
+   * receita ou despesa — é derivado do `tipo` (ver `data/financas.ts`):
+   * Venda = receita; Compra/Vacinação/Medicamento = despesa.
+   */
+  valor?: number;
 }
 
 /* ---- Derivados (não persistidos) ---- */

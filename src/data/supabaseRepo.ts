@@ -74,6 +74,7 @@ type EventoRow = {
   data: string;
   descricao: string;
   detalhe?: string | null;
+  valor?: number | null;
 };
 
 /* ---- Mapeadores linha ↔ domínio ---- */
@@ -130,6 +131,7 @@ const toEvento = (r: EventoRow): Evento => ({
   data: r.data,
   descricao: r.descricao,
   detalhe: r.detalhe ?? undefined,
+  valor: r.valor ?? undefined,
 });
 
 /* ---- Payloads para INSERT/UPSERT (omitem `id` gerado no client) ---- */
@@ -185,6 +187,7 @@ const eventoPayload = (e: Evento) => ({
   data: e.data,
   descricao: e.descricao,
   detalhe: e.detalhe ?? null,
+  valor: e.valor ?? null,
 });
 
 /* ---- Reads ---- */

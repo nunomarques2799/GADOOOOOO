@@ -10,7 +10,8 @@ import { ExploracaoRow } from '@/components/ExploracaoRow';
 import { QuickAction } from '@/components/QuickAction';
 import { StatCard } from '@/components/StatCard';
 import { Avatar, Badge, Card, Icon, SectionHeader, Text } from '@/components/ui';
-import { dataExtensa, saudacao } from '@/data/helpers';
+import { resumoFinanceiro } from '@/data/financas';
+import { dataExtensa, formatEuro, saudacao } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -21,10 +22,15 @@ export default function InicioScreen() {
   const router = useRouter();
   const desktop = useDesktop();
   const { isSuperadmin } = useMembros();
-  const { utilizador, exploracoes, terrenos, animais, alertas, online, pendentesSinc } = useGado();
+  const { utilizador, exploracoes, terrenos, animais, eventos, alertas, online, pendentesSinc } =
+    useGado();
 
   // Superadmin não gere gado — vai direto para o painel de clientes.
   if (isSuperadmin) return <Redirect href="/(superadmin)/clientes" />;
+
+  const fin = resumoFinanceiro(eventos);
+  const temFinancas = fin.movimentos.length > 0;
+  const saldoPositivo = fin.saldo >= 0;
 
   const primeiroNome = utilizador.nome.split(' ')[0];
   const iniciais = utilizador.nome
@@ -89,6 +95,28 @@ export default function InicioScreen() {
         />
         <StatCard icon="grass" value={terrenos.length} label="Terrenos" tint={colors.success} />
       </View>
+      <Card onPress={() => router.push('/financas')} style={{ marginTop: spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Icon
+            name="cash-multiple"
+            size="lg"
+            color={temFinancas ? (saldoPositivo ? colors.success : colors.danger) : colors.primary}
+          />
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyStrong">Finanças</Text>
+            <Text variant="secondary" color={colors.textSecondary}>
+              {temFinancas ? 'Saldo do efetivo' : 'Registe vendas e custos'}
+            </Text>
+          </View>
+          {temFinancas ? (
+            <Text variant="h3" color={saldoPositivo ? colors.success : colors.danger}>
+              {formatEuro(fin.saldo, 0)}
+            </Text>
+          ) : (
+            <Icon name="chevron-right" size="md" color={colors.textMuted} />
+          )}
+        </View>
+      </Card>
     </>
   );
 

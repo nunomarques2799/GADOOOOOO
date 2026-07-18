@@ -194,6 +194,8 @@ type GadoContext = {
     estado: Exclude<EstadoAnimal, 'ativo'>,
     data: string,
     motivo?: string,
+    /** Preço de venda em euros (só se aplica a `vendido`). */
+    valor?: number,
   ) => Promise<void>;
   /** Anula uma saída — volta a colocar o animal como ativo. */
   reativarAnimal: (id: string) => Promise<void>;
@@ -436,6 +438,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       estado: Exclude<EstadoAnimal, 'ativo'>,
       data: string,
       motivo?: string,
+      valor?: number,
     ): Promise<void> => {
       const atual = animaisRef.current.find((a) => a.id === id);
       if (!atual) return;
@@ -449,6 +452,9 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       const tipo = estado === 'falecido' ? 'Morte' : 'Venda';
       const descricao =
         estado === 'falecido' ? 'Animal registado como falecido.' : 'Animal saiu por venda.';
+      // O preço só se guarda numa venda (uma morte não é receita).
+      const valorVenda =
+        estado === 'vendido' && typeof valor === 'number' && valor > 0 ? valor : undefined;
       const evento: Evento = {
         id: novoId(),
         animalId: id,
@@ -456,6 +462,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
         data,
         descricao,
         detalhe: motivo,
+        valor: valorVenda,
       };
       setAnimais((prev) => prev.map((a) => (a.id === id ? atualizado : a)));
       setEventos((prev) => [evento, ...prev]);

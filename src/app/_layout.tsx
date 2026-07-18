@@ -153,6 +153,7 @@ export default function RootLayout() {
                   <Stack.Screen name="(tabs)" />
                   <Stack.Screen name="(superadmin)" />
                   <Stack.Screen name="alertas" />
+                  <Stack.Screen name="financas" />
                   <Stack.Screen name="animal/[id]" />
                   <Stack.Screen name="animal/novo" options={{ animation: 'slide_from_bottom' }} />
                   <Stack.Screen name="animal/editar/[id]" />

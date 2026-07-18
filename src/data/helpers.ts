@@ -59,6 +59,28 @@ export function formatDataCurta(iso: string): string {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
+/* ---- Dinheiro (euros, formato PT) ---- */
+
+/**
+ * Formata um valor em euros à portuguesa: milhares com espaço, decimais
+ * com vírgula e o símbolo € no fim (ex.: `1 350,00 €`). Sem casas decimais
+ * quando `casas` é 0 (ex.: `1 350 €`).
+ */
+export function formatEuro(valor: number, casas: 0 | 2 = 2): string {
+  const negativo = valor < 0;
+  const abs = Math.abs(valor);
+  const fixo = abs.toFixed(casas);
+  const [inteiro, decimal] = fixo.split('.');
+  const comMilhares = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const corpo = decimal ? `${comMilhares},${decimal}` : comMilhares;
+  return `${negativo ? '−' : ''}${corpo} €`;
+}
+
+/** Converte texto de input ("1 350,50" ou "1350.5") num número; NaN se inválido. */
+export function paraEuro(texto: string): number {
+  return parseFloat(texto.replace(/\s/g, '').replace(',', '.'));
+}
+
 /* ---- Idade ---- */
 export function idadeDias(iso: string): number {
   return Math.floor((Date.now() - new Date(iso).getTime()) / MS_DIA);

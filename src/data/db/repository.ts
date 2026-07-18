@@ -120,6 +120,7 @@ function toEvento(r: Row): Evento {
     data: String(r.data),
     descricao: String(r.descricao),
     detalhe: asStr(r.detalhe),
+    valor: asNum(r.valor),
   };
 }
 
@@ -192,9 +193,9 @@ export function guardarAnimal(db: SQLiteDatabase, a: Animal): void {
 
 export function guardarEvento(db: SQLiteDatabase, e: Evento): void {
   db.runSync(
-    `INSERT OR REPLACE INTO evento (id, animalId, tipo, data, descricao, detalhe, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [e.id, e.animalId, e.tipo, e.data, e.descricao, txt(e.detalhe), agora()],
+    `INSERT OR REPLACE INTO evento (id, animalId, tipo, data, descricao, detalhe, valor, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [e.id, e.animalId, e.tipo, e.data, e.descricao, txt(e.detalhe), num(e.valor), agora()],
   );
 }
 
