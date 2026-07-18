@@ -11,13 +11,16 @@
  * ao site outra vez. Só apanha alterações de JS: mexer em código nativo (um
  * plugin novo no app.json, uma permissão) continua a exigir build.
  *
- * A web não tem nada para atualizar (recarrega e já está), e ambos os
- * mecanismos ficam inertes aí. Quem consome isto é o `BannerAtualizacao`, que
- * não precisa de saber de onde veio a versão nova.
+ * WEB INSTALADA (PWA): service worker. Uma vez instalada no PC, a app abre a
+ * partir da cópia local e deixa de haver "recarregar a página" — por isso
+ * precisa do mesmo banner que as outras duas. Ver `public/sw.js`.
+ *
+ * Só um dos três está ativo de cada vez. Quem consome isto é o
+ * `BannerAtualizacao`, que não precisa de saber de onde veio a versão nova.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import * as Updates from 'expo-updates';
 
 /** API exposta pelo preload do Electron. */
@@ -129,12 +132,93 @@ export function useAtualizacaoDesktop(): EstadoAtualizacao {
 }
 
 /**
- * O que o banner usa. Só um dos dois caminhos pode estar ativo de cada vez
- * (a ponte do Electron não existe no telemóvel, e o EAS Update não corre no
- * desktop), por isso basta devolver o que tiver versão pronta.
+ * App instalada no PC a partir do site (PWA). O service worker guarda a versão
+ * nova em segundo plano e fica "à espera"; é este banner que a manda entrar,
+ * para não trocar o código a meio de um registo.
+ */
+export function useAtualizacaoServiceWorker(): EstadoAtualizacao {
+  const [pronta, setPronta] = useState(false);
+  const registo = useRef<ServiceWorkerRegistration | null>(null);
+  const ultimaProcura = useRef(0);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    if (ponte()) return; // Electron: quem atualiza é o electron-updater
+
+    let cancelado = false;
+
+    // Se a página ainda não tinha controlador, o `controllerchange` que aí vem
+    // é o da PRIMEIRA instalação — recarregar aí dava um recarregamento
+    // inexplicável logo na primeira visita.
+    const jaControlada = Boolean(navigator.serviceWorker.controller);
+    let aRecarregar = false;
+
+    const aoTrocarControlador = () => {
+      if (!jaControlada || aRecarregar) return;
+      aRecarregar = true;
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', aoTrocarControlador);
+
+    const vigiar = (reg: ServiceWorkerRegistration) => {
+      registo.current = reg;
+      // Pode já estar à espera de uma sessão anterior.
+      if (reg.waiting && jaControlada && !cancelado) setPronta(true);
+
+      reg.addEventListener('updatefound', () => {
+        const novo = reg.installing;
+        if (!novo) return;
+        novo.addEventListener('statechange', () => {
+          if (novo.state === 'installed' && navigator.serviceWorker.controller && !cancelado) {
+            setPronta(true);
+          }
+        });
+      });
+    };
+
+    void navigator.serviceWorker.ready.then(vigiar).catch(() => undefined);
+
+    // Uma app instalada pode ficar semanas aberta sem nunca recarregar. Sem
+    // isto, só apanhava versões novas quando o utilizador a fechasse.
+    const procurar = () => {
+      if (document.visibilityState !== 'visible') return;
+      const agora = Date.now();
+      if (agora - ultimaProcura.current < INTERVALO_PROCURA_MS) return;
+      ultimaProcura.current = agora;
+      void registo.current?.update().catch(() => {
+        ultimaProcura.current = 0; // sem rede: tenta outra vez à próxima
+      });
+    };
+    document.addEventListener('visibilitychange', procurar);
+
+    return () => {
+      cancelado = true;
+      navigator.serviceWorker.removeEventListener('controllerchange', aoTrocarControlador);
+      document.removeEventListener('visibilitychange', procurar);
+    };
+  }, []);
+
+  const instalar = useCallback(() => {
+    // O `skipWaiting` faz o service worker novo assumir; o `controllerchange`
+    // acima trata do recarregamento.
+    registo.current?.waiting?.postMessage('instalar-atualizacao');
+  }, []);
+
+  return { pronta, instalar };
+}
+
+/**
+ * O que o banner usa. Só um dos três caminhos pode estar ativo de cada vez
+ * (a ponte do Electron não existe no telemóvel, o EAS Update não corre no
+ * desktop e o service worker só existe na web fora do Electron), por isso
+ * basta devolver o que tiver versão pronta.
  */
 export function useAtualizacao(): EstadoAtualizacao {
   const desktop = useAtualizacaoDesktop();
   const ota = useAtualizacaoOta();
-  return desktop.pronta ? desktop : ota;
+  const web = useAtualizacaoServiceWorker();
+  if (desktop.pronta) return desktop;
+  if (ota.pronta) return ota;
+  return web;
 }

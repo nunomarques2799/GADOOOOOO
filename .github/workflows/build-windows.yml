@@ -15,6 +15,7 @@ on:
     paths:
       - "src/**"
       - "assets/**"
+      - "public/**" # o index.html e o service worker da web vão dentro do .exe
       - "app.json"
       - "package.json"
       - "package-lock.json"

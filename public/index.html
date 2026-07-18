@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!--
+  Modelo do HTML da app na web. É uma cópia do que o Expo usa por omissão
+  (node_modules/expo/node_modules/@expo/cli/static/template/index.html) com o
+  que é preciso para a app ser instalável no computador.
+
+  Porquê aqui e não num `+html.tsx`: com `web.output: "single"` (app.json) o
+  Expo não renderiza HTML nenhum — parte deste ficheiro e injeta-lhe o script
+  do bundle. O `+html.tsx` do expo-router só é usado em renderização estática,
+  por isso ali não teria efeito nenhum. O gancho suportado é este: se existir
+  um `public/index.html`, o Expo usa-o em vez do modelo dele.
+
+  Ao mexer, dois cuidados:
+  - Os marcadores do idioma e do título (as duas palavras entre sinais de
+    percentagem, abaixo) são substituídos no build a partir do app.json. O Expo
+    substitui só a PRIMEIRA ocorrência de cada um, por isso não os escrevas em
+    lado nenhum acima — inclusive neste comentário, ou é aqui que a troca
+    acontece e a página fica com o título por preencher.
+  - O bloco <style id="expo-reset"> é o que faz o scroll funcionar no
+    react-native-web. Não retirar.
+-->
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <!-- Sem `user-scalable=no`: quem tem dificuldade em ver tem de poder ampliar. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>%WEB_TITLE%</title>
+
+    <!-- É isto que faz o navegador oferecer "Instalar". Ver public/manifest.json. -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="application-name" content="Gestão de Gado" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Gado" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="apple-touch-icon" href="/icons/icone-192.png" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+
+    <script>
+      // Não registar o service worker dentro do Electron: lá o conteúdo é
+      // servido do disco por um servidor local e quem trata das atualizações é
+      // o electron-updater. Uma cache por cima disso serviria a versão anterior
+      // depois de a app se atualizar — e nada no ecrã explicaria porquê.
+      if ('serviceWorker' in navigator && !/Electron/i.test(navigator.userAgent)) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').catch(function () {
+            // Sem service worker a app funciona à mesma, só não fica instalável
+            // nem abre sem rede. Não vale interromper ninguém com um erro.
+          });
+        });
+      }
+    </script>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>É preciso ativar o JavaScript para usar esta aplicação.</noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>

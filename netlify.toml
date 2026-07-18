@@ -1,0 +1,55 @@
+# Netlify — SITE DA APP (o que fica instalável no PC)
+# ---------------------------------------------------------------------------
+# Há dois sites Netlify neste repositório, e é a "base directory" de cada um
+# que decide qual destes ficheiros é lido:
+#
+#   base = "website"  -> website/netlify.toml -> a página de apresentação
+#   base = ""  (raiz) -> ESTE ficheiro        -> a app propriamente dita
+#
+# A app tem de ficar na RAIZ do seu próprio site, e não numa subpasta do outro:
+# o build do Expo referencia tudo por caminhos absolutos (`/_expo/...`) e numa
+# subpasta não encontrava nada. Mudar isso obrigava a mexer no `baseUrl` do
+# Expo, o que partiria a app Windows, que serve estes mesmos ficheiros a partir
+# da raiz de um servidor local (ver desktop/main.js).
+
+[build]
+  command = "npx expo export --platform web"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # As chaves do Supabase têm de estar presentes no build, senão a app sai em
+  # modo demo offline (dados de exemplo, sem login). É a mesma razão pela qual
+  # estão no build-windows.yml. A chave é a PUBLISHABLE — segura no cliente,
+  # protegida por RLS — e já vai embutida no JavaScript servido a toda a gente,
+  # por isso não há aqui segredo nenhum a proteger.
+  EXPO_PUBLIC_SUPABASE_URL = "https://qmkafibxlmgouslybafy.supabase.co"
+  EXPO_PUBLIC_SUPABASE_KEY = "sb_publishable_6bjhd0CNIAglOPGmBt9Zlw_2gE4tr_r"
+
+# O service worker NÃO pode ser guardado em cache pelo navegador: é o ficheiro
+# que anuncia que existe versão nova. Guardado, a app ficaria presa numa versão
+# antiga e nada no ecrã explicaria porquê.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# Estes têm o conteúdo no nome (`...-<hash>.js`), por isso podem ficar em cache
+# para sempre: quando o build muda, o nome muda.
+[[headers]]
+  for = "/_expo/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# A app é uma SPA (`web.output: "single"` no app.json): o encaminhamento é feito
+# no navegador, por isso qualquer endereço tem de devolver o index.html. Sem
+# isto, abrir /animais diretamente — ou recarregar lá dentro — dava 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -30,7 +30,8 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png",
+      "favicon": "./assets/images/favicon-gado.png",
+      "lang": "pt-PT",
       "name": "Gestão de Gado",
       "shortName": "Gado",
       "description": "Gestão pecuária offline-first para criadores em Portugal.",
