@@ -15,6 +15,14 @@
 [build]
   command = "npx expo export --platform web"
   publish = "dist"
+  # Sem isto, QUALQUER push reconstruía a app — incluindo mexer só no site de
+  # apresentação, na documentação ou nos workflows. O plano grátis do Netlify
+  # tem um teto de minutos de build por mês, e não vale gastá-los a reconstruir
+  # uma app que não mudou.
+  #
+  # Como funciona: sair com código 0 CANCELA o build. É exatamente o que o
+  # `git diff --quiet` faz quando não há alterações nos caminhos indicados.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- src public assets app.json package.json package-lock.json netlify.toml"
 
 [build.environment]
   NODE_VERSION = "22"
