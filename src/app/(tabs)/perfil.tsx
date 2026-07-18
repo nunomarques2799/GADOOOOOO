@@ -25,8 +25,28 @@ export default function PerfilScreen() {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
   const router = useRouter();
-  const { utilizador, animais, eventos, exploracoes, terrenos, alertas } = useGado();
+  const { utilizador, animais, eventos, exploracoes, terrenos, alertas, pendentesSinc } = useGado();
   const { utilizador: conta, sair, configurado, apagarConta } = useAuth();
+
+  /**
+   * Terminar sessão apaga a cache local — incluindo alterações feitas offline
+   * que ainda não chegaram ao servidor. Se houver alguma, avisa em vez de a
+   * deixar desaparecer sem o criador dar por isso.
+   */
+  function confirmarSair() {
+    if (pendentesSinc === 0) {
+      void sair();
+      return;
+    }
+    confirmar(
+      'Ainda há alterações por enviar',
+      `Tem ${pendentesSinc} alteração${pendentesSinc > 1 ? 'ões' : ''} guardada${pendentesSinc > 1 ? 's' : ''} neste ` +
+        'aparelho que ainda não chegou ao servidor. Se terminar sessão agora, perde-se. ' +
+        'Ligue-se à internet e espere pela sincronização, ou termine sessão à mesma.',
+      () => void sair(),
+      { rotuloConfirmar: 'Terminar à mesma', destrutivo: true },
+    );
+  }
 
   async function exportarAnimais() {
     await guardarFicheiro(`animais-${hojeISO()}.csv`, csvAnimais(animais, exploracoes, terrenos));
@@ -236,7 +256,12 @@ export default function PerfilScreen() {
           {/* Conta — sessão e apagamento RGPD (só com Supabase/sessão) */}
           {configurado ? (
             <Card padded={false}>
-              <SettingRow icon="logout" label="Terminar sessão" tint={colors.danger} onPress={sair} />
+              <SettingRow
+                icon="logout"
+                label="Terminar sessão"
+                tint={colors.danger}
+                onPress={confirmarSair}
+              />
               <SettingRow
                 icon="delete-outline"
                 label="Apagar a minha conta"

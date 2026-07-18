@@ -14,6 +14,7 @@ import { Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { EcraLogin } from '@/components/EcraLogin';
+import { LimiteDeErro } from '@/components/LimiteDeErro';
 import { EcraNovaPalavra } from '@/components/EcraNovaPalavra';
 import { EcraPendente } from '@/components/EcraPendente';
 import { AuthProvider, useAuth } from '@/data/auth';
@@ -135,6 +136,9 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
+    // O limite de erro fica por FORA de tudo: se o portão de autenticação, os
+    // providers de dados ou qualquer ecrã rebentarem, ainda há quem apanhe.
+    <LimiteDeErro>
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <AuthProvider>
@@ -183,5 +187,6 @@ export default function RootLayout() {
         </ColunaApp>
       </AuthProvider>
     </SafeAreaProvider>
+    </LimiteDeErro>
   );
 }

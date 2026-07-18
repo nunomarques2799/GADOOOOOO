@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { limparCache } from './cacheLocal';
 import { supabase, supabaseConfigurado } from './supabase';
 
 /** Destino do link de recuperação de palavra-passe (página no site). */
@@ -142,13 +143,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return 'Supabase não configurado.';
     const { error } = await supabase.rpc('apagar_a_minha_conta');
     if (error) return traduzErro(error.message);
-    // A conta já não existe no servidor — limpa a sessão local e volta ao login.
+    // A conta já não existe no servidor — limpa a sessão e os dados locais
+    // (RGPD: apagar a conta não pode deixar o efetivo em cache no aparelho).
     await supabase.auth.signOut();
+    limparCache();
     return null;
   }, []);
 
   const sair = useCallback(async () => {
     await supabase?.auth.signOut();
+    // A cache local pertence à conta que saiu. Sem a apagar, o criador seguinte
+    // a entrar neste dispositivo veria o efetivo do anterior enquanto o servidor
+    // não respondesse (o arranque lê da cache antes de ir à rede).
+    limparCache();
   }, []);
 
   const value = useMemo<AuthContext>(

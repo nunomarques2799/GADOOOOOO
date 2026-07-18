@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { useAuth } from './auth';
@@ -66,9 +66,10 @@ import type {
 
 /**
  * Persistência:
- *   - Com sessão Supabase iniciada → offline-first: a cache local (localStorage,
- *     na web/Electron) é a fonte para a UI; as escritas são otimistas e vão ao
- *     Supabase quando há rede, ou ficam numa fila (outbox) até a rede voltar.
+ *   - Com sessão Supabase iniciada → offline-first: a cache local é a fonte
+ *     para a UI; as escritas são otimistas e vão ao Supabase quando há rede, ou
+ *     ficam numa fila (outbox) até a rede voltar. A cache assenta em SQLite no
+ *     telemóvel e em `localStorage` na web/Electron (ver `armazenamento.ts`).
  *   - Sem Supabase (offline puro) e no nativo → SQLite local (expo-sqlite).
  *   - Sem Supabase e na web → dados de exemplo em memória.
  */
@@ -349,7 +350,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     if (usaSupabase) void sincronizar();
   }, [usaSupabase, sincronizar]);
 
-  // Sincroniza automaticamente quando a ligação à rede volta.
+  // Sincroniza automaticamente quando a ligação à rede volta (web/Electron).
   useEffect(() => {
     if (!usaSupabase || !cacheDisponivel) return;
     if (typeof window === 'undefined' || !window.addEventListener) return;
@@ -364,6 +365,20 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('online', aoVoltar);
       window.removeEventListener('offline', aoPerder);
     };
+  }, [usaSupabase, sincronizar]);
+
+  /**
+   * No telemóvel não há eventos `online`/`offline` — são do browser. O sinal
+   * equivalente é a app voltar ao primeiro plano: é aí que o criador que esteve
+   * sem rede no mato reabre a app já com sinal. Sem isto a fila só era esvaziada
+   * no arranque, e as gravações feitas offline ficavam retidas até reiniciar.
+   */
+  useEffect(() => {
+    if (!usaSupabase || Platform.OS === 'web') return;
+    const sub = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') void sincronizar();
+    });
+    return () => sub.remove();
   }, [usaSupabase, sincronizar]);
 
   /* ---- Seletores ---- */

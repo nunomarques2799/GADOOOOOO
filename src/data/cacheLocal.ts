@@ -1,17 +1,19 @@
 /**
  * Cache local + fila de sincronização (outbox) para funcionamento offline.
  * ------------------------------------------------------------------
- * Alvo principal: a app de secretária (Electron), que corre o bundle web e
- * tem `localStorage` persistente (guardado na pasta de dados do utilizador).
- * Com sessão Supabase, os dados passam a ser gravados aqui para poderem ser
- * consultados e editados sem rede — no campo/no mato. As alterações feitas
- * offline entram numa fila e são enviadas ao Supabase quando a ligação volta.
+ * Com sessão Supabase, os dados são gravados aqui para poderem ser consultados
+ * e editados sem rede — no campo/no mato. As alterações feitas offline entram
+ * numa fila e são enviadas ao Supabase quando a ligação volta.
  *
- * Em plataformas sem `localStorage` (nativo) estas funções ficam inertes e a
- * app mantém o comportamento anterior (online). O móvel offline continua a
- * usar o SQLite local quando o Supabase não está configurado.
+ * Funciona em TODAS as plataformas: no telemóvel por cima do SQLite e na
+ * web/Electron por cima do `localStorage` (ver `armazenamento.ts` e
+ * `armazenamento.web.ts`). Até 2026-07-18 isto dependia diretamente do
+ * `localStorage`, que não existe em React Native — o resultado era que no
+ * Android, com sessão iniciada, não havia cache NEM SQLite e cada gravação
+ * exigia rede, apesar de a app prometer "funciona sem internet".
  */
 
+import { armazenamentoDisponivel, guardar, ler, remover } from './armazenamento';
 import type { Animal, Evento, Exploracao, Terreno } from './types';
 
 /** Instantâneo dos dados guardados localmente (mesma forma que o Snapshot). */
@@ -32,18 +34,15 @@ export type OpPendente =
 const CHAVE_CACHE = 'gado.cache.v1';
 const CHAVE_OUTBOX = 'gado.outbox.v1';
 
-// `localStorage` só existe na web/Electron. No nativo fica null → funções inertes.
-const ls: Storage | null = typeof localStorage !== 'undefined' ? localStorage : null;
-
-/** true se há armazenamento local persistente (web/Electron). */
-export const cacheDisponivel = ls !== null;
+/** true se há armazenamento local persistente. */
+export const cacheDisponivel = armazenamentoDisponivel;
 
 /** Lê o último instantâneo guardado, ou null se ainda não houver. */
 export function lerCache(): DadosGado | null {
-  if (!ls) return null;
+  const bruto = ler(CHAVE_CACHE);
+  if (!bruto) return null;
   try {
-    const bruto = ls.getItem(CHAVE_CACHE);
-    return bruto ? (JSON.parse(bruto) as DadosGado) : null;
+    return JSON.parse(bruto) as DadosGado;
   } catch {
     return null;
   }
@@ -51,32 +50,24 @@ export function lerCache(): DadosGado | null {
 
 /** Grava o instantâneo completo (chamado sempre que os dados mudam). */
 export function guardarCache(dados: DadosGado): void {
-  if (!ls) return;
-  try {
-    ls.setItem(CHAVE_CACHE, JSON.stringify(dados));
-  } catch {
-    /* quota cheia / indisponível — ignora, a app continua a funcionar */
-  }
+  guardar(CHAVE_CACHE, JSON.stringify(dados));
 }
 
 /** Fila de operações à espera de envio ao Supabase (por ordem). */
 export function lerOutbox(): OpPendente[] {
-  if (!ls) return [];
+  const bruto = ler(CHAVE_OUTBOX);
+  if (!bruto) return [];
   try {
-    const bruto = ls.getItem(CHAVE_OUTBOX);
-    return bruto ? (JSON.parse(bruto) as OpPendente[]) : [];
+    const ops = JSON.parse(bruto) as OpPendente[];
+    // Um valor corrompido não pode passar por fila: o store itera sobre isto.
+    return Array.isArray(ops) ? ops : [];
   } catch {
     return [];
   }
 }
 
 export function guardarOutbox(ops: OpPendente[]): void {
-  if (!ls) return;
-  try {
-    ls.setItem(CHAVE_OUTBOX, JSON.stringify(ops));
-  } catch {
-    /* ignora */
-  }
+  guardar(CHAVE_OUTBOX, JSON.stringify(ops));
 }
 
 /** Acrescenta uma operação ao fim da fila e devolve o novo total pendente. */
@@ -87,10 +78,24 @@ export function adicionarOutbox(op: OpPendente): number {
 }
 
 /**
+ * Apaga os dados locais da conta. Chamado ao terminar sessão: sem isto, o
+ * criador seguinte a entrar no mesmo dispositivo veria, durante o arranque, o
+ * efetivo do anterior (a cache é lida antes de o servidor responder).
+ */
+export function limparCache(): void {
+  remover(CHAVE_CACHE);
+  remover(CHAVE_OUTBOX);
+}
+
+/**
  * Heurística para distinguir falha de rede (offline → tentar mais tarde) de
  * um erro lógico do servidor (validação/RLS → não vale a pena repetir). Não
  * é infalível, mas os erros de rede do supabase-js trazem sempre "fetch"/
  * "network" na mensagem, e no offline o navigator.onLine costuma ser false.
+ *
+ * Em caso de dúvida é preferível classificar como rede: uma operação que fica
+ * na fila é reenviada mais tarde, enquanto uma descartada perde o registo do
+ * criador para sempre.
  */
 export function pareceErroDeRede(msg: string): boolean {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
@@ -100,8 +105,17 @@ export function pareceErroDeRede(msg: string): boolean {
     m.includes('network') ||
     m.includes('failed to') ||
     m.includes('timeout') ||
+    // "timed out" (com espaço) é a forma que o React Native devolve — só
+    // "timeout" deixava passar um timeout genuíno para o ramo de erro lógico,
+    // que DESCARTA a operação. Apanhado por teste, não em produção.
+    m.includes('timed out') ||
     m.includes('connection') ||
+    m.includes('unreachable') ||
+    m.includes('econnreset') ||
     m.includes('conexão') ||
-    m.includes('ligação')
+    m.includes('ligação') ||
+    // React Native devolve estes quando o pedido morre sem resposta.
+    m.includes('aborted') ||
+    m.includes('sem ligação')
   );
 }

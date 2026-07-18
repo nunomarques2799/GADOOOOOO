@@ -1,9 +1,15 @@
-name: Qualidade (tsc)
+name: Qualidade (tsc + testes)
 
-# Porta de qualidade: verifica os tipos antes de qualquer merge/build.
-# Corre em todos os pushes e pull requests. É rápido (~1 min) e apanha nomes
-# de ícones inválidos, imports partidos e erros de rotas do expo-router — foi
-# assim que 3 erros de compilação tinham chegado ao repositório.
+# Porta de qualidade: verifica os tipos E corre os testes antes de qualquer
+# merge/build. Corre em todos os pushes e pull requests. É rápido (~1 min).
+#
+# O `tsc` apanha nomes de ícones inválidos, imports partidos e erros de rotas do
+# expo-router — foi assim que 3 erros de compilação tinham chegado ao repositório.
+#
+# Os testes cobrem os prazos legais (DGAV/SNIRA — onde um erro custa uma coima ao
+# criador) e a camada offline-first (onde um erro apaga registos sem avisar).
+# Até 2026-07-18 existiam mas nunca corriam aqui: um teste que ninguém executa
+# não protege nada.
 
 on:
   push:
@@ -12,7 +18,7 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  typecheck:
+  qualidade:
     runs-on: ubuntu-latest
     steps:
       - name: Obter o código
@@ -29,3 +35,6 @@ jobs:
 
       - name: Verificar tipos (tsc)
         run: npx tsc --noEmit
+
+      - name: Correr os testes
+        run: npm test -- --ci
