@@ -15,6 +15,7 @@ import {
   Text,
 } from '@/components/ui';
 import { tipoTerrenoMeta } from '@/data/constants';
+import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { colors, radii, shadow, spacing } from '@/theme';
 
@@ -22,8 +23,11 @@ export default function TerrenoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { terrenoById, exploracaoById, animais } = useGado();
+  const { pode } = useMembros();
 
   const terreno = id ? terrenoById(id) : undefined;
+  // O veterinário trata dos animais, não do património — não edita terrenos.
+  const podeEditar = pode(terreno?.exploracaoId, 'gerirTerrenos');
 
   if (!terreno) {
     return (
@@ -43,8 +47,8 @@ export default function TerrenoDetalheScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Header
         title={terreno.nome}
-        actionIcon="pencil-outline"
-        onAction={() => router.push(`/terreno/editar/${terreno.id}`)}
+        actionIcon={podeEditar ? 'pencil-outline' : undefined}
+        onAction={podeEditar ? () => router.push(`/terreno/editar/${terreno.id}`) : undefined}
       />
       <Screen>
         {/* Hero */}

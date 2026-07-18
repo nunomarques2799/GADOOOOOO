@@ -71,6 +71,13 @@ export function formatDataCurta(iso: string): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
+/** Dia e hora, para registos com momento exato (ex.: `14/03 09:25`). */
+export function formatDataHora(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 /* ---- Dinheiro (euros, formato PT) ---- */
 

@@ -19,7 +19,8 @@ import {
 } from 'react';
 
 import { useAuth } from './auth';
-import { supabase } from './supabase';
+import { rolePode, type Capacidade } from './permissoes';
+import { supabase, supabaseConfigurado } from './supabase';
 import type {
   Convite,
   EstadoPerfil,
@@ -35,6 +36,12 @@ type MembrosContext = {
   estadoPerfil: EstadoPerfil | null;
   /** Devolve o role do utilizador nesta exploração (ou undefined). */
   roleEm: (exploracaoId: string) => RoleMembro | undefined;
+  /**
+   * true se o utilizador pode exercer esta capacidade nesta exploração.
+   * Usar para esconder controlos que o servidor iria recusar — ver
+   * `permissoes.ts`, que espelha as políticas RLS.
+   */
+  pode: (exploracaoId: string | undefined, capacidade: Capacidade) => boolean;
   /** true se o utilizador é admin de pelo menos uma exploração. */
   isAdminEmAlguma: boolean;
   /** Recarrega perfil + membros a partir do Supabase. */
@@ -158,6 +165,21 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     [membros],
   );
 
+  const pode = useCallback(
+    (exploracaoId: string | undefined, capacidade: Capacidade): boolean => {
+      // Sem Supabase (modo local/demo) não há equipa nem papéis: quem está no
+      // aparelho é o dono de tudo. Sem este caso, a app offline ficaria só de
+      // leitura, porque `membros` está vazio e nada seria permitido.
+      if (!supabaseConfigurado || !userId) return true;
+      // O superadmin entra em tudo (as políticas RLS abrem-lhe a porta a todas
+      // as tabelas); serve para poder inspecionar a conta de um cliente.
+      if (isSuperadmin) return true;
+      if (!exploracaoId) return false;
+      return rolePode(roleEm(exploracaoId), capacidade);
+    },
+    [isSuperadmin, roleEm, userId],
+  );
+
   const isAdminEmAlguma = useMemo(() => membros.some((m) => m.role === 'admin'), [membros]);
 
   /* ---------------- Superadmin ---------------- */
@@ -258,6 +280,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       isSuperadmin,
       estadoPerfil,
       roleEm,
+      pode,
       isAdminEmAlguma,
       recarregar,
       listarPendentes,
@@ -271,7 +294,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       resgatarConvite,
     }),
     [
-      aCarregar, membros, isSuperadmin, estadoPerfil, roleEm, isAdminEmAlguma,
+      aCarregar, membros, isSuperadmin, estadoPerfil, roleEm, pode, isAdminEmAlguma,
       recarregar, listarPendentes, aprovarCliente, bloquearCliente,
       listarConvites, criarConvite, removerConvite, listarMembrosDe,
       removerMembro, resgatarConvite,

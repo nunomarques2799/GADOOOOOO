@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
 import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
 import { tiposTerreno, tipoTerrenoMeta } from '@/data/constants';
+import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import type { Terreno, TipoTerreno } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
@@ -21,8 +22,10 @@ export function FormularioTerreno({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { addTerreno, updateTerreno, deleteTerreno, exploracaoById } = useGado();
+  const { pode } = useMembros();
 
   const editar = !!terreno;
+  const podeEliminar = pode(exploracaoId, 'gerirTerrenos');
   const [nome, setNome] = useState(terreno?.nome ?? '');
   const [tipo, setTipo] = useState<TipoTerreno>(terreno?.tipo ?? 'Pastagem');
   const [area, setArea] = useState(terreno?.area != null ? String(terreno.area) : '');
@@ -208,7 +211,7 @@ export function FormularioTerreno({
           </View>
         ) : null}
 
-        {editar ? (
+        {editar && podeEliminar ? (
           <Button
             label="Eliminar terreno"
             icon="trash-can-outline"

@@ -31,8 +31,21 @@ export type OpPendente =
   | { op: 'upsert'; entidade: Entidade; dados: Exploracao | Terreno | Animal | Evento }
   | { op: 'delete'; entidade: Entidade; id: string };
 
+/** Uma operação que o servidor recusou, guardada para o criador poder vê-la. */
+export type OpFalhada = {
+  op: OpPendente;
+  /** Mensagem do servidor (RLS, validação) tal como veio. */
+  erro: string;
+  /** Momento em que a tentativa falhou, em ISO. */
+  em: string;
+};
+
 const CHAVE_CACHE = 'gado.cache.v1';
 const CHAVE_OUTBOX = 'gado.outbox.v1';
+const CHAVE_FALHADAS = 'gado.falhadas.v1';
+
+/** Teto da lista de falhadas — é um registo para ler, não um arquivo. */
+const MAX_FALHADAS = 50;
 
 /** true se há armazenamento local persistente. */
 export const cacheDisponivel = armazenamentoDisponivel;
@@ -77,6 +90,59 @@ export function adicionarOutbox(op: OpPendente): number {
   return ops.length;
 }
 
+/* ------------------------------------------------------------------ *
+ *  Escritas recusadas pelo servidor
+ * ------------------------------------------------------------------ */
+
+/**
+ * Uma operação que falhou por erro lógico (RLS, validação) não pode voltar à
+ * fila — seria recusada outra vez, para sempre, e bloquearia tudo o que vem
+ * atrás. Mas também não pode simplesmente desaparecer: a alteração já foi
+ * mostrada ao criador como gravada. Fica aqui, para o ecrã de Sincronização a
+ * mostrar e a pessoa saber o que se perdeu e porquê.
+ */
+export function lerFalhadas(): OpFalhada[] {
+  const bruto = ler(CHAVE_FALHADAS);
+  if (!bruto) return [];
+  try {
+    const lista = JSON.parse(bruto) as OpFalhada[];
+    return Array.isArray(lista) ? lista : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Regista uma recusa e devolve o novo total. Mantém as mais recentes. */
+export function registarFalhada(op: OpPendente, erro: string): number {
+  const lista = [{ op, erro, em: new Date().toISOString() }, ...lerFalhadas()].slice(
+    0,
+    MAX_FALHADAS,
+  );
+  guardar(CHAVE_FALHADAS, JSON.stringify(lista));
+  return lista.length;
+}
+
+/** Esquece as recusas (o criador já as viu). */
+export function limparFalhadas(): void {
+  remover(CHAVE_FALHADAS);
+}
+
+/** Descrição curta do que a operação tentava fazer, para mostrar na lista. */
+export function descreverOp(op: OpPendente): string {
+  const nomes: Record<Entidade, string> = {
+    exploracao: 'Exploração',
+    terreno: 'Terreno',
+    animal: 'Animal',
+    evento: 'Evento',
+  };
+  const entidade = nomes[op.entidade];
+  if (op.op === 'delete') return `Eliminar ${entidade.toLowerCase()}`;
+  // Os nomes só existem nalgumas entidades; o evento identifica-se pelo tipo.
+  const dados = op.dados as { nome?: string; tipo?: string };
+  const rotulo = dados.nome ?? dados.tipo;
+  return rotulo ? `${entidade}: ${rotulo}` : `Gravar ${entidade.toLowerCase()}`;
+}
+
 /**
  * Apaga os dados locais da conta. Chamado ao terminar sessão: sem isto, o
  * criador seguinte a entrar no mesmo dispositivo veria, durante o arranque, o
@@ -85,6 +151,7 @@ export function adicionarOutbox(op: OpPendente): number {
 export function limparCache(): void {
   remover(CHAVE_CACHE);
   remover(CHAVE_OUTBOX);
+  remover(CHAVE_FALHADAS);
 }
 
 /**

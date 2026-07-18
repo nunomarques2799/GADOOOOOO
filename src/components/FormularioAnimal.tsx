@@ -17,6 +17,7 @@ import {
   parseDataPt,
 } from '@/data/helpers';
 import { rotuloAnimal } from '@/data/genealogia';
+import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import type { Animal, Especie, Sexo } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
@@ -56,6 +57,7 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { animais, exploracoes, terrenosByExploracao, addAnimal, updateAnimal, deleteAnimal } = useGado();
+  const { pode } = useMembros();
 
   const editar = !!animal;
 
@@ -68,6 +70,9 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
   const [raca, setRaca] = useState(animal?.raca ?? '');
   const [corPelagem, setCorPelagem] = useState(animal?.corPelagem ?? '');
   const [exploracaoId, setExploracaoId] = useState(animal?.exploracaoId ?? exploracoes[0]?.id ?? '');
+  // Apagar o registo leva o histórico atrás — fica com quem gere o efetivo,
+  // não com o veterinário. Ver `permissoes.ts`.
+  const podeEliminar = pode(animal?.exploracaoId ?? exploracaoId, 'eliminarAnimais');
   const [terrenoId, setTerrenoId] = useState<string | undefined>(animal?.terrenoId);
   const [maeId, setMaeId] = useState<string | undefined>(animal?.maeId);
   const [paiId, setPaiId] = useState<string | undefined>(animal?.paiId);
@@ -479,7 +484,7 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
           vazio="Não há machos elegíveis registados."
         />
 
-        {editar ? (
+        {editar && podeEliminar ? (
           <Button
             label="Eliminar animal"
             icon="trash-can-outline"

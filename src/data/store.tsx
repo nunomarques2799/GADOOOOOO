@@ -30,8 +30,12 @@ import {
   guardarCache,
   guardarOutbox,
   lerCache,
+  lerFalhadas,
   lerOutbox,
+  limparFalhadas as esquecerFalhadas,
   pareceErroDeRede,
+  registarFalhada,
+  type OpFalhada,
   type OpPendente,
 } from './cacheLocal';
 import {
@@ -191,6 +195,14 @@ type GadoContext = {
   online: boolean;
   /** Nº de alterações locais ainda por enviar ao Supabase. */
   pendentesSinc: number;
+  /**
+   * Alterações que o servidor recusou (falta de permissão, validação). Foram
+   * feitas offline, mostradas como gravadas, e não voltam a ser tentadas —
+   * o ecrã de Sincronização mostra-as para o criador saber o que se perdeu.
+   */
+  falhadas: OpFalhada[];
+  /** Esquece a lista de recusadas (depois de o criador a ver). */
+  limparFalhadas: () => void;
   // seletores
   exploracaoById: (id: string) => Exploracao | undefined;
   animalById: (id: string) => Animal | undefined;
@@ -325,6 +337,14 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   const [pendentesSinc, setPendentesSinc] = useState<number>(
     cacheDisponivel ? lerOutbox().length : 0,
   );
+  const [falhadas, setFalhadas] = useState<OpFalhada[]>(
+    cacheDisponivel ? lerFalhadas() : [],
+  );
+
+  const limparFalhadas = useCallback(() => {
+    esquecerFalhadas();
+    setFalhadas([]);
+  }, []);
 
   /** Escrita local SQLite (só no nativo sem Supabase). */
   const gravarSqlite = useCallback((fn: (db: SQLiteDatabase) => void) => {
@@ -399,7 +419,14 @@ export function GadoProvider({ children }: { children: ReactNode }) {
         setOnline(false);
         break; // continua offline — tenta na próxima vez
       }
-      // Sucesso, ou erro lógico (descarta a op para não bloquear a fila).
+      if (erro) {
+        // Erro lógico (RLS, validação): repetir daria o mesmo e a fila ficava
+        // presa para sempre. Sai da fila, mas fica registada — esta alteração
+        // já apareceu ao criador como gravada e não pode sumir em silêncio.
+        // O estado local corrige-se sozinho no `puxarDoServidor()` do fim.
+        registarFalhada(proxima, erro);
+        setFalhadas(lerFalhadas());
+      }
       ops = resto;
       guardarOutbox(ops);
       setPendentesSinc(ops.length);
@@ -687,6 +714,8 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       reativarAlerta,
       online,
       pendentesSinc,
+      falhadas,
+      limparFalhadas,
       exploracaoById,
       animalById,
       terrenoById,
@@ -711,7 +740,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     [
       utilizador, exploracoes, terrenos, animais, eventos, alertas,
       alertasDispensados, dispensarAlerta, reativarAlerta,
-      online, pendentesSinc,
+      online, pendentesSinc, falhadas, limparFalhadas,
       exploracaoById, animalById, terrenoById, animaisByExploracao,
       animaisByExploracaoIncluindoSaidos,
       terrenosByExploracao, eventosByAnimal, addAnimal, updateAnimal,

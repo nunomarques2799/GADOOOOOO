@@ -5,6 +5,7 @@ import { Pressable, View } from 'react-native';
 import { AnimalRow } from '@/components/AnimalRow';
 import { WeatherCard } from '@/components/WeatherCard';
 import {
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -17,6 +18,7 @@ import {
 } from '@/components/ui';
 import { tipoTerrenoMeta } from '@/data/constants';
 import { useMembros } from '@/data/membros';
+import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
 import type { EstadoMeteo } from '@/data/useMeteorologia';
 import { useMeteorologia } from '@/data/useMeteorologia';
@@ -26,9 +28,16 @@ export default function ExploracaoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { exploracaoById, terrenosByExploracao, animaisByExploracao } = useGado();
-  const { roleEm, isSuperadmin } = useMembros();
+  const { roleEm, pode } = useMembros();
   const { meteo, estado, recarregar } = useMeteorologia(id);
-  const podeGerirEquipa = id ? roleEm(id) === 'admin' || isSuperadmin : false;
+  // Os controlos seguem as permissões do papel (ver `permissoes.ts`): um
+  // veterinário não vê "editar" nem "adicionar terreno", porque o servidor
+  // recusaria a gravação — e feita offline, essa recusa só apareceria na
+  // sincronização, muito depois de a pessoa julgar que tinha guardado.
+  const podeGerirEquipa = pode(id, 'gerirEquipa');
+  const podeEditar = pode(id, 'editarExploracao');
+  const podeGerirTerrenos = pode(id, 'gerirTerrenos');
+  const meuRole = id ? roleEm(id) : undefined;
 
   const exploracao = exploracaoById(id);
 
@@ -49,8 +58,10 @@ export default function ExploracaoDetalheScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Header
         title={exploracao.nome}
-        actionIcon="pencil-outline"
-        onAction={() => router.push(`/exploracao/editar/${exploracao.id}`)}
+        actionIcon={podeEditar ? 'pencil-outline' : undefined}
+        onAction={
+          podeEditar ? () => router.push(`/exploracao/editar/${exploracao.id}`) : undefined
+        }
       />
       <Screen>
         {/* Hero */}
@@ -97,6 +108,18 @@ export default function ExploracaoDetalheScreen() {
             <HeroStat value={`${areaTotal.toFixed(1)} ha`} label="Área total" />
           </View>
         </LinearGradient>
+
+        {/* Quem entrou por convite não é dono desta exploração e vê menos
+            botões. Dizer o papel evita a pergunta "porque não consigo editar?" */}
+        {meuRole && meuRole !== 'admin' ? (
+          <View style={{ flexDirection: 'row', marginTop: spacing.md }}>
+            <Badge
+              tone="info"
+              icon={meuRole === 'veterinario' ? 'medical-bag' : 'account-hard-hat'}
+              label={`Entrou como ${legendaRole(meuRole).toLowerCase()}`}
+            />
+          </View>
+        ) : null}
 
         {/* Meteorologia local */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
@@ -160,16 +183,18 @@ export default function ExploracaoDetalheScreen() {
             marginBottom: spacing.xs,
           }}>
           <Text variant="h3">Terrenos ({terrenos.length})</Text>
-          <Pressable
-            onPress={() => router.push({ pathname: '/terreno/novo', params: { exploracaoId: exploracao.id } })}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Adicionar terreno">
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Icon name="plus-circle" size="md" color={colors.primary} />
-              <Text variant="bodyStrong" color={colors.primary}>Adicionar</Text>
-            </View>
-          </Pressable>
+          {podeGerirTerrenos ? (
+            <Pressable
+              onPress={() => router.push({ pathname: '/terreno/novo', params: { exploracaoId: exploracao.id } })}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Adicionar terreno">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Icon name="plus-circle" size="md" color={colors.primary} />
+                <Text variant="bodyStrong" color={colors.primary}>Adicionar</Text>
+              </View>
+            </Pressable>
+          ) : null}
         </View>
 
         {terrenos.length === 0 ? (

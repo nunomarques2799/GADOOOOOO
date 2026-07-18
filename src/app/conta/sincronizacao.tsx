@@ -3,9 +3,10 @@ import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Badge, Button, Card, Header, Icon, Text } from '@/components/ui';
-import { avisar } from '@/data/avisos';
-import { lerCache } from '@/data/cacheLocal';
+import { avisar, confirmar } from '@/data/avisos';
+import { descreverOp, lerCache } from '@/data/cacheLocal';
 import { guardarFicheiro, hojeISO } from '@/data/exportar';
+import { formatDataHora } from '@/data/helpers';
 import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
@@ -18,10 +19,28 @@ import { colors, layout, radii, spacing } from '@/theme';
 export default function SincronizacaoScreen() {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
-  const { online, pendentesSinc, animais, exploracoes, terrenos, eventos, recarregar } =
-    useGado();
+  const {
+    online,
+    pendentesSinc,
+    falhadas,
+    limparFalhadas,
+    animais,
+    exploracoes,
+    terrenos,
+    eventos,
+    recarregar,
+  } = useGado();
 
   const [aSincronizar, setASincronizar] = useState(false);
+
+  function confirmarLimparFalhadas() {
+    confirmar(
+      'Esquecer alterações recusadas',
+      'A lista deixa de aparecer. As alterações em si já não estão guardadas — se ainda forem precisas, tem de as fazer outra vez.',
+      limparFalhadas,
+      { rotuloConfirmar: 'Esquecer' },
+    );
+  }
 
   async function sincronizarAgora() {
     if (aSincronizar) return;
@@ -129,6 +148,67 @@ export default function SincronizacaoScreen() {
               style={{ marginTop: spacing.md }}
             />
           </Card>
+
+          {/* Alterações que o servidor recusou. Só aparece se houver alguma —
+              é o sítio onde deixam de se perder em silêncio. */}
+          {falhadas.length > 0 ? (
+            <View>
+              <Text
+                variant="label"
+                color={colors.textSecondary}
+                style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
+                NÃO FOI POSSÍVEL GRAVAR
+              </Text>
+              <Card>
+                <View style={{ gap: spacing.sm }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                    <Icon name="alert-circle-outline" size="lg" color={colors.danger} />
+                    <View style={{ flex: 1 }}>
+                      <Text variant="bodyStrong">
+                        {falhadas.length} alteraç{falhadas.length > 1 ? 'ões' : 'ão'} recusada
+                        {falhadas.length > 1 ? 's' : ''}
+                      </Text>
+                      <Text variant="secondary" color={colors.textSecondary}>
+                        Foram feitas sem ligação e o servidor não as aceitou — normalmente por
+                        não ter permissão para essa exploração. Não ficaram guardadas.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View>
+                    {falhadas.map((f, i) => (
+                      <View
+                        key={`${f.em}-${i}`}
+                        style={{
+                          paddingVertical: spacing.sm,
+                          borderTopWidth: 1,
+                          borderTopColor: colors.border,
+                        }}>
+                        <Text variant="bodyStrong">{descreverOp(f.op)}</Text>
+                        <Text variant="caption" color={colors.textSecondary}>
+                          {formatDataHora(f.em)}
+                        </Text>
+                        <Text
+                          variant="caption"
+                          color={colors.danger}
+                          style={{ marginTop: 2 }}
+                          numberOfLines={3}>
+                          {f.erro}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <Button
+                    label="Esquecer esta lista"
+                    icon="check"
+                    variant="secondary"
+                    onPress={confirmarLimparFalhadas}
+                  />
+                </View>
+              </Card>
+            </View>
+          ) : null}
 
           <View>
             <Text

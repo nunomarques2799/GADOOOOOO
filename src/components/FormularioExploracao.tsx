@@ -4,6 +4,7 @@ import { Alert, Platform, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Header, Icon, type IconName, Text } from '@/components/ui';
+import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import type { Exploracao } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
@@ -13,8 +14,10 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { addExploracao, updateExploracao, deleteExploracao } = useGado();
+  const { pode } = useMembros();
 
   const editar = !!exploracao;
+  const podeEliminar = pode(exploracao?.id, 'eliminarExploracao');
   const [nome, setNome] = useState(exploracao?.nome ?? '');
   const [marca, setMarca] = useState(exploracao?.marcaExploracao ?? '');
   const [nifDetentor, setNif] = useState(exploracao?.nifDetentor ?? '');
@@ -146,7 +149,7 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
           </View>
         ) : null}
 
-        {editar ? (
+        {editar && podeEliminar ? (
           <Button
             label="Eliminar exploração"
             icon="trash-can-outline"

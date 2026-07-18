@@ -25,12 +25,16 @@ jest.mock('../armazenamento', () => ({
 
 import {
   adicionarOutbox,
+  descreverOp,
   guardarCache,
   guardarOutbox,
   lerCache,
+  lerFalhadas,
   lerOutbox,
   limparCache,
+  limparFalhadas,
   pareceErroDeRede,
+  registarFalhada,
   type OpPendente,
 } from '../cacheLocal';
 import type { Animal } from '../types';
@@ -123,16 +127,88 @@ describe('cache local — dados visíveis sem rede', () => {
 });
 
 describe('limparCache — ao terminar sessão', () => {
-  it('apaga os dados e a fila da conta que saiu', () => {
+  it('apaga os dados, a fila e as recusas da conta que saiu', () => {
     // Sem isto, o criador seguinte a entrar neste aparelho via o efetivo do
     // anterior enquanto o servidor não respondesse.
     guardarCache({ exploracoes: [], terrenos: [], animais: [animal('a1')], eventos: [] });
     adicionarOutbox(upsert('a1'));
+    registarFalhada(upsert('a1'), 'permission denied');
 
     limparCache();
 
     expect(lerCache()).toBeNull();
     expect(lerOutbox()).toEqual([]);
+    expect(lerFalhadas()).toEqual([]);
+  });
+});
+
+describe('falhadas — escritas que o servidor recusou', () => {
+  // Antes, uma escrita recusada era descartada em silêncio: a alteração já
+  // tinha aparecido ao criador como gravada e desaparecia sem uma palavra.
+  // Um veterinário podia perder meia hora de registos feitos no mato.
+  it('começa vazia', () => {
+    expect(lerFalhadas()).toEqual([]);
+  });
+
+  it('guarda a operação, o erro do servidor e o momento', () => {
+    registarFalhada(upsert('a1'), 'new row violates row-level security policy');
+
+    const [f] = lerFalhadas();
+    expect(f.op).toEqual(upsert('a1'));
+    expect(f.erro).toContain('row-level security');
+    expect(Number.isNaN(Date.parse(f.em))).toBe(false);
+  });
+
+  it('mostra a mais recente primeiro', () => {
+    registarFalhada(upsert('antiga'), 'erro 1');
+    registarFalhada(upsert('nova'), 'erro 2');
+
+    const ids = lerFalhadas().map((f) => (f.op.op === 'upsert' ? f.op.dados.id : f.op.id));
+    expect(ids).toEqual(['nova', 'antiga']);
+  });
+
+  it('não cresce sem fim — é um registo para ler, não um arquivo', () => {
+    for (let i = 0; i < 60; i++) registarFalhada(upsert(`a${i}`), 'erro');
+    expect(lerFalhadas()).toHaveLength(50);
+  });
+
+  it('esquece a lista quando o criador a dispensa', () => {
+    registarFalhada(upsert('a1'), 'erro');
+    limparFalhadas();
+    expect(lerFalhadas()).toEqual([]);
+  });
+
+  it('não rebenta com um valor corrompido', () => {
+    mockMapa.set('gado.falhadas.v1', 'lixo');
+    expect(lerFalhadas()).toEqual([]);
+  });
+});
+
+describe('descreverOp — o que a alteração recusada tentava fazer', () => {
+  it('identifica uma gravação pelo nome', () => {
+    const op: OpPendente = {
+      op: 'upsert',
+      entidade: 'terreno',
+      dados: { id: 't1', exploracaoId: 'exp-1', nome: 'Courela do Vale' },
+    };
+    expect(descreverOp(op)).toBe('Terreno: Courela do Vale');
+  });
+
+  it('identifica um evento pelo tipo, que é o que ele tem em vez de nome', () => {
+    const op: OpPendente = {
+      op: 'upsert',
+      entidade: 'evento',
+      dados: { id: 'e1', animalId: 'a1', tipo: 'Vacinação', data: '2026-07-18', descricao: '' },
+    };
+    expect(descreverOp(op)).toBe('Evento: Vacinação');
+  });
+
+  it('descreve uma eliminação sem depender de dados', () => {
+    expect(descreverOp({ op: 'delete', entidade: 'animal', id: 'a1' })).toBe('Eliminar animal');
+  });
+
+  it('aguenta uma entidade sem nome', () => {
+    expect(descreverOp(upsert('a1'))).toBe('Gravar animal');
   });
 });
 
@@ -149,8 +225,8 @@ describe('pareceErroDeRede — decide entre reenviar e descartar', () => {
     expect(pareceErroDeRede(msg)).toBe(true);
   });
 
-  // Classificar como lógico => a operação é descartada, e ainda bem: repeti-la
-  // falharia sempre e bloquearia a fila toda atrás dela.
+  // Classificar como lógico => a operação sai da fila (repeti-la falharia
+  // sempre e bloquearia tudo atrás dela), mas fica registada nas falhadas.
   it.each([
     'new row violates row-level security policy for table "animal"',
     'duplicate key value violates unique constraint',

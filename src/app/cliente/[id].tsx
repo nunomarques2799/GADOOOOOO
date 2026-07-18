@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { Badge, Button, Card, Chip, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
+import { formatDataHora } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import {
   definirSubscricao,
@@ -397,15 +398,6 @@ function legendaEvento(tipo: string): string {
   if (tipo === 'plano_mudou') return 'Plano alterado';
   if (tipo === 'eliminado') return 'Subscrição eliminada';
   return 'Atualizada';
-}
-
-function formatDataHora(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  } catch {
-    return iso;
-  }
 }
 
 function StatBox({

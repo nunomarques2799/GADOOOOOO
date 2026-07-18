@@ -23,6 +23,7 @@ import { avisar, confirmar } from '@/data/avisos';
 import { filhosDe, rotuloAnimal } from '@/data/genealogia';
 import { balancoAnimal } from '@/data/financas';
 import { diasAte, formatDataCurta, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
+import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import type { EstadoAnimal, EventoTipo } from '@/data/types';
 import { colors, radii, shadow, spacing } from '@/theme';
@@ -52,7 +53,13 @@ export default function AnimalDetalheScreen() {
     reativarAnimal,
   } = useGado();
 
+  const { pode } = useMembros();
+
   const animal = animalById(id);
+  // Todos os papéis mexem na ficha e nos eventos; marcar a saída (uma venda,
+  // com preço) fica com quem gere o efetivo. Ver `permissoes.ts`.
+  const podeEditar = pode(animal?.exploracaoId, 'editarAnimais');
+  const podeRegistarSaida = pode(animal?.exploracaoId, 'registarSaida');
 
   // Formulário inline "Marcar saída" — só visível quando o utilizador o abre.
   const [saidaOpen, setSaidaOpen] = useState(false);
@@ -120,8 +127,8 @@ export default function AnimalDetalheScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Header
         title={animal.nome ?? 'Animal'}
-        actionIcon="pencil-outline"
-        onAction={() => router.push(`/animal/editar/${animal.id}`)}
+        actionIcon={podeEditar ? 'pencil-outline' : undefined}
+        onAction={podeEditar ? () => router.push(`/animal/editar/${animal.id}`) : undefined}
       />
       <Screen>
         {/* Hero */}
@@ -337,19 +344,23 @@ export default function AnimalDetalheScreen() {
         <View style={{ gap: spacing.sm, marginTop: spacing.xl }}>
           {!saiu ? (
             <>
-              <Button
-                label="Registar evento"
-                icon="plus"
-                variant="secondary"
-                onPress={() => router.push({ pathname: '/evento/novo', params: { animalId: animal.id } })}
-              />
-              <Button
-                label="Editar dados do animal"
-                icon="pencil-outline"
-                variant="ghost"
-                onPress={() => router.push(`/animal/editar/${animal.id}`)}
-              />
-              {!saidaOpen ? (
+              {podeEditar ? (
+                <>
+                  <Button
+                    label="Registar evento"
+                    icon="plus"
+                    variant="secondary"
+                    onPress={() => router.push({ pathname: '/evento/novo', params: { animalId: animal.id } })}
+                  />
+                  <Button
+                    label="Editar dados do animal"
+                    icon="pencil-outline"
+                    variant="ghost"
+                    onPress={() => router.push(`/animal/editar/${animal.id}`)}
+                  />
+                </>
+              ) : null}
+              {!podeRegistarSaida ? null : !saidaOpen ? (
                 <Button
                   label="Marcar como falecido / vendido"
                   icon="archive-outline"
@@ -376,14 +387,14 @@ export default function AnimalDetalheScreen() {
                 />
               )}
             </>
-          ) : (
+          ) : podeRegistarSaida ? (
             <Button
               label="Voltar a ativar o animal"
               icon="restore"
               variant="secondary"
               onPress={pedirReativar}
             />
-          )}
+          ) : null}
         </View>
       </Screen>
     </View>

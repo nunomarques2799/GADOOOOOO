@@ -52,7 +52,11 @@ export const colors = {
   /* Texto — alto contraste para visão reduzida */
   text: '#15251C', // ~near-black esverdeado
   textSecondary: '#54655B',
-  textMuted: '#8593',
+  // Atenção ao formato: um hex de 4 dígitos NÃO é um cinzento abreviado — o
+  // React Native lê-o como #RGBA. Este token esteve escrito '#8593' e saía
+  // rgba(136,85,153,0.20): um roxo quase invisível (1,30:1 sobre o fundo) em
+  // mais de 100 sítios, incluindo os separadores inativos e os placeholders.
+  textMuted: '#647268', // 4,65:1 sobre o fundo · 5,06:1 sobre branco (WCAG AA)
   textOnDark: '#FFFFFF',
   textOnDarkMuted: 'rgba(255,255,255,0.82)',
 
