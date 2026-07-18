@@ -1,6 +1,12 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { legendaRole, rolePode, type Capacidade } from '../permissoes';
+import {
+  legendaRole,
+  podeEscrever,
+  rolePode,
+  type Capacidade,
+  type ContextoAcesso,
+} from '../permissoes';
 import type { RoleMembro } from '../types';
 
 /**
@@ -61,6 +67,61 @@ describe('rolePode', () => {
   it('apagar um animal leva o histórico atrás — não é ato veterinário', () => {
     expect(rolePode('veterinario', 'editarAnimais')).toBe(true);
     expect(rolePode('veterinario', 'eliminarAnimais')).toBe(false);
+  });
+});
+
+/**
+ * Cada ramo desta função tem um modo de falhar próprio e caro — daí o teste.
+ * Espelha `pode_escrever_em()` de `supabase/schema_suspensao.sql`.
+ */
+describe('podeEscrever — modo da app + estado da conta + papel', () => {
+  const base: ContextoAcesso = {
+    supabaseConfigurado: true,
+    temSessao: true,
+    isSuperadmin: false,
+    estadoPerfil: 'ativo',
+    role: 'admin',
+  };
+
+  it('sem Supabase, permite tudo — é o modo local/demo, sem equipa nem papéis', () => {
+    // Se isto falhasse, o .exe sem chaves e a app offline ficavam só de leitura.
+    const ctx = { ...base, supabaseConfigurado: false, estadoPerfil: null, role: undefined };
+    expect(podeEscrever(ctx, 'eliminarExploracao')).toBe(true);
+  });
+
+  it('sem sessão iniciada, permite tudo (SQLite local)', () => {
+    const ctx = { ...base, temSessao: false, estadoPerfil: null, role: undefined };
+    expect(podeEscrever(ctx, 'gerirTerrenos')).toBe(true);
+  });
+
+  it('o superadmin passa mesmo sem papel na exploração', () => {
+    // Precisa disto para assistir a conta de um cliente.
+    const ctx = { ...base, isSuperadmin: true, role: undefined, estadoPerfil: null };
+    expect(podeEscrever(ctx, 'editarExploracao')).toBe(true);
+  });
+
+  it('conta suspensa não escreve, nem sendo dono da exploração', () => {
+    // O ponto todo do S3: suspender tem de suspender mesmo.
+    const ctx = { ...base, estadoPerfil: 'pendente' as const, role: 'admin' as const };
+    expect(podeEscrever(ctx, 'editarAnimais')).toBe(false);
+    expect(podeEscrever(ctx, 'gerirTerrenos')).toBe(false);
+    expect(podeEscrever(ctx, 'eliminarExploracao')).toBe(false);
+  });
+
+  it('a suspensão vence o papel, mas não vence o superadmin', () => {
+    expect(podeEscrever({ ...base, estadoPerfil: 'pendente' }, 'editarAnimais')).toBe(false);
+    expect(
+      podeEscrever({ ...base, estadoPerfil: 'pendente', isSuperadmin: true }, 'editarAnimais'),
+    ).toBe(true);
+  });
+
+  it('conta ativa sem papel nesta exploração não escreve', () => {
+    expect(podeEscrever({ ...base, role: undefined }, 'editarAnimais')).toBe(false);
+  });
+
+  it('conta ativa respeita os limites do papel', () => {
+    expect(podeEscrever({ ...base, role: 'veterinario' }, 'editarAnimais')).toBe(true);
+    expect(podeEscrever({ ...base, role: 'veterinario' }, 'eliminarAnimais')).toBe(false);
   });
 });
 

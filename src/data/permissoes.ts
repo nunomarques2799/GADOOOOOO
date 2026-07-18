@@ -13,7 +13,7 @@
  * Ao mexer numa política do SQL, mexer também aqui (e no teste).
  */
 
-import type { RoleMembro } from './types';
+import type { EstadoPerfil, RoleMembro } from './types';
 
 export type Capacidade =
   /** Mudar nome, marca, NIF ou localização da exploração. */
@@ -54,6 +54,37 @@ const PERMISSOES: Record<RoleMembro, readonly Capacidade[]> = {
 export function rolePode(role: RoleMembro | undefined, capacidade: Capacidade): boolean {
   if (!role) return false;
   return PERMISSOES[role].includes(capacidade);
+}
+
+/** Tudo o que decide se esta pessoa pode escrever, neste momento. */
+export type ContextoAcesso = {
+  /** Há projeto Supabase configurado? (falso no modo demo/offline puro) */
+  supabaseConfigurado: boolean;
+  /** Há sessão iniciada? */
+  temSessao: boolean;
+  isSuperadmin: boolean;
+  /** Estado do perfil de quem está a agir. */
+  estadoPerfil: EstadoPerfil | null;
+  /** Papel de quem está a agir NESTA exploração. */
+  role: RoleMembro | undefined;
+};
+
+/**
+ * Decisão completa de escrita: modo da app + estado da conta + papel.
+ * Espelha `pode_escrever_em()` + as políticas de `schema_suspensao.sql`.
+ *
+ * A ordem das perguntas importa e cada uma tem um modo de falhar próprio:
+ * sem Supabase a app ficaria só de leitura; o superadmin ficaria fechado
+ * fora das contas que precisa de assistir; e uma conta suspensa veria os
+ * botões todos para depois cada gravação rebentar contra a RLS.
+ */
+export function podeEscrever(ctx: ContextoAcesso, capacidade: Capacidade): boolean {
+  // Modo local/demo: não há equipa nem papéis — quem está no aparelho é o dono.
+  if (!ctx.supabaseConfigurado || !ctx.temSessao) return true;
+  if (ctx.isSuperadmin) return true;
+  // Suspensa (ou ainda por aprovar): consulta sim, escrita não.
+  if (ctx.estadoPerfil !== 'ativo') return false;
+  return rolePode(ctx.role, capacidade);
 }
 
 /** Nome do papel para mostrar ao utilizador. */

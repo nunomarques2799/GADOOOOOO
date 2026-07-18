@@ -19,7 +19,7 @@ import {
 } from 'react';
 
 import { useAuth } from './auth';
-import { rolePode, type Capacidade } from './permissoes';
+import { podeEscrever, type Capacidade } from './permissoes';
 import { supabase, supabaseConfigurado } from './supabase';
 import type {
   Convite,
@@ -42,6 +42,11 @@ type MembrosContext = {
    * `permissoes.ts`, que espelha as políticas RLS.
    */
   pode: (exploracaoId: string | undefined, capacidade: Capacidade) => boolean;
+  /**
+   * true se a conta está suspensa (superadmin bloqueou, ou ainda não aprovou):
+   * a app fica só de leitura. Espelha `pode_escrever_em()` no Supabase.
+   */
+  contaSuspensa: boolean;
   /** true se o utilizador é admin de pelo menos uma exploração. */
   isAdminEmAlguma: boolean;
   /** Recarrega perfil + membros a partir do Supabase. */
@@ -165,20 +170,22 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     [membros],
   );
 
-  const pode = useCallback(
-    (exploracaoId: string | undefined, capacidade: Capacidade): boolean => {
-      // Sem Supabase (modo local/demo) não há equipa nem papéis: quem está no
-      // aparelho é o dono de tudo. Sem este caso, a app offline ficaria só de
-      // leitura, porque `membros` está vazio e nada seria permitido.
-      if (!supabaseConfigurado || !userId) return true;
-      // O superadmin entra em tudo (as políticas RLS abrem-lhe a porta a todas
-      // as tabelas); serve para poder inspecionar a conta de um cliente.
-      if (isSuperadmin) return true;
-      if (!exploracaoId) return false;
-      return rolePode(roleEm(exploracaoId), capacidade);
-    },
-    [isSuperadmin, roleEm, userId],
+  // A decisão em si vive em `permissoes.ts` (lógica pura, testada); aqui só se
+  // reúne o contexto. Ver `podeEscrever` para o porquê de cada ramo.
+  const contexto = useMemo(
+    () => ({ supabaseConfigurado, temSessao: !!userId, isSuperadmin, estadoPerfil }),
+    [userId, isSuperadmin, estadoPerfil],
   );
+
+  const pode = useCallback(
+    (exploracaoId: string | undefined, capacidade: Capacidade): boolean =>
+      podeEscrever({ ...contexto, role: exploracaoId ? roleEm(exploracaoId) : undefined }, capacidade),
+    [contexto, roleEm],
+  );
+
+  /** true se a conta está suspensa (ou por aprovar): só pode ler. */
+  const contaSuspensa =
+    supabaseConfigurado && !!userId && !isSuperadmin && estadoPerfil !== 'ativo';
 
   const isAdminEmAlguma = useMemo(() => membros.some((m) => m.role === 'admin'), [membros]);
 
@@ -281,6 +288,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       estadoPerfil,
       roleEm,
       pode,
+      contaSuspensa,
       isAdminEmAlguma,
       recarregar,
       listarPendentes,
@@ -294,7 +302,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       resgatarConvite,
     }),
     [
-      aCarregar, membros, isSuperadmin, estadoPerfil, roleEm, pode, isAdminEmAlguma,
+      aCarregar, membros, isSuperadmin, estadoPerfil, roleEm, pode, contaSuspensa, isAdminEmAlguma,
       recarregar, listarPendentes, aprovarCliente, bloquearCliente,
       listarConvites, criarConvite, removerConvite, listarMembrosDe,
       removerMembro, resgatarConvite,

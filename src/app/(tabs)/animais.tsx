@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimalRow } from '@/components/AnimalRow';
 import { Chip, EmptyState, FAB, Icon, Text } from '@/components/ui';
 import { especieMeta, especies } from '@/data/constants';
+import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import type { Especie } from '@/data/types';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -18,6 +19,10 @@ export default function AnimaisScreen() {
   const router = useRouter();
   const desktop = useDesktop();
   const { animais, alertas } = useGado();
+  // Com a conta suspensa nada se grava — o formulário só levaria a um erro no
+  // fim. O papel não se verifica aqui porque a exploração ainda não está
+  // escolhida (é o formulário que a pede); isso fica para o `guardar`.
+  const { contaSuspensa } = useMembros();
 
   const [query, setQuery] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('Todos');
@@ -178,12 +183,18 @@ export default function AnimaisScreen() {
                 ? 'Experimente ajustar a pesquisa ou os filtros.'
                 : 'Ainda não há animais registados. Comece por adicionar o primeiro.'
             }
-            actionLabel={!query && filtro === 'Todos' && !soAlertas ? 'Registar animal' : undefined}
+            actionLabel={
+              !contaSuspensa && !query && filtro === 'Todos' && !soAlertas
+                ? 'Registar animal'
+                : undefined
+            }
             onAction={() => router.push('/animal/novo')}
           />
         }
       />
-      <FAB label="Registar" onPress={() => router.push('/animal/novo')} />
+      {contaSuspensa ? null : (
+        <FAB label="Registar" onPress={() => router.push('/animal/novo')} />
+      )}
     </View>
   );
 }

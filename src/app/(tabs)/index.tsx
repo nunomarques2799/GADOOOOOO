@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlertItem } from '@/components/AlertItem';
 import { BannerAtualizacao } from '@/components/BannerAtualizacao';
+import { BannerSuspensao } from '@/components/BannerSuspensao';
 import { ExploracaoRow } from '@/components/ExploracaoRow';
 import { QuickAction } from '@/components/QuickAction';
 import { StatCard } from '@/components/StatCard';
@@ -237,6 +238,9 @@ export default function InicioScreen() {
             paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
             marginTop: desktop ? spacing.lg : -spacing.xxxl,
           }}>
+          {/* Conta suspensa — fica em primeiro, é o que explica tudo o resto */}
+          <BannerSuspensao />
+
           {/* Aviso de nova versão — só na app desktop quando há atualização */}
           <BannerAtualizacao />
 
