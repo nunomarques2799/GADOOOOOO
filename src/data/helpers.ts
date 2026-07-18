@@ -1,4 +1,4 @@
-import { PrazosLegais, PrazosSanitarios } from './constants';
+import { PartoPrevisaoCaducaDias, PrazosLegais, PrazosSanitarios } from './constants';
 import type { Alerta, Animal, Evento } from './types';
 
 const MESES_PT = [
@@ -33,9 +33,14 @@ export function isoInDays(n: number): string {
 
 /**
  * Converte "dd/mm/aaaa" (ou dd-mm-aaaa) numa data ISO ao meio-dia.
- * Devolve null se inválida ou no futuro.
+ * Devolve null se inválida. Por omissão recusa datas futuras — quase tudo o
+ * que se regista já aconteceu; `permitirFuturo` abre a exceção para os campos
+ * que são futuros por definição, como a data prevista do parto.
  */
-export function parseDataPt(texto: string): string | null {
+export function parseDataPt(
+  texto: string,
+  opcoes?: { permitirFuturo?: boolean },
+): string | null {
   const m = texto.trim().match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
   if (!m) return null;
   const dia = Number(m[1]);
@@ -44,7 +49,15 @@ export function parseDataPt(texto: string): string | null {
   if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
   const d = new Date(ano, mes - 1, dia, 12, 0, 0);
   if (d.getFullYear() !== ano || d.getMonth() !== mes - 1 || d.getDate() !== dia) return null;
-  if (d.getTime() > Date.now()) return null;
+  if (!opcoes?.permitirFuturo && d.getTime() > Date.now()) return null;
+  return d.toISOString();
+}
+
+/** Data ISO ao meio-dia, `dias` depois de `iso`. Usado para prever o parto. */
+export function isoMaisDias(iso: string, dias: number): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + dias);
+  d.setHours(12, 0, 0, 0);
   return d.toISOString();
 }
 
@@ -157,7 +170,20 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
     // Parto previsto
     if (a.dataPrevistaParto) {
       const dias = diasAte(a.dataPrevistaParto);
-      if (dias <= 14) {
+      if (dias < -PartoPrevisaoCaducaDias) {
+        // Previsão caducada: ou o parto aconteceu e não foi registado, ou a
+        // conta estava errada. Continuar a contar dias de atraso não ajuda —
+        // o que falta é o criador dizer o que aconteceu. Sem `diasRestantes`,
+        // fica dispensável (ver `dispensados.ts`) e não fica preso na lista.
+        out.push({
+          id: `parto-${a.id}`,
+          categoria: 'parto',
+          animalId: a.id,
+          gravidade: 'info',
+          titulo: 'Parto previsto por confirmar',
+          descricao: `${rotulo}: a data prevista de parto já passou há mais de ${PartoPrevisaoCaducaDias} dias. Registe o parto ou corrija a previsão.`,
+        });
+      } else if (dias <= 14) {
         out.push({
           id: `parto-${a.id}`,
           categoria: 'parto',

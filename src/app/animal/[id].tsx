@@ -22,7 +22,7 @@ import { especieMeta } from '@/data/constants';
 import { avisar, confirmar } from '@/data/avisos';
 import { filhosDe, rotuloAnimal } from '@/data/genealogia';
 import { balancoAnimal } from '@/data/financas';
-import { formatDataCurta, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
+import { diasAte, formatDataCurta, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
 import { useGado } from '@/data/store';
 import type { EstadoAnimal, EventoTipo } from '@/data/types';
 import { colors, radii, shadow, spacing } from '@/theme';
@@ -231,6 +231,19 @@ export default function AnimalDetalheScreen() {
           <InfoField icon="cake-variant" label="Data de nascimento" value={formatDataPt(animal.dataNascimento)} />
           <InfoField icon="clock-outline" label="Idade" value={idadeExtenso(animal.dataNascimento)} />
           <InfoField icon="palette-outline" label="Raça / pelagem" value={[animal.raca, animal.corPelagem].filter(Boolean).join(' · ') || '—'} />
+          {/* Só a fêmeas prenhes: sem esta linha, quem registasse a cobrição
+              não tinha onde confirmar a data até o alerta tocar, 14 dias antes. */}
+          {animal.dataPrevistaParto ? (
+            <InfoField
+              icon="baby-bottle-outline"
+              label="Parto previsto"
+              value={`${formatDataPt(animal.dataPrevistaParto)}${
+                diasAte(animal.dataPrevistaParto) >= 0
+                  ? ` · daqui a ${diasAte(animal.dataPrevistaParto)} dias`
+                  : ''
+              }`}
+            />
+          ) : null}
           <GenealogiaRow label="Mãe" nome={mae ? rotuloAnimal(mae) : undefined} onPress={mae ? () => router.push(`/animal/${mae.id}`) : undefined} />
           <GenealogiaRow label="Pai" nome={pai ? rotuloAnimal(pai) : undefined} onPress={pai ? () => router.push(`/animal/${pai.id}`) : undefined} last />
         </Card>

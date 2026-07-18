@@ -23,7 +23,9 @@
       },
       "permissions": [
         "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "ACCESS_NETWORK_STATE",
+        "POST_NOTIFICATIONS",
+        "SCHEDULE_EXACT_ALARM"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -50,7 +52,14 @@
         }
       ],
       "expo-font",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "color": "#0f7d33",
+          "defaultChannel": "alertas"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

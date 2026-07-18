@@ -7,6 +7,7 @@ import {
   idadeDias,
   isoDaysAgo,
   isoInDays,
+  isoMaisDias,
   parseDataPt,
 } from '../helpers';
 
@@ -42,6 +43,25 @@ describe('parseDataPt', () => {
     expect(parseDataPt('01/01/2999')).toBeNull();
     expect(parseDataPt('amanhã')).toBeNull();
     expect(parseDataPt('')).toBeNull();
+  });
+
+  it('aceita o futuro quando explicitamente pedido', () => {
+    // A data prevista do parto é futura por definição — sem esta exceção não
+    // havia forma nenhuma de a registar.
+    expect(parseDataPt('01/01/2999', { permitirFuturo: true })).not.toBeNull();
+  });
+
+  it('continua a validar o resto mesmo a permitir futuro', () => {
+    expect(parseDataPt('31/02/2999', { permitirFuturo: true })).toBeNull();
+  });
+});
+
+describe('isoMaisDias', () => {
+  it('soma dias e fixa a hora ao meio-dia', () => {
+    // Meio-dia evita que fusos horários passem a data para o dia anterior.
+    const d = new Date(isoMaisDias('2026-03-01T12:00:00.000Z', 283));
+    expect(d.getHours()).toBe(12);
+    expect(diasAte(isoMaisDias(new Date().toISOString(), 10))).toBe(10);
   });
 });
 
@@ -110,6 +130,29 @@ describe('computeAlertas — revacinação', () => {
     ];
     const vac = computeAlertas([a], eventos).find((x) => x.categoria === 'vacinacao');
     expect(vac?.gravidade).toBe('urgente');
+  });
+});
+
+describe('computeAlertas — parto previsto', () => {
+  it('avisa a partir de duas semanas antes', () => {
+    const a = animal({ numeroIdentificacao: 'PT1', dataPrevistaParto: isoInDays(10) });
+    const parto = computeAlertas([a]).find((x) => x.categoria === 'parto');
+    expect(parto?.diasRestantes).toBe(10);
+  });
+
+  it('não avisa enquanto o parto estiver longe', () => {
+    const a = animal({ numeroIdentificacao: 'PT1', dataPrevistaParto: isoInDays(90) });
+    expect(computeAlertas([a]).some((x) => x.categoria === 'parto')).toBe(false);
+  });
+
+  it('deixa de contar dias quando a previsão caduca', () => {
+    // Passado um mês, contar "em atraso há 200 dias" não ajuda ninguém e o
+    // aviso ficava preso na lista para sempre. Sem `diasRestantes` passa a ser
+    // dispensável, e o texto pede o que falta mesmo: dizer o que aconteceu.
+    const a = animal({ numeroIdentificacao: 'PT1', dataPrevistaParto: isoDaysAgo(200) });
+    const parto = computeAlertas([a]).find((x) => x.categoria === 'parto');
+    expect(parto?.diasRestantes).toBeUndefined();
+    expect(parto?.titulo).toMatch(/por confirmar/i);
   });
 });
 

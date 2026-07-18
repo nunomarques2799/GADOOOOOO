@@ -13,7 +13,7 @@ const grupos: { chave: AlertaGravidade; titulo: string; cor: string }[] = [
 ];
 
 export default function AlertasScreen() {
-  const { alertas } = useGado();
+  const { alertas, dispensarAlerta } = useGado();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -41,7 +41,12 @@ export default function AlertasScreen() {
                 <Card padded={false}>
                   <View style={{ paddingHorizontal: spacing.md }}>
                     {doGrupo.map((a, i) => (
-                      <AlertItem key={a.id} alerta={a} divider={i < doGrupo.length - 1} />
+                      <AlertItem
+                        key={a.id}
+                        alerta={a}
+                        divider={i < doGrupo.length - 1}
+                        onDispensar={dispensarAlerta}
+                      />
                     ))}
                   </View>
                 </Card>

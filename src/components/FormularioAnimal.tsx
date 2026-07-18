@@ -5,8 +5,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
 import { confirmar } from '@/data/avisos';
-import { PrazosLegais, especieMeta, especies, sexos } from '@/data/constants';
-import { formatDataCurta, formatDataPt, idadeDias, idadeExtenso, isoDaysAgo, parseDataPt } from '@/data/helpers';
+import { GestacaoDias, PrazosLegais, especieMeta, especies, sexos } from '@/data/constants';
+import {
+  diasAte,
+  formatDataCurta,
+  formatDataPt,
+  idadeDias,
+  idadeExtenso,
+  isoDaysAgo,
+  isoMaisDias,
+  parseDataPt,
+} from '@/data/helpers';
 import { rotuloAnimal } from '@/data/genealogia';
 import { useGado } from '@/data/store';
 import type { Animal, Especie, Sexo } from '@/data/types';
@@ -63,6 +72,11 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
   const [maeId, setMaeId] = useState<string | undefined>(animal?.maeId);
   const [paiId, setPaiId] = useState<string | undefined>(animal?.paiId);
   const [sniraManual, setSniraManual] = useState<boolean | null>(animal?.comunicadoSnira ?? null);
+  const [prenhe, setPrenhe] = useState(!!animal?.dataPrevistaParto);
+  const [dataCobricao, setDataCobricao] = useState('');
+  const [dataPartoManual, setDataPartoManual] = useState(
+    animal?.dataPrevistaParto ? formatDataCurta(animal.dataPrevistaParto) : '',
+  );
   const [erroGuardar, setErroGuardar] = useState<string | null>(null);
   const [aGuardar, setAGuardar] = useState(false);
 
@@ -107,6 +121,25 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
   const recemNascido = idadeDias(dataNascimento) <= 30;
   const sniraComunicado = sniraManual ?? !recemNascido;
 
+  /* ---- Prenhez ----
+     Só se pergunta a fêmeas com idade para procriar — a mesma regra que decide
+     quem pode ser mãe na genealogia. A data que o criador sabe é a da cobrição,
+     por isso é essa que se pede; a previsão do parto sai da gestação da espécie.
+     Quem souber a data pelo veterinário pode escrevê-la diretamente. */
+  const idadeReprodutiva = idadeDias(dataNascimento) >= PrazosLegais.idadeMinMaeMeses * 30.44;
+  const mostrarPrenhez = sexo === 'Fêmea' && idadeReprodutiva;
+
+  const cobricaoIso = dataCobricao.trim() ? parseDataPt(dataCobricao) : null;
+  const cobricaoInvalida = dataCobricao.trim().length > 0 && !cobricaoIso;
+  const partoManualIso = dataPartoManual.trim()
+    ? parseDataPt(dataPartoManual, { permitirFuturo: true })
+    : null;
+  const partoManualInvalido = dataPartoManual.trim().length > 0 && !partoManualIso;
+  // A data escrita à mão ganha à calculada: quem a escreveu sabe mais.
+  const partoPrevisto = mostrarPrenhez && prenhe
+    ? (partoManualIso ?? (cobricaoIso ? isoMaisDias(cobricaoIso, GestacaoDias[especie]) : undefined))
+    : undefined;
+
   function trocarExploracao(id: string) {
     if (id === exploracaoId) return;
     setExploracaoId(id);
@@ -116,7 +149,7 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
   }
 
   async function guardar() {
-    if (dataManualInvalida || aGuardar) return;
+    if (dataManualInvalida || cobricaoInvalida || partoManualInvalido || aGuardar) return;
     if (!exploracaoId) {
       setErroGuardar('Escolha uma exploração para o animal.');
       return;
@@ -143,6 +176,7 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
         dataIdentificacao: temBrinco
           ? (animal?.dataIdentificacao ?? (recemNascido ? isoDaysAgo(0) : dataNascimento))
           : undefined,
+        dataPrevistaParto: partoPrevisto,
       };
       if (animal) {
         await updateAnimal(animal.id, dados);
@@ -294,6 +328,85 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
           </Field>
         ) : null}
 
+        {/* Prenhez — só a fêmeas com idade para procriar */}
+        {mostrarPrenhez ? (
+          <Field label="Está prenhe?" opcional>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <BigToggle
+                label="Não"
+                icon="close"
+                selected={!prenhe}
+                onPress={() => setPrenhe(false)}
+              />
+              <BigToggle
+                label="Sim"
+                icon="baby-bottle-outline"
+                selected={prenhe}
+                onPress={() => setPrenhe(true)}
+              />
+            </View>
+
+            {prenhe ? (
+              <View style={{ marginTop: spacing.md }}>
+                <Text variant="caption" color={colors.textMuted} style={{ marginBottom: 4 }}>
+                  Data da cobrição (dd/mm/aaaa) — calculamos o parto por si
+                </Text>
+                <TextField
+                  value={dataCobricao}
+                  onChangeText={setDataCobricao}
+                  placeholder="Ex: 10/02/2026"
+                  icon="calendar-heart"
+                  keyboardType="number-pad"
+                />
+                {cobricaoInvalida ? (
+                  <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
+                    Data inválida. Use o formato dd/mm/aaaa e uma data não futura.
+                  </Text>
+                ) : null}
+
+                <Text
+                  variant="caption"
+                  color={colors.textMuted}
+                  style={{ marginTop: spacing.sm, marginBottom: 4 }}>
+                  Ou, se já souber a data do parto, escreva-a aqui
+                </Text>
+                <TextField
+                  value={dataPartoManual}
+                  onChangeText={setDataPartoManual}
+                  placeholder="Ex: 20/11/2026"
+                  icon="calendar-edit"
+                  keyboardType="number-pad"
+                />
+                {partoManualInvalido ? (
+                  <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
+                    Data inválida. Use o formato dd/mm/aaaa.
+                  </Text>
+                ) : null}
+
+                {partoPrevisto ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      marginTop: spacing.sm,
+                    }}>
+                    <Icon name="baby-bottle-outline" size="sm" color={colors.primary} />
+                    <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
+                      Parto previsto: {formatDataPt(partoPrevisto)}
+                      {diasAte(partoPrevisto) >= 0 ? ` · daqui a ${diasAte(partoPrevisto)} dias` : ''}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm }}>
+                    Indique uma das datas para o podermos avisar do parto.
+                  </Text>
+                )}
+              </View>
+            ) : null}
+          </Field>
+        ) : null}
+
         {/* Raça e pelagem */}
         <Field label="Raça" opcional>
           <TextField value={raca} onChangeText={setRaca} placeholder="Ex: Mertolenga" icon="palette-outline" />
@@ -406,7 +519,13 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
           label={editar ? 'Guardar alterações' : 'Guardar animal'}
           icon="check"
           onPress={guardar}
-          disabled={dataManualInvalida || exploracoes.length === 0 || aGuardar}
+          disabled={
+            dataManualInvalida ||
+            cobricaoInvalida ||
+            partoManualInvalido ||
+            exploracoes.length === 0 ||
+            aGuardar
+          }
         />
       </View>
     </View>

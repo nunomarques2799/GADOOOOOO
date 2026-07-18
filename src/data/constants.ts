@@ -14,6 +14,27 @@ export const PrazosLegais = {
   idadeMinPaiMeses: 18,
 } as const;
 
+/**
+ * Duração média da gestação, em dias, por espécie. Serve para calcular a data
+ * prevista do parto a partir da cobrição — que é a data que o criador
+ * costuma saber. São médias da literatura zootécnica, não garantias.
+ */
+export const GestacaoDias: Record<Especie, number> = {
+  Bovino: 283,
+  Equídeo: 340,
+  Ovino: 150,
+  Caprino: 150,
+  Suíno: 114,
+};
+
+/**
+ * Dias de atraso a partir dos quais uma previsão de parto deixa de valer.
+ * Passado este prazo sem parto registado, a previsão está errada ou o criador
+ * esqueceu-se de registar — contar dias de atraso indefinidamente só ia encher
+ * a lista de avisos que nunca mais saem.
+ */
+export const PartoPrevisaoCaducaDias = 30;
+
 /** Prazos sanitários (dias) — orientação prática, não prazo legal rígido. */
 export const PrazosSanitarios = {
   /** Vacinação anual: alerta de revacinação passado ~1 ano da última. */

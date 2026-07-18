@@ -14,6 +14,8 @@ mercado e legal (DGAV/IFAP/SNIRA) em `../Instruções/`.
 - **Dados**: acede via `useGado()` (`src/data/store.tsx`). A UI nunca toca na BD diretamente — os tipos em `src/data/types.ts` espelham o schema Drift para a futura persistência (`expo-sqlite`) entrar sem alterar ecrãs.
 - **Offline-first**: com sessão Supabase, a cache local (`src/data/cacheLocal.ts`) é a fonte para a UI e as escritas falhadas por rede ficam numa fila. Assenta em `src/data/armazenamento.ts` — chave-valor **síncrono** (SQLite no telemóvel, `localStorage` na web). Tem de ser síncrono porque o arranque desenha o primeiro ecrã a partir da cache. Nunca voltar a usar `localStorage` diretamente: não existe em React Native e isso deixou o Android sem offline nenhum durante semanas.
 - **Navegação**: expo-router. Separadores em `src/app/(tabs)/`, ecrãs de detalhe/formulário empilhados na raiz.
+- **Alertas**: só os que não têm prazo a correr (`gravidade: 'info'` **e** sem `diasRestantes`) podem ser calados pelo criador — ver `src/data/dispensados.ts`. Nada com contagem decrescente é silenciável, e uma dispensa cai sozinha se a gravidade piorar. Um alerta que nunca desaparece nem se pode dispensar enche a lista e faz perder os urgentes.
+- **Notificações**: avisos locais agendados (`expo-notifications`), sem servidor. A decisão do que agendar está em `notificacoesPlano.ts` (lógica pura, testada); `notificacoesLocais.ts` só a executa e tem stub `.web.ts`. Atenção ao teto de 64 notificações pendentes do iOS. Como o `app.json` ganhou o plugin, **a app instalada só passa a notificar depois de um build nativo novo** — não chega publicar.
 
 ## Verificar
 

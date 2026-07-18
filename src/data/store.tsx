@@ -34,8 +34,22 @@ import {
   pareceErroDeRede,
   type OpPendente,
 } from './cacheLocal';
+import {
+  dispensar as marcarDispensado,
+  filtrarDispensados,
+  guardarDispensas,
+  lerDispensas,
+  limparObsoletas,
+  reporDispensa,
+  type Dispensas,
+} from './dispensados';
 import { computeAlertas } from './helpers';
 import { filtrarAlertas, useNotificacoes } from './notificacoes';
+import {
+  agendar as agendarNotificacoes,
+  cancelarTudo as cancelarNotificacoes,
+  suportaNotificacoes,
+} from './notificacoesLocais';
 import {
   animaisSeed,
   eventosSeed,
@@ -167,6 +181,12 @@ type GadoContext = {
   animais: Animal[];
   eventos: Evento[];
   alertas: Alerta[];
+  /** Alertas que o criador mandou calar (ver `dispensados.ts`). */
+  alertasDispensados: Alerta[];
+  /** Cala um alerta sem prazo a correr. */
+  dispensarAlerta: (a: Alerta) => void;
+  /** Volta a mostrar um alerta dispensado. */
+  reativarAlerta: (id: string) => void;
   /** Há ligação para sincronizar com o servidor? (offline-first) */
   online: boolean;
   /** Nº de alterações locais ainda por enviar ao Supabase. */
@@ -242,12 +262,62 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   terrenosRef.current = terrenos;
 
   // Todos os alertas possíveis; as preferências do utilizador (ecrã
-  // "Notificações e alertas") filtram categorias e antecedência.
+  // "Notificações e alertas") filtram categorias e antecedência, e o que o
+  // criador mandou calar sai por cima disso.
   const { preferencias: prefsNotif } = useNotificacoes();
-  const alertas = useMemo(
-    () => filtrarAlertas(computeAlertas(animais, eventos), prefsNotif),
-    [animais, eventos, prefsNotif],
+  const [dispensas, setDispensas] = useState<Dispensas>(() =>
+    cacheDisponivel ? lerDispensas() : {},
   );
+
+  const alertasBrutos = useMemo(() => computeAlertas(animais, eventos), [animais, eventos]);
+
+  const alertas = useMemo(
+    () => filtrarDispensados(filtrarAlertas(alertasBrutos, prefsNotif), dispensas),
+    [alertasBrutos, prefsNotif, dispensas],
+  );
+
+  // Esquece dispensas de alertas que já não existem. O guarda do efetivo vazio
+  // é essencial: com sessão Supabase e cache fria o primeiro render ainda não
+  // tem animais, e sem ele apagaríamos todas as dispensas antes de os dados
+  // chegarem do servidor.
+  useEffect(() => {
+    if (animais.length === 0) return;
+    const limpo = limparObsoletas(dispensas, new Set(alertasBrutos.map((a) => a.id)));
+    if (limpo) {
+      guardarDispensas(limpo);
+      setDispensas(limpo);
+    }
+  }, [alertasBrutos, dispensas, animais.length]);
+
+  const dispensarAlerta = useCallback((a: Alerta) => {
+    setDispensas((d) => marcarDispensado(d, a));
+  }, []);
+
+  const reativarAlerta = useCallback((id: string) => {
+    setDispensas((d) => reporDispensa(d, id));
+  }, []);
+
+  // Os que estão calados neste momento — para o ecrã de notificações os poder
+  // mostrar e o criador conseguir voltar atrás.
+  const alertasDispensados = useMemo(() => {
+    const visiveis = new Set(alertas.map((a) => a.id));
+    return filtrarAlertas(alertasBrutos, prefsNotif).filter((a) => !visiveis.has(a.id));
+  }, [alertasBrutos, prefsNotif, alertas]);
+
+  /**
+   * Reagenda os avisos do telemóvel sempre que os alertas mudam. O atraso
+   * evita repetir o trabalho durante uma sincronização, que atualiza os dados
+   * várias vezes seguidas — cancelar e reagendar dezenas de notificações a
+   * cada passo seria trabalho deitado fora.
+   */
+  useEffect(() => {
+    if (!suportaNotificacoes) return;
+    const t = setTimeout(() => {
+      if (prefsNotif.noTelemovel) void agendarNotificacoes(alertas, prefsNotif);
+      else void cancelarNotificacoes();
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [alertas, prefsNotif]);
 
   const [online, setOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine !== false : true,
@@ -612,6 +682,9 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       animais,
       eventos,
       alertas,
+      alertasDispensados,
+      dispensarAlerta,
+      reativarAlerta,
       online,
       pendentesSinc,
       exploracaoById,
@@ -637,6 +710,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     }),
     [
       utilizador, exploracoes, terrenos, animais, eventos, alertas,
+      alertasDispensados, dispensarAlerta, reativarAlerta,
       online, pendentesSinc,
       exploracaoById, animalById, terrenoById, animaisByExploracao,
       animaisByExploracaoIncluindoSaidos,

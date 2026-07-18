@@ -1,8 +1,9 @@
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, Header, Icon, type IconName, Text } from '@/components/ui';
-import { confirmar } from '@/data/avisos';
+import { avisar, confirmar } from '@/data/avisos';
 import {
   CATEGORIAS,
   iconeCategoria,
@@ -10,6 +11,8 @@ import {
   useNotificacoes,
   type Categoria,
 } from '@/data/notificacoes';
+import { pedirPermissao, suportaNotificacoes, temPermissao } from '@/data/notificacoesLocais';
+import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
 
@@ -61,6 +64,8 @@ export default function NotificacoesScreen() {
             </View>
           </Card>
 
+          <AvisoNoTelemovel />
+
           {CATEGORIAS.map((c) => (
             <LinhaCategoria
               key={c}
@@ -72,6 +77,8 @@ export default function NotificacoesScreen() {
             />
           ))}
 
+          <AvisosDispensados />
+
           <Button
             label="Repor recomendações"
             icon="restart"
@@ -82,6 +89,126 @@ export default function NotificacoesScreen() {
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+/**
+ * Interruptor dos avisos no telemóvel. A permissão do sistema é pedida no
+ * momento em que o criador liga isto — nunca no arranque da app, onde um
+ * diálogo do sistema aparece antes de se perceber o que a app faz e a maior
+ * parte das pessoas recusa por reflexo.
+ */
+function AvisoNoTelemovel() {
+  const { preferencias, definirNoTelemovel } = useNotificacoes();
+  const [permitido, setPermitido] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!suportaNotificacoes) return;
+    void temPermissao().then(setPermitido);
+  }, []);
+
+  // Na web/Electron não há nada para agendar: a app está aberta à frente do
+  // criador e a lista de alertas já faz o trabalho.
+  if (!suportaNotificacoes) return null;
+
+  async function alternar(v: boolean) {
+    if (!v) {
+      definirNoTelemovel(false);
+      return;
+    }
+    const ok = permitido || (await pedirPermissao());
+    setPermitido(ok);
+    definirNoTelemovel(ok);
+    if (!ok) {
+      avisar(
+        'Autorização recusada',
+        'O telemóvel está a bloquear os avisos desta app. Pode autorizá-los nas definições do sistema, em Notificações.',
+      );
+    }
+  }
+
+  const ligado = preferencias.noTelemovel && permitido !== false;
+
+  return (
+    <Card>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: radii.pill,
+            backgroundColor: ligado ? colors.primaryTint : colors.surfaceSunken,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Icon
+            name={ligado ? 'bell-ring-outline' : 'bell-off-outline'}
+            size="md"
+            color={ligado ? colors.primary : colors.textMuted}
+          />
+        </View>
+        <Text variant="bodyStrong" style={{ flex: 1 }}>
+          Avisar no telemóvel
+        </Text>
+        <Switch
+          value={ligado}
+          onValueChange={(v) => void alternar(v)}
+          trackColor={{ true: colors.primary, false: colors.borderStrong }}
+          thumbColor={colors.white}
+          accessibilityLabel="Avisar no telemóvel"
+        />
+      </View>
+      <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
+        {ligado
+          ? 'O telemóvel avisa-o de manhã quando um prazo se aproxima, mesmo com a app fechada e sem internet.'
+          : 'Os avisos só aparecem quando abrir a app.'}
+      </Text>
+    </Card>
+  );
+}
+
+/**
+ * Avisos que o criador calou no ecrã de alertas. Sem uma forma de voltar
+ * atrás, dispensar seria irreversível — e um toque enganado no botão de calar
+ * faria desaparecer o aviso para sempre, sem sítio nenhum onde o procurar.
+ */
+function AvisosDispensados() {
+  const { alertasDispensados, reativarAlerta } = useGado();
+
+  if (alertasDispensados.length === 0) return null;
+
+  return (
+    <Card>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <Icon name="bell-off-outline" size="md" color={colors.textSecondary} />
+        <Text variant="bodyStrong" style={{ flex: 1 }}>
+          Avisos dispensados
+        </Text>
+        <Text variant="secondary" color={colors.textMuted}>
+          {alertasDispensados.length}
+        </Text>
+      </View>
+      <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
+        Estes avisos não aparecem no início. Voltam sozinhos se a situação se agravar.
+      </Text>
+      <View style={{ marginTop: spacing.sm, gap: spacing.xs }}>
+        {alertasDispensados.map((a) => (
+          <View
+            key={a.id}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Text variant="secondary" style={{ flex: 1 }} numberOfLines={2}>
+              {a.descricao}
+            </Text>
+            <Button
+              label="Repor"
+              variant="ghost"
+              fullWidth={false}
+              onPress={() => reativarAlerta(a.id)}
+            />
+          </View>
+        ))}
+      </View>
+    </Card>
   );
 }
 
