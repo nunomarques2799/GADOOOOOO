@@ -145,11 +145,73 @@ export interface Evento extends ComVersao {
   descricao: string;
   detalhe?: string; // ex: medicamento, dose, veterinário
   /**
-   * Valor em euros associado ao evento (sempre positivo). O sentido —
-   * receita ou despesa — é derivado do `tipo` (ver `data/financas.ts`):
-   * Venda = receita; Compra/Vacinação/Medicamento = despesa.
+   * Custo em euros do que este evento consumiu (sempre positivo): a compra do
+   * animal, a vacina, o medicamento. É SEMPRE uma despesa — ver `financas.ts`.
+   *
+   * O preço de uma VENDA não vive aqui: é uma receita, e as receitas só podem
+   * ser vistas pelo dono. Como o Postgres não sabe esconder uma coluna a uns
+   * membros e não a outros, deixá-lo no evento entregava o preço de venda a
+   * qualquer trabalhador ou veterinário que lesse a tabela. Vive em
+   * `Movimento` (tabela própria, com RLS por papel).
    */
   valor?: number;
+}
+
+/* ---- Movimentos financeiros (o que não cabe num evento de animal) ---- */
+
+/**
+ * Onde o dinheiro é gasto. A alimentação costuma ser a maior fatia do custo
+ * de uma exploração, e nada disso tem animal: é da exploração inteira.
+ */
+export type CategoriaDespesa =
+  | 'Alimentação'
+  | 'Sanidade'
+  | 'Compra de animais'
+  | 'Energia e combustível'
+  | 'Água'
+  | 'Rendas e terrenos'
+  | 'Máquinas e reparações'
+  | 'Mão-de-obra'
+  | 'Taxas e seguros'
+  | 'Outras despesas';
+
+/** De onde o dinheiro vem. */
+export type CategoriaReceita =
+  | 'Venda de animais'
+  | 'Leite e produtos'
+  | 'Apoios e subsídios'
+  | 'Outras receitas';
+
+export type CategoriaMovimento = CategoriaDespesa | CategoriaReceita;
+
+export type Direcao = 'receita' | 'despesa';
+
+/**
+ * Uma entrada ou saída de dinheiro da exploração.
+ *
+ * Existe porque as finanças não cabem todas nos eventos: a fatura da ração, a
+ * eletricidade e o gasóleo não pertencem a nenhum animal, e sem elas o saldo
+ * seria bonito e falso. `animalId`/`terrenoId` são opcionais — servem para
+ * imputar um custo quando faz sentido, sem obrigar a isso na conta da luz.
+ */
+export interface Movimento extends ComVersao {
+  id: string;
+  exploracaoId: string;
+  direcao: Direcao;
+  categoria: CategoriaMovimento;
+  /** Euros, sempre positivo. O sinal vem da `direcao`. */
+  valor: number;
+  data: string; // ISO
+  descricao: string;
+  /** Quem emitiu a fatura, ou a quem se vendeu. */
+  contraparte?: string;
+  animalId?: string;
+  terrenoId?: string;
+  /**
+   * Quem registou. É o que permite ao trabalhador ver e corrigir o que lançou
+   * sem lhe abrir a contabilidade da exploração — a RLS filtra por esta coluna.
+   */
+  criadoPor?: string;
 }
 
 /* ---- Derivados (não persistidos) ---- */

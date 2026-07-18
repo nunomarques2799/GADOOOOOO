@@ -14,7 +14,7 @@
  */
 
 import { armazenamentoDisponivel, guardar, ler, remover } from './armazenamento';
-import type { Animal, Evento, Exploracao, Terreno } from './types';
+import type { Animal, Evento, Exploracao, Movimento, Terreno } from './types';
 
 /** Instantâneo dos dados guardados localmente (mesma forma que o Snapshot). */
 export type DadosGado = {
@@ -22,13 +22,18 @@ export type DadosGado = {
   terrenos: Terreno[];
   animais: Animal[];
   eventos: Evento[];
+  movimentos: Movimento[];
 };
 
-export type Entidade = 'exploracao' | 'terreno' | 'animal' | 'evento';
+export type Entidade = 'exploracao' | 'terreno' | 'animal' | 'evento' | 'movimento';
 
 /** Operação por sincronizar: gravar (upsert) ou eliminar uma entidade. */
 export type OpPendente =
-  | { op: 'upsert'; entidade: Entidade; dados: Exploracao | Terreno | Animal | Evento }
+  | {
+      op: 'upsert';
+      entidade: Entidade;
+      dados: Exploracao | Terreno | Animal | Evento | Movimento;
+    }
   | { op: 'delete'; entidade: Entidade; id: string };
 
 /**
@@ -77,7 +82,18 @@ export function lerCache(): DadosGado | null {
   const bruto = ler(CHAVE_CACHE);
   if (!bruto) return null;
   try {
-    return JSON.parse(bruto) as DadosGado;
+    const d = JSON.parse(bruto) as Partial<DadosGado>;
+    // Uma cache gravada por uma versão anterior da app não traz as listas que
+    // entretanto nasceram (`movimentos`). Sem estas omissões, o primeiro
+    // arranque depois de atualizar rebentava a ler `.length` de undefined —
+    // e é justamente o arranque em que ainda não houve resposta do servidor.
+    return {
+      exploracoes: d.exploracoes ?? [],
+      terrenos: d.terrenos ?? [],
+      animais: d.animais ?? [],
+      eventos: d.eventos ?? [],
+      movimentos: d.movimentos ?? [],
+    };
   } catch {
     return null;
   }
@@ -183,6 +199,7 @@ export function descreverOp(op: OpPendente): string {
     terreno: 'Terreno',
     animal: 'Animal',
     evento: 'Evento',
+    movimento: 'Movimento',
   };
   const entidade = nomes[op.entidade];
   if (op.op === 'delete') return `Eliminar ${entidade.toLowerCase()}`;

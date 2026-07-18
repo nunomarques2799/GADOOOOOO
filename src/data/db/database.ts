@@ -71,6 +71,29 @@ export function inicializarBd(): SQLiteDatabase {
     garantirColuna(db, 'evento', 'valor', 'REAL');
   }
 
+  // v3 → v4: tabela `movimento` (despesas da exploração e todas as receitas).
+  // A tabela em si é criada pelo CREATE_TABLES_SQL acima; o que falta é mudar
+  // de sítio os preços de venda que estavam em `evento.valor`. Sem isto, as
+  // receitas já registadas desapareciam do ecrã — `financas.ts` deixou de
+  // contar o valor de eventos de Venda (ver o cabeçalho de schema_financas.sql).
+  if (versao < 4) {
+    db.withTransactionSync(() => {
+      db.runSync(
+        `INSERT OR IGNORE INTO movimento
+           (id, exploracaoId, direcao, categoria, valor, data, descricao, animalId, updatedAt)
+         SELECT 'mig-' || e.id, a.exploracaoId, 'receita', 'Venda de animais',
+                e.valor, e.data,
+                CASE WHEN e.descricao = '' THEN 'Venda de animal' ELSE e.descricao END,
+                e.animalId, ?
+           FROM evento e JOIN animal a ON a.id = e.animalId
+          WHERE e.tipo = 'Venda' AND e.valor IS NOT NULL AND e.valor > 0`,
+        [new Date().toISOString()],
+      );
+      // Deixar o valor no evento fá-lo-ia ser contado duas vezes.
+      db.runSync(`UPDATE evento SET valor = NULL WHERE tipo = 'Venda'`);
+    });
+  }
+
   if (versao < SCHEMA_VERSION) {
     db.execSync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   }

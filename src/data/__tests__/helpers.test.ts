@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 
 import type { Animal, Evento } from '../types';
 import {
@@ -61,7 +61,23 @@ describe('isoMaisDias', () => {
     // Meio-dia evita que fusos horários passem a data para o dia anterior.
     const d = new Date(isoMaisDias('2026-03-01T12:00:00.000Z', 283));
     expect(d.getHours()).toBe(12);
-    expect(diasAte(isoMaisDias(new Date().toISOString(), 10))).toBe(10);
+  });
+
+  it('daqui a 10 dias continua a ler-se como 10 dias', () => {
+    // O relógio TEM de ser fixado, e ao meio-dia — a hora a que `isoMaisDias`
+    // ancora o alvo. Com a hora real este teste dava 11 de manhã e 10 de
+    // tarde: falhava em metade das execuções da CI, e uma porta de qualidade
+    // que falha ao calhar deixa de ser lida.
+    //
+    // A diferença de manhã não é ruído do teste — é `diasAte` a arredondar
+    // para cima sobre uma fração de dia, o que faz as contagens dos alertas
+    // mostrarem um dia a mais antes do meio-dia. Fica registado à parte.
+    jest.useFakeTimers().setSystemTime(new Date(2026, 6, 19, 12, 0, 0));
+    try {
+      expect(diasAte(isoMaisDias(new Date().toISOString(), 10))).toBe(10);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 

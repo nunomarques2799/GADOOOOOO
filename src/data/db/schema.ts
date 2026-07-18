@@ -12,7 +12,7 @@
 export const DB_NAME = 'gado.db';
 
 /** Versão do schema (PRAGMA user_version). Incrementar ao migrar. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const CREATE_TABLES_SQL = `
 PRAGMA journal_mode = WAL;
@@ -86,7 +86,24 @@ CREATE TABLE IF NOT EXISTS evento (
   updatedAt TEXT
 );
 
+CREATE TABLE IF NOT EXISTS movimento (
+  id TEXT PRIMARY KEY NOT NULL,
+  exploracaoId TEXT NOT NULL,
+  direcao TEXT NOT NULL,
+  categoria TEXT NOT NULL,
+  valor REAL NOT NULL,
+  data TEXT NOT NULL,
+  descricao TEXT NOT NULL,
+  contraparte TEXT,
+  animalId TEXT,
+  terrenoId TEXT,
+  criadoPor TEXT,
+  updatedAt TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_animal_exploracao ON animal(exploracaoId);
 CREATE INDEX IF NOT EXISTS idx_terreno_exploracao ON terreno(exploracaoId);
 CREATE INDEX IF NOT EXISTS idx_evento_animal ON evento(animalId);
+CREATE INDEX IF NOT EXISTS idx_movimento_exploracao ON movimento(exploracaoId);
+CREATE INDEX IF NOT EXISTS idx_movimento_animal ON movimento(animalId);
 `;

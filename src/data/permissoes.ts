@@ -29,12 +29,24 @@ export type Capacidade =
   /** Apagar o registo de um animal e todo o seu histórico. */
   | 'eliminarAnimais'
   /** Marcar um animal como falecido ou vendido. */
-  | 'registarSaida';
+  | 'registarSaida'
+  /** Lançar uma despesa da exploração (ração, energia, gasóleo, rendas…). */
+  | 'registarDespesa'
+  /** Lançar uma receita (venda, leite, subsídios). Decide quanto entrou. */
+  | 'registarReceita'
+  /** Pôr o custo (€) numa vacinação ou medicamento que se está a registar. */
+  | 'registarCustoTratamento';
 
 /**
  * O veterinário trata dos animais, não do património: mexe nas fichas e regista
  * eventos e saídas (certificar uma morte é ato veterinário), mas não apaga
  * registos nem toca em terrenos, na exploração ou na equipa.
+ *
+ * No dinheiro a régua é mais apertada, e a assimetria é de propósito: o
+ * trabalhador lança despesas (é ele que traz a fatura da ração do armazém), o
+ * veterinário só põe o preço do tratamento que acabou de dar, e as receitas
+ * são só do dono — quanto se vendeu um animal não é assunto de quem o carregou
+ * para o camião.
  */
 const PERMISSOES: Record<RoleMembro, readonly Capacidade[]> = {
   admin: [
@@ -45,9 +57,41 @@ const PERMISSOES: Record<RoleMembro, readonly Capacidade[]> = {
     'editarAnimais',
     'eliminarAnimais',
     'registarSaida',
+    'registarDespesa',
+    'registarReceita',
+    'registarCustoTratamento',
   ],
-  trabalhador: ['gerirTerrenos', 'editarAnimais', 'eliminarAnimais', 'registarSaida'],
-  veterinario: ['editarAnimais', 'registarSaida'],
+  trabalhador: [
+    'gerirTerrenos',
+    'editarAnimais',
+    'eliminarAnimais',
+    'registarSaida',
+    'registarDespesa',
+    'registarCustoTratamento',
+  ],
+  veterinario: ['editarAnimais', 'registarSaida', 'registarCustoTratamento'],
+};
+
+/**
+ * Capacidades de CONSULTA. Vivem à parte das de escrita porque a regra da
+ * conta suspensa é o inverso: suspensa não escreve, mas continua a poder ler.
+ */
+export type CapacidadeLeitura =
+  /** Abrir o ecrã Finanças: saldo, dashboards, movimentos de toda a exploração. */
+  | 'verFinancas'
+  /** Ver o custo/resultado económico na ficha de um animal. */
+  | 'verBalancoAnimal';
+
+/**
+ * Consultar as contas é do dono. O trabalhador e o veterinário veem apenas o
+ * que eles próprios lançaram (a RLS filtra por `criado_por`) — o suficiente
+ * para corrigirem um erro de digitação, sem lhes abrir as margens da
+ * exploração.
+ */
+const LEITURA: Record<RoleMembro, readonly CapacidadeLeitura[]> = {
+  admin: ['verFinancas', 'verBalancoAnimal'],
+  trabalhador: [],
+  veterinario: [],
 };
 
 /** true se o papel dado pode exercer a capacidade. Sem papel, não pode nada. */
@@ -85,6 +129,22 @@ export function podeEscrever(ctx: ContextoAcesso, capacidade: Capacidade): boole
   // Suspensa (ou ainda por aprovar): consulta sim, escrita não.
   if (ctx.estadoPerfil !== 'ativo') return false;
   return rolePode(ctx.role, capacidade);
+}
+
+/**
+ * Decisão de LEITURA. Espelha as políticas de SELECT de `schema_financas.sql`.
+ *
+ * Deliberadamente não pergunta pelo `estadoPerfil`: uma conta suspensa fica só
+ * de leitura, portanto continua a consultar tudo o que consultava. Passar esta
+ * decisão por `podeEscrever` escondia o ecrã Finanças ao dono no dia em que a
+ * conta ficasse por regularizar — exatamente quando ele mais precisa de ver as
+ * contas.
+ */
+export function podeConsultar(ctx: ContextoAcesso, capacidade: CapacidadeLeitura): boolean {
+  if (!ctx.supabaseConfigurado || !ctx.temSessao) return true;
+  if (ctx.isSuperadmin) return true;
+  if (!ctx.role) return false;
+  return LEITURA[ctx.role].includes(capacidade);
 }
 
 /** Nome do papel para mostrar ao utilizador. */

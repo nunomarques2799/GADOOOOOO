@@ -111,6 +111,7 @@ describe('cache local — dados visíveis sem rede', () => {
     terrenos: [],
     animais: [animal('a1')],
     eventos: [],
+    movimentos: [],
   };
 
   it('devolve null enquanto não houver nada guardado', () => {
@@ -132,7 +133,13 @@ describe('limparCache — ao terminar sessão', () => {
   it('apaga os dados, a fila e as recusas da conta que saiu', () => {
     // Sem isto, o criador seguinte a entrar neste aparelho via o efetivo do
     // anterior enquanto o servidor não respondesse.
-    guardarCache({ exploracoes: [], terrenos: [], animais: [animal('a1')], eventos: [] });
+    guardarCache({
+      exploracoes: [],
+      terrenos: [],
+      animais: [animal('a1')],
+      eventos: [],
+      movimentos: [],
+    });
     adicionarOutbox(upsert('a1'));
     registarFalhada(upsert('a1'), 'permission denied');
 

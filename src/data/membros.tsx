@@ -20,7 +20,12 @@ import {
 
 import { useAuth } from './auth';
 import { cacheDisponivel, guardarAcesso, lerAcesso } from './cacheLocal';
-import { podeEscrever, type Capacidade } from './permissoes';
+import {
+  podeConsultar,
+  podeEscrever,
+  type Capacidade,
+  type CapacidadeLeitura,
+} from './permissoes';
 import { supabase, supabaseConfigurado } from './supabase';
 import type {
   Convite,
@@ -43,6 +48,23 @@ type MembrosContext = {
    * `permissoes.ts`, que espelha as políticas RLS.
    */
   pode: (exploracaoId: string | undefined, capacidade: Capacidade) => boolean;
+  /**
+   * true se o utilizador pode CONSULTAR isto. Separado de `pode` porque uma
+   * conta suspensa deixa de escrever mas continua a poder ler — ver
+   * `podeConsultar` em `permissoes.ts`.
+   *
+   * Sem exploração indicada, responde por qualquer uma onde a pessoa seja
+   * membro: os ecrãs transversais (Finanças) mostram o conjunto, e exigir uma
+   * exploração fecharia o ecrã a quem tem várias.
+   */
+  podeVer: (exploracaoId: string | undefined, capacidade: CapacidadeLeitura) => boolean;
+  /**
+   * true se o utilizador pode exercer a capacidade em PELO MENOS UMA das suas
+   * explorações. Para ecrãs que não estão dentro de uma delas (o botão de
+   * registar despesa no ecrã Finanças, por exemplo), onde `pode(undefined, …)`
+   * responderia sempre que não.
+   */
+  podeEmAlguma: (capacidade: Capacidade) => boolean;
   /**
    * true se a conta está suspensa (superadmin bloqueou, ou ainda não aprovou):
    * a app fica só de leitura. Espelha `pode_escrever_em()` no Supabase.
@@ -219,6 +241,27 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     [contexto, roleEm],
   );
 
+  const podeEmAlguma = useCallback(
+    (capacidade: Capacidade): boolean => {
+      // Sem membros (modo local/demo, ou ainda a carregar) a decisão é a mesma
+      // que `pode` toma sem papel — deixa o modo demo funcionar sem equipa.
+      if (membros.length === 0) return podeEscrever({ ...contexto, role: undefined }, capacidade);
+      return membros.some((m) => podeEscrever({ ...contexto, role: m.role }, capacidade));
+    },
+    [contexto, membros],
+  );
+
+  const podeVer = useCallback(
+    (exploracaoId: string | undefined, capacidade: CapacidadeLeitura): boolean => {
+      if (exploracaoId) {
+        return podeConsultar({ ...contexto, role: roleEm(exploracaoId) }, capacidade);
+      }
+      if (membros.length === 0) return podeConsultar({ ...contexto, role: undefined }, capacidade);
+      return membros.some((m) => podeConsultar({ ...contexto, role: m.role }, capacidade));
+    },
+    [contexto, roleEm, membros],
+  );
+
   /** true se a conta está suspensa (ou por aprovar): só pode ler. */
   const contaSuspensa =
     supabaseConfigurado && !!userId && !isSuperadmin && estadoPerfil !== 'ativo';
@@ -324,6 +367,8 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       estadoPerfil,
       roleEm,
       pode,
+      podeVer,
+      podeEmAlguma,
       contaSuspensa,
       isAdminEmAlguma,
       recarregar,
@@ -338,7 +383,8 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       resgatarConvite,
     }),
     [
-      aCarregar, membros, isSuperadmin, estadoPerfil, roleEm, pode, contaSuspensa, isAdminEmAlguma,
+      aCarregar, membros, isSuperadmin, estadoPerfil, roleEm, pode, podeVer, podeEmAlguma,
+      contaSuspensa, isAdminEmAlguma,
       recarregar, listarPendentes, aprovarCliente, bloquearCliente,
       listarConvites, criarConvite, removerConvite, listarMembrosDe,
       removerMembro, resgatarConvite,

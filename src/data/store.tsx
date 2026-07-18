@@ -18,10 +18,12 @@ import {
   carregarUtilizador,
   eliminarAnimal as bdEliminarAnimal,
   eliminarExploracao as bdEliminarExploracao,
+  eliminarMovimento as bdEliminarMovimento,
   eliminarTerreno as bdEliminarTerreno,
   guardarAnimal,
   guardarEvento,
   guardarExploracao,
+  guardarMovimento,
   guardarTerreno,
 } from './db/repository';
 import {
@@ -58,6 +60,7 @@ import {
   animaisSeed,
   eventosSeed,
   exploracoesSeed,
+  movimentosSeed,
   terrenosSeed,
   utilizadorSeed,
 } from './seed';
@@ -68,10 +71,12 @@ import {
   mensagemLegivel,
   eliminarAnimalSupabase,
   eliminarExploracaoSupabase,
+  eliminarMovimentoSupabase,
   eliminarTerrenoSupabase,
   upsertAnimalSupabase,
   upsertEventoSupabase,
   upsertExploracaoSupabase,
+  upsertMovimentoSupabase,
   upsertTerrenoSupabase,
 } from './supabaseRepo';
 import type {
@@ -80,6 +85,7 @@ import type {
   EstadoAnimal,
   Evento,
   Exploracao,
+  Movimento,
   Terreno,
   Utilizador,
 } from './types';
@@ -105,6 +111,8 @@ async function enviarOp(op: OpPendente): Promise<string | null> {
         return eliminarTerrenoSupabase(op.id);
       case 'animal':
         return eliminarAnimalSupabase(op.id);
+      case 'movimento':
+        return eliminarMovimentoSupabase(op.id);
       case 'evento':
         return null; // sem eliminação de eventos no domínio atual
     }
@@ -118,6 +126,8 @@ async function enviarOp(op: OpPendente): Promise<string | null> {
       return upsertAnimalSupabase(op.dados as Animal);
     case 'evento':
       return upsertEventoSupabase(op.dados as Evento);
+    case 'movimento':
+      return upsertMovimentoSupabase(op.dados as Movimento);
   }
 }
 
@@ -146,19 +156,21 @@ type Snapshot = {
   terrenos: Terreno[];
   animais: Animal[];
   eventos: Evento[];
+  movimentos: Movimento[];
 };
 
 /** Snapshot inicial síncrono (SQLite local ou seed). */
 function snapshotSincrono(): Snapshot {
   if (USA_SQLITE_LOCAL) {
     const db = inicializarBd();
-    const { exploracoes, terrenos, animais, eventos } = carregarTudo(db);
+    const { exploracoes, terrenos, animais, eventos, movimentos } = carregarTudo(db);
     return {
       utilizador: carregarUtilizador(db) ?? utilizadorSeed,
       exploracoes,
       terrenos,
       animais,
       eventos,
+      movimentos,
     };
   }
   // Web sem Supabase → seed em memória.
@@ -169,6 +181,7 @@ function snapshotSincrono(): Snapshot {
       terrenos: terrenosSeed,
       animais: animaisSeed,
       eventos: eventosSeed,
+      movimentos: movimentosSeed,
     };
   }
   // Web/Electron com Supabase → arranca da cache local (funciona offline).
@@ -177,7 +190,14 @@ function snapshotSincrono(): Snapshot {
   if (cache) {
     return { utilizador: utilizadorSeed, ...cache };
   }
-  return { utilizador: utilizadorSeed, exploracoes: [], terrenos: [], animais: [], eventos: [] };
+  return {
+    utilizador: utilizadorSeed,
+    exploracoes: [],
+    terrenos: [],
+    animais: [],
+    eventos: [],
+    movimentos: [],
+  };
 }
 
 type GadoContext = {
@@ -186,6 +206,13 @@ type GadoContext = {
   terrenos: Terreno[];
   animais: Animal[];
   eventos: Evento[];
+  /**
+   * Entradas e saídas de dinheiro da exploração. Atenção: com sessão Supabase
+   * a RLS já filtrou isto por papel — um trabalhador recebe apenas o que ele
+   * próprio lançou. Somar esta lista NÃO dá as contas da exploração a menos
+   * que quem está a ver tenha `verFinancas` (ver `permissoes.ts`).
+   */
+  movimentos: Movimento[];
   alertas: Alerta[];
   /** Alertas que o criador mandou calar (ver `dispensados.ts`). */
   alertasDispensados: Alerta[];
@@ -215,6 +242,8 @@ type GadoContext = {
   animaisByExploracaoIncluindoSaidos: (id: string) => Animal[];
   terrenosByExploracao: (id: string) => Terreno[];
   eventosByAnimal: (id: string) => Evento[];
+  movimentosByAnimal: (id: string) => Movimento[];
+  movimentosByExploracao: (id: string) => Movimento[];
   // ações (async quando batem no Supabase; devolvem o objeto criado)
   addAnimal: (a: Omit<Animal, 'id'>) => Promise<Animal>;
   updateAnimal: (id: string, patch: Partial<Animal>) => Promise<void>;
@@ -241,6 +270,9 @@ type GadoContext = {
   updateTerreno: (id: string, patch: Partial<Terreno>) => Promise<void>;
   deleteTerreno: (id: string) => Promise<void>;
   addEvento: (e: Omit<Evento, 'id'>) => Promise<Evento>;
+  addMovimento: (m: Omit<Movimento, 'id'>) => Promise<Movimento>;
+  updateMovimento: (id: string, patch: Partial<Movimento>) => Promise<void>;
+  deleteMovimento: (id: string) => Promise<void>;
   recarregar: () => Promise<void>;
 };
 
@@ -266,6 +298,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   const [terrenos, setTerrenos] = useState<Terreno[]>(boot.terrenos);
   const [animais, setAnimais] = useState<Animal[]>(boot.animais);
   const [eventos, setEventos] = useState<Evento[]>(boot.eventos);
+  const [movimentos, setMovimentos] = useState<Movimento[]>(boot.movimentos);
 
   // Espelho sempre atual do efetivo, para ler dentro das ações sem o incluir nas dependências.
   const animaisRef = useRef(animais);
@@ -276,6 +309,8 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   terrenosRef.current = terrenos;
   const eventosRef = useRef(eventos);
   eventosRef.current = eventos;
+  const movimentosRef = useRef(movimentos);
+  movimentosRef.current = movimentos;
 
   // Todos os alertas possíveis; as preferências do utilizador (ecrã
   // "Notificações e alertas") filtram categorias e antecedência, e o que o
@@ -359,9 +394,9 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   // offline com os dados atuais. Só com Supabase + armazenamento disponível.
   useEffect(() => {
     if (usaSupabase && cacheDisponivel) {
-      guardarCache({ exploracoes, terrenos, animais, eventos });
+      guardarCache({ exploracoes, terrenos, animais, eventos, movimentos });
     }
-  }, [usaSupabase, exploracoes, terrenos, animais, eventos]);
+  }, [usaSupabase, exploracoes, terrenos, animais, eventos, movimentos]);
 
   /** Puxa a verdade do servidor. Devolve false (mantendo a cache) se falhar. */
   const puxarDoServidor = useCallback(async (): Promise<boolean> => {
@@ -371,6 +406,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       setTerrenos(snap.terrenos);
       setAnimais(snap.animais);
       setEventos(snap.eventos);
+      setMovimentos(snap.movimentos);
       return true;
     } catch {
       return false; // offline — fica com o que está em cache
@@ -522,6 +558,17 @@ export function GadoProvider({ children }: { children: ReactNode }) {
         .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()),
     [eventos],
   );
+  const movimentosByAnimal = useCallback(
+    (id: string) =>
+      movimentos
+        .filter((m) => m.animalId === id)
+        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()),
+    [movimentos],
+  );
+  const movimentosByExploracao = useCallback(
+    (id: string) => movimentos.filter((m) => m.exploracaoId === id),
+    [movimentos],
+  );
 
   /* ---- Ações ---- */
 
@@ -560,6 +607,12 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
       setAnimais((prev) => prev.filter((a) => a.id !== id));
       setEventos((prev) => prev.filter((e) => e.animalId !== id));
+      // O dinheiro fica, o animal é que sai: espelha o `on delete set null` da
+      // coluna no servidor. Apagar os movimentos junto com o animal tirava
+      // despesas já pagas da conta e mudava o saldo por causa de uma limpeza.
+      setMovimentos((prev) =>
+        prev.map((m) => (m.animalId === id ? { ...m, animalId: undefined } : m)),
+      );
 
       if (!usaSupabase) {
         gravarSqlite((db) => bdEliminarAnimal(db, id));
@@ -596,9 +649,6 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       const tipo = estado === 'falecido' ? 'Morte' : 'Venda';
       const descricao =
         estado === 'falecido' ? 'Animal registado como falecido.' : 'Animal saiu por venda.';
-      // O preço só se guarda numa venda (uma morte não é receita).
-      const valorVenda =
-        estado === 'vendido' && typeof valor === 'number' && valor > 0 ? valor : undefined;
       const evento: Evento = {
         id: novoId(),
         animalId: id,
@@ -606,21 +656,47 @@ export function GadoProvider({ children }: { children: ReactNode }) {
         data,
         descricao,
         detalhe: motivo,
-        valor: valorVenda,
       };
+
+      /**
+       * O preço da venda é uma RECEITA, e receitas vivem em `movimento` — não
+       * em `evento.valor`, que é sempre custo. Quem não pode lançar receitas
+       * (trabalhador) não passa `valor`: a saída fica registada na mesma e o
+       * preço entra depois, pelo dono. Ver `vendasSemPreco()` em `financas.ts`,
+       * que é o que impede essa venda de se perder de vista.
+       */
+      const receita: Movimento | undefined =
+        estado === 'vendido' && typeof valor === 'number' && valor > 0
+          ? {
+              id: novoId(),
+              exploracaoId: atual.exploracaoId,
+              direcao: 'receita',
+              categoria: 'Venda de animais',
+              valor,
+              data,
+              descricao: motivo?.trim() ? `Venda — ${motivo.trim()}` : 'Venda de animal',
+              animalId: id,
+              criadoPor: utilizador.id,
+            }
+          : undefined;
+
       setAnimais((prev) => prev.map((a) => (a.id === id ? atualizado : a)));
       setEventos((prev) => [evento, ...prev]);
+      if (receita) setMovimentos((prev) => [receita, ...prev]);
+
       if (usaSupabase) {
         await empurrar({ op: 'upsert', entidade: 'animal', dados: atualizado });
         await empurrar({ op: 'upsert', entidade: 'evento', dados: evento });
+        if (receita) await empurrar({ op: 'upsert', entidade: 'movimento', dados: receita });
       } else {
         gravarSqlite((db) => {
           guardarAnimal(db, atualizado);
           guardarEvento(db, evento);
+          if (receita) guardarMovimento(db, receita);
         });
       }
     },
-    [usaSupabase, gravarSqlite, empurrar],
+    [usaSupabase, gravarSqlite, empurrar, utilizador.id],
   );
 
   const reativarAnimal = useCallback(
@@ -676,6 +752,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
         animaisRef.current.filter((a) => a.exploracaoId === id).map((a) => a.id),
       );
       setEventos((prev) => prev.filter((e) => !animaisRemovidos.has(e.animalId)));
+      setMovimentos((prev) => prev.filter((m) => m.exploracaoId !== id));
       setAnimais((prev) => prev.filter((a) => a.exploracaoId !== id));
       setTerrenos((prev) => prev.filter((t) => t.exploracaoId !== id));
       setExploracoes((prev) => prev.filter((e) => e.id !== id));
@@ -733,6 +810,52 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     [usaSupabase, gravarSqlite, empurrar],
   );
 
+  const addMovimento = useCallback(
+    async (m: Omit<Movimento, 'id'>): Promise<Movimento> => {
+      // `criadoPor` fica com o utilizador atual para a UI o poder mostrar já;
+      // no servidor quem manda é o default `auth.uid()` da coluna.
+      const novo: Movimento = { ...m, id: novoId(), criadoPor: m.criadoPor ?? utilizador.id };
+      setMovimentos((prev) => [novo, ...prev]); // otimista — aparece já, mesmo offline
+      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'movimento', dados: novo });
+      else gravarSqlite((db) => guardarMovimento(db, novo));
+      return novo;
+    },
+    [usaSupabase, gravarSqlite, empurrar, utilizador.id],
+  );
+
+  const updateMovimento = useCallback(
+    async (id: string, patch: Partial<Movimento>): Promise<void> => {
+      const atual = movimentosRef.current.find((m) => m.id === id);
+      if (!atual) return;
+      const atualizado: Movimento = { ...atual, ...patch, id, exploracaoId: atual.exploracaoId };
+      setMovimentos((prev) => prev.map((m) => (m.id === id ? atualizado : m)));
+      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'movimento', dados: atualizado });
+      else gravarSqlite((db) => guardarMovimento(db, atualizado));
+    },
+    [usaSupabase, gravarSqlite, empurrar],
+  );
+
+  const deleteMovimento = useCallback(
+    async (id: string): Promise<void> => {
+      // Guarda para repor: só o dono pode apagar movimentos, e a recusa da RLS
+      // só se descobre ao sincronizar. Sem reposição, o lançamento sumia do
+      // ecrã e voltava sozinho na sincronização seguinte.
+      const removido = movimentosRef.current.find((m) => m.id === id);
+      setMovimentos((prev) => prev.filter((m) => m.id !== id));
+      if (!usaSupabase) {
+        gravarSqlite((db) => bdEliminarMovimento(db, id));
+        return;
+      }
+      try {
+        await empurrar({ op: 'delete', entidade: 'movimento', id });
+      } catch (e) {
+        if (removido) setMovimentos((prev) => [removido, ...prev]);
+        throw e;
+      }
+    },
+    [usaSupabase, gravarSqlite, empurrar],
+  );
+
   const value = useMemo<GadoContext>(
     () => ({
       utilizador,
@@ -740,6 +863,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       terrenos,
       animais,
       eventos,
+      movimentos,
       alertas,
       alertasDispensados,
       dispensarAlerta,
@@ -755,6 +879,8 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       animaisByExploracaoIncluindoSaidos,
       terrenosByExploracao,
       eventosByAnimal,
+      movimentosByAnimal,
+      movimentosByExploracao,
       addAnimal,
       updateAnimal,
       deleteAnimal,
@@ -767,18 +893,23 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       updateTerreno,
       deleteTerreno,
       addEvento,
+      addMovimento,
+      updateMovimento,
+      deleteMovimento,
       recarregar,
     }),
     [
-      utilizador, exploracoes, terrenos, animais, eventos, alertas,
+      utilizador, exploracoes, terrenos, animais, eventos, movimentos, alertas,
       alertasDispensados, dispensarAlerta, reativarAlerta,
       online, pendentesSinc, falhadas, limparFalhadas,
       exploracaoById, animalById, terrenoById, animaisByExploracao,
       animaisByExploracaoIncluindoSaidos,
-      terrenosByExploracao, eventosByAnimal, addAnimal, updateAnimal,
+      terrenosByExploracao, eventosByAnimal, movimentosByAnimal,
+      movimentosByExploracao, addAnimal, updateAnimal,
       deleteAnimal, marcarSaida, reativarAnimal,
       addExploracao, updateExploracao, deleteExploracao,
       addTerreno, updateTerreno, deleteTerreno, addEvento,
+      addMovimento, updateMovimento, deleteMovimento,
       recarregar,
     ],
   );

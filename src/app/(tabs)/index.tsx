@@ -22,15 +22,22 @@ export default function InicioScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
-  const { isSuperadmin } = useMembros();
-  const { utilizador, exploracoes, terrenos, animais, eventos, alertas, online, pendentesSinc } =
-    useGado();
+  const { isSuperadmin, podeVer, podeEmAlguma } = useMembros();
+  const {
+    utilizador, exploracoes, terrenos, animais, eventos, movimentos, alertas, online,
+    pendentesSinc,
+  } = useGado();
 
   // Superadmin não gere gado — vai direto para o painel de clientes.
   if (isSuperadmin) return <Redirect href="/(superadmin)/clientes" />;
 
-  const fin = resumoFinanceiro(eventos);
-  const temFinancas = fin.movimentos.length > 0;
+  // Quem não pode consultar as contas não vê o saldo aqui. Mostrar a soma do
+  // que a RLS lhe deixou ver daria um número parecido com o saldo da
+  // exploração, e completamente errado.
+  const podeVerFinancas = podeVer(undefined, 'verFinancas');
+  const podeRegistarDespesa = podeEmAlguma('registarDespesa');
+  const fin = resumoFinanceiro(eventos, movimentos);
+  const temFinancas = podeVerFinancas && fin.movimentos.length > 0;
   const saldoPositivo = fin.saldo >= 0;
 
   const primeiroNome = utilizador.nome.split(' ')[0];
@@ -96,28 +103,30 @@ export default function InicioScreen() {
         />
         <StatCard icon="grass" value={terrenos.length} label="Terrenos" tint={colors.success} />
       </View>
-      <Card onPress={() => router.push('/financas')} style={{ marginTop: spacing.sm }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <Icon
-            name="cash-multiple"
-            size="lg"
-            color={temFinancas ? (saldoPositivo ? colors.success : colors.danger) : colors.primary}
-          />
-          <View style={{ flex: 1 }}>
-            <Text variant="bodyStrong">Finanças</Text>
-            <Text variant="secondary" color={colors.textSecondary}>
-              {temFinancas ? 'Saldo do efetivo' : 'Registe vendas e custos'}
-            </Text>
+      {podeVerFinancas ? (
+        <Card onPress={() => router.push('/financas')} style={{ marginTop: spacing.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Icon
+              name="cash-multiple"
+              size="lg"
+              color={temFinancas ? (saldoPositivo ? colors.success : colors.danger) : colors.primary}
+            />
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyStrong">Finanças</Text>
+              <Text variant="secondary" color={colors.textSecondary}>
+                {temFinancas ? 'Saldo da exploração' : 'Registe despesas e receitas'}
+              </Text>
+            </View>
+            {temFinancas ? (
+              <Text variant="h3" color={saldoPositivo ? colors.success : colors.danger}>
+                {formatEuro(fin.saldo, 0)}
+              </Text>
+            ) : (
+              <Icon name="chevron-right" size="md" color={colors.textMuted} />
+            )}
           </View>
-          {temFinancas ? (
-            <Text variant="h3" color={saldoPositivo ? colors.success : colors.danger}>
-              {formatEuro(fin.saldo, 0)}
-            </Text>
-          ) : (
-            <Icon name="chevron-right" size="md" color={colors.textMuted} />
-          )}
-        </View>
-      </Card>
+        </Card>
+      ) : null}
     </>
   );
 
@@ -169,6 +178,18 @@ export default function InicioScreen() {
           tint={colors.warningTint}
           onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Pesagem' } })}
         />
+        {/* A despesa é o registo mais frequente de todos — a ração, o gasóleo,
+            a fatura da luz — e é a única coisa financeira que o trabalhador
+            faz. Merece estar aqui, ao lado dos eventos do dia-a-dia. */}
+        {podeRegistarDespesa ? (
+          <QuickAction
+            icon="cash-minus"
+            label="Despesa"
+            color={colors.success}
+            tint={colors.successTint}
+            onPress={() => router.push('/movimento/novo')}
+          />
+        ) : null}
       </View>
     </>
   );

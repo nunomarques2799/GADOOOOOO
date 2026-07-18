@@ -2,9 +2,11 @@ import { describe, expect, it } from '@jest/globals';
 
 import {
   legendaRole,
+  podeConsultar,
   podeEscrever,
   rolePode,
   type Capacidade,
+  type CapacidadeLeitura,
   type ContextoAcesso,
 } from '../permissoes';
 import type { RoleMembro } from '../types';
@@ -43,6 +45,24 @@ describe('rolePode', () => {
     ['veterinario', 'editarExploracao', false],
     ['veterinario', 'eliminarExploracao', false],
     ['veterinario', 'gerirEquipa', false],
+
+    // ---- Dinheiro ----
+    // O dono decide tudo o que envolve euros.
+    ['admin', 'registarDespesa', true],
+    ['admin', 'registarReceita', true],
+    ['admin', 'registarCustoTratamento', true],
+
+    // O trabalhador traz a fatura da ração do armazém — lança despesas. Mas
+    // quanto se vendeu um animal não é assunto de quem o carregou no camião.
+    ['trabalhador', 'registarDespesa', true],
+    ['trabalhador', 'registarCustoTratamento', true],
+    ['trabalhador', 'registarReceita', false],
+
+    // O veterinário só põe o preço do tratamento que acabou de dar. Não lança
+    // despesas da exploração nem, muito menos, receitas.
+    ['veterinario', 'registarCustoTratamento', true],
+    ['veterinario', 'registarDespesa', false],
+    ['veterinario', 'registarReceita', false],
 
     // Quem não é membro não faz nada — é o caso de quem abre uma exploração
     // de outra pessoa por um link antigo.
@@ -122,6 +142,58 @@ describe('podeEscrever — modo da app + estado da conta + papel', () => {
   it('conta ativa respeita os limites do papel', () => {
     expect(podeEscrever({ ...base, role: 'veterinario' }, 'editarAnimais')).toBe(true);
     expect(podeEscrever({ ...base, role: 'veterinario' }, 'eliminarAnimais')).toBe(false);
+  });
+});
+
+/**
+ * Consultar não é escrever, e a diferença tem consequências: uma conta
+ * suspensa deixa de gravar mas continua a poder ver as suas contas. Espelha as
+ * policies de SELECT de `supabase/schema_financas.sql`.
+ */
+describe('podeConsultar — quem vê as contas', () => {
+  const base: ContextoAcesso = {
+    supabaseConfigurado: true,
+    temSessao: true,
+    isSuperadmin: false,
+    estadoPerfil: 'ativo',
+    role: 'admin',
+  };
+
+  const casos: [ContextoAcesso['role'], CapacidadeLeitura, boolean][] = [
+    ['admin', 'verFinancas', true],
+    ['admin', 'verBalancoAnimal', true],
+    // Quem só lança despesas não vê a contabilidade: no servidor a RLS já lhe
+    // devolve apenas o que ele próprio lançou, e mostrar essa soma parecia o
+    // saldo da exploração sem o ser.
+    ['trabalhador', 'verFinancas', false],
+    ['trabalhador', 'verBalancoAnimal', false],
+    ['veterinario', 'verFinancas', false],
+    ['veterinario', 'verBalancoAnimal', false],
+    [undefined, 'verFinancas', false],
+  ];
+
+  it.each(casos)('papel %s + %s → %s', (papel, capacidade, esperado) => {
+    expect(podeConsultar({ ...base, role: papel }, capacidade)).toBe(esperado);
+  });
+
+  it('conta suspensa continua a consultar as contas', () => {
+    // A regra da suspensão é "só de leitura", não "às escuras". Passar esta
+    // decisão por `podeEscrever` fechava o ecrã Finanças ao dono justamente no
+    // dia em que a conta ficasse por regularizar.
+    const suspensa = { ...base, estadoPerfil: 'pendente' as const };
+    expect(podeConsultar(suspensa, 'verFinancas')).toBe(true);
+    expect(podeEscrever(suspensa, 'registarDespesa')).toBe(false);
+  });
+
+  it('sem Supabase, o modo local/demo vê tudo', () => {
+    const ctx = { ...base, supabaseConfigurado: false, estadoPerfil: null, role: undefined };
+    expect(podeConsultar(ctx, 'verFinancas')).toBe(true);
+  });
+
+  it('o superadmin consulta sem papel na exploração', () => {
+    expect(
+      podeConsultar({ ...base, isSuperadmin: true, role: undefined }, 'verFinancas'),
+    ).toBe(true);
   });
 });
 

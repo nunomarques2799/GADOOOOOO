@@ -14,7 +14,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
-import type { Animal, Evento, Exploracao, Terreno } from '../types';
+import type { Animal, Evento, Exploracao, Movimento, Terreno } from '../types';
 
 /* ---- Fronteiras simuladas ---- */
 
@@ -53,13 +53,26 @@ jest.mock('../notificacoesLocais', () => ({
  * distinguir os dois desfechos que importam: falha de rede (vai para a fila) e
  * erro lógico (rebenta à vista do criador).
  */
+/**
+ * `movimentos` é opcional para os testes que não mexem em dinheiro não terem
+ * de a declarar. É normalizada na fronteira do mock, tal como o repositório
+ * real faz — o store conta com a lista sempre presente.
+ */
+type SnapshotMock = {
+  exploracoes: Exploracao[];
+  terrenos: Terreno[];
+  animais: Animal[];
+  eventos: Evento[];
+  movimentos?: Movimento[];
+};
+
 const mockServidor = {
   snapshot: {
-    exploracoes: [] as Exploracao[],
-    terrenos: [] as Terreno[],
-    animais: [] as Animal[],
-    eventos: [] as Evento[],
-  },
+    exploracoes: [],
+    terrenos: [],
+    animais: [],
+    eventos: [],
+  } as SnapshotMock,
   erroSeguinte: null as string | null,
   recebidas: [] as string[],
   falhasCarregar: 0,
@@ -81,7 +94,7 @@ jest.mock('../supabaseRepo', () => ({
       mockServidor.falhasCarregar -= 1;
       throw new Error('Network request failed');
     }
-    return mockServidor.snapshot;
+    return { ...mockServidor.snapshot, movimentos: mockServidor.snapshot.movimentos ?? [] };
   },
   upsertAnimalSupabase: async (a: Animal) => mockRespostaEscrita(`upsert:animal:${a.id}`),
   upsertEventoSupabase: async (e: Evento) => mockRespostaEscrita(`upsert:evento:${e.id}`),
@@ -90,6 +103,8 @@ jest.mock('../supabaseRepo', () => ({
   eliminarAnimalSupabase: async (id: string) => mockRespostaEscrita(`delete:animal:${id}`),
   eliminarExploracaoSupabase: async (id: string) => mockRespostaEscrita(`delete:exploracao:${id}`),
   eliminarTerrenoSupabase: async (id: string) => mockRespostaEscrita(`delete:terreno:${id}`),
+  upsertMovimentoSupabase: async (m: Movimento) => mockRespostaEscrita(`upsert:movimento:${m.id}`),
+  eliminarMovimentoSupabase: async (id: string) => mockRespostaEscrita(`delete:movimento:${id}`),
   // Classificação de erros: o store usa-as para separar conflito de recusa e
   // para limpar o marcador técnico antes de a mensagem chegar ao ecrã. Aqui
   // mantêm-se com o comportamento real, que é puro.
@@ -435,7 +450,9 @@ describe('saída do efetivo', () => {
     };
   });
 
-  it('uma venda regista o preço e liberta o terreno', async () => {
+  it('uma venda cria a receita como movimento e liberta o terreno', async () => {
+    // O preço NÃO pode ficar em `evento.valor`: é receita, e o evento é
+    // legível por toda a equipa. Ver o cabeçalho de `financas.ts`.
     const { ctx } = await montar();
 
     await act(async () => {
@@ -448,7 +465,25 @@ describe('saída do efetivo', () => {
 
     const evento = ctx().eventosByAnimal('a1')[0];
     expect(evento.tipo).toBe('Venda');
-    expect(evento.valor).toBe(850);
+    expect(evento.valor).toBeUndefined();
+
+    const receita = ctx().movimentosByAnimal('a1')[0];
+    expect(receita.direcao).toBe('receita');
+    expect(receita.categoria).toBe('Venda de animais');
+    expect(receita.valor).toBe(850);
+    expect(receita.exploracaoId).toBe('exp-1');
+  });
+
+  it('uma venda sem preço não inventa receita nenhuma', async () => {
+    // É o caso do trabalhador: regista a saída, o preço fica para o dono.
+    const { ctx } = await montar();
+
+    await act(async () => {
+      await ctx().marcarSaida('a1', 'vendido', new Date().toISOString(), 'Feira');
+    });
+
+    expect(ctx().eventosByAnimal('a1')[0].tipo).toBe('Venda');
+    expect(ctx().movimentosByAnimal('a1')).toEqual([]);
   });
 
   it('uma morte não regista valor nenhum', async () => {
@@ -463,6 +498,7 @@ describe('saída do efetivo', () => {
     const evento = ctx().eventosByAnimal('a1')[0];
     expect(evento.tipo).toBe('Morte');
     expect(evento.valor).toBeUndefined();
+    expect(ctx().movimentosByAnimal('a1')).toEqual([]);
   });
 
   it('quem saiu deixa de contar no efetivo e de gerar alertas', async () => {

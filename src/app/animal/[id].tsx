@@ -48,12 +48,13 @@ export default function AnimalDetalheScreen() {
     terrenoById,
     exploracaoById,
     eventosByAnimal,
+    movimentosByAnimal,
     alertas,
     marcarSaida,
     reativarAnimal,
   } = useGado();
 
-  const { pode } = useMembros();
+  const { pode, podeVer } = useMembros();
 
   const animal = animalById(id);
   // Todos os papéis mexem na ficha e nos eventos; marcar a saída (uma venda,
@@ -86,7 +87,12 @@ export default function AnimalDetalheScreen() {
   const pai = animal.paiId ? animalById(animal.paiId) : undefined;
   const crias = filhosDe(animais, animal.id);
   const eventos = eventosByAnimal(animal.id);
-  const balanco = balancoAnimal(eventos);
+  const balanco = balancoAnimal(eventos, movimentosByAnimal(animal.id));
+  const podeVerBalanco = podeVer(animal.exploracaoId, 'verBalancoAnimal');
+  // Quem não pode lançar receitas também não decide o preço: o trabalhador
+  // regista a saída do animal e o valor fica por preencher, para o dono o
+  // fechar depois (aparece-lhe em Finanças como "venda sem preço").
+  const podeDefinirPreco = pode(animal.exploracaoId, 'registarReceita');
   const meusAlertas = alertas.filter((a) => a.animalId === animal.id);
   const saiu = animal.estado === 'falecido' || animal.estado === 'vendido';
 
@@ -99,7 +105,7 @@ export default function AnimalDetalheScreen() {
     setSaidaErro(null);
     setAGuardar(true);
     try {
-      const preco = saidaTipo === 'vendido' ? paraEuro(saidaPreco) : NaN;
+      const preco = saidaTipo === 'vendido' && podeDefinirPreco ? paraEuro(saidaPreco) : NaN;
       const valor = Number.isFinite(preco) && preco > 0 ? preco : undefined;
       await marcarSaida(animal!.id, saidaTipo, iso, saidaMotivo.trim() || undefined, valor);
       setSaidaOpen(false);
@@ -271,8 +277,10 @@ export default function AnimalDetalheScreen() {
           <InfoField icon="map-marker" label="Terreno atual" value={terreno?.nome ?? 'Sem terreno'} last />
         </Card>
 
-        {/* Balanço económico — só quando há valores registados */}
-        {balanco.temDados ? (
+        {/* Balanço económico — só a quem pode consultar contas, e só quando há
+            valores registados. O trabalhador vê a ficha do animal toda menos
+            isto: quanto o animal rendeu é conta da exploração. */}
+        {balanco.temDados && podeVerBalanco ? (
           <>
             <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
               Balanço
@@ -373,6 +381,7 @@ export default function AnimalDetalheScreen() {
                   data={saidaData}
                   motivo={saidaMotivo}
                   preco={saidaPreco}
+                  podeDefinirPreco={podeDefinirPreco}
                   erro={saidaErro}
                   aGuardar={aGuardar}
                   onChangeTipo={setSaidaTipo}
@@ -406,6 +415,7 @@ function FormularioSaida({
   data,
   motivo,
   preco,
+  podeDefinirPreco,
   erro,
   aGuardar,
   onChangeTipo,
@@ -419,6 +429,7 @@ function FormularioSaida({
   data: string;
   motivo: string;
   preco: string;
+  podeDefinirPreco: boolean;
   erro: string | null;
   aGuardar: boolean;
   onChangeTipo: (t: Exclude<EstadoAnimal, 'ativo'>) => void;
@@ -459,7 +470,7 @@ function FormularioSaida({
           keyboardType="numbers-and-punctuation"
         />
       </View>
-      {tipo === 'vendido' ? (
+      {tipo === 'vendido' && podeDefinirPreco ? (
         <>
           <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 4 }}>
             Preço de venda (€) — opcional
@@ -474,6 +485,26 @@ function FormularioSaida({
             />
           </View>
         </>
+      ) : null}
+      {tipo === 'vendido' && !podeDefinirPreco ? (
+        // Dizer porque é que não há campo do preço. Sem esta linha, quem
+        // registou a saída fica sem saber se se esqueceu de alguma coisa.
+        <View
+          style={{
+            flexDirection: 'row',
+            gap: spacing.xs,
+            alignItems: 'flex-start',
+            backgroundColor: colors.infoTint,
+            borderRadius: radii.md,
+            padding: spacing.sm,
+            marginBottom: spacing.md,
+          }}>
+          <Icon name="information" size="md" color={colors.info} />
+          <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
+            O preço é lançado por quem gere a exploração. Registe a saída — o valor
+            entra depois.
+          </Text>
+        </View>
       ) : null}
       <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 4 }}>
         Nota (opcional) — comprador, matadouro, causa, etc.

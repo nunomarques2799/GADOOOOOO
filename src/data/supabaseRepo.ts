@@ -12,11 +12,14 @@
 import { supabase } from './supabase';
 import type {
   Animal,
+  CategoriaMovimento,
+  Direcao,
   Especie,
   EstadoAnimal,
   Evento,
   EventoTipo,
   Exploracao,
+  Movimento,
   Sexo,
   Terreno,
   TipoTerreno,
@@ -100,6 +103,20 @@ type EventoRow = ComUpdatedAt & {
   valor?: number | null;
 };
 
+type MovimentoRow = ComUpdatedAt & {
+  id: string;
+  exploracao_id: string;
+  direcao: string;
+  categoria: string;
+  valor: number;
+  data: string;
+  descricao: string;
+  contraparte?: string | null;
+  animal_id?: string | null;
+  terreno_id?: string | null;
+  criado_por?: string | null;
+};
+
 /* ---- Mapeadores linha ↔ domínio ---- */
 
 const toExploracao = (r: ExploracaoRow): Exploracao => ({
@@ -161,6 +178,21 @@ const toEvento = (r: EventoRow): Evento => ({
   valor: r.valor ?? undefined,
 });
 
+const toMovimento = (r: MovimentoRow): Movimento => ({
+  atualizadoEm: r.updated_at ?? undefined,
+  id: r.id,
+  exploracaoId: r.exploracao_id,
+  direcao: r.direcao as Direcao,
+  categoria: r.categoria as CategoriaMovimento,
+  valor: Number(r.valor),
+  data: r.data,
+  descricao: r.descricao,
+  contraparte: r.contraparte ?? undefined,
+  animalId: r.animal_id ?? undefined,
+  terrenoId: r.terreno_id ?? undefined,
+  criadoPor: r.criado_por ?? undefined,
+});
+
 /* ---- Payloads para INSERT/UPSERT (omitem `id` gerado no client) ---- */
 
 const exploracaoPayload = (e: Exploracao) => ({
@@ -217,6 +249,31 @@ const eventoPayload = (e: Evento) => ({
   valor: e.valor ?? null,
 });
 
+const movimentoPayload = (m: Movimento) => ({
+  id: m.id,
+  exploracao_id: m.exploracaoId,
+  direcao: m.direcao,
+  categoria: m.categoria,
+  valor: m.valor,
+  data: m.data.slice(0, 10), // a coluna é `date`; o domínio guarda ISO completo
+  descricao: m.descricao,
+  contraparte: m.contraparte ?? null,
+  animal_id: m.animalId ?? null,
+  terreno_id: m.terrenoId ?? null,
+  // `criado_por` não vai no payload: o default da coluna é `auth.uid()` e a RLS
+  // exige que seja o próprio. Deixá-lo ao servidor evita que um cliente
+  // desatualizado (ou distraído) lance movimentos em nome de outra pessoa.
+});
+
+/**
+ * A tabela não existe no servidor? `42P01` é o código do Postgres para
+ * "undefined_table"; o PostgREST devolve `PGRST205` quando a tabela não está
+ * no seu esquema em cache. Ver o uso em `carregarTudoSupabase`.
+ */
+function tabelaInexistente(erro: { code?: string; message?: string }): boolean {
+  return erro.code === '42P01' || erro.code === 'PGRST205';
+}
+
 /* ---- Reads ---- */
 
 export type Snapshot = {
@@ -224,26 +281,46 @@ export type Snapshot = {
   terrenos: Terreno[];
   animais: Animal[];
   eventos: Evento[];
+  movimentos: Movimento[];
 };
 
 export async function carregarTudoSupabase(): Promise<Snapshot> {
-  if (!supabase) return { exploracoes: [], terrenos: [], animais: [], eventos: [] };
-  const [expRes, terRes, aniRes, evtRes] = await Promise.all([
+  if (!supabase) {
+    return { exploracoes: [], terrenos: [], animais: [], eventos: [], movimentos: [] };
+  }
+  const [expRes, terRes, aniRes, evtRes, movRes] = await Promise.all([
     supabase.from('exploracao').select('*').order('nome'),
     supabase.from('terreno').select('*').order('nome'),
     supabase.from('animal').select('*'),
     supabase.from('evento').select('*').order('data', { ascending: false }),
+    // A RLS decide o que vem: o dono recebe a exploração toda, o trabalhador só
+    // o que ele próprio lançou, o veterinário nada. Não é preciso filtrar aqui.
+    supabase.from('movimento').select('*').order('data', { ascending: false }),
   ]);
   // Falhar em vez de devolver listas vazias: sem esta guarda, um erro de rede
   // (estar offline) devolveria tudo vazio e apagaria a cache local. Quem chama
   // trata o erro mantendo os dados que já tem em cache.
   const erro = expRes.error ?? terRes.error ?? aniRes.error ?? evtRes.error;
   if (erro) throw new Error(erro.message);
+
+  // A tabela `movimento` nasceu depois da app estar publicada, e a migração
+  // (`supabase/schema_financas.sql`) é corrida à mão. Entre a nova versão
+  // chegar ao telemóvel e o SQL ser aplicado há uma janela em que a tabela não
+  // existe — e sem esta exceção o erro derrubava a leitura TODA, deixando a app
+  // a parecer offline a toda a gente até alguém correr o script. Só se ignora
+  // esta falha em concreto: qualquer outro erro continua a propagar.
+  if (movRes.error && !tabelaInexistente(movRes.error)) {
+    throw new Error(movRes.error.message);
+  }
+  const movimentos = movRes.error
+    ? []
+    : ((movRes.data ?? []) as MovimentoRow[]).map(toMovimento);
   return {
     exploracoes: ((expRes.data ?? []) as ExploracaoRow[]).map(toExploracao),
     terrenos: ((terRes.data ?? []) as TerrenoRow[]).map(toTerreno),
     animais: ((aniRes.data ?? []) as AnimalRow[]).map(toAnimal),
     eventos: ((evtRes.data ?? []) as EventoRow[]).map(toEvento),
+    movimentos,
   };
 }
 
@@ -265,7 +342,7 @@ export async function carregarTudoSupabase(): Promise<Snapshot> {
  * perceber qual dos dois casos é.
  */
 async function gravarComVersao(
-  tabela: 'exploracao' | 'terreno' | 'animal' | 'evento',
+  tabela: 'exploracao' | 'terreno' | 'animal' | 'evento' | 'movimento',
   id: string,
   versaoConhecida: string | undefined,
   payload: Record<string, unknown>,
@@ -354,4 +431,14 @@ export async function eliminarAnimalSupabase(id: string): Promise<string | null>
 
 export async function upsertEventoSupabase(e: Evento): Promise<string | null> {
   return gravarComVersao('evento', e.id, e.atualizadoEm, eventoPayload(e));
+}
+
+export async function upsertMovimentoSupabase(m: Movimento): Promise<string | null> {
+  return gravarComVersao('movimento', m.id, m.atualizadoEm, movimentoPayload(m));
+}
+
+export async function eliminarMovimentoSupabase(id: string): Promise<string | null> {
+  if (!supabase) return null;
+  const { error } = await supabase.from('movimento').delete().eq('id', id);
+  return error?.message ?? null;
 }

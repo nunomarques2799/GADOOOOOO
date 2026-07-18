@@ -17,15 +17,19 @@ import {
   animaisSeed,
   eventosSeed,
   exploracoesSeed,
+  movimentosSeed,
   terrenosSeed,
   utilizadorSeed,
 } from '../seed';
 import type {
   Animal,
+  CategoriaMovimento,
+  Direcao,
   Especie,
   EstadoAnimal,
   Evento,
   Exploracao,
+  Movimento,
   Sexo,
   Terreno,
   TipoTerreno,
@@ -124,6 +128,22 @@ function toEvento(r: Row): Evento {
   };
 }
 
+function toMovimento(r: Row): Movimento {
+  return {
+    id: String(r.id),
+    exploracaoId: String(r.exploracaoId),
+    direcao: String(r.direcao) as Direcao,
+    categoria: String(r.categoria) as CategoriaMovimento,
+    valor: Number(r.valor),
+    data: String(r.data),
+    descricao: String(r.descricao),
+    contraparte: asStr(r.contraparte),
+    animalId: asStr(r.animalId),
+    terrenoId: asStr(r.terrenoId),
+    criadoPor: asStr(r.criadoPor),
+  };
+}
+
 /* ------------------------------------------------------------------ *
  *  Leitura — carregar todo o efetivo para o estado React
  * ------------------------------------------------------------------ */
@@ -138,12 +158,14 @@ export function carregarTudo(db: SQLiteDatabase): {
   terrenos: Terreno[];
   animais: Animal[];
   eventos: Evento[];
+  movimentos: Movimento[];
 } {
   return {
     exploracoes: db.getAllSync<Row>('SELECT * FROM exploracao ORDER BY nome').map(toExploracao),
     terrenos: db.getAllSync<Row>('SELECT * FROM terreno ORDER BY nome').map(toTerreno),
     animais: db.getAllSync<Row>('SELECT * FROM animal ORDER BY updatedAt DESC').map(toAnimal),
     eventos: db.getAllSync<Row>('SELECT * FROM evento ORDER BY data DESC').map(toEvento),
+    movimentos: db.getAllSync<Row>('SELECT * FROM movimento ORDER BY data DESC').map(toMovimento),
   };
 }
 
@@ -199,10 +221,32 @@ export function guardarEvento(db: SQLiteDatabase, e: Evento): void {
   );
 }
 
-/** Elimina um animal e o seu histórico de eventos (sem órfãos na BD). */
+export function guardarMovimento(db: SQLiteDatabase, m: Movimento): void {
+  db.runSync(
+    `INSERT OR REPLACE INTO movimento
+     (id, exploracaoId, direcao, categoria, valor, data, descricao, contraparte,
+      animalId, terrenoId, criadoPor, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      m.id, m.exploracaoId, m.direcao, m.categoria, m.valor, m.data, m.descricao,
+      txt(m.contraparte), txt(m.animalId), txt(m.terrenoId), txt(m.criadoPor), agora(),
+    ],
+  );
+}
+
+export function eliminarMovimento(db: SQLiteDatabase, id: string): void {
+  db.runSync('DELETE FROM movimento WHERE id = ?', [id]);
+}
+
+/**
+ * Elimina um animal e o seu histórico de eventos (sem órfãos na BD).
+ * Os movimentos que lhe estavam imputados ficam, sem animal: o dinheiro saiu
+ * na mesma e não pode desaparecer da conta só porque o animal foi apagado.
+ */
 export function eliminarAnimal(db: SQLiteDatabase, id: string): void {
   db.withTransactionSync(() => {
     db.runSync('DELETE FROM evento WHERE animalId = ?', [id]);
+    db.runSync('UPDATE movimento SET animalId = NULL WHERE animalId = ?', [id]);
     db.runSync('DELETE FROM animal WHERE id = ?', [id]);
   });
 }
@@ -211,15 +255,17 @@ export function eliminarAnimal(db: SQLiteDatabase, id: string): void {
 export function eliminarTerreno(db: SQLiteDatabase, id: string): void {
   db.withTransactionSync(() => {
     db.runSync('UPDATE animal SET terrenoId = NULL WHERE terrenoId = ?', [id]);
+    db.runSync('UPDATE movimento SET terrenoId = NULL WHERE terrenoId = ?', [id]);
     db.runSync('DELETE FROM terreno WHERE id = ?', [id]);
   });
 }
 
-/** Elimina uma exploração inteira: terrenos, animais e eventos. */
+/** Elimina uma exploração inteira: terrenos, animais, eventos e movimentos. */
 export function eliminarExploracao(db: SQLiteDatabase, id: string): void {
   db.withTransactionSync(() => {
     const animais = db.getAllSync<Row>('SELECT id FROM animal WHERE exploracaoId = ?', [id]);
     animais.forEach((a) => db.runSync('DELETE FROM evento WHERE animalId = ?', [String(a.id)]));
+    db.runSync('DELETE FROM movimento WHERE exploracaoId = ?', [id]);
     db.runSync('DELETE FROM animal WHERE exploracaoId = ?', [id]);
     db.runSync('DELETE FROM terreno WHERE exploracaoId = ?', [id]);
     db.runSync('DELETE FROM exploracao WHERE id = ?', [id]);
@@ -237,5 +283,6 @@ export function semearBd(db: SQLiteDatabase): void {
     terrenosSeed.forEach((t) => guardarTerreno(db, t));
     animaisSeed.forEach((a) => guardarAnimal(db, a));
     eventosSeed.forEach((e) => guardarEvento(db, e));
+    movimentosSeed.forEach((m) => guardarMovimento(db, m));
   });
 }
