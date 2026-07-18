@@ -54,16 +54,18 @@ export function AlertItem({ alerta, divider }: { alerta: Alerta; divider?: boole
         size={44}
         iconSize={22}
       />
-      <View style={{ flex: 1 }}>
-        <Text variant="bodyStrong" numberOfLines={1}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text variant="bodyStrong" numberOfLines={2}>
           {alerta.titulo}
         </Text>
         <Text variant="secondary" color={colors.textSecondary} numberOfLines={2}>
           {alerta.descricao}
         </Text>
       </View>
-      <View style={{ alignItems: 'flex-end', gap: 2 }}>
-        <Text variant="caption" color={g.cor}>
+      {/* O prazo é curto e tem de se ler de uma vez — não encolhe nem parte
+          ("5 dias" saía em duas linhas quando a letra do sistema era grande). */}
+      <View style={{ alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+        <Text variant="caption" color={g.cor} numberOfLines={1}>
           {prazoLabel(alerta.diasRestantes)}
         </Text>
         <Icon name="chevron-right" size="sm" color={colors.textMuted} />

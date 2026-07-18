@@ -62,13 +62,13 @@ export function AnimalRow({ animal }: { animal: Animal }) {
             {animal.numeroIdentificacao ?? 'Sem brinco'}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-            <Text variant="caption" color={colors.textMuted}>
+            <Text variant="caption" color={colors.textMuted} numberOfLines={1} style={{ flexShrink: 1 }}>
               {animal.raca ?? animal.especie} · {idadeExtenso(animal.dataNascimento)}
             </Text>
             {terreno ? (
               <>
                 <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: colors.textMuted }} />
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, flexShrink: 1 }}>
                   <Icon name="map-marker" size={12} color={colors.textMuted} />
                   <Text variant="caption" color={colors.textMuted} numberOfLines={1}>
                     {terreno.nome}

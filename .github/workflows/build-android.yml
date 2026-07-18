@@ -69,10 +69,11 @@ jobs:
       - name: Construir Android (espera a conclusão)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          # Sem estas variáveis a app sai em modo demo offline. Chave publishable
-          # (segura para o cliente, protegida por RLS).
-          EXPO_PUBLIC_SUPABASE_URL: https://qmkafibxlmgouslybafy.supabase.co
-          EXPO_PUBLIC_SUPABASE_KEY: sb_publishable_6bjhd0CNIAglOPGmBt9Zlw_2gE4tr_r
+          # ATENÇÃO: as variáveis EXPO_PUBLIC_SUPABASE_* NÃO podem ficar aqui.
+          # O `eas build` compila na nuvem da Expo, e o worker remoto não recebe
+          # o ambiente deste runner — a app sairia em modo demo (sem login).
+          # Estão em `eas.json` → build.<perfil>.env, que o EAS envia para o
+          # worker. Chave publishable, segura para o cliente (protegida por RLS).
         run: |
           eas build \
             --platform android \

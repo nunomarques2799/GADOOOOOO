@@ -35,18 +35,25 @@ export function ExploracaoRow({ exploracao }: { exploracao: Exploracao }) {
           <Icon name="chevron-right" size="md" color={colors.textMuted} />
         </View>
 
+        {/* `flexWrap` + `minWidth` na marca: sem isto, quando os contadores não
+            cabiam, a coluna da marca era espremida até um caractere por linha e
+            o código da exploração saía escrito na vertical. Agora, se não
+            couber ao lado, passa para a linha de baixo inteira. */}
         <View
           style={{
             flexDirection: 'row',
-            gap: spacing.lg,
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            columnGap: spacing.lg,
+            rowGap: spacing.xs,
             paddingTop: spacing.sm,
             borderTopWidth: 1,
             borderTopColor: colors.border,
           }}>
           <MiniStat icon="cow" value={nAnimais} label="animais" />
           <MiniStat icon="grass" value={nTerrenos} label="terrenos" />
-          <View style={{ flex: 1, alignItems: 'flex-end', justifyContent: 'center' }}>
-            <Text variant="caption" color={colors.textSecondary}>
+          <View style={{ flexGrow: 1, minWidth: 90, alignItems: 'flex-end' }}>
+            <Text variant="caption" color={colors.textSecondary} numberOfLines={1}>
               {exploracao.marcaExploracao}
             </Text>
           </View>
@@ -58,10 +65,10 @@ export function ExploracaoRow({ exploracao }: { exploracao: Exploracao }) {
 
 function MiniStat({ icon, value, label }: { icon: 'cow' | 'grass'; value: number; label: string }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0 }}>
       <Icon name={icon} size="sm" color={colors.primary} />
       <Text variant="bodyStrong">{value}</Text>
-      <Text variant="secondary" color={colors.textSecondary}>
+      <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
         {label}
       </Text>
     </View>

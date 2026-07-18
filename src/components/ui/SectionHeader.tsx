@@ -19,17 +19,22 @@ export function SectionHeader({ title, actionLabel, onAction }: Props) {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: spacing.sm,
         marginBottom: spacing.sm,
         marginTop: spacing.xl,
       }}>
-      <Text variant="h2">{title}</Text>
+      {/* O título cede espaço à ação em vez de a empurrar para fora do ecrã —
+          com a letra do sistema ampliada, os dois sobrepunham-se. */}
+      <Text variant="h2" style={{ flexShrink: 1 }} numberOfLines={2}>
+        {title}
+      </Text>
       {actionLabel && onAction ? (
         <Pressable
           onPress={onAction}
           accessibilityRole="button"
           hitSlop={8}
           style={({ pressed }) => [
-            { flexDirection: 'row', alignItems: 'center', gap: 2 },
+            { flexDirection: 'row', alignItems: 'center', gap: 2, flexShrink: 0 },
             pressed && { opacity: 0.6 },
           ]}>
           <Text variant="label" color={colors.primary}>

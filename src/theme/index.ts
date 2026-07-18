@@ -5,6 +5,7 @@ export {
   sizes,
   layout,
   type,
+  maxFontScale,
   fontFamily,
   shadow,
   motion,

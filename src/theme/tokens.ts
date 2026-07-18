@@ -226,6 +226,30 @@ export const type = {
 
 export type TypeVariantName = keyof typeof type;
 
+/**
+ * Teto de ampliação por variante ("Tamanho da letra" do Android / Dynamic Type).
+ *
+ * A escala acima já é generosa de propósito — o público-alvo é idoso. Deixar o
+ * sistema multiplicá-la ainda por 1,5–2× não ajuda ninguém: parte palavras a
+ * meio ("Animai s"), sobrepõe títulos às ações e esmaga colunas até o texto sair
+ * na vertical. Os títulos, que já são enormes, esticam pouco; o texto pequeno,
+ * que tem folga, estica mais. Ampliar continua a funcionar — só deixa de
+ * destruir o desenho.
+ */
+export const maxFontScale = {
+  display: 1.15,
+  h1: 1.15,
+  h2: 1.2,
+  h3: 1.25,
+  bodyLg: 1.3,
+  body: 1.3,
+  bodyStrong: 1.3,
+  secondary: 1.35,
+  label: 1.3,
+  caption: 1.4,
+  button: 1.25,
+} satisfies Record<TypeVariantName, number>;
+
 /* ------------------------------------------------------------------ *
  *  SOMBRAS — suaves, verde-tingidas (elevação consistente)
  * ------------------------------------------------------------------ */

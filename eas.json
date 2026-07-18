@@ -6,6 +6,10 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://qmkafibxlmgouslybafy.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_KEY": "sb_publishable_6bjhd0CNIAglOPGmBt9Zlw_2gE4tr_r"
+      },
       "ios": {
         "simulator": false
       },
@@ -16,6 +20,10 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://qmkafibxlmgouslybafy.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_KEY": "sb_publishable_6bjhd0CNIAglOPGmBt9Zlw_2gE4tr_r"
+      },
       "ios": {
         "simulator": false
       },
@@ -26,6 +34,10 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://qmkafibxlmgouslybafy.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_KEY": "sb_publishable_6bjhd0CNIAglOPGmBt9Zlw_2gE4tr_r"
+      },
       "android": {
         "buildType": "app-bundle"
       }

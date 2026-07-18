@@ -26,7 +26,12 @@ export function QuickAction({
       accessibilityLabel={label}
       style={({ pressed }) => [
         {
-          flex: 1,
+          // Duas por linha (grelha 2×2), não quatro: com quatro lado a lado
+          // sobravam ~28px por rótulo e "Medicamento" saía truncado. A mais
+          // largura junta-se um alvo de toque maior, que é o que este público
+          // precisa.
+          flexGrow: 1,
+          flexBasis: '45%',
           backgroundColor: colors.surface,
           borderRadius: radii.lg,
           borderWidth: 1,
@@ -50,7 +55,7 @@ export function QuickAction({
         }}>
         <Icon name={icon} size="lg" color={color} />
       </View>
-      <Text variant="caption" color={colors.text} center numberOfLines={2}>
+      <Text variant="secondary" color={colors.text} center numberOfLines={2}>
         {label}
       </Text>
     </Pressable>

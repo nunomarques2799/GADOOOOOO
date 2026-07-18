@@ -1,6 +1,6 @@
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, radii, spacing, type } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
@@ -42,7 +42,9 @@ export function Badge({ label, tone = 'neutral', icon, style }: Props) {
         style,
       ]}>
       {icon ? <Icon name={icon} size={14} color={t.fg} /> : null}
-      <Text style={[type.caption, { color: t.fg }]}>{label}</Text>
+      <Text variant="caption" color={t.fg} numberOfLines={1} style={{ flexShrink: 1 }}>
+        {label}
+      </Text>
     </View>
   );
 }

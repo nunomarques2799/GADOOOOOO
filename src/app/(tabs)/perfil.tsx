@@ -119,7 +119,15 @@ export default function PerfilScreen() {
                 <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
                   {email}
                 </Text>
-                <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs }}>
+                {/* `flexWrap`: com a letra do sistema ampliada as duas
+                    etiquetas não cabiam lado a lado e a segunda saía do ecrã. */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: spacing.xs,
+                    marginTop: spacing.xs,
+                  }}>
                   <Badge tone="brand" icon="cow" label={`${animais.length} animais`} />
                   <Badge tone="neutral" icon="barn" label={`${exploracoes.length} explor.`} />
                 </View>

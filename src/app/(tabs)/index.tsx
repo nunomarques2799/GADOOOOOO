@@ -145,7 +145,7 @@ export default function InicioScreen() {
   const secaoAcoes = (
     <>
       <SectionHeader title="Ações rápidas" />
-      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
         <QuickAction icon="plus-circle" label="Novo animal" onPress={() => router.push('/animal/novo')} />
         <QuickAction
           icon="baby-bottle-outline"
