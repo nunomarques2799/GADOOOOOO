@@ -7,21 +7,21 @@ name: Build Android app
 #
 # Requer o secret EXPO_TOKEN (Perfil Expo → Access Tokens → criar token robô).
 #
-# Corre em push para main e manualmente. O AAB (production, para a Play Store)
-# tem de ser gerado manualmente com `eas build --platform android --profile
-# production` ou via workflow_dispatch com perfil=production.
+# SÓ CORRE À MÃO (Actions → Build Android app → Run workflow). Não corre em push.
+#
+# Porquê: o plano gratuito do EAS tem um teto mensal de builds Android, e
+# construir a cada push gastava-o em versões que ninguém chegava a instalar. Foi
+# o que aconteceu a 2026-07-18 — o teto esgotou-se a meio do dia e os pushes
+# seguintes passaram a falhar com "used its Android builds from the Free plan".
+#
+# Na prática não se perde nada, porque a maioria das alterações NÃO precisa de
+# build nenhum: mexer só em `src/` entrega-se por `eas update --branch preview`,
+# que não gasta quota. O build só é preciso quando muda código nativo — plugin
+# novo no `app.json`, permissão, dependência nativa. Ver AGENTS.md.
+#
+# O AAB (production, para a Play Store) escolhe-se aqui no perfil.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
-      - "assets/**"
-      - "app.json"
-      - "eas.json"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/build-android.yml"
   workflow_dispatch:
     inputs:
       perfil:
