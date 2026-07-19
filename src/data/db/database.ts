@@ -94,6 +94,14 @@ export function inicializarBd(): SQLiteDatabase {
     });
   }
 
+  // v4 → v5: interruptor da gestão económica. Fica DESLIGADO em explorações já
+  // criadas — é opt-in, e ninguém deve passar a ver um ecrã de contas que não
+  // pediu. Os movimentos já registados ficam guardados, só escondidos.
+  if (versao < 5) {
+    garantirColuna(db, 'exploracao', 'financasAtivas', 'INTEGER');
+    db.runSync('UPDATE exploracao SET financasAtivas = 0 WHERE financasAtivas IS NULL');
+  }
+
   if (versao < SCHEMA_VERSION) {
     db.execSync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   }

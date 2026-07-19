@@ -176,6 +176,7 @@ export default function RootLayout() {
                   <Stack.Screen name="conta/editar" />
                   <Stack.Screen name="conta/sincronizacao" />
                   <Stack.Screen name="conta/notificacoes" />
+                  <Stack.Screen name="conta/financas" />
                   <Stack.Screen name="conta/ajuda" />
                   <Stack.Screen name="inspecionar/exploracao/[id]" />
                   <Stack.Screen name="inspecionar/animal/[id]" />

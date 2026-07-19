@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import {
+  exigeFinancasAtivas,
   legendaRole,
   podeConsultar,
   podeEscrever,
@@ -194,6 +195,38 @@ describe('podeConsultar — quem vê as contas', () => {
     expect(
       podeConsultar({ ...base, isSuperadmin: true, role: undefined }, 'verFinancas'),
     ).toBe(true);
+  });
+});
+
+/**
+ * O interruptor da gestão económica (Perfil → Gestão financeira) desliga um
+ * conjunto exato de capacidades. Esta lista é a mesma que a RLS bloqueia em
+ * `supabase/schema_financas_opcional.sql` — se as duas divergirem, a app mostra
+ * um botão que o servidor recusa, e offline essa recusa só aparece na
+ * sincronização, quando o criador já julga que gravou.
+ */
+describe('exigeFinancasAtivas', () => {
+  it('tudo o que mexe em dinheiro depende do interruptor', () => {
+    expect(exigeFinancasAtivas('registarDespesa')).toBe(true);
+    expect(exigeFinancasAtivas('registarReceita')).toBe(true);
+    expect(exigeFinancasAtivas('registarCustoTratamento')).toBe(true);
+    expect(exigeFinancasAtivas('verFinancas')).toBe(true);
+    expect(exigeFinancasAtivas('verBalancoAnimal')).toBe(true);
+  });
+
+  it('o resto da app não depende dele', () => {
+    // Desligar as contas não pode tirar o gado a ninguém: quem não quer
+    // contabilidade na app continua a registar partos, vacinas e pesagens.
+    const alheias: Capacidade[] = [
+      'editarExploracao',
+      'eliminarExploracao',
+      'gerirEquipa',
+      'gerirTerrenos',
+      'editarAnimais',
+      'eliminarAnimais',
+      'registarSaida',
+    ];
+    for (const cap of alheias) expect(exigeFinancasAtivas(cap)).toBe(false);
   });
 });
 

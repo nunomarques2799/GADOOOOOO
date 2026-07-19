@@ -94,6 +94,30 @@ const LEITURA: Record<RoleMembro, readonly CapacidadeLeitura[]> = {
   veterinario: [],
 };
 
+/**
+ * Capacidades que só existem com a gestão económica LIGADA na exploração.
+ *
+ * A lista está aqui, e não espalhada pelos ecrãs, porque é o mesmo conjunto
+ * que a RLS de `supabase/schema_financas_opcional.sql` bloqueia do lado do
+ * servidor. Um ecrã que se esqueça do interruptor mostra um botão que o
+ * servidor vai recusar — e, feito offline, essa recusa só aparece na
+ * sincronização, quando o criador já julga que gravou.
+ *
+ * Ver `useFinancas()`, que é quem faz o "E" entre isto e o papel.
+ */
+const DEPENDEM_DAS_FINANCAS: readonly (Capacidade | CapacidadeLeitura)[] = [
+  'registarDespesa',
+  'registarReceita',
+  'registarCustoTratamento',
+  'verFinancas',
+  'verBalancoAnimal',
+];
+
+/** true se esta capacidade fica indisponível com as finanças desligadas. */
+export function exigeFinancasAtivas(capacidade: Capacidade | CapacidadeLeitura): boolean {
+  return DEPENDEM_DAS_FINANCAS.includes(capacidade);
+}
+
 /** true se o papel dado pode exercer a capacidade. Sem papel, não pode nada. */
 export function rolePode(role: RoleMembro | undefined, capacidade: Capacidade): boolean {
   if (!role) return false;

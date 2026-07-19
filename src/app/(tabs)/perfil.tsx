@@ -15,6 +15,7 @@ import {
   imprimirRelatorio,
 } from '@/data/exportar';
 import { useGado } from '@/data/store';
+import { useFinancas } from '@/data/useFinancas';
 import { VERSAO_APP } from '@/data/versao';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
@@ -27,6 +28,7 @@ export default function PerfilScreen() {
   const router = useRouter();
   const { utilizador, animais, eventos, exploracoes, terrenos, alertas, pendentesSinc } = useGado();
   const { utilizador: conta, sair, configurado, apagarConta } = useAuth();
+  const { ativas: financasAtivas, podeLigarDesligar: podeLigarFinancas } = useFinancas();
 
   /**
    * Terminar sessão apaga a cache local — incluindo alterações feitas offline
@@ -240,6 +242,17 @@ export default function PerfilScreen() {
               label="Notificações e alertas"
               onPress={() => router.push('/conta/notificacoes')}
             />
+            {/* Só o dono decide se a app serve para fazer contas. Um
+                trabalhador não tem nada que ver esta linha — e muito menos
+                desligar o registo de despesas a toda a exploração. */}
+            {podeLigarFinancas ? (
+              <SettingRow
+                icon="cash-multiple"
+                label="Gestão financeira"
+                trailing={financasAtivas ? 'Ligada' : 'Desligada'}
+                onPress={() => router.push('/conta/financas')}
+              />
+            ) : null}
             <SettingRow
               icon="shield-account-outline"
               label="Privacidade e termos"

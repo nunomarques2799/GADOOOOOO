@@ -67,6 +67,7 @@ import {
 import { supabaseConfigurado } from './supabase';
 import {
   carregarTudoSupabase,
+  definirFinancasAtivas as definirFinancasAtivasSupabase,
   eConflito,
   mensagemLegivel,
   eliminarAnimalSupabase,
@@ -270,6 +271,11 @@ type GadoContext = {
   updateTerreno: (id: string, patch: Partial<Terreno>) => Promise<void>;
   deleteTerreno: (id: string) => Promise<void>;
   addEvento: (e: Omit<Evento, 'id'>) => Promise<Evento>;
+  /**
+   * Liga ou desliga a gestão económica em toda a conta. Desligar ESCONDE, não
+   * apaga: nenhum movimento é removido e religar devolve as contas intactas.
+   */
+  definirFinancasAtivas: (ativas: boolean) => Promise<void>;
   addMovimento: (m: Omit<Movimento, 'id'>) => Promise<Movimento>;
   updateMovimento: (id: string, patch: Partial<Movimento>) => Promise<void>;
   deleteMovimento: (id: string) => Promise<void>;
@@ -810,6 +816,34 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     [usaSupabase, gravarSqlite, empurrar],
   );
 
+  const definirFinancasAtivas = useCallback(
+    async (ativas: boolean): Promise<void> => {
+      // Otimista, para o interruptor responder no dedo mesmo com rede fraca.
+      setExploracoes((prev) => prev.map((e) => ({ ...e, financasAtivas: ativas })));
+
+      if (usaSupabase) {
+        // Pelo RPC, não por upsert: `financas_ativas` é do servidor (escrever a
+        // exploração inteira daqui arriscava desfazer alterações de outra
+        // pessoa). O RPC muda o perfil e todas as explorações numa transação.
+        const erro = await definirFinancasAtivasSupabase(ativas);
+        if (erro) {
+          // Repõe o que estava — um interruptor que fica ligado depois de o
+          // servidor recusar é pior do que um que não mexe.
+          setExploracoes((prev) => prev.map((e) => ({ ...e, financasAtivas: !ativas })));
+          throw new Error(mensagemLegivel(erro));
+        }
+        await puxarDoServidor();
+        return;
+      }
+      gravarSqlite((db) => {
+        exploracoesRef.current.forEach((e) =>
+          guardarExploracao(db, { ...e, financasAtivas: ativas }),
+        );
+      });
+    },
+    [usaSupabase, gravarSqlite, puxarDoServidor],
+  );
+
   const addMovimento = useCallback(
     async (m: Omit<Movimento, 'id'>): Promise<Movimento> => {
       // `criadoPor` fica com o utilizador atual para a UI o poder mostrar já;
@@ -893,6 +927,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       updateTerreno,
       deleteTerreno,
       addEvento,
+      definirFinancasAtivas,
       addMovimento,
       updateMovimento,
       deleteMovimento,
@@ -909,7 +944,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       deleteAnimal, marcarSaida, reativarAnimal,
       addExploracao, updateExploracao, deleteExploracao,
       addTerreno, updateTerreno, deleteTerreno, addEvento,
-      addMovimento, updateMovimento, deleteMovimento,
+      definirFinancasAtivas, addMovimento, updateMovimento, deleteMovimento,
       recarregar,
     ],
   );

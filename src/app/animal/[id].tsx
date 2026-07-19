@@ -25,6 +25,7 @@ import { balancoAnimal } from '@/data/financas';
 import { diasAte, formatDataCurta, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { useFinancas } from '@/data/useFinancas';
 import type { EstadoAnimal, EventoTipo } from '@/data/types';
 import { colors, radii, shadow, spacing } from '@/theme';
 
@@ -54,13 +55,26 @@ export default function AnimalDetalheScreen() {
     reativarAnimal,
   } = useGado();
 
-  const { pode, podeVer } = useMembros();
+  const { pode } = useMembros();
 
   const animal = animalById(id);
   // Todos os papéis mexem na ficha e nos eventos; marcar a saída (uma venda,
   // com preço) fica com quem gere o efetivo. Ver `permissoes.ts`.
   const podeEditar = pode(animal?.exploracaoId, 'editarAnimais');
   const podeRegistarSaida = pode(animal?.exploracaoId, 'registarSaida');
+
+  // Acima do `return` do animal inexistente de propósito: os hooks têm de
+  // correr sempre, na mesma ordem, ou o React perde o estado do ecrã.
+  //
+  // Quem não pode lançar receitas também não decide o preço — o trabalhador
+  // regista a saída e o valor fica por preencher, para o dono o fechar depois
+  // (aparece-lhe em Finanças como "venda sem preço"). Com a gestão económica
+  // desligada, ninguém vê preço nenhum, nem o dono.
+  const {
+    ativas: financasAtivas,
+    podeVerBalancoAnimal: podeVerBalanco,
+    podeRegistarReceita: podeDefinirPreco,
+  } = useFinancas(animal?.exploracaoId);
 
   // Formulário inline "Marcar saída" — só visível quando o utilizador o abre.
   const [saidaOpen, setSaidaOpen] = useState(false);
@@ -88,11 +102,6 @@ export default function AnimalDetalheScreen() {
   const crias = filhosDe(animais, animal.id);
   const eventos = eventosByAnimal(animal.id);
   const balanco = balancoAnimal(eventos, movimentosByAnimal(animal.id));
-  const podeVerBalanco = podeVer(animal.exploracaoId, 'verBalancoAnimal');
-  // Quem não pode lançar receitas também não decide o preço: o trabalhador
-  // regista a saída do animal e o valor fica por preencher, para o dono o
-  // fechar depois (aparece-lhe em Finanças como "venda sem preço").
-  const podeDefinirPreco = pode(animal.exploracaoId, 'registarReceita');
   const meusAlertas = alertas.filter((a) => a.animalId === animal.id);
   const saiu = animal.estado === 'falecido' || animal.estado === 'vendido';
 
@@ -382,6 +391,7 @@ export default function AnimalDetalheScreen() {
                   motivo={saidaMotivo}
                   preco={saidaPreco}
                   podeDefinirPreco={podeDefinirPreco}
+                  financasAtivas={financasAtivas}
                   erro={saidaErro}
                   aGuardar={aGuardar}
                   onChangeTipo={setSaidaTipo}
@@ -416,6 +426,7 @@ function FormularioSaida({
   motivo,
   preco,
   podeDefinirPreco,
+  financasAtivas,
   erro,
   aGuardar,
   onChangeTipo,
@@ -430,6 +441,7 @@ function FormularioSaida({
   motivo: string;
   preco: string;
   podeDefinirPreco: boolean;
+  financasAtivas: boolean;
   erro: string | null;
   aGuardar: boolean;
   onChangeTipo: (t: Exclude<EstadoAnimal, 'ativo'>) => void;
@@ -486,9 +498,13 @@ function FormularioSaida({
           </View>
         </>
       ) : null}
-      {tipo === 'vendido' && !podeDefinirPreco ? (
+      {tipo === 'vendido' && !podeDefinirPreco && financasAtivas ? (
         // Dizer porque é que não há campo do preço. Sem esta linha, quem
         // registou a saída fica sem saber se se esqueceu de alguma coisa.
+        //
+        // Só quando as finanças estão LIGADAS: com elas desligadas não há
+        // preço nenhum à espera de ser lançado, e prometer que "o valor entra
+        // depois" deixava o criador à espera de uma coisa que não acontece.
         <View
           style={{
             flexDirection: 'row',

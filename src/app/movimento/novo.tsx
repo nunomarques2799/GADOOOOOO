@@ -4,11 +4,11 @@ import { Pressable, ScrollView, TextInput, View, type KeyboardTypeOptions } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { avisar } from '@/data/avisos';
-import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
+import { Button, Chip, EmptyState, Header, Icon, type IconName, Screen, Text } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
 import { formatDataPt, isoDaysAgo, paraEuro } from '@/data/helpers';
-import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { useFinancas } from '@/data/useFinancas';
 import type { CategoriaDespesa, CategoriaReceita, Direcao } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
@@ -48,7 +48,6 @@ export default function NovoMovimentoScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { exploracoes, animais, terrenos, addMovimento } = useGado();
-  const { pode } = useMembros();
 
   const params = useLocalSearchParams<{
     direcao?: string;
@@ -71,8 +70,11 @@ export default function NovoMovimentoScreen() {
   const [terrenoId, setTerrenoId] = useState<string | undefined>(undefined);
   const [aGravar, setAGravar] = useState(false);
 
-  const podeReceita = pode(exploracaoId, 'registarReceita');
-  const podeDespesa = pode(exploracaoId, 'registarDespesa');
+  const {
+    ativas,
+    podeRegistarReceita: podeReceita,
+    podeRegistarDespesa: podeDespesa,
+  } = useFinancas(exploracaoId);
 
   // Um trabalhador não lança receitas: se a exploração escolhida não lho
   // permite, o formulário volta a despesa em vez de o deixar preencher tudo
@@ -139,6 +141,24 @@ export default function NovoMovimentoScreen() {
   }
 
   const corDirecao = direcaoEfetiva === 'receita' ? colors.success : colors.danger;
+
+  // Alcançável por link direto (a app instalada guarda URLs) mesmo depois de o
+  // dono desligar a gestão financeira. Sem esta guarda, o formulário abria e a
+  // gravação só falhava no fim — ou, offline, na sincronização seguinte.
+  if (!ativas) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <Header title="Registar movimento" />
+        <Screen>
+          <EmptyState
+            icon="cash-off"
+            title="Gestão financeira desligada"
+            message="Esta conta não usa a app para registar despesas e receitas. Quem gere a exploração pode ligá-la em Perfil → Gestão financeira."
+          />
+        </Screen>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

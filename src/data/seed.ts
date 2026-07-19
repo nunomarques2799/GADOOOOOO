@@ -9,9 +9,16 @@ export const utilizadorSeed: Utilizador = {
   nif: '212 345 678',
 };
 
+/**
+ * Explorações de exemplo. Vêm com a gestão económica LIGADA — ao contrário do
+ * que acontece numa conta a sério, onde é opt-in — porque este é o modo demo:
+ * se viessem desligadas, quem experimenta a app não veria a funcionalidade
+ * existir, e os movimentos de exemplo não apareceriam em lado nenhum.
+ */
 export const exploracoesSeed: Exploracao[] = [
   {
     id: 'exp-1',
+    financasAtivas: true,
     utilizadorId: 'dev-user-001',
     nome: 'Monte do Avô',
     marcaExploracao: 'PT 61 234 5678',
@@ -20,6 +27,7 @@ export const exploracoesSeed: Exploracao[] = [
   },
   {
     id: 'exp-2',
+    financasAtivas: true,
     utilizadorId: 'dev-user-001',
     nome: 'Herdade das Corgas',
     marcaExploracao: 'PT 61 987 1234',

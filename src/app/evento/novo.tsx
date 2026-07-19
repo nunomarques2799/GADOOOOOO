@@ -13,6 +13,7 @@ import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui
 import { especieMeta } from '@/data/constants';
 import { formatDataPt, isoDaysAgo, isoInDays, paraEuro } from '@/data/helpers';
 import { useGado } from '@/data/store';
+import { useFinancas } from '@/data/useFinancas';
 import type { EventoTipo, Sexo } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
@@ -92,6 +93,9 @@ export default function NovoEventoScreen() {
 
   const data = isoDaysAgo(diasAtras);
   const animal = animalId ? animalById(animalId) : undefined;
+  const { podeRegistarCustoTratamento: podeRegistarCusto } = useFinancas(
+    animal?.exploracaoId,
+  );
 
   // Lista para escolher o animal (só fêmeas quando é um parto).
   const animaisEscolha = useMemo(() => {
@@ -157,9 +161,10 @@ export default function NovoEventoScreen() {
     if (notas.trim()) partes.push(notas.trim());
     const detalhe = partes.join(' · ') || undefined;
 
-    // Custo (€) — só faz sentido em vacinação/medicamento.
+    // Custo (€) — só faz sentido em vacinação/medicamento, e só se a gestão
+    // económica estiver ligada (o servidor limpa-o na mesma, por trigger).
     let valor: number | undefined;
-    if (tipo === 'Vacinação' || tipo === 'Medicamento') {
+    if (podeRegistarCusto && (tipo === 'Vacinação' || tipo === 'Medicamento')) {
       const n = paraEuro(custo);
       if (Number.isFinite(n) && n > 0) valor = n;
     }
@@ -370,8 +375,11 @@ export default function NovoEventoScreen() {
           </Field>
         ) : null}
 
-        {/* Custo — vacinação e medicamento (entra na gestão económica) */}
-        {tipo === 'Vacinação' || tipo === 'Medicamento' ? (
+        {/* Custo — vacinação e medicamento (entra na gestão económica). Some
+            com a gestão financeira desligada: o registo sanitário é o mesmo,
+            só não se pede o dinheiro. É também a única coisa financeira que o
+            veterinário preenche. */}
+        {podeRegistarCusto && (tipo === 'Vacinação' || tipo === 'Medicamento') ? (
           <Field label="Custo (€)" opcional>
             <TextField value={custo} onChangeText={setCusto} placeholder="Ex: 45" icon="cash" keyboardType="decimal-pad" />
           </Field>

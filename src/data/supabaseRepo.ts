@@ -56,6 +56,7 @@ type ExploracaoRow = ComUpdatedAt & {
   nif_detentor: string;
   localizacao?: string | null;
   fotografia?: string | null;
+  financas_ativas?: boolean | null;
 };
 
 type TerrenoRow = ComUpdatedAt & {
@@ -128,6 +129,7 @@ const toExploracao = (r: ExploracaoRow): Exploracao => ({
   nifDetentor: r.nif_detentor,
   localizacao: r.localizacao ?? undefined,
   fotografia: r.fotografia ?? undefined,
+  financasAtivas: r.financas_ativas ?? false,
 });
 
 const toTerreno = (r: TerrenoRow): Terreno => ({
@@ -202,7 +204,18 @@ const exploracaoPayload = (e: Exploracao) => ({
   nif_detentor: e.nifDetentor,
   localizacao: e.localizacao ?? null,
   fotografia: e.fotografia ?? null,
+  // `financas_ativas` não vai no payload de propósito: é do servidor, escrita
+  // só pelo RPC `definir_financas_ativas`. Incluí-la aqui fazia com que
+  // renomear a exploração num aparelho com a cache antiga voltasse a desligar
+  // (ou a ligar) as finanças sem ninguém ter pedido nada.
 });
+
+/** Liga ou desliga a gestão económica em toda a conta. Devolve erro ou null. */
+export async function definirFinancasAtivas(ativas: boolean): Promise<string | null> {
+  if (!supabase) return null;
+  const { error } = await supabase.rpc('definir_financas_ativas', { ativas });
+  return error?.message ?? null;
+}
 
 const terrenoPayload = (t: Terreno) => ({
   id: t.id,

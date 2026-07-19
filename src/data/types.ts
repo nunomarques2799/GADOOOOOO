@@ -90,6 +90,19 @@ export interface Exploracao extends ComVersao {
   nifDetentor: string;
   localizacao?: string;
   fotografia?: string;
+  /**
+   * A gestão económica está ligada nesta exploração? Desligada (o valor por
+   * omissão) esconde tudo o que é dinheiro e impede toda a gente de lançar
+   * despesas, receitas ou custos de tratamento.
+   *
+   * É uma decisão de CONTA — o cliente liga-a uma vez no Perfil e o servidor
+   * espelha-a por todas as explorações que ele administra. Está guardada aqui,
+   * e não no perfil, porque a RLS de `perfil` só deixa cada um ver o seu: o
+   * trabalhador e o veterinário precisam de a poder ler para saber o que a app
+   * lhes deve mostrar. Nunca é escrita pelo cliente — só pelo RPC
+   * `definir_financas_ativas` (ver `supabase/schema_financas_opcional.sql`).
+   */
+  financasAtivas?: boolean;
 }
 
 export interface Terreno extends ComVersao {

@@ -15,6 +15,7 @@ import { resumoFinanceiro } from '@/data/financas';
 import { dataExtensa, formatEuro, saudacao } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { useFinancas } from '@/data/useFinancas';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
 
@@ -22,7 +23,7 @@ export default function InicioScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
-  const { isSuperadmin, podeVer, podeEmAlguma } = useMembros();
+  const { isSuperadmin } = useMembros();
   const {
     utilizador, exploracoes, terrenos, animais, eventos, movimentos, alertas, online,
     pendentesSinc,
@@ -31,11 +32,11 @@ export default function InicioScreen() {
   // Superadmin não gere gado — vai direto para o painel de clientes.
   if (isSuperadmin) return <Redirect href="/(superadmin)/clientes" />;
 
-  // Quem não pode consultar as contas não vê o saldo aqui. Mostrar a soma do
-  // que a RLS lhe deixou ver daria um número parecido com o saldo da
-  // exploração, e completamente errado.
-  const podeVerFinancas = podeVer(undefined, 'verFinancas');
-  const podeRegistarDespesa = podeEmAlguma('registarDespesa');
+  // Duas condições, uma só resposta (ver `useFinancas`): a gestão económica
+  // tem de estar ligada na conta E esta pessoa tem de a poder consultar.
+  // Mostrar a soma do que a RLS lhe deixou ver daria um número parecido com o
+  // saldo da exploração, e completamente errado.
+  const { podeVerFinancas, podeRegistarDespesa } = useFinancas();
   const fin = resumoFinanceiro(eventos, movimentos);
   const temFinancas = podeVerFinancas && fin.movimentos.length > 0;
   const saldoPositivo = fin.saldo >= 0;

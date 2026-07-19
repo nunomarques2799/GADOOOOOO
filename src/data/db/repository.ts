@@ -74,6 +74,7 @@ function toExploracao(r: Row): Exploracao {
     nifDetentor: String(r.nifDetentor),
     localizacao: asStr(r.localizacao),
     fotografia: asStr(r.fotografia),
+    financasAtivas: asBool(r.financasAtivas) ?? false,
   };
 }
 
@@ -183,9 +184,12 @@ export function guardarUtilizador(db: SQLiteDatabase, u: Utilizador): void {
 
 export function guardarExploracao(db: SQLiteDatabase, e: Exploracao): void {
   db.runSync(
-    `INSERT OR REPLACE INTO exploracao (id, utilizadorId, nome, marcaExploracao, nifDetentor, localizacao, fotografia, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [e.id, e.utilizadorId, e.nome, e.marcaExploracao, e.nifDetentor, txt(e.localizacao), txt(e.fotografia), agora()],
+    `INSERT OR REPLACE INTO exploracao (id, utilizadorId, nome, marcaExploracao, nifDetentor, localizacao, fotografia, financasAtivas, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      e.id, e.utilizadorId, e.nome, e.marcaExploracao, e.nifDetentor,
+      txt(e.localizacao), txt(e.fotografia), bool(e.financasAtivas ?? false), agora(),
+    ],
   );
 }
 

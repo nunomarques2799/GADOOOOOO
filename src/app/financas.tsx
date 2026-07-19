@@ -30,8 +30,8 @@ import {
   type Periodo,
 } from '@/data/financas';
 import { formatDataCurta, formatEuro } from '@/data/helpers';
-import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { useFinancas } from '@/data/useFinancas';
 import type { CategoriaMovimento } from '@/data/types';
 import { colors, radii, spacing } from '@/theme';
 
@@ -60,14 +60,9 @@ function iconeDe(c: CategoriaMovimento): IconName {
 export default function FinancasScreen() {
   const router = useRouter();
   const { eventos, movimentos, animais, animalById } = useGado();
-  const { podeVer, podeEmAlguma } = useMembros();
+  const { ativas, podeVerFinancas, podeRegistarDespesa } = useFinancas();
 
   const [periodo, setPeriodo] = useState<Periodo>('ano');
-
-  // Sem `verFinancas` não há ecrã: quem só lança despesas não vê as contas da
-  // exploração. O servidor já filtra o que chega (RLS), isto evita mostrar uma
-  // soma parcial — meia conta é pior do que conta nenhuma, porque parece toda.
-  const podeConsultar = podeVer(undefined, 'verFinancas');
 
   const todos = useMemo(() => lancamentos(eventos, movimentos), [eventos, movimentos]);
   const doPeriodo = useMemo(() => noPeriodo(todos, periodo), [todos, periodo]);
@@ -96,7 +91,26 @@ export default function FinancasScreen() {
     }
   }
 
-  if (!podeConsultar) {
+  // Duas razões diferentes para não haver ecrã, e cada uma merece a sua
+  // explicação: ou a conta não usa a app para contas, ou usa mas isto não é
+  // assunto de quem está a ver. Uma mensagem genérica deixava o trabalhador a
+  // pensar que estava sem permissões quando o dono é que desligou tudo.
+  if (!ativas) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <Header title="Finanças" />
+        <Screen>
+          <EmptyState
+            icon="cash-off"
+            title="Gestão financeira desligada"
+            message="Esta conta não usa a app para registar despesas e receitas. Quem gere a exploração pode ligá-la em Perfil → Gestão financeira."
+          />
+        </Screen>
+      </View>
+    );
+  }
+
+  if (!podeVerFinancas) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <Header title="Finanças" />
@@ -106,7 +120,7 @@ export default function FinancasScreen() {
             title="Contas reservadas ao dono"
             message="As receitas e o balanço da exploração só podem ser consultados por quem a gere. Pode continuar a registar as despesas que fizer."
           />
-          {podeEmAlguma('registarDespesa') ? (
+          {podeRegistarDespesa ? (
             <Button
               label="Registar despesa"
               icon="cash-minus"
