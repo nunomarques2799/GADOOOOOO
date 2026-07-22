@@ -57,6 +57,37 @@ tal e qual como no site publicado — sem gastar um único minuto de build.
 > [`build-windows.yml`](.github/workflows/build-windows.yml) exporta de novo
 > com as chaves certas.
 
+### A app Windows em testes
+
+Para experimentar na app de desktop a sério — a mesma janela, o mesmo
+comportamento — sem tocar no "Gestão de Gado" que já está instalado:
+
+```bash
+powershell scripts/desktop-dev.ps1
+```
+
+Constrói o bundle, marca-o como sendo de testes e abre a app. **Não instala
+nada**: sem atalho, sem entrada em "Aplicações", sem auto-atualização. Podes
+ter as duas abertas lado a lado.
+
+O que faz a separação, e porque é que não era opcional: a app serve-se de
+`127.0.0.1` numa porta fixa, e o Chromium isola o armazenamento por origem mais
+a pasta de dados do utilizador — que sai do nome da app. Duas cópias com o
+mesmo nome e a mesma porta partilhariam o `localStorage`, e lá dentro vive o
+`gado.outbox.v1`, a fila de escritas ainda por sincronizar. Um animal de teste
+criado em dev ficava nessa fila e a app de produção, ao abrir, empurrava-o para
+a base de dados do criador. Por isso o build de testes corre como
+**`Gestao de Gado (DEV)`** (pasta `%APPDATA%` própria) na **porta 41280**, e
+nunca procura atualizações — ver a secção "Ambiente" em
+[`desktop/main.js`](desktop/main.js).
+
+A marca vai dentro do bundle (`web/ambiente.json`), não numa variável de
+ambiente do arranque: assim não há como abrir o bundle de testes com a
+identidade da app de produção por se ter esquecido um passo. E o script
+**recusa-se a construir** se o `.env` não estiver em `dev` — sem isso, um
+`.env` apontado a produção dava uma app ligada aos dados reais a ostentar o
+nome "DEV".
+
 ### E o site de testes no Netlify?
 
 A configuração já está no [`netlify.toml`](netlify.toml) e não custa nada

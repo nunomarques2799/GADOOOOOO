@@ -17,6 +17,38 @@ const WEB_DIR = app.isPackaged
   ? path.join(process.resourcesPath, 'web')
   : path.join(__dirname, 'web');
 
+/* ---------------- Ambiente: produção ou testes ---------------- */
+// O bundle web traz um `ambiente.json` quando foi construído contra a base de
+// dados de TESTES (ver scripts/desktop-dev.ps1). A marca viaja DENTRO do
+// bundle, e não numa variável de ambiente passada no arranque, de propósito:
+// assim não há forma de abrir o bundle de testes com a identidade da app de
+// produção por se ter esquecido um `set` antes do comando.
+//
+// Porque é que isto importa mais do que parece: a app serve-se sempre de
+// 127.0.0.1 numa porta fixa, e o Chromium isola o armazenamento por origem
+// (esquema://host:porta) MAIS a pasta de dados do utilizador — que sai do nome
+// da app. Duas cópias com o mesmo nome e a mesma porta partilham o
+// localStorage. E lá dentro está `gado.outbox.v1`, a fila de escritas ainda por
+// sincronizar: um animal de teste criado em dev ficava nessa fila e a app de
+// produção, ao abrir, empurrava-o para a base de dados do criador.
+function lerAmbiente() {
+  try {
+    const bruto = fs.readFileSync(path.join(WEB_DIR, 'ambiente.json'), 'utf8');
+    return JSON.parse(bruto).ambiente === 'dev' ? 'dev' : 'producao';
+  } catch {
+    // Sem marca nenhuma é produção. O default tem de ser o ambiente que se
+    // trata com cuidado, nunca o contrário.
+    return 'producao';
+  }
+}
+
+const EH_DEV = lerAmbiente() === 'dev';
+
+// Nome diferente => %APPDATA%\<nome> diferente => localStorage separado do da
+// app instalada. Tem de ficar aqui, antes de a app arrancar: depois de o
+// caminho de userData ser resolvido, mudar o nome já não o move.
+if (EH_DEV) app.setName('Gestao de Gado (DEV)');
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -59,7 +91,10 @@ function serveFile(res, filePath) {
 // aberturas. Com porta fixa a origem é sempre a mesma → tudo persiste. O lock
 // de instância única (ver fundo do ficheiro) garante que não há conflito com a
 // própria app.
-const PORTA_FIXA = 41279;
+// Porta diferente em testes: além da pasta de dados, separa também a ORIGEM,
+// e evita que as duas apps disputem a mesma porta quando estão abertas ao lado
+// uma da outra — que é precisamente o que se quer fazer para as comparar.
+const PORTA_FIXA = EH_DEV ? 41280 : 41279;
 
 function createServer() {
   return new Promise((resolve) => {
@@ -104,7 +139,7 @@ async function createWindow() {
     minWidth: 380,
     minHeight: 640,
     backgroundColor: '#F3F6F2',
-    title: 'Gestao de Gado',
+    title: EH_DEV ? 'Gestao de Gado — TESTES' : 'Gestao de Gado',
     show: false,
     autoHideMenuBar: true,
     icon: path.join(WEB_DIR, 'favicon.ico'),
@@ -148,6 +183,11 @@ const INTERVALO_PROCURA_MS = 6 * 60 * 60 * 1000;
 function ligarAtualizador() {
   // Em desenvolvimento não há release nem assinatura — não faz sentido procurar.
   if (!app.isPackaged) return;
+
+  // Um build de testes nunca procura atualizações. O Release do GitHub é o de
+  // produção: "atualizar" instalava a app real por cima da de testes e o
+  // ambiente desaparecia sem ninguém perceber porquê.
+  if (EH_DEV) return;
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
