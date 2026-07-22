@@ -14,6 +14,7 @@ import { Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { EcraLogin } from '@/components/EcraLogin';
+import { FaixaAmbiente } from '@/components/FaixaAmbiente';
 import { LimiteDeErro } from '@/components/LimiteDeErro';
 import { EcraNovaPalavra } from '@/components/EcraNovaPalavra';
 import { EcraPendente } from '@/components/EcraPendente';
@@ -141,6 +142,10 @@ export default function RootLayout() {
     <LimiteDeErro>
     <SafeAreaProvider>
       <StatusBar style="dark" />
+      {/* Por fora do portão de autenticação: a faixa de testes tem de aparecer
+          logo no ecrã de entrada, que é onde se percebe que se está a escrever
+          na base errada — antes de lá escrever seja o que for. */}
+      <FaixaAmbiente>
       <AuthProvider>
         <ColunaApp>
         <PortaoAuth>
@@ -188,6 +193,7 @@ export default function RootLayout() {
         </PortaoAuth>
         </ColunaApp>
       </AuthProvider>
+      </FaixaAmbiente>
     </SafeAreaProvider>
     </LimiteDeErro>
   );

@@ -7,6 +7,7 @@ mercado e legal (DGAV/IFAP/SNIRA) em `../Instruções/`.
 
 ## Regras do projeto
 
+- **Dois ambientes** (ver `AMBIENTES.md`): trabalha-se no branch `dev`, contra o projeto Supabase de **testes**; o `main` é o que o criador tem instalado e **fazer merge para `main` é publicar** — dispara sozinho o site da app e o instalador Windows. Nunca correr `eas update --branch preview` a partir do `dev`: esse canal é o telemóvel dele. Alterações à base de dados: dev primeiro, `scripts/backup.ps1 -Ambiente prod` depois, produção só no fim — ordem dos ficheiros em `supabase/MIGRACOES.md`.
 - **Design system**: usa sempre os tokens de `@/theme` (ver `DESIGN_SYSTEM.md`). Nunca hex soltos.
 - **Ícones**: só `MaterialCommunityIcons` via `<Icon name="…" />`. Nunca emojis. Confirma que o nome existe no glyphmap.
 - **Texto**: usa `<Text variant="…">` (não `<Text>` do RN diretamente).

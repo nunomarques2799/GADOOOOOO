@@ -86,6 +86,15 @@ export const colors = {
   shadow: '#0C3A22',
   white: '#FFFFFF',
   black: '#15251C',
+
+  /* Faixa do ambiente de testes — ver `FaixaAmbiente.tsx`.
+   * O roxo é DELIBERADAMENTE estranho a esta paleta: não é verde de marca,
+   * não é âmbar de prazo, não é terracota de urgência. É a única cor da app
+   * que não quer dizer nada sobre o gado, e é por isso que serve — não há
+   * como confundir esta faixa com um alerta do próprio domínio. Só aparece
+   * quando EXPO_PUBLIC_AMBIENTE=dev, portanto nunca chega a produção. */
+  ambienteDev: '#6B3FA0',
+  onAmbienteDev: '#FFFFFF',
 } as const;
 
 export type ColorToken = keyof typeof colors;

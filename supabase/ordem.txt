@@ -1,0 +1,17 @@
+# Ordem de aplicação dos ficheiros de schema. O RACIONAL está em MIGRACOES.md —
+# aqui fica só a lista, para que a ordem tenha um sítio único que as máquinas
+# também saibam ler (scripts/gerar-schema-completo.ps1 lê este ficheiro).
+#
+# Ao acrescentar um ficheiro novo: junta-o AQUI e à tabela do MIGRACOES.md.
+# Linhas em branco e linhas iniciadas por # são ignoradas.
+
+schema.sql
+schema_roles.sql
+schema_superadmin.sql
+schema_seguranca.sql
+schema_rgpd.sql
+schema_suspensao.sql
+schema_versoes.sql
+schema_financas.sql
+schema_eliminar.sql
+schema_financas_opcional.sql

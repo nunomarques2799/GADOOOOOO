@@ -34,6 +34,33 @@
   EXPO_PUBLIC_SUPABASE_URL = "https://qmkafibxlmgouslybafy.supabase.co"
   EXPO_PUBLIC_SUPABASE_KEY = "sb_publishable_6bjhd0CNIAglOPGmBt9Zlw_2gE4tr_r"
 
+# ---------------------------------------------------------------------------
+# TUDO O QUE NÃO É O BRANCH DE PRODUÇÃO LIGA-SE À BASE DE DADOS DE TESTES
+# ---------------------------------------------------------------------------
+# `[build.environment]` acima aplica-se a todos os contextos; estes blocos
+# sobrepõem-se-lhe em tudo o que NÃO seja o branch de produção (`main`):
+#
+#   branch-deploy  -> qualquer branch publicado que não o `main` (ex.: `dev`)
+#   deploy-preview -> a pré-visualização de um pull request
+#
+# São dois blocos e não um bloco `[context.dev]` de propósito. Um bloco com o
+# nome do branch protegia só o `dev` e deixava qualquer OUTRO branch — ou a
+# pré-visualização do próprio pull request de `dev` para `main` — a arrancar
+# com as chaves de produção. Uma pré-visualização ligada à base do criador é
+# uma app a sério, com os dados dele, e sem nada no ecrã a avisar disso.
+#
+# Assim, a regra fica simples de verificar: só o `main` fala com produção.
+# EXPO_PUBLIC_AMBIENTE=dev acende a faixa roxa no topo (ver AMBIENTES.md).
+[context.branch-deploy.environment]
+  EXPO_PUBLIC_SUPABASE_URL = "https://wkaxskxfcnexiutjewui.supabase.co"
+  EXPO_PUBLIC_SUPABASE_KEY = "sb_publishable_YfMkGOsrK6nrctci_jwlkg_J8Vl4F_W"
+  EXPO_PUBLIC_AMBIENTE = "dev"
+
+[context.deploy-preview.environment]
+  EXPO_PUBLIC_SUPABASE_URL = "https://wkaxskxfcnexiutjewui.supabase.co"
+  EXPO_PUBLIC_SUPABASE_KEY = "sb_publishable_YfMkGOsrK6nrctci_jwlkg_J8Vl4F_W"
+  EXPO_PUBLIC_AMBIENTE = "dev"
+
 # O service worker NÃO pode ser guardado em cache pelo navegador: é o ficheiro
 # que anuncia que existe versão nova. Guardado, a app ficaria presa numa versão
 # antiga e nada no ecrã explicaria porquê.
