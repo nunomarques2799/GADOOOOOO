@@ -13,7 +13,7 @@ Este documento existe para que experimentar deixe de ser arriscado.
 | --- | --- | --- |
 | Quem usa | o criador | tu |
 | Base de dados | projeto Supabase `qmkafibxlmgouslybafy` | projeto Supabase próprio |
-| Site da app | `app-gestaogado.netlify.app` | `dev--app-gestaogado.netlify.app` |
+| Site da app | `app-gestaogado.netlify.app` | `localhost` (ver abaixo) |
 | Branch | `main` | `dev` |
 | Faixa roxa no topo | não | **sim** |
 | Se partires isto | mau dia | não acontece nada |
@@ -26,15 +26,50 @@ alguma vez estiveres a apagar dados de teste **sem** a faixa roxa no ecrã, para
 ## O dia a dia
 
 ```
-trabalhas em `dev`  →  vês em dev--app-gestaogado.netlify.app  →  PR para `main`
+trabalhas em `dev`  →  testas em localhost  →  PR para `main`
 ```
 
 1. `git checkout dev` — é aqui que se trabalha. Nunca direto no `main`.
-2. Commit + push para `dev`. O Netlify reconstrói o site de testes; nada chega
-   ao criador.
-3. Testar a sério no site de testes: entrar, registar um animal, ver os alertas.
+2. `npm run web` — a app inteira, ligada à base de testes, com a faixa roxa.
+3. Commit + push para `dev`. Não publica nada a ninguém.
 4. Quando estiver bom: pull request `dev` → `main`. A CI corre `tsc` + testes.
 5. Merge. **É o merge que publica** — ver a secção seguinte.
+
+### Testar o que o `npm run web` não consegue provar
+
+O servidor de desenvolvimento não é o bundle que as pessoas recebem. A app
+instalável, o service worker e o arranque sem rede só se testam a sério contra
+um *export* de produção:
+
+```bash
+npx expo export --platform web
+npx serve dist -s -l 8090
+```
+
+`http://localhost:8090` é o bundle real. O navegador trata `localhost` como
+contexto seguro, por isso a instalação como app e o service worker funcionam
+tal e qual como no site publicado — sem gastar um único minuto de build.
+
+> ⚠️ Depois disto, o `dist/` local fica com um build apontado à base de
+> **testes**. Não o publiques à mão em lado nenhum, e não construas o `.exe`
+> localmente a partir dele sem voltar a exportar com as chaves de produção. O
+> instalador que sai da CI não tem este problema: o
+> [`build-windows.yml`](.github/workflows/build-windows.yml) exporta de novo
+> com as chaves certas.
+
+### E o site de testes no Netlify?
+
+A configuração já está no [`netlify.toml`](netlify.toml) e não custa nada
+enquanto ninguém a ativar, mas **os branch deploys estão desligados de
+propósito**. A 2026-07-22 a conta tinha 44 dos 300 créditos mensais e faltavam
+15 dias para renovar — a um ritmo de ~17/dia. Um segundo alvo de build gastava
+em testes a quota necessária para publicar em produção, que é o contrário do
+que este documento existe para garantir.
+
+Para ativar quando houver folga: Netlify → `app-gestaogado` → *Site
+configuration* → *Build & deploy* → *Branches and deploy contexts* → *Configure*
+→ **Branch deploys: Let me add individual branches** → `dev`. Fica em
+`dev--app-gestaogado.netlify.app`, já com as chaves certas.
 
 ## O que o merge para `main` dispara (e o que não dispara)
 
