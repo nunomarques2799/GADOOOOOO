@@ -312,62 +312,75 @@ function ClienteCard({
 }) {
   const iniciais = cliente.nome.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   return (
-    <Card style={{ marginBottom: spacing.sm }} padded={false} onPress={onPress} accessibilityLabel={cliente.nome}>
+    // O cartão já não é ele próprio o botão. Enquanto era, o botão "Aprovar
+    // como cliente" ficava DENTRO dele — <button> dentro de <button>, que é
+    // HTML inválido na web. E o estrago não era só o aviso na consola: o
+    // clique em "Aprovar" subia também para o cartão, por isso aprovava o
+    // cliente E abria-lhe o detalhe ao mesmo tempo. Agora quem navega é a
+    // área de informação, e o botão de aprovar é irmão dela, não filho.
+    <Card style={{ marginBottom: spacing.sm }} padded={false}>
       <View style={{ padding: spacing.md, gap: spacing.sm }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <View
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: radii.pill,
-              backgroundColor: cliente.estado === 'ativo' ? colors.primaryTint : colors.warningTint,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-            <Text variant="bodyStrong" color={cliente.estado === 'ativo' ? colors.primaryDark : colors.warning}>{iniciais || '?'}</Text>
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={cliente.nome}
+          style={({ pressed }) => [{ gap: spacing.sm }, pressed && { opacity: 0.7 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <View
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: radii.pill,
+                backgroundColor: cliente.estado === 'ativo' ? colors.primaryTint : colors.warningTint,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <Text variant="bodyStrong" color={cliente.estado === 'ativo' ? colors.primaryDark : colors.warning}>{iniciais || '?'}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="h3" numberOfLines={1}>{cliente.nome}</Text>
+              <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>{cliente.email}</Text>
+            </View>
+            {cliente.estado === 'pendente' ? (
+              <Badge tone="warning" icon="clock-outline" label="Pendente" />
+            ) : (
+              <BadgeSubscricao estado={cliente.estadoSubscricao} plano={cliente.plano} />
+            )}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text variant="h3" numberOfLines={1}>{cliente.nome}</Text>
-            <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>{cliente.email}</Text>
-          </View>
-          {cliente.estado === 'pendente' ? (
-            <Badge tone="warning" icon="clock-outline" label="Pendente" />
-          ) : (
-            <BadgeSubscricao estado={cliente.estadoSubscricao} plano={cliente.plano} />
-          )}
-        </View>
 
-        {cliente.estado === 'ativo' ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              gap: spacing.lg,
-              paddingTop: spacing.sm,
-              borderTopWidth: 1,
-              borderTopColor: colors.border,
-            }}>
-            <MiniStat icon="barn" valor={cliente.nExploracoes} label="explor." />
-            <MiniStat icon="grass" valor={cliente.nTerrenos} label="terrenos" />
-            <MiniStat icon="cow" valor={cliente.nAnimais} label="animais" />
-            {cliente.precoMensal != null && cliente.precoMensal > 0 ? (
-              <View style={{ marginLeft: 'auto', alignItems: 'flex-end' }}>
-                <Text variant="bodyStrong">{cliente.precoMensal.toFixed(0)}€/mês</Text>
-                {cliente.proximaCobranca ? (
-                  <Text variant="caption" color={colors.textMuted}>
-                    Prox. {formatCurto(cliente.proximaCobranca)}
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
-          </View>
-        ) : (
+          {cliente.estado === 'ativo' ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: spacing.lg,
+                paddingTop: spacing.sm,
+                borderTopWidth: 1,
+                borderTopColor: colors.border,
+              }}>
+              <MiniStat icon="barn" valor={cliente.nExploracoes} label="explor." />
+              <MiniStat icon="grass" valor={cliente.nTerrenos} label="terrenos" />
+              <MiniStat icon="cow" valor={cliente.nAnimais} label="animais" />
+              {cliente.precoMensal != null && cliente.precoMensal > 0 ? (
+                <View style={{ marginLeft: 'auto', alignItems: 'flex-end' }}>
+                  <Text variant="bodyStrong">{cliente.precoMensal.toFixed(0)}€/mês</Text>
+                  {cliente.proximaCobranca ? (
+                    <Text variant="caption" color={colors.textMuted}>
+                      Prox. {formatCurto(cliente.proximaCobranca)}
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </Pressable>
+
+        {cliente.estado === 'ativo' ? null : (
           <Pressable
             onPress={onAprovar}
             disabled={aProcessar}
             accessibilityRole="button"
             style={({ pressed }) => [
               {
-                marginTop: spacing.xs,
                 backgroundColor: colors.primary,
                 borderRadius: radii.pill,
                 paddingVertical: spacing.xs,
