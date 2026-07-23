@@ -246,6 +246,30 @@ describe('arranque', () => {
     expect(ctx().animais).toEqual([]);
     expect(ctx().online).toBe(false);
   });
+
+  it('guarda a razão da recusa, para o ecrã de Sincronização a mostrar', async () => {
+    // Sem isto, descobrir porque é que a app não traz dados exigia abrir as
+    // ferramentas do programador — que é pedir de mais a quem está no campo,
+    // e a quem o ajuda ao telefone.
+    mockServidor.falhasCarregar = 1;
+
+    const { ctx } = await montar();
+    expect(ctx().erroSincronizacao).toMatch(/Network request failed/);
+
+    // E some assim que uma leitura corre bem, para não ficar um aviso velho
+    // a assustar depois de o problema estar resolvido.
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [],
+      animais: [animal('a1')],
+      eventos: [],
+    };
+    await act(async () => {
+      await ctx().recarregar();
+    });
+    expect(ctx().erroSincronizacao).toBeNull();
+    expect(ctx().online).toBe(true);
+  });
 });
 
 describe('escritas otimistas', () => {

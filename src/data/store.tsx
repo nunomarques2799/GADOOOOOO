@@ -224,6 +224,18 @@ type GadoContext = {
   reativarAlerta: (id: string) => void;
   /** Há ligação para sincronizar com o servidor? (offline-first) */
   online: boolean;
+  /**
+   * Porque é que a última leitura do servidor falhou, tal como o servidor a
+   * explicou. `null` quando correu bem.
+   *
+   * A leitura falha em silêncio de propósito — é o que permite continuar a
+   * mostrar a cache em vez de um ecrã de erro no meio do campo. Mas "em
+   * silêncio" não pode querer dizer "sem forma nenhuma de saber": sem isto,
+   * uma app a mostrar dados antigos era indistinguível de uma conta vazia, e
+   * a única maneira de descobrir a razão era abrir as ferramentas do
+   * programador. O ecrã de Sincronização mostra isto a quem for lá ver.
+   */
+  erroSincronizacao: string | null;
   /** Nº de alterações locais ainda por enviar ao Supabase. */
   pendentesSinc: number;
   /**
@@ -392,6 +404,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   const [falhadas, setFalhadas] = useState<OpFalhada[]>(
     cacheDisponivel ? lerFalhadas() : [],
   );
+  const [erroSincronizacao, setErroSincronizacao] = useState<string | null>(null);
 
   const limparFalhadas = useCallback(() => {
     esquecerFalhadas();
@@ -420,8 +433,14 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       setAnimais(snap.animais);
       setEventos(snap.eventos);
       setMovimentos(snap.movimentos);
+      setErroSincronizacao(null);
       return true;
-    } catch {
+    } catch (e) {
+      // Guarda-se a razão em vez de a deitar fora. Continuar a mostrar a cache
+      // é a decisão certa — o criador está no campo e os dados dele são estes
+      // — mas atirar o motivo ao lixo transformava qualquer falha de leitura
+      // numa app calada e vazia, sem ninguém saber de onde partir.
+      setErroSincronizacao(e instanceof Error ? e.message : String(e));
       return false; // offline — fica com o que está em cache
     }
   }, []);
@@ -961,6 +980,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       dispensarAlerta,
       reativarAlerta,
       online,
+      erroSincronizacao,
       pendentesSinc,
       falhadas,
       limparFalhadas,
@@ -995,7 +1015,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     [
       utilizador, exploracoes, terrenos, animais, eventos, movimentos, alertas,
       alertasDispensados, dispensarAlerta, reativarAlerta,
-      online, pendentesSinc, falhadas, limparFalhadas,
+      online, erroSincronizacao, pendentesSinc, falhadas, limparFalhadas,
       exploracaoById, animalById, terrenoById, animaisByExploracao,
       animaisByExploracaoIncluindoSaidos,
       terrenosByExploracao, eventosByAnimal, movimentosByAnimal,
