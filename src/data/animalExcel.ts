@@ -18,7 +18,7 @@
 
 import { especies, finalidades, finalidadesPara, sexos } from './constants';
 import { parseDataPt } from './helpers';
-import { normalizar } from './racas';
+import { coresDe, normalizar, opcoesComUsadas, racasDe } from './racas';
 import type { Animal, Especie, Finalidade, Sexo } from './types';
 
 /** Campo do animal que uma coluna do template preenche. */
@@ -41,6 +41,21 @@ export type CampoImportado =
  *  escolhe-se na app, o id gera-se ao gravar). */
 export type DadosAnimalImportado = Omit<Animal, 'id' | 'exploracaoId' | 'atualizadoEm'>;
 
+/**
+ * Valores que uma coluna oferece numa lista pendente (dropdown) do Excel.
+ *
+ * `estrita` decide o que o Excel faz a um valor escrito à mão que não esteja na
+ * lista: recusa-o (as colunas que a app converte em enum — espécie, sexo,
+ * finalidade, Sim/Não) ou aceita-o sem discutir (raça e cor, que na app também
+ * são texto livre e onde uma raça local tem de caber). A régua é a mesma da
+ * validação da importação: só se bloqueia no Excel o que a importação também
+ * rejeitaria — assim exportar, editar e reimportar nunca esbarra na folha.
+ */
+export type OpcoesColuna = {
+  valores: string[];
+  estrita: boolean;
+};
+
 /** Definição de uma coluna do template. */
 export type ColunaTemplate = {
   campo: CampoImportado;
@@ -51,7 +66,25 @@ export type ColunaTemplate = {
   /** Outras formas de escrever o cabeçalho, além do rótulo (comparadas sem
    *  acentos, maiúsculas nem pontuação). */
   aliases?: string[];
+  /** Lista pendente a oferecer no Excel, se a coluna tiver valores conhecidos. */
+  opcoes?: OpcoesColuna;
 };
+
+/** Todas as raças sugeridas, de todas as espécies, sem repetir. */
+function todasAsRacas(): string[] {
+  return opcoesComUsadas(
+    especies.flatMap((e) => racasDe(e)),
+    [],
+  );
+}
+
+/** Todas as pelagens sugeridas, de todas as espécies, sem repetir. */
+function todasAsCores(): string[] {
+  return opcoesComUsadas(
+    especies.flatMap((e) => coresDe(e)),
+    [],
+  );
+}
 
 /**
  * As colunas do template, por esta ordem. Só `especie`, `sexo` e
@@ -73,6 +106,7 @@ export const COLUNAS: ColunaTemplate[] = [
     exemplo: 'Bovino',
     ajuda: `Obrigatório. Um de: ${especies.join(', ')}.`,
     aliases: ['especies'],
+    opcoes: { valores: especies, estrita: true },
   },
   {
     campo: 'sexo',
@@ -80,6 +114,7 @@ export const COLUNAS: ColunaTemplate[] = [
     obrigatorio: true,
     exemplo: 'Fêmea',
     ajuda: 'Obrigatório. Macho ou Fêmea (também aceita M ou F).',
+    opcoes: { valores: sexos, estrita: true },
   },
   {
     campo: 'dataNascimento',
@@ -94,15 +129,17 @@ export const COLUNAS: ColunaTemplate[] = [
     rotulo: 'Raça',
     obrigatorio: false,
     exemplo: 'Mertolenga',
-    ajuda: 'Escrita por extenso. Se não estiver na lista da app, entra na mesma.',
+    ajuda: 'Escolha da lista ou escreva. Se não estiver na lista, entra na mesma.',
+    opcoes: { valores: todasAsRacas(), estrita: false },
   },
   {
     campo: 'corPelagem',
     rotulo: 'Cor da pelagem',
     obrigatorio: false,
     exemplo: 'Malhada',
-    ajuda: 'Cor ou pelagem do animal.',
+    ajuda: 'Cor ou pelagem do animal. Pode escolher da lista ou escrever outra.',
     aliases: ['cor', 'pelagem'],
+    opcoes: { valores: todasAsCores(), estrita: false },
   },
   {
     campo: 'numeroIdentificacao',
@@ -126,6 +163,7 @@ export const COLUNAS: ColunaTemplate[] = [
     obrigatorio: false,
     exemplo: 'Leite',
     ajuda: `Só para bovinos. Um de: ${finalidades.join(', ')}.`,
+    opcoes: { valores: finalidades, estrita: true },
   },
   {
     campo: 'casa',
@@ -149,6 +187,7 @@ export const COLUNAS: ColunaTemplate[] = [
     exemplo: 'Sim',
     ajuda: 'Sim ou Não. Só conta se houver brinco. Em branco assume-se Sim.',
     aliases: ['snira'],
+    opcoes: { valores: ['Sim', 'Não'], estrita: true },
   },
   {
     campo: 'dataPrevistaParto',
