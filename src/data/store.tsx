@@ -11,6 +11,7 @@ import {
 import { AppState, Platform } from 'react-native';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import type { DadosAnimalImportado } from './animalExcel';
 import { useAuth } from './auth';
 import { abrirBd, inicializarBd } from './db/database';
 import {
@@ -260,6 +261,16 @@ type GadoContext = {
   movimentosByExploracao: (id: string) => Movimento[];
   // ações (async quando batem no Supabase; devolvem o objeto criado)
   addAnimal: (a: Omit<Animal, 'id'>) => Promise<Animal>;
+  /**
+   * Importa vários animais de uma vez (ex.: de um ficheiro Excel) para uma
+   * exploração. Faz um único acréscimo ao estado — não N — e só depois envia
+   * cada um ao servidor. Devolve quantos entraram e as recusas do servidor
+   * (erros de rede não contam: esses ficam na fila e sincronizam mais tarde).
+   */
+  importarAnimais: (
+    exploracaoId: string,
+    novos: DadosAnimalImportado[],
+  ) => Promise<{ criados: number; falhas: { rotulo: string; erro: string }[] }>;
   updateAnimal: (id: string, patch: Partial<Animal>) => Promise<void>;
   deleteAnimal: (id: string) => Promise<void>;
   /**
@@ -618,6 +629,44 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'animal', dados: novo });
       else gravarSqlite((db) => guardarAnimal(db, novo));
       return novo;
+    },
+    [usaSupabase, gravarSqlite, empurrar],
+  );
+
+  const importarAnimais = useCallback(
+    async (
+      exploracaoId: string,
+      novos: DadosAnimalImportado[],
+    ): Promise<{ criados: number; falhas: { rotulo: string; erro: string }[] }> => {
+      const comId: Animal[] = novos.map((a) => ({ ...a, id: novoId(), exploracaoId }));
+      // Um só acréscimo, não um por animal: uma folha com centenas de linhas
+      // provocaria centenas de re-renders se cada um chamasse `addAnimal`.
+      setAnimais((prev) => [...comId, ...prev]);
+
+      if (!usaSupabase) {
+        gravarSqlite((db) => comId.forEach((a) => guardarAnimal(db, a)));
+        return { criados: comId.length, falhas: [] };
+      }
+
+      const falhas: { rotulo: string; erro: string }[] = [];
+      let criados = 0;
+      for (const a of comId) {
+        try {
+          // `empurrar` mete os erros de REDE na fila (devolve sem lançar) — esses
+          // sincronizam depois e contam como criados. Só os erros lógicos (RLS,
+          // validação) chegam ao catch: aí tira-se o animal do ecrã, que de outra
+          // forma ficava a aparentar gravado sem nunca existir no servidor.
+          await empurrar({ op: 'upsert', entidade: 'animal', dados: a });
+          criados++;
+        } catch (e) {
+          setAnimais((prev) => prev.filter((x) => x.id !== a.id));
+          falhas.push({
+            rotulo: a.nome ?? a.numeroIdentificacao ?? a.id,
+            erro: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }
+      return { criados, falhas };
     },
     [usaSupabase, gravarSqlite, empurrar],
   );
@@ -994,6 +1043,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       movimentosByAnimal,
       movimentosByExploracao,
       addAnimal,
+      importarAnimais,
       updateAnimal,
       deleteAnimal,
       marcarSaida,
@@ -1019,7 +1069,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       exploracaoById, animalById, terrenoById, animaisByExploracao,
       animaisByExploracaoIncluindoSaidos,
       terrenosByExploracao, eventosByAnimal, movimentosByAnimal,
-      movimentosByExploracao, addAnimal, updateAnimal,
+      movimentosByExploracao, addAnimal, importarAnimais, updateAnimal,
       deleteAnimal, marcarSaida, reativarAnimal,
       addExploracao, updateExploracao, deleteExploracao,
       addTerreno, updateTerreno, deleteTerreno, addEvento,

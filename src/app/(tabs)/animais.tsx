@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, TextInput, View } from 'react-native';
+import { FlatList, Platform, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimalRow } from '@/components/AnimalRow';
 import { FolhaFiltros, type Disponivel } from '@/components/FolhaFiltros';
-import { Chip, EmptyState, FAB, Icon, Text } from '@/components/ui';
+import { Button, Chip, EmptyState, FAB, Icon, Text } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
 import {
   contarAtivos,
@@ -201,6 +201,20 @@ export default function AnimaisScreen() {
                 ) : null}
               </Pressable>
             </View>
+
+            {/* Importar de Excel — só web/Electron, onde há seletor de ficheiros.
+                No telemóvel a lista continua a registar-se com o "Registar". */}
+            {Platform.OS === 'web' && !contaSuspensa ? (
+              <View style={{ alignItems: 'flex-start', marginBottom: spacing.sm }}>
+                <Button
+                  label="Importar de Excel"
+                  icon="microsoft-excel"
+                  variant="secondary"
+                  fullWidth={false}
+                  onPress={() => router.push('/animal/importar')}
+                />
+              </View>
+            ) : null}
 
             {/* O que está a filtrar, para se tirar sem reabrir a folha */}
             {etiquetas.length > 0 ? (
