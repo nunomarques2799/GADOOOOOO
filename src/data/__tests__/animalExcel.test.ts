@@ -133,6 +133,50 @@ describe('linhaParaAnimal — regras de domínio', () => {
   });
 });
 
+describe('interpretarMatriz — duplicados (brinco)', () => {
+  const COM_BRINCO = [...MINIMO, 'Nº de brinco (SIA)'];
+
+  it('salta um brinco que já existe na conta', () => {
+    const r = interpretarMatriz(
+      [COM_BRINCO, ['Bovino', 'Fêmea', '15/03/2021', 'PT 1']],
+      ['PT 1'],
+    );
+    expect(r.validas).toBe(0);
+    expect(r.duplicadas).toBe(1);
+    expect(r.linhas[0].duplicado).toBe('ja-existe');
+    expect(r.linhas[0].dados).toBeUndefined();
+  });
+
+  it('reconhece o mesmo brinco escrito com espaçamento diferente', () => {
+    const r = interpretarMatriz(
+      [COM_BRINCO, ['Bovino', 'Fêmea', '15/03/2021', 'pt0001']],
+      ['PT 00 01'],
+    );
+    expect(r.duplicadas).toBe(1);
+  });
+
+  it('salta a segunda ocorrência do mesmo brinco dentro do ficheiro', () => {
+    const r = interpretarMatriz([
+      COM_BRINCO,
+      ['Bovino', 'Fêmea', '15/03/2021', 'PT 9'],
+      ['Bovino', 'Macho', '16/03/2021', 'PT 9'],
+    ]);
+    expect(r.validas).toBe(1);
+    expect(r.duplicadas).toBe(1);
+    expect(r.linhas[1].duplicado).toBe('no-ficheiro');
+  });
+
+  it('não trata animais sem brinco como duplicados', () => {
+    const r = interpretarMatriz([
+      MINIMO,
+      ['Bovino', 'Fêmea', '15/03/2021'],
+      ['Bovino', 'Fêmea', '15/03/2021'],
+    ]);
+    expect(r.validas).toBe(2);
+    expect(r.duplicadas).toBe(0);
+  });
+});
+
 describe('COLUNAS', () => {
   it('tem exatamente três colunas obrigatórias: espécie, sexo e nascimento', () => {
     const obrig = COLUNAS.filter((c) => c.obrigatorio).map((c) => c.campo);

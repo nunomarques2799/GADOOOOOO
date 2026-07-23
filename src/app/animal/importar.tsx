@@ -29,12 +29,19 @@ export default function ImportarAnimaisScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
-  const { exploracoes, importarAnimais } = useGado();
+  const { animais, exploracoes, importarAnimais } = useGado();
   const { pode, contaSuspensa } = useMembros();
 
   const editaveis = useMemo(
     () => exploracoes.filter((e) => pode(e.id, 'editarAnimais')),
     [exploracoes, pode],
+  );
+
+  // Brincos já na conta — para saltar animais repetidos ao importar. Um brinco
+  // é único, por isso conta o efetivo todo, não só o da exploração de destino.
+  const brincosExistentes = useMemo(
+    () => animais.map((a) => a.numeroIdentificacao).filter((b): b is string => !!b),
+    [animais],
   );
 
   const [exploracaoId, setExploracaoId] = useState(editaveis[0]?.id ?? '');
@@ -69,12 +76,16 @@ export default function ImportarAnimaisScreen() {
     () => (resultado ? resultado.linhas.filter((l) => l.dados && l.avisos.length > 0) : []),
     [resultado],
   );
+  const comDuplicado = useMemo(
+    () => (resultado ? resultado.linhas.filter((l) => l.duplicado) : []),
+    [resultado],
+  );
 
   async function escolherFicheiro() {
     if (aLer) return;
     setALer(true);
     try {
-      const r = await escolherELerExcel();
+      const r = await escolherELerExcel(brincosExistentes);
       if (r) setResultado(r);
     } catch (e) {
       avisar('Não foi possível ler o ficheiro', e instanceof Error ? e.message : String(e));
@@ -219,6 +230,7 @@ export default function ImportarAnimaisScreen() {
               prontos={prontos.length}
               comErro={comErro}
               comAviso={comAviso}
+              comDuplicado={comDuplicado}
             />
           ) : null}
         </View>
@@ -286,13 +298,18 @@ function Previsualizacao({
   prontos,
   comErro,
   comAviso,
+  comDuplicado,
 }: {
   resultado: ResultadoImportacao;
   prontos: number;
   comErro: LinhaImportacao[];
   comAviso: LinhaImportacao[];
+  comDuplicado: LinhaImportacao[];
 }) {
-  const nada = prontos === 0 && comErro.length === 0;
+  const nada = prontos === 0 && comErro.length === 0 && comDuplicado.length === 0;
+  const problemas: string[] = [];
+  if (comErro.length > 0) problemas.push(`${comErro.length} com erro`);
+  if (comDuplicado.length > 0) problemas.push(`${comDuplicado.length} já existem`);
 
   return (
     <View style={{ gap: spacing.md, marginTop: spacing.xs }}>
@@ -311,8 +328,8 @@ function Previsualizacao({
                 : 'Nenhum animal pronto a importar'}
             </Text>
             <Text variant="secondary" color={colors.textSecondary}>
-              {comErro.length > 0
-                ? `${comErro.length} linha${comErro.length > 1 ? 's' : ''} com problemas — não ${comErro.length > 1 ? 'entram' : 'entra'}.`
+              {problemas.length > 0
+                ? `${problemas.join(' · ')}.`
                 : nada
                   ? 'O ficheiro não tinha linhas de animais.'
                   : 'Tudo certo, sem problemas.'}
@@ -371,6 +388,43 @@ function Previsualizacao({
                       </Text>
                     </View>
                   ))}
+                </View>
+              ))}
+            </View>
+          </Card>
+        </View>
+      ) : null}
+
+      {/* Duplicados — brinco já existente ou repetido no ficheiro */}
+      {comDuplicado.length > 0 ? (
+        <View>
+          <Text
+            variant="label"
+            color={colors.textSecondary}
+            style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
+            JÁ EXISTEM — NÃO IMPORTADOS
+          </Text>
+          <Card>
+            <View style={{ gap: spacing.sm }}>
+              {comDuplicado.map((l) => (
+                <View
+                  key={l.numero}
+                  style={{
+                    borderTopWidth: 1,
+                    borderTopColor: colors.border,
+                    paddingTop: spacing.sm,
+                  }}>
+                  <Text variant="bodyStrong">
+                    Linha {l.numero} · {l.rotulo}
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
+                    <Icon name="content-duplicate" size="sm" color={colors.textMuted} />
+                    <Text variant="caption" color={colors.textSecondary} style={{ flex: 1 }}>
+                      {l.duplicado === 'ja-existe'
+                        ? 'Já existe um animal com este brinco — não foi importado.'
+                        : 'Este brinco aparece mais do que uma vez no ficheiro.'}
+                    </Text>
+                  </View>
                 </View>
               ))}
             </View>

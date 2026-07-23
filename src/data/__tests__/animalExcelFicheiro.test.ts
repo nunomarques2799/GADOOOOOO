@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import * as XLSX from 'xlsx';
+import * as XLSXStyle from 'xlsx-js-style';
 
 import { COLUNAS, EXEMPLOS, interpretarMatriz } from '../animalExcel';
 import { construirTemplate } from '../animalExcelFicheiro';
@@ -11,7 +12,8 @@ import { construirTemplate } from '../animalExcelFicheiro';
  * sem browser nem sessão, que é o que este teste não consegue ter.
  */
 function roundTrip(wb: XLSX.WorkBook) {
-  const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+  // Escreve com estilos (o caminho da app) e lê com o xlsx seguro.
+  const buf = XLSXStyle.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
   const lido = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true });
   const nome =
     lido.SheetNames.find((n) => n.trim().toLowerCase() === 'animais') ?? lido.SheetNames[0];

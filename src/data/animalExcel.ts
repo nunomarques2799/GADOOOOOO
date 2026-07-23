@@ -194,7 +194,8 @@ export const EXEMPLOS: Record<CampoImportado, string>[] = [
   },
 ];
 
-/** O que a leitura de uma linha produziu. `dados` só existe se não houver erros. */
+/** O que a leitura de uma linha produziu. `dados` só existe se a linha for
+ *  importável — sem erros de validação E sem ser um duplicado. */
 export type LinhaImportacao = {
   /** Número da linha no Excel (o cabeçalho é a linha 1, os dados começam na 2). */
   numero: number;
@@ -203,14 +204,25 @@ export type LinhaImportacao = {
   erros: string[];
   /** Coisas que não impedem a importação, mas convém o criador saber. */
   avisos: string[];
+  /**
+   * Brinco repetido: `ja-existe` = já há um animal com este brinco na conta;
+   * `no-ficheiro` = aparece mais do que uma vez no próprio ficheiro. Em ambos
+   * os casos a linha NÃO é importada (não há `dados`) — evita criar o mesmo
+   * animal duas vezes, que é o que acontece quem exporta, edita e reimporta.
+   */
+  duplicado?: 'no-ficheiro' | 'ja-existe';
   /** Como referir esta linha na lista (nome, brinco, ou "Linha N"). */
   rotulo: string;
 };
 
 export type ResultadoImportacao = {
   linhas: LinhaImportacao[];
+  /** Linhas que vão ser importadas. */
   validas: number;
+  /** Linhas com erro de validação. */
   comErro: number;
+  /** Linhas saltadas por brinco repetido (já existe ou repetido no ficheiro). */
+  duplicadas: number;
   /** Rótulos de colunas obrigatórias que o ficheiro não trazia. */
   colunasEmFalta: string[];
   /** Cabeçalhos do ficheiro que não correspondem a nenhuma coluna conhecida. */
@@ -250,6 +262,15 @@ const CHAVE_PARA_CAMPO = new Map<string, CampoImportado>();
 for (const c of COLUNAS) {
   CHAVE_PARA_CAMPO.set(chaveCol(c.rotulo), c.campo);
   for (const a of c.aliases ?? []) CHAVE_PARA_CAMPO.set(chaveCol(a), c.campo);
+}
+
+/**
+ * Chave para comparar brincos: sem acentos, maiúsculas nem espaços, para que
+ * "PT 6120 0011 2201" e "pt612000112201" contem como o mesmo animal (é o mesmo
+ * número, escrito com espaçamento diferente).
+ */
+export function chaveBrinco(s: string | undefined): string {
+  return normalizar(s ?? '').replace(/\s+/g, '');
 }
 
 function parseEspecie(v: unknown): Especie | null {
@@ -399,7 +420,10 @@ export function linhaParaAnimal(
  * converte cada linha de dados. Não conhece o SheetJS — quem o chama entrega já
  * a matriz.
  */
-export function interpretarMatriz(matriz: unknown[][]): ResultadoImportacao {
+export function interpretarMatriz(
+  matriz: unknown[][],
+  brincosExistentes: Iterable<string> = [],
+): ResultadoImportacao {
   const linhas: LinhaImportacao[] = [];
   const colunasIgnoradas: string[] = [];
 
@@ -427,11 +451,37 @@ export function interpretarMatriz(matriz: unknown[][]): ResultadoImportacao {
     linhas.push(linhaParaAnimal(valores, r + 1));
   }
 
+  // Segunda passagem: brincos repetidos. Só as linhas que passaram na validação
+  // e têm brinco entram nesta conta — sem brinco não há como saber se é o mesmo
+  // animal, por isso essas passam sempre.
+  const jaNaConta = new Set<string>();
+  for (const b of brincosExistentes) {
+    const k = chaveBrinco(b);
+    if (k) jaNaConta.add(k);
+  }
+  const vistosNoFicheiro = new Set<string>();
+  for (const l of linhas) {
+    const brinco = l.dados?.numeroIdentificacao;
+    if (!brinco) continue;
+    const k = chaveBrinco(brinco);
+    if (jaNaConta.has(k)) {
+      l.duplicado = 'ja-existe';
+      l.dados = undefined;
+    } else if (vistosNoFicheiro.has(k)) {
+      l.duplicado = 'no-ficheiro';
+      l.dados = undefined;
+    } else {
+      vistosNoFicheiro.add(k);
+    }
+  }
+
   const validas = linhas.filter((l) => l.dados).length;
+  const duplicadas = linhas.filter((l) => l.duplicado).length;
   return {
     linhas,
     validas,
-    comErro: linhas.length - validas,
+    comErro: linhas.length - validas - duplicadas,
+    duplicadas,
     colunasEmFalta,
     colunasIgnoradas,
   };

@@ -4,23 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
-import { avisar } from '@/data/avisos';
-import {
-  csvAnimais,
-  csvEventos,
-  guardarFicheiro,
-  guardarRelatorio,
-  hojeISO,
-  htmlRelatorioPrazos,
-  imprimirRelatorio,
-} from '@/data/exportar';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
 import { VERSAO_APP } from '@/data/versao';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, spacing } from '@/theme';
-
-const TITULO_PRAZOS = 'Relatório de prazos — Gestão de Gado';
 
 /**
  * Tudo o que se CONFIGURA e tudo o que se EXPORTA.
@@ -34,7 +22,7 @@ export default function DefinicoesScreen() {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
   const router = useRouter();
-  const { animais, eventos, exploracoes, terrenos, alertas } = useGado();
+  const { exploracoes } = useGado();
   const { configurado } = useAuth();
   const {
     ativas: financasAtivas,
@@ -42,39 +30,6 @@ export default function DefinicoesScreen() {
   } = useFinancas();
 
   const casaAtiva = exploracoes.some((e) => e.casaAtiva);
-
-  async function exportar(nomeFicheiro: string, conteudo: string) {
-    try {
-      await guardarFicheiro(nomeFicheiro, conteudo);
-    } catch (e) {
-      avisar('Não foi possível exportar', e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  function imprimirPrazos() {
-    const ok = imprimirRelatorio(TITULO_PRAZOS, htmlRelatorioPrazos(alertas));
-    if (!ok) {
-      avisar('Indisponível', 'A impressão do relatório está disponível na versão de computador.');
-    }
-  }
-
-  async function descarregarPrazos() {
-    const r = await guardarRelatorio(TITULO_PRAZOS, htmlRelatorioPrazos(alertas), `prazos-${hojeISO()}`);
-    if (r.estado === 'guardado' || r.estado === 'cancelado') return; // o diálogo já falou por si
-    if (r.estado === 'html') {
-      avisar(
-        'Relatório descarregado',
-        'Guardámos o relatório como página web. Para o ter em PDF, abra-o e use Imprimir → Guardar como PDF. ' +
-          'Na app de computador o relatório é guardado logo em PDF.',
-      );
-      return;
-    }
-    if (r.estado === 'indisponivel') {
-      avisar('Indisponível', 'Descarregar o relatório está disponível na versão de computador.');
-      return;
-    }
-    avisar('Não foi possível guardar', r.motivo);
-  }
 
   const coluna = {
     width: '100%',
@@ -121,48 +76,6 @@ export default function DefinicoesScreen() {
               icon="bell-outline"
               label="Notificações e alertas"
               onPress={() => router.push('/conta/notificacoes')}
-              last
-            />
-          </Grupo>
-
-          {/* Exportar e relatórios */}
-          <Grupo titulo="EXPORTAR E RELATÓRIOS">
-            <Linha
-              icon="cow"
-              label="Exportar animais (CSV)"
-              trailing={String(animais.length)}
-              onPress={() =>
-                void exportar(`animais-${hojeISO()}.csv`, csvAnimais(animais, exploracoes, terrenos))
-              }
-            />
-            <Linha
-              icon="calendar-text-outline"
-              label="Exportar eventos (CSV)"
-              trailing={String(eventos.length)}
-              onPress={() => void exportar(`eventos-${hojeISO()}.csv`, csvEventos(eventos, animais))}
-            />
-            <Linha
-              icon="printer-outline"
-              label="Imprimir relatório de prazos"
-              trailing={String(alertas.length)}
-              onPress={imprimirPrazos}
-            />
-            <Linha
-              icon="file-download-outline"
-              label="Descarregar relatório (PDF)"
-              trailing={String(alertas.length)}
-              onPress={() => void descarregarPrazos()}
-            />
-            <Linha
-              icon="file-export-outline"
-              label="Exportar para o iDigital"
-              trailing="Fase 2"
-              onPress={() =>
-                avisar(
-                  'Ainda em desenvolvimento',
-                  'A exportação para o iDigital chega numa próxima versão. Entretanto pode usar o "Descarregar relatório (PDF)" ou o "Exportar animais (CSV)".',
-                )
-              }
               last
             />
           </Grupo>

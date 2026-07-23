@@ -23,7 +23,7 @@ type Rota = Extract<Href, string>;
 type Destino = { nome: string; rota: Rota; label: string; icon: IconName };
 
 /**
- * Os oito destinos, pela ordem em que aparecem na barra lateral.
+ * Os nove destinos, pela ordem em que aparecem na barra lateral.
  * `nome` é o ficheiro dentro de `(tabs)/`; `rota` é o URL (o grupo `(tabs)`
  * não aparece no caminho, por isso `(tabs)/alertas.tsx` serve `/alertas`).
  */
@@ -34,16 +34,17 @@ const DESTINOS: Destino[] = [
   { nome: 'animais', rota: '/animais', label: 'Animais', icon: 'cow' },
   { nome: 'alertas', rota: '/alertas', label: 'Alertas', icon: 'bell-outline' },
   { nome: 'financas', rota: '/financas', label: 'Finanças', icon: 'cash-multiple' },
+  { nome: 'documentos', rota: '/documentos', label: 'Documentos', icon: 'file-document-outline' },
   { nome: 'definicoes', rota: '/definicoes', label: 'Definições', icon: 'cog-outline' },
   { nome: 'perfil', rota: '/perfil', label: 'Perfil', icon: 'account' },
 ];
 
 /**
- * O que fica na barra de baixo do TELEMÓVEL. São cinco lugares e oito
- * destinos: a barra reparte a largura por todos, e com oito cada um ficaria
- * com ~46px num ecrã de 375px — menos de 32px com a letra do sistema no
+ * O que fica na barra de baixo do TELEMÓVEL. São cinco lugares e nove
+ * destinos: a barra reparte a largura por todos, e com nove cada um ficaria
+ * espremido num ecrã de 375px — bem menos ainda com a letra do sistema no
  * máximo, que é o cenário que esta app tem de aguentar. Ficam os quatro do
- * dia-a-dia e um botão "Mais" para os outros quatro.
+ * dia-a-dia e um botão "Mais" para os outros cinco.
  *
  * No computador não há este problema: a lateral é vertical e leva os oito.
  */
