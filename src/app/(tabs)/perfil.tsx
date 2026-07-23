@@ -50,11 +50,24 @@ export default function PerfilScreen() {
     );
   }
 
-  async function exportarAnimais() {
-    await guardarFicheiro(`animais-${hojeISO()}.csv`, csvAnimais(animais, exploracoes, terrenos));
+  /**
+   * No telemóvel a exportação passa pelo `Share`, que REJEITA quando a folha
+   * de partilha não abre. Sem este `catch`, a promessa ficava sem dono e o
+   * criador carregava no botão e não via nada acontecer — nem ficheiro, nem
+   * explicação. Ver `guardarFicheiro` em `exportar.ts`.
+   */
+  async function exportar(nomeFicheiro: string, conteudo: string) {
+    try {
+      await guardarFicheiro(nomeFicheiro, conteudo);
+    } catch (e) {
+      avisar('Não foi possível exportar', e instanceof Error ? e.message : String(e));
+    }
   }
-  async function exportarEventos() {
-    await guardarFicheiro(`eventos-${hojeISO()}.csv`, csvEventos(eventos, animais));
+  function exportarAnimais() {
+    void exportar(`animais-${hojeISO()}.csv`, csvAnimais(animais, exploracoes, terrenos));
+  }
+  function exportarEventos() {
+    void exportar(`eventos-${hojeISO()}.csv`, csvEventos(eventos, animais));
   }
   function imprimirPrazos() {
     const ok = imprimirRelatorio(TITULO_PRAZOS, htmlRelatorioPrazos(alertas));

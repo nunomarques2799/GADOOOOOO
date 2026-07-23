@@ -54,6 +54,28 @@ describe('parseDataPt', () => {
   it('continua a validar o resto mesmo a permitir futuro', () => {
     expect(parseDataPt('31/02/2999', { permitirFuturo: true })).toBeNull();
   });
+
+  // A data fica ao meio-dia. Enquanto o limite do "futuro" foi o instante
+  // atual, escrever a data de hoje antes das 12h dava "Data inválida" —
+  // exatamente o que acontecia no "Marcar saída", que já vem preenchido com
+  // hoje. Percorre-se o dia inteiro para que nenhuma hora volte a falhar.
+  it.each([0, 6, 9, 11, 12, 13, 18, 23])('aceita a data de hoje às %ih', (hora) => {
+    jest.useFakeTimers();
+    try {
+      const agora = new Date(2026, 6, 23, hora, 30, 0);
+      jest.setSystemTime(agora);
+      const p = (n: number) => String(n).padStart(2, '0');
+      const hoje = `${p(agora.getDate())}/${p(agora.getMonth() + 1)}/${agora.getFullYear()}`;
+      expect(parseDataPt(hoje)).not.toBeNull();
+      // Amanhã continua a ser recusado, a qualquer hora: a garantia que se
+      // pretende é "não aceitar dias futuros", não "não aceitar horas futuras".
+      const amanha = new Date(2026, 6, 24);
+      const amanhaTxt = `${p(amanha.getDate())}/${p(amanha.getMonth() + 1)}/${amanha.getFullYear()}`;
+      expect(parseDataPt(amanhaTxt)).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });
 
 describe('isoMaisDias', () => {

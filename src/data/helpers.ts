@@ -36,6 +36,13 @@ export function isoInDays(n: number): string {
  * Devolve null se inválida. Por omissão recusa datas futuras — quase tudo o
  * que se regista já aconteceu; `permitirFuturo` abre a exceção para os campos
  * que são futuros por definição, como a data prevista do parto.
+ *
+ * "Futuro" é medido em DIAS, não em horas: a data fica ao meio-dia, e comparar
+ * esse meio-dia com o instante atual recusava a data de HOJE a quem a
+ * escrevesse de manhã. Era o caso mais comum de todos — o campo "Marcar saída"
+ * já vem preenchido com hoje, e antes das 12h o criador carregava em Confirmar
+ * e recebia "Data inválida" por cima de uma data correta, sem nada que
+ * indicasse o que fazer a seguir.
  */
 export function parseDataPt(
   texto: string,
@@ -49,8 +56,15 @@ export function parseDataPt(
   if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
   const d = new Date(ano, mes - 1, dia, 12, 0, 0);
   if (d.getFullYear() !== ano || d.getMonth() !== mes - 1 || d.getDate() !== dia) return null;
-  if (!opcoes?.permitirFuturo && d.getTime() > Date.now()) return null;
+  if (!opcoes?.permitirFuturo && d.getTime() > fimDeHoje()) return null;
   return d.toISOString();
+}
+
+/** Último instante do dia de hoje, em hora local. */
+function fimDeHoje(): number {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
+  return d.getTime();
 }
 
 /** Data ISO ao meio-dia, `dias` depois de `iso`. Usado para prever o parto. */

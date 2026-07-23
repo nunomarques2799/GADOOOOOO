@@ -610,6 +610,11 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       // sincronização seguinte — o criador via-o sumir e depois ressuscitar.
       const animalRemovido = animaisRef.current.find((a) => a.id === id);
       const eventosRemovidos = eventosRef.current.filter((e) => e.animalId === id);
+      // Também os movimentos imputados: a recusa tem de repor TUDO o que a
+      // cascata local mexeu. Sem isto, o animal voltava ao ecrã mas o dinheiro
+      // que lhe estava imputado ficava órfão até à sincronização seguinte — e
+      // no meio disso a ficha dele mostrava um balanço a menos.
+      const movimentosDesligados = movimentosRef.current.filter((m) => m.animalId === id);
 
       setAnimais((prev) => prev.filter((a) => a.id !== id));
       setEventos((prev) => prev.filter((e) => e.animalId !== id));
@@ -629,6 +634,10 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         if (animalRemovido) setAnimais((prev) => [animalRemovido, ...prev]);
         if (eventosRemovidos.length > 0) setEventos((prev) => [...eventosRemovidos, ...prev]);
+        if (movimentosDesligados.length > 0) {
+          const repor = new Map(movimentosDesligados.map((m) => [m.id, m]));
+          setMovimentos((prev) => prev.map((m) => repor.get(m.id) ?? m));
+        }
         throw e; // quem chamou mostra a razão da recusa
       }
     },
@@ -691,9 +700,21 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       if (receita) setMovimentos((prev) => [receita, ...prev]);
 
       if (usaSupabase) {
-        await empurrar({ op: 'upsert', entidade: 'animal', dados: atualizado });
-        await empurrar({ op: 'upsert', entidade: 'evento', dados: evento });
-        if (receita) await empurrar({ op: 'upsert', entidade: 'movimento', dados: receita });
+        try {
+          await empurrar({ op: 'upsert', entidade: 'animal', dados: atualizado });
+          await empurrar({ op: 'upsert', entidade: 'evento', dados: evento });
+          if (receita) await empurrar({ op: 'upsert', entidade: 'movimento', dados: receita });
+        } catch (e) {
+          // Uma saída são três escritas ligadas entre si. Se a primeira for
+          // recusada, as outras nem chegam a ser tentadas — e sem esta
+          // reposição o ecrã ficava a mostrar o animal como vendido, com um
+          // evento de Venda e uma receita que não existem em lado nenhum. O
+          // criador via o erro e, por trás dele, tudo com ar de gravado.
+          setAnimais((prev) => prev.map((a) => (a.id === id ? atual : a)));
+          setEventos((prev) => prev.filter((ev) => ev.id !== evento.id));
+          if (receita) setMovimentos((prev) => prev.filter((m) => m.id !== receita.id));
+          throw e;
+        }
       } else {
         gravarSqlite((db) => {
           guardarAnimal(db, atualizado);

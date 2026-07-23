@@ -29,14 +29,21 @@ export default function InicioScreen() {
     pendentesSinc,
   } = useGado();
 
-  // Superadmin não gere gado — vai direto para o painel de clientes.
-  if (isSuperadmin) return <Redirect href="/(superadmin)/clientes" />;
-
   // Duas condições, uma só resposta (ver `useFinancas`): a gestão económica
   // tem de estar ligada na conta E esta pessoa tem de a poder consultar.
   // Mostrar a soma do que a RLS lhe deixou ver daria um número parecido com o
   // saldo da exploração, e completamente errado.
+  //
+  // ACIMA do desvio do superadmin de propósito: é um hook, e um hook não pode
+  // ficar depois de um `return` condicional. O `isSuperadmin` chega da cache e
+  // é corrigido pelo servidor logo a seguir; no render em que passasse de false
+  // a true, o React contava menos hooks do que da vez anterior e derrubava a
+  // app com "Rendered fewer hooks than expected".
   const { podeVerFinancas, podeRegistarDespesa } = useFinancas();
+
+  // Superadmin não gere gado — vai direto para o painel de clientes.
+  if (isSuperadmin) return <Redirect href="/(superadmin)/clientes" />;
+
   const fin = resumoFinanceiro(eventos, movimentos);
   const temFinancas = podeVerFinancas && fin.movimentos.length > 0;
   const saldoPositivo = fin.saldo >= 0;

@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
+import { avisar } from '@/data/avisos';
 import { especieMeta } from '@/data/constants';
 import { formatDataPt, isoDaysAgo, isoInDays, paraEuro } from '@/data/helpers';
 import { useGado } from '@/data/store';
@@ -90,6 +91,7 @@ export default function NovoEventoScreen() {
 
   // Comum
   const [notas, setNotas] = useState('');
+  const [aGuardar, setAGuardar] = useState(false);
 
   const data = isoDaysAgo(diasAtras);
   const animal = animalId ? animalById(animalId) : undefined;
@@ -128,8 +130,8 @@ export default function NovoEventoScreen() {
     return `GMD ${gmd.toFixed(2).replace('.', ',')} kg/dia`;
   }
 
-  function guardar() {
-    if (!animalId || !valido) return;
+  async function guardar() {
+    if (!animalId || !valido || aGuardar) return;
 
     let descricao = '';
     const partes: string[] = [];
@@ -169,17 +171,29 @@ export default function NovoEventoScreen() {
       if (Number.isFinite(n) && n > 0) valor = n;
     }
 
-    addEvento({ animalId, tipo, data, descricao, detalhe, valor });
+    // Esperar pela gravação antes de sair do ecrã. Sem o `await` e sem o
+    // `catch`, uma recusa do servidor (RLS, conflito de versão) ficava numa
+    // promessa sem dono: a app navegava para a ficha do animal como se tivesse
+    // gravado, e o registo sanitário — uma vacina, um medicamento com intervalo
+    // de segurança — desaparecia sem ninguém saber. Offline não muda nada: aí a
+    // escrita entra na fila e isto devolve logo sem erro.
+    setAGuardar(true);
+    try {
+      await addEvento({ animalId, tipo, data, descricao, detalhe, valor });
 
-    // Efeitos secundários no animal
-    if (tipo === 'Medicamento' && seguranca > 0) {
-      updateAnimal(animalId, { fimIntervaloSeguranca: isoInDays(seguranca) });
-    }
-    if (tipo === 'Parto' && animal?.dataPrevistaParto) {
-      updateAnimal(animalId, { dataPrevistaParto: undefined });
-    }
+      // Efeitos secundários no animal
+      if (tipo === 'Medicamento' && seguranca > 0) {
+        await updateAnimal(animalId, { fimIntervaloSeguranca: isoInDays(seguranca) });
+      }
+      if (tipo === 'Parto' && animal?.dataPrevistaParto) {
+        await updateAnimal(animalId, { dataPrevistaParto: undefined });
+      }
 
-    router.replace(`/animal/${animalId}`);
+      router.replace(`/animal/${animalId}`);
+    } catch (e) {
+      avisar('Não foi possível guardar', e instanceof Error ? e.message : String(e));
+      setAGuardar(false);
+    }
   }
 
   return (
@@ -408,7 +422,12 @@ export default function NovoEventoScreen() {
           },
           shadow.lg,
         ]}>
-        <Button label="Guardar registo" icon="check" onPress={guardar} disabled={!valido} />
+        <Button
+          label={aGuardar ? 'A guardar…' : 'Guardar registo'}
+          icon="check"
+          onPress={guardar}
+          disabled={!valido || aGuardar}
+        />
       </View>
     </View>
   );

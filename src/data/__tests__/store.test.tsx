@@ -145,6 +145,32 @@ async function montar(): Promise<{ ctx: () => Ctx; arvore: ReactTestRenderer }> 
   return { ctx: () => atual as Ctx, arvore };
 }
 
+/**
+ * Corre uma ação que se espera falhar e devolve o erro que ela lançou.
+ *
+ * A rejeição TEM de ser apanhada aqui dentro, antes de sair do `act`. Deixá-la
+ * escapar — `await expect(act(...)).rejects.toThrow(...)` — faz o `act`
+ * propagar o erro sem descarregar as atualizações de estado que ficaram em
+ * fila, e a sonda continua a devolver o contexto de ANTES da ação. Os testes
+ * de reposição escritos assim passavam com a reposição removida do store:
+ * comparavam o estado inicial consigo próprio e davam por boa uma rede de
+ * segurança que não estava lá.
+ */
+async function falhaCom(acao: () => Promise<unknown>): Promise<Error> {
+  let capturado: unknown = null;
+  await act(async () => {
+    try {
+      await acao();
+    } catch (e) {
+      capturado = e;
+    }
+  });
+  if (!(capturado instanceof Error)) {
+    throw new Error('esperava-se que a ação falhasse, e não falhou');
+  }
+  return capturado;
+}
+
 function animal(id: string, patch: Partial<Animal> = {}): Animal {
   return {
     id,
@@ -240,11 +266,8 @@ describe('escritas otimistas', () => {
     const { ctx } = await montar();
     mockServidor.erroSeguinte = 'new row violates row-level security policy';
 
-    await expect(
-      act(async () => {
-        await ctx().addAnimal(animal('recusado') as Omit<Animal, 'id'>);
-      }),
-    ).rejects.toThrow(/row-level security/);
+    const erro = await falhaCom(() => ctx().addAnimal(animal('recusado') as Omit<Animal, 'id'>));
+    expect(erro.message).toMatch(/row-level security/);
 
     expect(lerOutbox()).toEqual([]);
   });
@@ -365,14 +388,45 @@ describe('sincronização da fila', () => {
     expect(ctx().animais).toHaveLength(1);
 
     mockServidor.erroSeguinte = 'Este animal tem 1 registo(s) no histórico.';
-    await expect(
-      act(async () => {
-        await ctx().deleteAnimal('a1');
-      }),
-    ).rejects.toThrow(/histórico/);
+    const erro = await falhaCom(() => ctx().deleteAnimal('a1'));
+    expect(erro.message).toMatch(/histórico/);
 
     expect(ctx().animais.map((a) => a.id)).toEqual(['a1']);
     expect(ctx().eventos.map((e) => e.id)).toEqual(['e1']);
+  });
+
+  it('uma eliminação recusada devolve o dinheiro imputado ao animal', async () => {
+    // A cascata local desliga os movimentos do animal (espelha o `on delete
+    // set null` do servidor). Quando a eliminação é recusada, esse desligar
+    // tem de ser desfeito com o resto: sem isso o animal voltava ao ecrã mas
+    // sem o balanço dele — a despesa continuava lá, já sem dono.
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [],
+      animais: [animal('a1')],
+      eventos: [],
+      movimentos: [
+        {
+          id: 'm1',
+          exploracaoId: 'exp-1',
+          animalId: 'a1',
+          direcao: 'despesa',
+          categoria: 'Sanidade',
+          valor: 45,
+          data: '2026-01-01',
+          descricao: 'Vacina',
+        },
+      ],
+    };
+    const { ctx } = await montar();
+    expect(ctx().movimentosByAnimal('a1')).toHaveLength(1);
+
+    mockServidor.erroSeguinte = 'Este animal é mãe ou pai de 1 animais registados.';
+    const erro = await falhaCom(() => ctx().deleteAnimal('a1'));
+    expect(erro.message).toMatch(/mãe ou pai/);
+
+    expect(ctx().animais.map((a) => a.id)).toEqual(['a1']);
+    expect(ctx().movimentosByAnimal('a1').map((m) => m.id)).toEqual(['m1']);
   });
 
   it('limpar a lista de falhadas esvazia-a', async () => {
@@ -511,6 +565,26 @@ describe('saída do efetivo', () => {
     expect(ctx().animaisByExploracao('exp-1')).toEqual([]);
     expect(ctx().animaisByExploracaoIncluindoSaidos('exp-1')).toHaveLength(1);
     expect(ctx().alertas.filter((al) => al.animalId === 'a1')).toEqual([]);
+  });
+
+  it('uma saída recusada não deixa venda nem receita no ecrã', async () => {
+    // Uma saída são três escritas ligadas. Se a do animal for recusada, as
+    // outras duas nem são tentadas — e o que ficava no ecrã era o pior dos
+    // mundos: o erro à frente e, por trás dele, o animal vendido, o evento de
+    // Venda e uma receita de 850 € que não existem em servidor nenhum.
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Não tem permissão para alterar este registo.';
+    const erro = await falhaCom(() =>
+      ctx().marcarSaida('a1', 'vendido', new Date().toISOString(), 'Feira', 850),
+    );
+    expect(erro.message).toMatch(/permissão/);
+
+    const a = ctx().animalById('a1')!;
+    expect(a.estado).toBeUndefined();
+    expect(a.terrenoId).toBe('t1'); // continua no terreno onde estava
+    expect(ctx().eventosByAnimal('a1')).toEqual([]);
+    expect(ctx().movimentosByAnimal('a1')).toEqual([]);
   });
 });
 

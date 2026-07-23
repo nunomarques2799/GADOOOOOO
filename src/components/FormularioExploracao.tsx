@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, ScrollView, TextInput, View } from 'react-native';
+import { ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Header, Icon, type IconName, Text } from '@/components/ui';
+import { avisar, confirmar } from '@/data/avisos';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import type { Exploracao } from '@/data/types';
@@ -59,23 +60,24 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
 
   function confirmarEliminar() {
     if (!exploracao) return;
-    const executar = () => {
-      deleteExploracao(exploracao.id);
-      router.replace('/exploracoes');
-    };
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(`Eliminar a exploração "${exploracao.nome}" e todos os terrenos/animais associados?`)) {
-        executar();
+    // Sair do ecrã antes de saber o resultado escondia as recusas: a app ia
+    // para a lista de explorações e o criador ficava a pensar que tinha
+    // eliminado. Aqui pesa mais do que noutro sítio qualquer — a cascata local
+    // já apagou terrenos, animais e histórico do ecrã, e se o servidor recusar
+    // é a sincronização seguinte que os traz de volta, sem explicação nenhuma.
+    const executar = async () => {
+      try {
+        await deleteExploracao(exploracao.id);
+        router.replace('/exploracoes');
+      } catch (e) {
+        avisar('Não foi possível eliminar', e instanceof Error ? e.message : String(e));
       }
-      return;
-    }
-    Alert.alert(
+    };
+    confirmar(
       'Eliminar exploração',
       `Vai eliminar "${exploracao.nome}", os seus terrenos, animais e histórico. Esta ação não pode ser desfeita.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: executar },
-      ],
+      () => void executar(),
+      { rotuloConfirmar: 'Eliminar', destrutivo: true },
     );
   }
 
