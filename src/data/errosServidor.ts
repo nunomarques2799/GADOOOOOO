@@ -26,13 +26,18 @@ export function traduzErroServidor(msg: string): string {
 
   // ---- RLS: a regra do servidor recusou ----
   if (m.includes('row-level security') || m.includes('row level security')) {
-    // Criar exploração é o único caso em que a recusa quer dizer "conta por
-    // aprovar" — a política `exploracao_ativo_insert` exige um perfil ativo, e
-    // é a porta por onde passa qualquer cliente novo.
+    // O servidor diz "recusado" e não diz porquê. Aqui só se pode dizer o que
+    // se sabe: houve recusa e estas são as duas razões possíveis. A primeira
+    // versão desta mensagem afirmava que a conta estava por aprovar — e foi
+    // mostrada a uma conta aprovada, a mandá-la falar com um administrador que
+    // não tinha nada para fazer. Uma mensagem errada custa mais do que uma
+    // mensagem vaga. Quem consegue distinguir os dois casos é `explicarRecusa`
+    // no `supabaseRepo.ts`, que vai perguntar ao servidor quem somos.
     if (m.includes('"exploracao"')) {
       return (
-        'A sua conta ainda não foi aprovada para criar explorações. ' +
-        'Fale com o administrador — assim que aprovar, é só tentar de novo.'
+        'O servidor recusou criar a exploração. ' +
+        'Ou a sessão expirou — feche e volte a entrar — ou a conta ainda não ' +
+        'está aprovada para criar explorações.'
       );
     }
     return (

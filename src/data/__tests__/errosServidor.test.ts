@@ -3,11 +3,15 @@ import { describe, expect, it } from '@jest/globals';
 import { traduzErroServidor } from '../errosServidor';
 
 describe('traduzErroServidor', () => {
-  it('explica a recusa ao criar exploração como conta por aprovar', () => {
+  it('na recusa ao criar exploração dá as duas causas, sem escolher uma', () => {
     const traduzido = traduzErroServidor(
       'new row violates row-level security policy for table "exploracao"',
     );
-    expect(traduzido).toContain('não foi aprovada');
+    // Ambas as saídas têm de estar lá: a primeira versão desta mensagem
+    // afirmava a aprovação em falta e foi mostrada a uma conta APROVADA, a
+    // mandá-la falar com um administrador que nada tinha para fazer.
+    expect(traduzido).toContain('sessão expirou');
+    expect(traduzido).toContain('aprovada');
     // O que o criador não pode ver é a mensagem do Postgres.
     expect(traduzido.toLowerCase()).not.toContain('row-level security');
   });

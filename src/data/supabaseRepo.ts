@@ -374,6 +374,25 @@ export async function carregarTudoSupabase(): Promise<Snapshot> {
  * permissão), por isso, quando nada é gravado, vamos ler a linha para
  * perceber qual dos dois casos é.
  */
+/**
+ * Uma recusa da RLS pode ser falta de permissão — ou falta de sessão.
+ *
+ * As duas chegam com a mesma frase: as políticas comparam `auth.uid()` com o
+ * dono da linha, e sem sessão válida `auth.uid()` é NULL, o que faz a condição
+ * dar falso exatamente como daria a um intruso. A diferença importa muito para
+ * quem está do outro lado: uma resolve-se voltando a entrar, a outra só com
+ * outra pessoa a aprovar. Como o servidor não a diz, pergunta-se-lhe quem
+ * somos — só quando já houve recusa, para não custar um pedido a cada gravação.
+ */
+export async function explicarRecusa(msg: string): Promise<string> {
+  if (!supabase || !/row.level security/i.test(msg)) return traduzErroServidor(msg);
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    return 'A sua sessão terminou. Volte a entrar na conta e tente de novo — a alteração não se perdeu.';
+  }
+  return traduzErroServidor(msg);
+}
+
 async function gravarComVersao(
   tabela: 'exploracao' | 'terreno' | 'animal' | 'evento' | 'movimento',
   id: string,
@@ -386,7 +405,7 @@ async function gravarComVersao(
   // aparelho e ainda não sincronizou. Não há outro autor com quem colidir.
   if (!versaoConhecida) {
     const { error } = await supabase.from(tabela).upsert(payload);
-    return error ? traduzErroServidor(error.message) : null;
+    return error ? await explicarRecusa(error.message) : null;
   }
 
   const { data, error } = await supabase
@@ -395,7 +414,7 @@ async function gravarComVersao(
     .eq('id', id)
     .lte('updated_at', versaoConhecida)
     .select('id');
-  if (error) return traduzErroServidor(error.message);
+  if (error) return await explicarRecusa(error.message);
   if (data && data.length > 0) return null;
 
   // Nada foi gravado — descobrir porquê.

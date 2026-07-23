@@ -5,8 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
-import { traduzErroServidor } from '@/data/errosServidor';
 import { useMembros } from '@/data/membros';
+import { explicarRecusa } from '@/data/supabaseRepo';
 import { supabase } from '@/data/supabase';
 import { colors, radii, sizes, spacing } from '@/theme';
 
@@ -64,7 +64,7 @@ export function EcraPendente() {
     });
     setAGravar(false);
     if (error) {
-      setErroCriar(traduzErroServidor(error.message));
+      setErroCriar(await explicarRecusa(error.message));
       return;
     }
     await recarregar();
