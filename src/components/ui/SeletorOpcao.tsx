@@ -71,44 +71,66 @@ export function SeletorOpcao({
 
   return (
     <>
-      <Pressable
-        onPress={() => setAberto(true)}
-        accessibilityRole="button"
-        accessibilityLabel={valor ? `${titulo}: ${valor}` : `Escolher ${titulo.toLowerCase()}`}
-        style={({ pressed }) => [
-          {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: spacing.xs,
-            minHeight: sizes.input,
-            borderRadius: radii.md,
-            borderWidth: 1.5,
-            borderColor: colors.border,
-            backgroundColor: colors.surface,
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.xs,
-          },
-          pressed && { opacity: 0.8 },
-        ]}>
-        {icon ? <Icon name={icon} size="md" color={colors.textMuted} /> : null}
-        <Text
-          variant="body"
-          color={valor ? colors.text : colors.textMuted}
-          style={{ flex: 1, fontFamily: 'Nunito_600SemiBold' }}>
-          {valor ?? placeholder}
-        </Text>
+      {/*
+        A moldura é uma View e os dois botões são IRMÃOS lá dentro. Parece
+        rebuscado ao lado de um Pressable que contivesse o outro, e é de
+        propósito: na web, `accessibilityRole="button"` vira um `<button>`, e um
+        `<button>` dentro de outro é HTML inválido — o React recusa-o com
+        "cannot contain a nested <button>". Os leitores de ecrã também não
+        sabem anunciar dois botões sobrepostos.
+      */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          minHeight: sizes.input,
+          borderRadius: radii.md,
+          borderWidth: 1.5,
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+        }}>
+        <Pressable
+          onPress={() => setAberto(true)}
+          accessibilityRole="button"
+          accessibilityLabel={valor ? `${titulo}: ${valor}` : `Escolher ${titulo.toLowerCase()}`}
+          style={({ pressed }) => [
+            {
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.xs,
+              alignSelf: 'stretch',
+              paddingLeft: spacing.md,
+              // Sem valor, o campo vai até ao fim e leva o chevron consigo; com
+              // valor, o botão de limpar ocupa esse canto.
+              paddingRight: valor ? spacing.xs : spacing.md,
+              paddingVertical: spacing.xs,
+            },
+            pressed && { opacity: 0.8 },
+          ]}>
+          {icon ? <Icon name={icon} size="md" color={colors.textMuted} /> : null}
+          <Text
+            variant="body"
+            color={valor ? colors.text : colors.textMuted}
+            style={{ flex: 1, fontFamily: 'Nunito_600SemiBold' }}>
+            {valor ?? placeholder}
+          </Text>
+          {valor ? null : <Icon name="chevron-down" size="md" color={colors.textMuted} />}
+        </Pressable>
         {valor ? (
           <Pressable
             onPress={() => onEscolher(undefined)}
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel={`Limpar ${titulo.toLowerCase()}`}>
+            accessibilityLabel={`Limpar ${titulo.toLowerCase()}`}
+            style={({ pressed }) => [
+              { alignSelf: 'stretch', justifyContent: 'center', paddingHorizontal: spacing.md },
+              pressed && { opacity: 0.6 },
+            ]}>
             <Icon name="close-circle" size="md" color={colors.textMuted} />
           </Pressable>
-        ) : (
-          <Icon name="chevron-down" size="md" color={colors.textMuted} />
-        )}
-      </Pressable>
+        ) : null}
+      </View>
 
       <Modal
         visible={aberto}
