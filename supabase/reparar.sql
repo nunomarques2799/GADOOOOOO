@@ -78,6 +78,14 @@ update public.perfil
    set estado = 'ativo'
  where id = (select id from auth.users where lower(email) = lower('escrever@aqui.pt'));
 
+-- Variante SÓ PARA O PROJETO DE TESTES: ativa todas as contas de uma vez.
+-- Poupa o passo de acertar o email — que é onde isto costuma falhar em
+-- silêncio, porque um email que não existe faz o UPDATE mexer em zero linhas e
+-- não dá erro nenhum. Confirmar a faixa "TESTES" na app antes de correr; em
+-- produção, aprovar às cegas era dar a plataforma a quem se registou.
+--
+--   update public.perfil set estado = 'ativo' where estado <> 'ativo';
+
 
 -- ------------------------------------------------------------------
 -- 4. Recarregar a cache de schema do PostgREST

@@ -9,6 +9,7 @@
  * fica centralizado aqui para os componentes ficarem só com os tipos.
  */
 
+import { traduzErroServidor } from './errosServidor';
 import { supabase } from './supabase';
 import type {
   Animal,
@@ -223,14 +224,14 @@ const exploracaoPayload = (e: Exploracao) => ({
 export async function definirFinancasAtivas(ativas: boolean): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.rpc('definir_financas_ativas', { ativas });
-  return error?.message ?? null;
+  return error ? traduzErroServidor(error.message) : null;
 }
 
 /** Liga ou desliga o registo por casa/número em toda a conta. Erro ou null. */
 export async function definirCasaAtiva(ativa: boolean): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.rpc('definir_casa_ativa', { ativa });
-  return error?.message ?? null;
+  return error ? traduzErroServidor(error.message) : null;
 }
 
 const terrenoPayload = (t: Terreno) => ({
@@ -333,7 +334,7 @@ export async function carregarTudoSupabase(): Promise<Snapshot> {
   // (estar offline) devolveria tudo vazio e apagaria a cache local. Quem chama
   // trata o erro mantendo os dados que já tem em cache.
   const erro = expRes.error ?? terRes.error ?? aniRes.error ?? evtRes.error;
-  if (erro) throw new Error(erro.message);
+  if (erro) throw new Error(traduzErroServidor(erro.message));
 
   // A tabela `movimento` nasceu depois da app estar publicada, e a migração
   // (`supabase/schema_financas.sql`) é corrida à mão. Entre a nova versão
@@ -385,7 +386,7 @@ async function gravarComVersao(
   // aparelho e ainda não sincronizou. Não há outro autor com quem colidir.
   if (!versaoConhecida) {
     const { error } = await supabase.from(tabela).upsert(payload);
-    return error?.message ?? null;
+    return error ? traduzErroServidor(error.message) : null;
   }
 
   const { data, error } = await supabase
@@ -394,7 +395,7 @@ async function gravarComVersao(
     .eq('id', id)
     .lte('updated_at', versaoConhecida)
     .select('id');
-  if (error) return error.message;
+  if (error) return traduzErroServidor(error.message);
   if (data && data.length > 0) return null;
 
   // Nada foi gravado — descobrir porquê.
@@ -403,7 +404,7 @@ async function gravarComVersao(
     .select('updated_at')
     .eq('id', id)
     .maybeSingle();
-  if (erroLeitura) return erroLeitura.message;
+  if (erroLeitura) return traduzErroServidor(erroLeitura.message);
 
   if (!atual) {
     // Ou foi eliminada por outra pessoa, ou a RLS nem sequer no-la deixa ver.
@@ -432,7 +433,7 @@ export async function upsertExploracaoSupabase(e: Exploracao): Promise<string | 
 export async function eliminarExploracaoSupabase(id: string): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.from('exploracao').delete().eq('id', id);
-  return error?.message ?? null;
+  return error ? traduzErroServidor(error.message) : null;
 }
 
 export async function upsertTerrenoSupabase(t: Terreno): Promise<string | null> {
@@ -442,7 +443,7 @@ export async function upsertTerrenoSupabase(t: Terreno): Promise<string | null> 
 export async function eliminarTerrenoSupabase(id: string): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.from('terreno').delete().eq('id', id);
-  return error?.message ?? null;
+  return error ? traduzErroServidor(error.message) : null;
 }
 
 export async function upsertAnimalSupabase(a: Animal): Promise<string | null> {
@@ -458,7 +459,7 @@ export async function upsertAnimalSupabase(a: Animal): Promise<string | null> {
 export async function eliminarAnimalSupabase(id: string): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.rpc('eliminar_animal', { animal_id: id });
-  return error?.message ?? null;
+  return error ? traduzErroServidor(error.message) : null;
 }
 
 export async function upsertEventoSupabase(e: Evento): Promise<string | null> {
@@ -472,5 +473,5 @@ export async function upsertMovimentoSupabase(m: Movimento): Promise<string | nu
 export async function eliminarMovimentoSupabase(id: string): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.from('movimento').delete().eq('id', id);
-  return error?.message ?? null;
+  return error ? traduzErroServidor(error.message) : null;
 }
