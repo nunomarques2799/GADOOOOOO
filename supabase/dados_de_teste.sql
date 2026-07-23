@@ -102,11 +102,30 @@ begin
   -- ----------------------------------------------------------------
   -- Duas, de propósito: com uma só, os filtros por exploração e a coluna da
   -- exploração no ecrã Terrenos nunca chegam a aparecer.
-  -- O trigger `on_exploracao_created` trata do resto — mete o dono como admin
-  -- e herda as opções do perfil que se acabaram de ligar acima.
   insert into public.exploracao (id, user_id, nome, marca_exploracao, nif_detentor, localizacao) values
     (exp1, uid, 'Quinta da Ribeira do Sol', 'PT 61 200 1120', '501234567', 'Idanha-a-Nova, Castelo Branco'),
     (exp2, uid, 'Cabeço da Vinha',          'PT 61 980 0224', '501234567', 'Penamacor, Castelo Branco');
+
+  -- Dono admin das duas.
+  --
+  -- Isto É o que faz as explorações APARECEREM: a RLS de leitura é
+  -- `membro_de(id)` (ver `exploracao_membros_read` em schema_roles.sql), que
+  -- pergunta por uma linha em `membro_exploracao` — não pelo `user_id` da
+  -- exploração. Sem ela, as linhas existem na base e a app não vê nenhuma.
+  --
+  -- O trigger `on_exploracao_created` já devia ter feito isto. Faz-se à mão na
+  -- mesma porque depender dele era pôr a funcionar-ou-não do script à mercê de
+  -- qual foi o último ficheiro de schema a redefinir o trigger — e a falha não
+  -- dá erro nenhum, dá uma app vazia, que é muito mais difícil de diagnosticar.
+  insert into public.membro_exploracao (user_id, exploracao_id, role) values
+    (uid, exp1, 'admin'),
+    (uid, exp2, 'admin')
+  on conflict (user_id, exploracao_id) do update set role = 'admin';
+
+  -- O mesmo para as opções que o trigger devia ter herdado do perfil.
+  update public.exploracao
+     set financas_ativas = true, casa_ativa = true
+   where id in (exp1, exp2);
 
   -- ----------------------------------------------------------------
   -- 4. Terrenos
