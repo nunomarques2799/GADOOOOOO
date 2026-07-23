@@ -47,6 +47,49 @@ select column_name
 
 
 -- ------------------------------------------------------------------
+-- 0b. DIAGNÓSTICO — quando o estado está 'ativo' e a RLS recusa à mesma
+-- ------------------------------------------------------------------
+-- O SQL Editor corre como `postgres`, que passa por cima da RLS: um INSERT
+-- feito aqui à mão funciona sempre e não prova nada. Estes dois blocos são a
+-- forma de ver o que a app vê.
+
+-- Que políticas existem MESMO nesta base. A de INSERT tem de ser a
+-- `exploracao_ativo_insert`. Se aparecer uma `... for all` a exigir
+-- `role_em(id) = 'admin'`, está encontrado: ao criar a exploração ainda não há
+-- linha em `membro_exploracao` (é o trigger que a cria, logo A SEGUIR ao
+-- insert), portanto essa política recusa sempre a primeira exploração. Sinal
+-- de que o `schema_roles.sql` desta base é anterior ao do repositório —
+-- reaplicá-lo resolve, e é idempotente.
+select policyname, cmd,
+       coalesce(qual, '—') as using_expr,
+       coalesce(with_check, '—') as with_check
+  from pg_policies
+ where schemaname = 'public' and tablename = 'exploracao'
+ order by cmd, policyname;
+
+-- Repetir o INSERT exatamente como a app o faz, na pele da conta indicada.
+-- Faz `rollback` no fim: não deixa nada para trás, mesmo quando corre bem.
+begin;
+  select set_config(
+    'request.jwt.claims',
+    json_build_object(
+      'sub', (select id from auth.users where lower(email) = lower('escrever@aqui.pt')),
+      'role', 'authenticated'
+    )::text,
+    true) as claims_definidas;
+  set local role authenticated;
+
+  -- As duas metades da política, em separado. Se `perfil_ativo` vier false com
+  -- o estado a dizer 'ativo', a função é que está velha (reaplicar o
+  -- `schema_roles.sql`); se `uid` vier NULL, o email acima não existe.
+  select auth.uid() as uid, public.perfil_ativo() as perfil_ativo;
+
+  insert into public.exploracao (id, nome, marca_exploracao, nif_detentor)
+  values ('rls-teste', 'Teste RLS', 'XX0000', '000000000');
+rollback;
+
+
+-- ------------------------------------------------------------------
 -- 1. Perfis em falta — contas criadas antes de o trigger existir
 -- ------------------------------------------------------------------
 -- Sem linha em `perfil`, a conta entra na app e não consegue escrever nada:
