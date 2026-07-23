@@ -14,10 +14,17 @@ export default function ExploracoesScreen() {
   const router = useRouter();
   const desktop = useDesktop();
   const { exploracoes } = useGado();
-  const { estadoPerfil, isSuperadmin } = useMembros();
+  const { estadoPerfil } = useMembros();
   // Só clientes aprovados (perfil ativo) podem criar explorações. Membros por
   // convite (trabalhador/veterinário) veem as suas mas não criam novas.
-  const podeCriar = estadoPerfil === 'ativo' || isSuperadmin;
+  //
+  // Ser superadmin não conta aqui, ao contrário do resto da app: a política
+  // `exploracao_ativo_insert` exige `perfil_ativo()` e não abre exceção a
+  // ninguém. Enquanto isto dizia `|| isSuperadmin`, uma conta superadmin ainda
+  // por aprovar via o botão "Nova" e recebia, ao gravar, um "new row violates
+  // row-level security policy" em cru — o erro que este ficheiro existe para
+  // evitar mostrar. Ver `permissoes.ts`: a UI espelha a RLS, não a contraria.
+  const podeCriar = estadoPerfil === 'ativo';
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

@@ -28,6 +28,7 @@ Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
 | 9 | `schema_eliminar.sql` | Só se elimina animal sem eventos nem crias. | anteriores |
 | 10 | `schema_financas_opcional.sql` | Finanças passam a opt-in por cliente. | **8** |
 | 11 | `schema_animal_campos.sql` | Casa/número e finalidade do animal; opt-in da casa. | **10** |
+| 12 | `schema_notas.sql` | Notas pessoais (tabela `nota`, por utilizador). | 1 |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 
@@ -54,7 +55,7 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 powershell scripts/gerar-schema-completo.ps1
 ```
 
-Isso gera `supabase/_completo.sql` com os 11 ficheiros pela ordem certa. Colar
+Isso gera `supabase/_completo.sql` com os 12 ficheiros pela ordem certa. Colar
 **tudo de uma vez** no *SQL Editor* → *Run*.
 
 Colar tudo junto é mais seguro do que ficheiro a ficheiro, ao contrário do que
@@ -83,6 +84,19 @@ assunto.** Ver [`../AMBIENTES.md`](../AMBIENTES.md).
 3. **Backup de produção**: `powershell scripts/backup.ps1 -Ambiente prod`.
 4. Só então aplicar em produção.
 5. Acrescentar a linha nova a esta tabela, com as dependências.
+
+Um ficheiro que acrescente **colunas** deve terminar com `notify pgrst, 'reload
+schema';`. A API do Supabase serve-se de uma cópia em memória do schema, e
+enquanto ela estiver velha a app recebe `Could not find the 'x' column of 'y'
+in the schema cache` — o erro diz "não existe", a coluna existe, e não há nada
+no SQL que sugira onde procurar.
+
+## Quando a base está feita e a app dá erro à mesma
+
+[`reparar.sql`](reparar.sql) — não é schema (não entra no `ordem.txt`), são as
+correções ao *estado* dos dados: perfis em falta, contas por aprovar que não
+conseguem criar explorações, e o recarregar da cache acima. Começa pelo bloco
+de diagnóstico.
 
 ## Porque não `supabase db push` / migrations da CLI
 

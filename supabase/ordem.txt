@@ -16,3 +16,4 @@ schema_financas.sql
 schema_eliminar.sql
 schema_financas_opcional.sql
 schema_animal_campos.sql
+schema_notas.sql

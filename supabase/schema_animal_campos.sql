@@ -140,6 +140,18 @@ create trigger on_exploracao_created
 
 
 -- ------------------------------------------------------------------
+-- 5. Avisar a API de que há colunas novas
+-- ------------------------------------------------------------------
+-- O PostgREST (a API REST do Supabase) trabalha sobre uma cópia em memória da
+-- lista de tabelas e colunas. Enquanto essa cópia não se atualizar, gravar um
+-- animal falha com "Could not find the 'casa' column of 'animal' in the schema
+-- cache" — a coluna já existe, quem ainda não sabe dela é a API. Costuma
+-- recarregar sozinha logo a seguir ao DDL, mas não é garantido, e o erro que
+-- dá entretanto não se parece nada com a sua causa.
+notify pgrst, 'reload schema';
+
+
+-- ------------------------------------------------------------------
 -- VERIFICAR
 -- ------------------------------------------------------------------
 -- As colunas existem e estão vazias:

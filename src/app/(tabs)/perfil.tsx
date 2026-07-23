@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, Badge, Card, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
-import { avisar, confirmar } from '@/data/avisos';
+import { confirmar } from '@/data/avisos';
 import { useMembros } from '@/data/membros';
 import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
@@ -24,7 +24,7 @@ export default function PerfilScreen() {
   const desktop = useDesktop();
   const router = useRouter();
   const { utilizador, animais, exploracoes, pendentesSinc } = useGado();
-  const { utilizador: conta, sair, configurado, apagarConta } = useAuth();
+  const { utilizador: conta, sair, configurado } = useAuth();
   const { membros, isSuperadmin, estadoPerfil } = useMembros();
 
   /**
@@ -44,21 +44,6 @@ export default function PerfilScreen() {
         'Ligue-se à internet e espere pela sincronização, ou termine sessão à mesma.',
       () => void sair(),
       { rotuloConfirmar: 'Terminar à mesma', destrutivo: true },
-    );
-  }
-
-  function confirmarApagarConta() {
-    const executar = async () => {
-      const erro = await apagarConta();
-      if (erro) avisar('Erro', `Não foi possível apagar a conta: ${erro}`);
-      // Em caso de sucesso, a sessão é limpa e o portão de auth volta ao login.
-    };
-    confirmar(
-      'Apagar a minha conta',
-      'Vai apagar a sua conta e TODOS os dados (explorações, animais, terrenos e histórico). ' +
-        'Esta ação é permanente e não pode ser desfeita. Tem a certeza?',
-      () => void executar(),
-      { rotuloConfirmar: 'Apagar tudo', destrutivo: true },
     );
   }
 
@@ -157,22 +142,20 @@ export default function PerfilScreen() {
               onPress={() => router.push('/conta/editar')}
               last={!configurado}
             />
+            {/*
+              Não há "Apagar a minha conta". Estava aqui, a um toque de distância
+              de "Terminar sessão", e apagava a exploração inteira sem volta —
+              incluindo a de quem tivesse trabalhadores dependentes dela. Quem
+              apaga uma conta é o administrador, a pedido; ver `schema_rgpd.sql`.
+            */}
             {configurado ? (
-              <>
-                <Linha
-                  icon="logout"
-                  label="Terminar sessão"
-                  tint={colors.danger}
-                  onPress={confirmarSair}
-                />
-                <Linha
-                  icon="delete-outline"
-                  label="Apagar a minha conta"
-                  tint={colors.danger}
-                  onPress={confirmarApagarConta}
-                  last
-                />
-              </>
+              <Linha
+                icon="logout"
+                label="Terminar sessão"
+                tint={colors.danger}
+                onPress={confirmarSair}
+                last
+              />
             ) : null}
           </Card>
 
