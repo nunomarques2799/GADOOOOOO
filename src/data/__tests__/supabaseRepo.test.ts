@@ -19,14 +19,19 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
  * devolve; o prefixo `mock` é o que autoriza o jest a referenciá-la dentro da
  * fábrica, que é içada acima dos imports.
  */
+type Erro = { message: string; code?: string } | null;
+
 const mockRespostas: {
-  update: { data: unknown[] | null; error: { message: string } | null };
-  select: { data: unknown; error: { message: string } | null };
-  upsert: { error: { message: string } | null };
+  update: { data: unknown[] | null; error: Erro };
+  select: { data: unknown; error: Erro };
+  insert: { error: Erro };
+  /** Resposta do UPDATE sem `.select()` — o recurso quando o insert duplica. */
+  updateDireto: { error: Erro };
 } = {
   update: { data: [], error: null },
   select: { data: null, error: null },
-  upsert: { error: null },
+  insert: { error: null },
+  updateDireto: { error: null },
 };
 
 const mockChamadas: { tabela: string; op: string; filtros: Record<string, unknown> }[] = [];
@@ -37,10 +42,17 @@ jest.mock('../supabase', () => {
     const filtros: Record<string, unknown> = {};
     const cadeia: Record<string, unknown> = {
       update() { op = 'update'; return cadeia; },
-      upsert() {
-        op = 'upsert';
+      insert() {
+        op = 'insert';
         mockChamadas.push({ tabela, op, filtros });
-        return Promise.resolve(mockRespostas.upsert);
+        return Promise.resolve(mockRespostas.insert);
+      },
+      // Um UPDATE sem `.select()` no fim resolve-se ao ser esperado. É o
+      // recurso do insert duplicado, e sem isto o `await` devolvia a própria
+      // cadeia e o teste passava sem chamada nenhuma ter acontecido.
+      then(resolve: (v: unknown) => void) {
+        mockChamadas.push({ tabela, op, filtros });
+        resolve(mockRespostas.updateDireto);
       },
       select() {
         if (op === 'update') {
@@ -80,22 +92,43 @@ beforeEach(() => {
   mockChamadas.length = 0;
   mockRespostas.update = { data: [], error: null };
   mockRespostas.select = { data: null, error: null };
-  mockRespostas.upsert = { error: null };
+  mockRespostas.insert = { error: null };
+  mockRespostas.updateDireto = { error: null };
 });
 
 describe('gravação sem versão conhecida — registo criado neste aparelho', () => {
-  it('usa upsert, porque não há outro autor com quem colidir', async () => {
+  it('usa INSERT, não upsert — o upsert arrastava as políticas de UPDATE', async () => {
+    // O upsert gera INSERT … ON CONFLICT DO UPDATE, e a política de UPDATE da
+    // exploração exige um papel (`admin`) que só o trigger cria DEPOIS do
+    // insert. Criar a primeira exploração dava 403 com o upsert e passa com o
+    // insert — este teste trava a regressão de voltar a pôr upsert.
     const erro = await upsertAnimalSupabase(animal());
 
     expect(erro).toBeNull();
     expect(mockChamadas).toEqual([
-      expect.objectContaining({ tabela: 'animal', op: 'upsert' }),
+      expect.objectContaining({ tabela: 'animal', op: 'insert' }),
     ]);
   });
 
   it('propaga o erro do servidor tal como veio', async () => {
-    mockRespostas.upsert = { error: { message: 'permission denied for table animal' } };
+    mockRespostas.insert = { error: { message: 'permission denied for table animal' } };
     expect(await upsertAnimalSupabase(animal())).toBe('permission denied for table animal');
+  });
+
+  it('chave duplicada não é erro: a linha já existe, faz UPDATE em vez de gritar', async () => {
+    // Acontece quando a resposta do insert se perdeu (o registo entrou na
+    // mesma) ou a fila offline repetiu a operação. Era o que o upsert absorvia
+    // sozinho — o utilizador via a exploração criada e um aviso vermelho a
+    // dizer que falhou, que é precisamente o que isto corrige.
+    mockRespostas.insert = { error: { message: 'duplicate key value', code: '23505' } };
+
+    const erro = await upsertAnimalSupabase(animal());
+
+    expect(erro).toBeNull();
+    expect(mockChamadas).toEqual([
+      expect.objectContaining({ tabela: 'animal', op: 'insert' }),
+      expect.objectContaining({ tabela: 'animal', op: 'update', filtros: { id: 'a1' } }),
+    ]);
   });
 });
 

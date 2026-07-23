@@ -404,8 +404,23 @@ async function gravarComVersao(
   // Sem versão conhecida, a linha nunca veio do servidor: foi criada neste
   // aparelho e ainda não sincronizou. Não há outro autor com quem colidir.
   if (!versaoConhecida) {
-    const { error } = await supabase.from(tabela).upsert(payload);
-    return error ? await explicarRecusa(error.message) : null;
+    // `insert` e não `upsert`, ao contrário do que aqui esteve. O `upsert` do
+    // PostgREST gera `INSERT … ON CONFLICT DO UPDATE`, e isso arrasta as
+    // políticas de UPDATE para uma linha que ainda não existe. Na `exploracao`
+    // isso é fatal: a política de UPDATE exige `role_em(id) = 'admin'`, e esse
+    // papel só nasce no trigger `handle_new_exploracao`, que corre DEPOIS do
+    // insert. Resultado: criar a primeira exploração levava 403 da RLS, apesar
+    // de a política de INSERT (perfil ativo) estar satisfeita — o mesmo pedido
+    // feito com `insert` passa.
+    const { error } = await supabase.from(tabela).insert(payload);
+    if (!error) return null;
+    // 23505 = chave duplicada. A linha já lá está: ou o pedido anterior chegou
+    // e a resposta é que se perdeu, ou a fila offline repetiu a operação. É o
+    // caso que o `upsert` tratava sozinho, e que se trata aqui à mão para não
+    // ter de o trazer de volta.
+    if (error.code !== '23505') return await explicarRecusa(error.message);
+    const { error: erroUpdate } = await supabase.from(tabela).update(payload).eq('id', id);
+    return erroUpdate ? await explicarRecusa(erroUpdate.message) : null;
   }
 
   const { data, error } = await supabase
