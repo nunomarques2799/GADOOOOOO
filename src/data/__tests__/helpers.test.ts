@@ -8,6 +8,7 @@ import {
   isoDaysAgo,
   isoInDays,
   isoMaisDias,
+  mascaraDataPt,
   parseDataPt,
 } from '../helpers';
 
@@ -75,6 +76,41 @@ describe('parseDataPt', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+describe('mascaraDataPt', () => {
+  it('põe as barras à medida que se escreve', () => {
+    expect(mascaraDataPt('')).toBe('');
+    expect(mascaraDataPt('1')).toBe('1');
+    expect(mascaraDataPt('15')).toBe('15');
+    expect(mascaraDataPt('150')).toBe('15/0');
+    expect(mascaraDataPt('1503')).toBe('15/03');
+    expect(mascaraDataPt('15032')).toBe('15/03/2');
+    expect(mascaraDataPt('15032021')).toBe('15/03/2021');
+  });
+
+  it('nunca deixa uma barra no fim, para o apagar funcionar', () => {
+    // Se a máscara devolvesse "15/" a partir de "15", apagar a barra voltava a
+    // pô-la e a tecla parecia avariada. O que sai daqui volta a entrar aqui.
+    for (const digitos of ['1', '15', '150', '1503', '15032', '150320', '1503202', '15032021']) {
+      const saida = mascaraDataPt(digitos);
+      expect(saida).not.toMatch(/\/$/);
+      expect(mascaraDataPt(saida)).toBe(saida); // idempotente
+    }
+  });
+
+  it('endireita o que vem colado e corta o que sobra', () => {
+    expect(mascaraDataPt('15-03-2021')).toBe('15/03/2021');
+    expect(mascaraDataPt('15.03.2021')).toBe('15/03/2021');
+    expect(mascaraDataPt('15/03/2021999')).toBe('15/03/2021');
+    expect(mascaraDataPt('abc')).toBe('');
+  });
+
+  it('o que a máscara produz é aceite pelo parseDataPt', () => {
+    // As duas peças têm de encaixar: não vale a máscara escrever num formato
+    // que a validação depois recusa.
+    expect(parseDataPt(mascaraDataPt('15032021'))).not.toBeNull();
   });
 });
 

@@ -102,6 +102,18 @@ export function inicializarBd(): SQLiteDatabase {
     db.runSync('UPDATE exploracao SET financasAtivas = 0 WHERE financasAtivas IS NULL');
   }
 
+  // v5 → v6: casa/número e finalidade do animal, e o interruptor do registo
+  // por casa. Fica DESLIGADO nas explorações que já existem, pela mesma razão
+  // que as finanças: é opt-in, e ninguém deve dar de caras com campos novos
+  // que não pediu. Os campos ficam vazios — nada é inventado a partir do nome.
+  if (versao < 6) {
+    garantirColuna(db, 'animal', 'casa', 'TEXT');
+    garantirColuna(db, 'animal', 'numeroCasa', 'TEXT');
+    garantirColuna(db, 'animal', 'finalidade', 'TEXT');
+    garantirColuna(db, 'exploracao', 'casaAtiva', 'INTEGER');
+    db.runSync('UPDATE exploracao SET casaAtiva = 0 WHERE casaAtiva IS NULL');
+  }
+
   if (versao < SCHEMA_VERSION) {
     db.execSync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   }

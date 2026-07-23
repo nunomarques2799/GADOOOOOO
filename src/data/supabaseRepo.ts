@@ -18,6 +18,7 @@ import type {
   EstadoAnimal,
   Evento,
   EventoTipo,
+  Finalidade,
   Exploracao,
   Movimento,
   Sexo,
@@ -57,6 +58,7 @@ type ExploracaoRow = ComUpdatedAt & {
   localizacao?: string | null;
   fotografia?: string | null;
   financas_ativas?: boolean | null;
+  casa_ativa?: boolean | null;
 };
 
 type TerrenoRow = ComUpdatedAt & {
@@ -82,6 +84,9 @@ type AnimalRow = ComUpdatedAt & {
   data_nascimento: string;
   raca?: string | null;
   cor_pelagem?: string | null;
+  casa?: string | null;
+  numero_casa?: string | null;
+  finalidade?: string | null;
   numero_identificacao?: string | null;
   data_identificacao?: string | null;
   tipo_identificacao?: string | null;
@@ -130,6 +135,7 @@ const toExploracao = (r: ExploracaoRow): Exploracao => ({
   localizacao: r.localizacao ?? undefined,
   fotografia: r.fotografia ?? undefined,
   financasAtivas: r.financas_ativas ?? false,
+  casaAtiva: r.casa_ativa ?? false,
 });
 
 const toTerreno = (r: TerrenoRow): Terreno => ({
@@ -157,6 +163,9 @@ const toAnimal = (r: AnimalRow): Animal => ({
   dataNascimento: r.data_nascimento,
   raca: r.raca ?? undefined,
   corPelagem: r.cor_pelagem ?? undefined,
+  casa: r.casa ?? undefined,
+  numeroCasa: r.numero_casa ?? undefined,
+  finalidade: (r.finalidade as Finalidade | null) ?? undefined,
   numeroIdentificacao: r.numero_identificacao ?? undefined,
   dataIdentificacao: r.data_identificacao ?? undefined,
   tipoIdentificacao: r.tipo_identificacao ?? undefined,
@@ -204,16 +213,23 @@ const exploracaoPayload = (e: Exploracao) => ({
   nif_detentor: e.nifDetentor,
   localizacao: e.localizacao ?? null,
   fotografia: e.fotografia ?? null,
-  // `financas_ativas` não vai no payload de propósito: é do servidor, escrita
-  // só pelo RPC `definir_financas_ativas`. Incluí-la aqui fazia com que
+  // `financas_ativas` e `casa_ativa` não vão no payload de propósito: são do
+  // servidor, escritas só pelos RPC respetivos. Incluí-las aqui fazia com que
   // renomear a exploração num aparelho com a cache antiga voltasse a desligar
-  // (ou a ligar) as finanças sem ninguém ter pedido nada.
+  // (ou a ligar) a opção sem ninguém ter pedido nada.
 });
 
 /** Liga ou desliga a gestão económica em toda a conta. Devolve erro ou null. */
 export async function definirFinancasAtivas(ativas: boolean): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.rpc('definir_financas_ativas', { ativas });
+  return error?.message ?? null;
+}
+
+/** Liga ou desliga o registo por casa/número em toda a conta. Erro ou null. */
+export async function definirCasaAtiva(ativa: boolean): Promise<string | null> {
+  if (!supabase) return null;
+  const { error } = await supabase.rpc('definir_casa_ativa', { ativa });
   return error?.message ?? null;
 }
 
@@ -240,6 +256,9 @@ const animalPayload = (a: Animal) => ({
   data_nascimento: a.dataNascimento,
   raca: a.raca ?? null,
   cor_pelagem: a.corPelagem ?? null,
+  casa: a.casa ?? null,
+  numero_casa: a.numeroCasa ?? null,
+  finalidade: a.finalidade ?? null,
   numero_identificacao: a.numeroIdentificacao ?? null,
   data_identificacao: a.dataIdentificacao ?? null,
   tipo_identificacao: a.tipoIdentificacao ?? null,

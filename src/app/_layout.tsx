@@ -161,8 +161,10 @@ export default function RootLayout() {
                   }}>
                   <Stack.Screen name="(tabs)" />
                   <Stack.Screen name="(superadmin)" />
-                  <Stack.Screen name="alertas" />
-                  <Stack.Screen name="financas" />
+                  {/* `alertas` e `financas` mudaram-se para dentro de `(tabs)`
+                      (passaram a separadores). O grupo não entra no caminho, por
+                      isso os URLs `/alertas` e `/financas` continuam os mesmos —
+                      as ligações antigas e a app instalada não partem. */}
                   <Stack.Screen name="animal/[id]" />
                   <Stack.Screen name="animal/novo" options={{ animation: 'slide_from_bottom' }} />
                   <Stack.Screen name="animal/editar/[id]" />
@@ -182,6 +184,7 @@ export default function RootLayout() {
                   <Stack.Screen name="conta/sincronizacao" />
                   <Stack.Screen name="conta/notificacoes" />
                   <Stack.Screen name="conta/financas" />
+                  <Stack.Screen name="conta/casa" />
                   <Stack.Screen name="conta/ajuda" />
                   <Stack.Screen name="inspecionar/exploracao/[id]" />
                   <Stack.Screen name="inspecionar/animal/[id]" />

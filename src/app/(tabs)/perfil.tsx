@@ -1,34 +1,31 @@
 import { useRouter } from 'expo-router';
-import { Linking, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, Badge, Card, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { avisar, confirmar } from '@/data/avisos';
-import {
-  csvAnimais,
-  csvEventos,
-  guardarFicheiro,
-  guardarRelatorio,
-  hojeISO,
-  htmlRelatorioPrazos,
-  imprimirRelatorio,
-} from '@/data/exportar';
+import { useMembros } from '@/data/membros';
+import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
-import { useFinancas } from '@/data/useFinancas';
-import { VERSAO_APP } from '@/data/versao';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
 
-const TITULO_PRAZOS = 'Relatório de prazos — Gestão de Gado';
-
+/**
+ * Quem sou eu nesta app: a conta, os papéis e o que se pode fazer com ela.
+ *
+ * As opções de funcionamento (finanças, casa, notificações, exportações)
+ * mudaram-se para o ecrã Definições. Estavam aqui à mistura, e a lista tinha
+ * crescido ao ponto de "Terminar sessão" vir a seguir a "Exportar CSV" — duas
+ * coisas que não têm nada que ver uma com a outra.
+ */
 export default function PerfilScreen() {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
   const router = useRouter();
-  const { utilizador, animais, eventos, exploracoes, terrenos, alertas, pendentesSinc } = useGado();
+  const { utilizador, animais, exploracoes, pendentesSinc } = useGado();
   const { utilizador: conta, sair, configurado, apagarConta } = useAuth();
-  const { ativas: financasAtivas, podeLigarDesligar: podeLigarFinancas } = useFinancas();
+  const { membros, isSuperadmin, estadoPerfil } = useMembros();
 
   /**
    * Terminar sessão apaga a cache local — incluindo alterações feitas offline
@@ -48,50 +45,6 @@ export default function PerfilScreen() {
       () => void sair(),
       { rotuloConfirmar: 'Terminar à mesma', destrutivo: true },
     );
-  }
-
-  /**
-   * No telemóvel a exportação passa pelo `Share`, que REJEITA quando a folha
-   * de partilha não abre. Sem este `catch`, a promessa ficava sem dono e o
-   * criador carregava no botão e não via nada acontecer — nem ficheiro, nem
-   * explicação. Ver `guardarFicheiro` em `exportar.ts`.
-   */
-  async function exportar(nomeFicheiro: string, conteudo: string) {
-    try {
-      await guardarFicheiro(nomeFicheiro, conteudo);
-    } catch (e) {
-      avisar('Não foi possível exportar', e instanceof Error ? e.message : String(e));
-    }
-  }
-  function exportarAnimais() {
-    void exportar(`animais-${hojeISO()}.csv`, csvAnimais(animais, exploracoes, terrenos));
-  }
-  function exportarEventos() {
-    void exportar(`eventos-${hojeISO()}.csv`, csvEventos(eventos, animais));
-  }
-  function imprimirPrazos() {
-    const ok = imprimirRelatorio(TITULO_PRAZOS, htmlRelatorioPrazos(alertas));
-    if (!ok) {
-      avisar('Indisponível', 'A impressão do relatório está disponível na versão de computador.');
-    }
-  }
-
-  async function descarregarPrazos() {
-    const r = await guardarRelatorio(TITULO_PRAZOS, htmlRelatorioPrazos(alertas), `prazos-${hojeISO()}`);
-    if (r.estado === 'guardado' || r.estado === 'cancelado') return; // o diálogo já falou por si
-    if (r.estado === 'html') {
-      avisar(
-        'Relatório descarregado',
-        'Guardámos o relatório como página web. Para o ter em PDF, abra-o e use Imprimir → Guardar como PDF. ' +
-          'Na app de computador o relatório é guardado logo em PDF.',
-      );
-      return;
-    }
-    if (r.estado === 'indisponivel') {
-      avisar('Indisponível', 'Descarregar o relatório está disponível na versão de computador.');
-      return;
-    }
-    avisar('Não foi possível guardar', r.motivo);
   }
 
   function confirmarApagarConta() {
@@ -114,9 +67,11 @@ export default function PerfilScreen() {
   const email = conta?.email ?? utilizador.email;
   const iniciais = (nome || email).split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
-  // Uma lista de opções não ganha em esticar por um ecrã largo — em desktop
-  // fica numa coluna única centrada.
-  const colunaPerfil = {
+  // Os papéis que esta pessoa tem, sem repetir: é o que explica por que razão
+  // vê (ou não vê) certos botões, e não estava dito em lado nenhum.
+  const papeis = [...new Set(membros.map((m) => m.role))];
+
+  const coluna = {
     width: '100%',
     maxWidth: desktop ? layout.conteudoEstreito : undefined,
     alignSelf: 'center',
@@ -125,24 +80,17 @@ export default function PerfilScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* A lista de opções é mais alta do que a janela — sem ScrollView o fim
-          (terminar sessão, apagar conta) ficava fora de alcance. */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           alignItems: 'center',
           paddingBottom: insets.bottom + spacing.xxl,
         }}>
-        <View
-          style={{
-            ...colunaPerfil,
-            paddingTop: insets.top + spacing.md,
-            paddingBottom: spacing.lg,
-          }}>
+        <View style={{ ...coluna, paddingTop: insets.top + spacing.md, paddingBottom: spacing.lg }}>
           <Text variant="display">Perfil</Text>
         </View>
 
-        <View style={{ ...colunaPerfil, gap: spacing.md }}>
+        <View style={{ ...coluna, gap: spacing.md }}>
           {/* Cartão do utilizador */}
           <Card>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
@@ -154,8 +102,8 @@ export default function PerfilScreen() {
                 <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
                   {email}
                 </Text>
-                {/* `flexWrap`: com a letra do sistema ampliada as duas
-                    etiquetas não cabiam lado a lado e a segunda saía do ecrã. */}
+                {/* `flexWrap`: com a letra do sistema ampliada as etiquetas
+                    não cabiam lado a lado e a última saía do ecrã. */}
                 <View
                   style={{
                     flexDirection: 'row',
@@ -170,154 +118,125 @@ export default function PerfilScreen() {
             </View>
           </Card>
 
-          {/* Estado de sincronização (offline-first) */}
+          {/* O que esta conta é. Sem isto, um trabalhador que não veja o botão
+              das receitas não tinha onde perceber porquê. */}
           <Card>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: radii.pill,
-                  backgroundColor: colors.successTint,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                <Icon name="cloud-check-outline" size="md" color={colors.success} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text variant="bodyStrong">Dados guardados no dispositivo</Text>
-                <Text variant="secondary" color={colors.textSecondary}>
-                  Funciona sem internet. Sincroniza quando houver rede.
-                </Text>
-              </View>
+            <View style={{ gap: spacing.sm }}>
+              <LinhaInfo
+                icon={isSuperadmin ? 'shield-crown' : 'account-check-outline'}
+                label="Tipo de conta"
+                valor={isSuperadmin ? 'Administrador da plataforma' : 'Criador'}
+              />
+              {!isSuperadmin ? (
+                <LinhaInfo
+                  icon="badge-account-horizontal-outline"
+                  label={papeis.length > 1 ? 'Os seus papéis' : 'O seu papel'}
+                  valor={
+                    papeis.length > 0
+                      ? papeis.map(legendaRole).join(' · ')
+                      : 'Sem exploração associada'
+                  }
+                />
+              ) : null}
+              {!isSuperadmin && estadoPerfil !== 'ativo' ? (
+                <LinhaInfo
+                  icon="clock-alert-outline"
+                  label="Estado"
+                  valor="Por aprovar — só de leitura"
+                  tom={colors.warning}
+                />
+              ) : null}
             </View>
           </Card>
 
-          {/* Exportar e relatórios */}
-          <View>
-            <Text variant="label" color={colors.textSecondary} style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-              EXPORTAR E RELATÓRIOS
-            </Text>
-            <Card padded={false}>
-              <SettingRow
-                icon="cow"
-                label="Exportar animais (CSV)"
-                trailing={String(animais.length)}
-                onPress={exportarAnimais}
-              />
-              <SettingRow
-                icon="calendar-text-outline"
-                label="Exportar eventos (CSV)"
-                trailing={String(eventos.length)}
-                onPress={exportarEventos}
-              />
-              <SettingRow
-                icon="printer-outline"
-                label="Imprimir relatório de prazos"
-                trailing={String(alertas.length)}
-                onPress={imprimirPrazos}
-              />
-              <SettingRow
-                icon="file-download-outline"
-                label="Descarregar relatório (PDF)"
-                trailing={String(alertas.length)}
-                onPress={() => void descarregarPrazos()}
-                last
-              />
-            </Card>
-          </View>
-
-          {/* Definições */}
+          {/* Dados pessoais e sessão */}
           <Card padded={false}>
-            <SettingRow
+            <Linha
               icon="account-edit"
               label="Editar dados pessoais"
               onPress={() => router.push('/conta/editar')}
+              last={!configurado}
             />
-            <SettingRow
-              icon="cloud-sync-outline"
-              label="Sincronização e cópia de segurança"
-              onPress={() => router.push('/conta/sincronizacao')}
-            />
-            <SettingRow
-              icon="file-export-outline"
-              label="Exportar para o iDigital"
-              trailing="Fase 2"
-              onPress={() =>
-                avisar(
-                  'Ainda em desenvolvimento',
-                  'A exportação para o iDigital chega numa próxima versão. Entretanto pode usar o "Descarregar relatório (PDF)" ou o "Exportar animais (CSV)".',
-                )
-              }
-            />
-            <SettingRow
-              icon="bell-outline"
-              label="Notificações e alertas"
-              onPress={() => router.push('/conta/notificacoes')}
-            />
-            {/* Só o dono decide se a app serve para fazer contas. Um
-                trabalhador não tem nada que ver esta linha — e muito menos
-                desligar o registo de despesas a toda a exploração. */}
-            {podeLigarFinancas ? (
-              <SettingRow
-                icon="cash-multiple"
-                label="Gestão financeira"
-                trailing={financasAtivas ? 'Ligada' : 'Desligada'}
-                onPress={() => router.push('/conta/financas')}
-              />
+            {configurado ? (
+              <>
+                <Linha
+                  icon="logout"
+                  label="Terminar sessão"
+                  tint={colors.danger}
+                  onPress={confirmarSair}
+                />
+                <Linha
+                  icon="delete-outline"
+                  label="Apagar a minha conta"
+                  tint={colors.danger}
+                  onPress={confirmarApagarConta}
+                  last
+                />
+              </>
             ) : null}
-            <SettingRow
-              icon="shield-account-outline"
-              label="Privacidade e termos"
-              onPress={() => void Linking.openURL('https://gestaogado.netlify.app/privacidade')}
-            />
-            <SettingRow
-              icon="help-circle-outline"
-              label="Ajuda e apoio"
-              onPress={() => router.push('/conta/ajuda')}
-              last
-            />
           </Card>
 
-          {/* Conta — sessão e apagamento RGPD (só com Supabase/sessão) */}
-          {configurado ? (
-            <Card padded={false}>
-              <SettingRow
-                icon="logout"
-                label="Terminar sessão"
-                tint={colors.danger}
-                onPress={confirmarSair}
-              />
-              <SettingRow
-                icon="delete-outline"
-                label="Apagar a minha conta"
-                tint={colors.danger}
-                onPress={confirmarApagarConta}
-                last
-              />
-            </Card>
-          ) : null}
-
-          <Text variant="caption" color={colors.textMuted} center style={{ marginTop: spacing.xs }}>
-            Gestão de Gado · versão {VERSAO_APP}
-          </Text>
+          <Pressable
+            onPress={() => router.push('/definicoes')}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir definições"
+            style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
+            <Text variant="secondary" color={colors.primary} center>
+              As opções da app estão em Definições
+            </Text>
+          </Pressable>
         </View>
       </ScrollView>
     </View>
   );
 }
 
-function SettingRow({
+function LinhaInfo({
   icon,
   label,
-  trailing,
+  valor,
+  tom,
+}: {
+  icon: IconName;
+  label: string;
+  valor: string;
+  tom?: string;
+}) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+      <View
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: radii.pill,
+          backgroundColor: colors.primaryTint,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+        <Icon name={icon} size="sm" color={tom ?? colors.primary} />
+      </View>
+      <Text variant="body" color={colors.textSecondary} style={{ flex: 1 }}>
+        {label}
+      </Text>
+      <Text
+        variant="bodyStrong"
+        color={tom ?? colors.text}
+        style={{ maxWidth: '55%', textAlign: 'right' }}>
+        {valor}
+      </Text>
+    </View>
+  );
+}
+
+function Linha({
+  icon,
+  label,
   tint = colors.text,
   onPress,
   last,
 }: {
   icon: IconName;
   label: string;
-  trailing?: string;
   tint?: string;
   onPress?: () => void;
   last?: boolean;
@@ -343,11 +262,6 @@ function SettingRow({
       <Text variant="body" color={tint} style={{ flex: 1 }}>
         {label}
       </Text>
-      {trailing ? (
-        <Text variant="caption" color={colors.textMuted}>
-          {trailing}
-        </Text>
-      ) : null}
       <Icon name="chevron-right" size="sm" color={colors.textMuted} />
     </Pressable>
   );

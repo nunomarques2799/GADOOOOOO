@@ -16,8 +16,9 @@ export function AnimalRow({ animal }: { animal: Animal }) {
   const semBrinco = animal.especie === 'Bovino' && !animal.numeroIdentificacao;
   const saiu = animal.estado === 'falecido' || animal.estado === 'vendido';
 
-  const sexoCor = animal.sexo === 'Fêmea' ? '#C2568A' : '#3B7BC4';
-  const sexoIcon = animal.sexo === 'Fêmea' ? 'gender-female' : 'gender-male';
+  const femea = animal.sexo === 'Fêmea';
+  const sexoCor = femea ? colors.femea : colors.macho;
+  const sexoIcon = femea ? 'gender-female' : 'gender-male';
 
   return (
     <Card
@@ -27,7 +28,17 @@ export function AnimalRow({ animal }: { animal: Animal }) {
       padded={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.sm }}>
         <View>
-          <IconBadge name={meta.icon} color={meta.cor} background={colors.primaryTint} size={52} iconSize={30} />
+          {/* O fundo dá o sexo de relance, que é a primeira coisa que se
+              procura numa lista de gado — antes do nome. O ícone fica na cor
+              do sexo, e não na da espécie, porque a espécie já se lê pela
+              forma do próprio ícone (vaca, ovelha, cavalo). */}
+          <IconBadge
+            name={meta.icon}
+            color={sexoCor}
+            background={femea ? colors.femeaTint : colors.machoTint}
+            size={52}
+            iconSize={30}
+          />
           {semBrinco ? (
             <View
               style={{

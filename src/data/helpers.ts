@@ -67,6 +67,26 @@ function fimDeHoje(): number {
   return d.getTime();
 }
 
+/**
+ * Põe as barras de uma data à medida que se escreve: `15032021` → `15/03/2021`.
+ *
+ * Escrever barras num teclado numérico de telemóvel obriga a trocar de
+ * teclado, e é onde as datas se enganavam — a app aceita `dd/mm/aaaa` e mais
+ * nada, mas o teclado que abre para as escrever nem sempre tem a tecla. Aqui a
+ * pontuação é posta pela app e o criador só carrega em números.
+ *
+ * Trabalha só sobre os dígitos, o que também endireita o que vem colado
+ * (`15-03-2021`, `15.03.2021`) e corta o que passa dos oito. Nunca deixa uma
+ * barra no fim: assim apagar tira sempre um dígito, em vez de tirar uma barra
+ * que a máscara voltava a pôr — que é a tecla de apagar a parecer avariada.
+ */
+export function mascaraDataPt(texto: string): string {
+  const d = texto.replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
 /** Data ISO ao meio-dia, `dias` depois de `iso`. Usado para prever o parto. */
 export function isoMaisDias(iso: string, dias: number): string {
   const d = new Date(iso);

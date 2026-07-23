@@ -67,6 +67,7 @@ import {
 import { supabaseConfigurado } from './supabase';
 import {
   carregarTudoSupabase,
+  definirCasaAtiva as definirCasaAtivaSupabase,
   definirFinancasAtivas as definirFinancasAtivasSupabase,
   eConflito,
   mensagemLegivel,
@@ -276,6 +277,12 @@ type GadoContext = {
    * apaga: nenhum movimento é removido e religar devolve as contas intactas.
    */
   definirFinancasAtivas: (ativas: boolean) => Promise<void>;
+  /**
+   * Liga ou desliga o registo por casa/número em toda a conta. Como as
+   * finanças, desligar ESCONDE: nenhuma casa já escrita é apagada, e religar
+   * devolve tudo como estava.
+   */
+  definirCasaAtiva: (ativa: boolean) => Promise<void>;
   addMovimento: (m: Omit<Movimento, 'id'>) => Promise<Movimento>;
   updateMovimento: (id: string, patch: Partial<Movimento>) => Promise<void>;
   deleteMovimento: (id: string) => Promise<void>;
@@ -865,6 +872,29 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     [usaSupabase, gravarSqlite, puxarDoServidor],
   );
 
+  const definirCasaAtiva = useCallback(
+    async (ativa: boolean): Promise<void> => {
+      // Mesmo desenho que `definirFinancasAtivas`, e pelas mesmas razões:
+      // otimista para o interruptor responder no dedo, pelo RPC porque a
+      // coluna é do servidor, e a repor o que estava se o servidor recusar.
+      setExploracoes((prev) => prev.map((e) => ({ ...e, casaAtiva: ativa })));
+
+      if (usaSupabase) {
+        const erro = await definirCasaAtivaSupabase(ativa);
+        if (erro) {
+          setExploracoes((prev) => prev.map((e) => ({ ...e, casaAtiva: !ativa })));
+          throw new Error(mensagemLegivel(erro));
+        }
+        await puxarDoServidor();
+        return;
+      }
+      gravarSqlite((db) => {
+        exploracoesRef.current.forEach((e) => guardarExploracao(db, { ...e, casaAtiva: ativa }));
+      });
+    },
+    [usaSupabase, gravarSqlite, puxarDoServidor],
+  );
+
   const addMovimento = useCallback(
     async (m: Omit<Movimento, 'id'>): Promise<Movimento> => {
       // `criadoPor` fica com o utilizador atual para a UI o poder mostrar já;
@@ -949,6 +979,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       deleteTerreno,
       addEvento,
       definirFinancasAtivas,
+      definirCasaAtiva,
       addMovimento,
       updateMovimento,
       deleteMovimento,
@@ -965,7 +996,8 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       deleteAnimal, marcarSaida, reativarAnimal,
       addExploracao, updateExploracao, deleteExploracao,
       addTerreno, updateTerreno, deleteTerreno, addEvento,
-      definirFinancasAtivas, addMovimento, updateMovimento, deleteMovimento,
+      definirFinancasAtivas, definirCasaAtiva,
+      addMovimento, updateMovimento, deleteMovimento,
       recarregar,
     ],
   );

@@ -11,4 +11,5 @@ export { FAB } from './FAB';
 export { Avatar } from './Avatar';
 export { EmptyState } from './EmptyState';
 export { Field, TextField } from './FormField';
+export { SeletorOpcao } from './SeletorOpcao';
 export { Header } from './Header';

@@ -18,11 +18,11 @@ import {
   Text,
   TextField,
 } from '@/components/ui';
-import { especieMeta } from '@/data/constants';
+import { especieMeta, finalidadeMeta } from '@/data/constants';
 import { avisar, confirmar } from '@/data/avisos';
 import { filhosDe, rotuloAnimal } from '@/data/genealogia';
 import { balancoAnimal } from '@/data/financas';
-import { diasAte, formatDataCurta, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
+import { diasAte, formatDataCurta, formatDataPt, formatEuro, idadeExtenso, mascaraDataPt, paraEuro, parseDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
@@ -235,6 +235,22 @@ export default function AnimalDetalheScreen() {
         </Text>
         <Card>
           <InfoField icon="tag-outline" label="Nº de identificação (brinco)" value={animal.numeroIdentificacao ?? '—'} />
+          {/* Casa e número só aparecem quando o animal os tem: uma linha com
+              travessão a quem nunca registou por casa é ruído puro. */}
+          {animal.casa || animal.numeroCasa ? (
+            <InfoField
+              icon="home-outline"
+              label="Casa e número"
+              value={[animal.casa, animal.numeroCasa].filter(Boolean).join(' · ')}
+            />
+          ) : null}
+          {animal.finalidade ? (
+            <InfoField
+              icon={finalidadeMeta[animal.finalidade].icon}
+              label="Finalidade"
+              value={animal.finalidade}
+            />
+          ) : null}
           <InfoField icon="calendar-check" label="Data de identificação" value={animal.dataIdentificacao ? formatDataPt(animal.dataIdentificacao) : '—'} />
           <InfoField
             icon="cloud-upload-outline"
@@ -476,10 +492,10 @@ function FormularioSaida({
       <View style={{ marginBottom: spacing.md }}>
         <TextField
           value={data}
-          onChangeText={onChangeData}
+          onChangeText={(t) => onChangeData(mascaraDataPt(t))}
           placeholder="dd/mm/aaaa"
           icon="calendar"
-          keyboardType="numbers-and-punctuation"
+          keyboardType="number-pad"
         />
       </View>
       {tipo === 'vendido' && podeDefinirPreco ? (

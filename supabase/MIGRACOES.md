@@ -27,6 +27,7 @@ Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
 | 8 | `schema_financas.sql` | `evento.valor` e a tabela `movimento`. | 1, 2, **7** |
 | 9 | `schema_eliminar.sql` | Só se elimina animal sem eventos nem crias. | anteriores |
 | 10 | `schema_financas_opcional.sql` | Finanças passam a opt-in por cliente. | **8** |
+| 11 | `schema_animal_campos.sql` | Casa/número e finalidade do animal; opt-in da casa. | **10** |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 
@@ -37,6 +38,10 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
   e a app diz que sim. É um problema de RGPD, não de arrumação.
 - **8 depende de 7.** As finanças escrevem com deteção de conflitos.
 - **10 depende de 8.** Não há como tornar opcional uma tabela que não existe.
+- **11 depende de 10.** Ambos substituem o trigger `handle_new_exploracao`. O
+  11 reescreve-o a herdar as DUAS opções (finanças e casa); aplicá-lo antes do
+  10 fazia o 10 sobrepor-se-lhe e as explorações novas nasciam sem a casa
+  herdada — sem erro nenhum, só um campo que não aparecia.
 
 > A ordem não é a alfabética nem a do explorador de ficheiros. É esta.
 
@@ -49,7 +54,7 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 powershell scripts/gerar-schema-completo.ps1
 ```
 
-Isso gera `supabase/_completo.sql` com os 10 ficheiros pela ordem certa. Colar
+Isso gera `supabase/_completo.sql` com os 11 ficheiros pela ordem certa. Colar
 **tudo de uma vez** no *SQL Editor* → *Run*.
 
 Colar tudo junto é mais seguro do que ficheiro a ficheiro, ao contrário do que

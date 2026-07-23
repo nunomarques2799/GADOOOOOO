@@ -9,6 +9,24 @@ export type Sexo = 'Macho' | 'Fêmea';
 export type TipoTerreno = 'Pastagem' | 'Cultivo' | 'Misto' | 'Outro';
 
 /**
+ * Para que serve o animal na exploração. Só se pergunta a BOVINOS: é onde a
+ * distinção manda no maneio (uma vaca de leite ordenha-se todos os dias, uma
+ * de criação não) e no que faz sentido filtrar. Nos pequenos ruminantes o
+ * rebanho tende a ter um destino só, e perguntar animal a animal seria um
+ * campo a mais em cada registo.
+ *
+ * Nem todas se aplicam aos dois sexos — ver `finalidadesPara()` em
+ * `constants.ts`. Um macho não é de "Criação" e uma fêmea não é "Semental".
+ */
+export type Finalidade =
+  | 'Leite'
+  | 'Carne'
+  | 'Criação'
+  | 'Semental'
+  | 'Recria'
+  | 'Trabalho';
+
+/**
  * Estado do animal no efetivo. `falecido` e `vendido` mantêm o registo em BD
  * (para preservar a árvore genealógica dos descendentes) mas ficam ocultos
  * das listas do dia-a-dia e não geram alertas.
@@ -103,6 +121,20 @@ export interface Exploracao extends ComVersao {
    * `definir_financas_ativas` (ver `supabase/schema_financas_opcional.sql`).
    */
   financasAtivas?: boolean;
+  /**
+   * O registo por casa e número está ligado nesta exploração? Desligado (o
+   * valor por omissão) esconde os dois campos do formulário do animal.
+   *
+   * Vive aqui, e não no perfil, pela mesma razão que `financasAtivas`: a RLS de
+   * `perfil` só deixa cada um ver o seu, e o trabalhador precisa de a ler para
+   * saber que campos preencher. Escrita só pelo RPC `definir_casa_ativa`.
+   *
+   * Ao contrário das finanças, isto não fecha nenhuma porta no servidor: são
+   * duas colunas de texto sem regra de permissão própria. O interruptor existe
+   * para não encher o formulário a quem nunca registou gado por casa — não é
+   * uma medida de segurança, e não se deve passar a tratá-lo como tal.
+   */
+  casaAtiva?: boolean;
 }
 
 export interface Terreno extends ComVersao {
@@ -128,6 +160,19 @@ export interface Animal extends ComVersao {
   dataNascimento: string; // ISO
   raca?: string;
   corPelagem?: string;
+  /**
+   * Registo tradicional por casa: o nome da casa e o número do animal dentro
+   * dela ("Casa do Monte, 12"). Muitos criadores identificam assim os animais
+   * há gerações, ao lado (ou em vez) do brinco.
+   *
+   * Os campos só aparecem no formulário com `Exploracao.casaAtiva` ligada, mas
+   * um animal que já os tenha preenchido mostra-os SEMPRE — desligar a opção
+   * esconde o que ainda não foi escrito, nunca o que já lá está.
+   */
+  casa?: string;
+  numeroCasa?: string;
+  /** Só para bovinos. Ver `Finalidade`. */
+  finalidade?: Finalidade;
   numeroIdentificacao?: string; // brinco SIA
   dataIdentificacao?: string; // ISO
   tipoIdentificacao?: string;

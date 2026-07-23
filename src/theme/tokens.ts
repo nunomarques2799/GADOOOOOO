@@ -81,6 +81,16 @@ export const colors = {
   suino: '#C56B8A',
   equideo: '#8A5A3B',
 
+  /* Sexo — o fundo do ícone na lista de animais e nos filtros.
+     A cor sozinha nunca decide nada: vai sempre acompanhada do ícone de
+     género (♀/♂) e do rótulo, porque um em cada doze homens não distingue
+     estes dois tons — e o utilizador-alvo é um criador de 82 anos, muitas
+     vezes com o telemóvel ao sol. */
+  femea: '#B8447C', // 4,58:1 sobre o seu tinte
+  femeaTint: '#FBE6F1',
+  macho: '#2F6FB5', // 4,71:1 sobre o seu tinte
+  machoTint: '#E3EEFA',
+
   /* Utilitário */
   overlay: 'rgba(15, 40, 26, 0.55)', // scrim de modais (>40%)
   shadow: '#0C3A22',

@@ -3,9 +3,18 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Card, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
+import { Button, Card, Chip, Header, Icon, type IconName, SeletorOpcao, Text } from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
-import { GestacaoDias, PrazosLegais, especieMeta, especies, sexos } from '@/data/constants';
+import {
+  GestacaoDias,
+  PrazosLegais,
+  especieMeta,
+  especies,
+  finalidadeMeta,
+  finalidadesPara,
+  sexos,
+} from '@/data/constants';
+import { coresDe, normalizar, opcoesComUsadas, racasDe } from '@/data/racas';
 import {
   diasAte,
   formatDataCurta,
@@ -14,12 +23,13 @@ import {
   idadeExtenso,
   isoDaysAgo,
   isoMaisDias,
+  mascaraDataPt,
   parseDataPt,
 } from '@/data/helpers';
 import { impedimentoParaEliminar, rotuloAnimal } from '@/data/genealogia';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
-import type { Animal, Especie, Sexo } from '@/data/types';
+import type { Animal, Especie, Finalidade, Sexo } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 const opcoesData = [
@@ -70,8 +80,11 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
   const [dataManual, setDataManual] = useState(animal ? formatDataCurta(animal.dataNascimento) : '');
   const [nome, setNome] = useState(animal?.nome ?? '');
   const [brinco, setBrinco] = useState(animal?.numeroIdentificacao ?? '');
-  const [raca, setRaca] = useState(animal?.raca ?? '');
-  const [corPelagem, setCorPelagem] = useState(animal?.corPelagem ?? '');
+  const [raca, setRaca] = useState<string | undefined>(animal?.raca);
+  const [corPelagem, setCorPelagem] = useState<string | undefined>(animal?.corPelagem);
+  const [finalidade, setFinalidade] = useState<Finalidade | undefined>(animal?.finalidade);
+  const [casa, setCasa] = useState<string | undefined>(animal?.casa);
+  const [numeroCasa, setNumeroCasa] = useState(animal?.numeroCasa ?? '');
   const [exploracaoId, setExploracaoId] = useState(animal?.exploracaoId ?? exploracoes[0]?.id ?? '');
   // Apagar o registo leva o histórico atrás — fica com quem gere o efetivo,
   // não com o veterinário. Ver `permissoes.ts`.
@@ -92,6 +105,32 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
     () => (exploracaoId ? terrenosByExploracao(exploracaoId) : []),
     [exploracaoId, terrenosByExploracao],
   );
+
+  /* ---- Listas de escolha ----
+     As sugestões juntam-se ao que já existe no efetivo, para uma raça
+     acrescentada à mão aparecer sozinha no animal seguinte (ver `racas.ts`).
+     A raça e a cor seguem a ESPÉCIE escolhida agora, não a do animal: mudar de
+     bovino para ovino tem de trocar as raças oferecidas. */
+  const opcoesRaca = useMemo(
+    () => opcoesComUsadas(racasDe(especie), animais.filter((a) => a.especie === especie).map((a) => a.raca)),
+    [especie, animais],
+  );
+  const opcoesCor = useMemo(
+    () => opcoesComUsadas(coresDe(especie), animais.filter((a) => a.especie === especie).map((a) => a.corPelagem)),
+    [especie, animais],
+  );
+  // As casas não têm lista curada — nascem todas do que o criador escreveu.
+  const opcoesCasa = useMemo(
+    () => opcoesComUsadas([], animais.map((a) => a.casa)),
+    [animais],
+  );
+
+  // O interruptor vive na conta (ver `casaAtiva`), mas um animal que já tenha
+  // casa preenchida mostra sempre os campos: desligar a opção não pode fazer
+  // desaparecer do formulário um dado que está gravado — pareceria perdido, e
+  // ao guardar de novo perdia-se mesmo.
+  const casaLigada = exploracoes.some((e) => e.casaAtiva);
+  const mostrarCasa = casaLigada || !!animal?.casa || !!animal?.numeroCasa;
 
   const dataManualIso = dataManual.trim() ? parseDataPt(dataManual) : null;
   const dataManualInvalida = dataManual.trim().length > 0 && !dataManualIso;
@@ -178,8 +217,13 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
         dataNascimento,
         nome: nome.trim() || undefined,
         numeroIdentificacao: brinco.trim() || undefined,
-        raca: raca.trim() || undefined,
-        corPelagem: corPelagem.trim() || undefined,
+        raca: raca?.trim() || undefined,
+        corPelagem: corPelagem?.trim() || undefined,
+        // A finalidade é só de bovinos: mudar a espécie depois de a escolher
+        // não pode deixar para trás um valor que a ficha já não mostra.
+        finalidade: especie === 'Bovino' ? finalidade : undefined,
+        casa: casa?.trim() || undefined,
+        numeroCasa: numeroCasa.trim() || undefined,
         comunicadoSnira: temBrinco ? sniraComunicado : undefined,
         dataIdentificacao: temBrinco
           ? (animal?.dataIdentificacao ?? (recemNascido ? isoDaysAgo(0) : dataNascimento))
@@ -282,8 +326,9 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
           <TextField
             value={dataManual}
             onChangeText={(t) => {
-              setDataManual(t);
-              if (t.trim()) setDiasNasc(null);
+              const m = mascaraDataPt(t);
+              setDataManual(m);
+              if (m.trim()) setDiasNasc(null);
               else setDiasNasc(0);
             }}
             placeholder="Ex: 15/03/2021"
@@ -368,7 +413,7 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
                 </Text>
                 <TextField
                   value={dataCobricao}
-                  onChangeText={setDataCobricao}
+                  onChangeText={(t) => setDataCobricao(mascaraDataPt(t))}
                   placeholder="Ex: 10/02/2026"
                   icon="calendar-heart"
                   keyboardType="number-pad"
@@ -387,7 +432,7 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
                 </Text>
                 <TextField
                   value={dataPartoManual}
-                  onChangeText={setDataPartoManual}
+                  onChangeText={(t) => setDataPartoManual(mascaraDataPt(t))}
                   placeholder="Ex: 20/11/2026"
                   icon="calendar-edit"
                   keyboardType="number-pad"
@@ -422,14 +467,87 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
           </Field>
         ) : null}
 
-        {/* Raça e pelagem */}
+        {/* Finalidade — só a bovinos, e só as que fazem sentido para o sexo */}
+        {especie === 'Bovino' ? (
+          <Field label="Finalidade" opcional>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+              {finalidadesPara(sexo).map((f) => (
+                <Chip
+                  key={f}
+                  label={f}
+                  icon={finalidadeMeta[f].icon}
+                  selected={finalidade === f}
+                  onPress={() => setFinalidade(finalidade === f ? undefined : f)}
+                />
+              ))}
+            </View>
+            {finalidade ? (
+              <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
+                {finalidadeMeta[finalidade].descricao}
+              </Text>
+            ) : null}
+          </Field>
+        ) : null}
+
+        {/* Raça e pelagem — de lista, para os filtros poderem contar com elas */}
         <Field label="Raça" opcional>
-          <TextField value={raca} onChangeText={setRaca} placeholder="Ex: Mertolenga" icon="palette-outline" />
+          <SeletorOpcao
+            titulo="Raça"
+            valor={raca}
+            opcoes={opcoesRaca}
+            onEscolher={setRaca}
+            placeholder="Escolher raça"
+            icon="palette-outline"
+            rotuloAdicionar="Usar a raça"
+            normalizar={normalizar}
+          />
         </Field>
 
         <Field label="Cor da pelagem" opcional>
-          <TextField value={corPelagem} onChangeText={setCorPelagem} placeholder="Ex: Malhada" icon="format-color-fill" />
+          <SeletorOpcao
+            titulo="Cor da pelagem"
+            valor={corPelagem}
+            opcoes={opcoesCor}
+            onEscolher={setCorPelagem}
+            placeholder="Escolher cor"
+            icon="format-color-fill"
+            rotuloAdicionar="Usar a cor"
+            normalizar={normalizar}
+          />
         </Field>
+
+        {/* Casa e número — só com o registo por casa ligado nas Definições, ou
+            se este animal já os tiver (desligar esconde o que falta preencher,
+            nunca o que já está escrito). */}
+        {mostrarCasa ? (
+          <Field label="Casa e número" opcional>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <View style={{ flex: 2 }}>
+                <SeletorOpcao
+                  titulo="Casa"
+                  valor={casa}
+                  opcoes={opcoesCasa}
+                  onEscolher={setCasa}
+                  placeholder="Casa"
+                  icon="home-outline"
+                  rotuloAdicionar="Usar a casa"
+                  normalizar={normalizar}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <TextField
+                  value={numeroCasa}
+                  onChangeText={setNumeroCasa}
+                  placeholder="Nº"
+                  icon="numeric"
+                />
+              </View>
+            </View>
+            <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
+              O registo tradicional por casa, a par do brinco.
+            </Text>
+          </Field>
+        ) : null}
 
         {/* Exploração */}
         <Field label="Exploração" obrigatorio>
