@@ -228,6 +228,23 @@ describe('arranque', () => {
     const { ctx } = await montar();
 
     expect(ctx().animais.map((a) => a.id)).toEqual(['a9']);
+    // O nome deste teste sempre prometeu isto, mas ninguém o verificava — e
+    // era mesmo aqui que estava o buraco: o store dava `online: true` antes de
+    // puxar do servidor, por isso uma leitura recusada deixava a app a mostrar
+    // a cache com ar de estar tudo bem. Sem este `expect`, distinguir uma
+    // conta vazia de uma leitura falhada só olhando ao ecrã era impossível.
+    expect(ctx().online).toBe(false);
+  });
+
+  it('uma leitura recusada pelo servidor não se disfarça de conta vazia', async () => {
+    // Sem cache nenhuma: é o caso em que a app abre a zeros. Se além disso
+    // disser que está online, o criador conclui que perdeu o efetivo.
+    mockServidor.falhasCarregar = 1;
+
+    const { ctx } = await montar();
+
+    expect(ctx().animais).toEqual([]);
+    expect(ctx().online).toBe(false);
   });
 });
 

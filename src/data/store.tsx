@@ -495,8 +495,15 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       setPendentesSinc(ops.length);
     }
     if (ops.length === 0) {
-      setOnline(true);
-      await puxarDoServidor();
+      // O estado de ligação segue o RESULTADO da leitura, não o facto de a
+      // fila ter esvaziado. Marcar `online` antes de puxar escondia a única
+      // falha que interessa: com o servidor a recusar a leitura, a app ficava
+      // a mostrar a cache — dados antigos, ou nenhuns — a dizer que estava
+      // tudo bem. Sem aviso, sem erro, e sem nada que distinga isso de uma
+      // conta mesmo vazia. Agora aparece o cartão de "sem ligação" do ecrã
+      // Início, que é o que dá ao criador alguma coisa em que reparar.
+      const leu = await puxarDoServidor();
+      setOnline(leu);
     }
   }, [usaSupabase, puxarDoServidor]);
 
