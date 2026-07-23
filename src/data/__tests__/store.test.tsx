@@ -116,7 +116,7 @@ jest.mock('../supabaseRepo', () => ({
       : msg,
 }));
 
-import { lerOutbox } from '../cacheLocal';
+import { CHAVES, lerOutbox } from '../cacheLocal';
 import { NotificacoesProvider } from '../notificacoes';
 import { GadoProvider, useGado } from '../store';
 
@@ -220,7 +220,7 @@ describe('arranque', () => {
     // A cache é o que o criador viu da última vez. Sem ela, abrir a app no
     // mato mostrava um efetivo vazio — como se tivesse perdido os animais.
     mockMapa.set(
-      'gado.cache.v1',
+      CHAVES.cache,
       JSON.stringify({ exploracoes: [exploracao], terrenos: [], animais: [animal('a9')], eventos: [] }),
     );
     mockServidor.falhasCarregar = 1;
@@ -320,7 +320,7 @@ describe('escritas otimistas', () => {
       await ctx().addAnimal(animal('a1') as Omit<Animal, 'id'>);
     });
 
-    const cache = JSON.parse(mockMapa.get('gado.cache.v1') as string);
+    const cache = JSON.parse(mockMapa.get(CHAVES.cache) as string);
     expect(cache.animais).toHaveLength(1);
   });
 });

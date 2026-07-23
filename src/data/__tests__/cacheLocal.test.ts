@@ -25,6 +25,7 @@ jest.mock('../armazenamento', () => ({
 
 import {
   adicionarOutbox,
+  CHAVES,
   descreverOp,
   guardarAcesso,
   lerAcesso,
@@ -93,14 +94,14 @@ describe('outbox — fila de alterações por enviar', () => {
 
   it('não rebenta com um valor corrompido no armazenamento', () => {
     // Se isto lançasse, o arranque da app morria e o criador ficava sem entrar.
-    mockMapa.set('gado.outbox.v1', '{isto não é json}');
+    mockMapa.set(CHAVES.outbox, '{isto não é json}');
     expect(lerOutbox()).toEqual([]);
   });
 
   it('devolve lista vazia se o valor guardado não for um array', () => {
     // O store faz `while (ops.length > 0)` e itera — um objeto aqui seria um
     // ciclo infinito ou um crash no arranque.
-    mockMapa.set('gado.outbox.v1', '{"op":"upsert"}');
+    mockMapa.set(CHAVES.outbox, '{"op":"upsert"}');
     expect(lerOutbox()).toEqual([]);
   });
 });
@@ -124,7 +125,7 @@ describe('cache local — dados visíveis sem rede', () => {
   });
 
   it('não rebenta com cache corrompida — trata como se não existisse', () => {
-    mockMapa.set('gado.cache.v1', 'lixo');
+    mockMapa.set(CHAVES.cache, 'lixo');
     expect(lerCache()).toBeNull();
   });
 });
@@ -173,18 +174,18 @@ describe('acesso — quem sou e onde pertenço, para a app abrir sem rede', () =
   it('trata lixo como "não sei", em vez de inventar um estado', () => {
     // Afirmar 'ativo' ou 'superadmin' a partir de dados corrompidos seria
     // conceder acesso por acidente.
-    mockMapa.set('gado.acesso.v1', 'não é json');
+    mockMapa.set(CHAVES.acesso, 'não é json');
     expect(lerAcesso()).toBeNull();
   });
 
   it('recusa um estado de perfil que não reconhece', () => {
-    mockMapa.set('gado.acesso.v1', JSON.stringify({ estadoPerfil: 'deus', isSuperadmin: true }));
+    mockMapa.set(CHAVES.acesso, JSON.stringify({ estadoPerfil: 'deus', isSuperadmin: true }));
     expect(lerAcesso()).toBeNull();
   });
 
   it('aguenta membros em falta ou com forma errada', () => {
     mockMapa.set(
-      'gado.acesso.v1',
+      CHAVES.acesso,
       JSON.stringify({ estadoPerfil: 'ativo', isSuperadmin: false, membros: 'nada disto' }),
     );
     expect(lerAcesso()?.membros).toEqual([]);
@@ -235,7 +236,7 @@ describe('falhadas — escritas que o servidor recusou', () => {
   });
 
   it('não rebenta com um valor corrompido', () => {
-    mockMapa.set('gado.falhadas.v1', 'lixo');
+    mockMapa.set(CHAVES.falhadas, 'lixo');
     expect(lerFalhadas()).toEqual([]);
   });
 });
@@ -312,4 +313,51 @@ describe('pareceErroDeRede — decide entre reenviar e descartar', () => {
       ),
     ).toBe(false);
   });
+});
+
+/**
+ * O caso que deu origem a isto: o mesmo `localhost:8081` serviu primeiro a app
+ * ligada a PRODUÇÃO e depois a de testes. Sem o projeto no nome da chave, a
+ * segunda abria a mostrar o efetivo real da primeira — por baixo da faixa roxa
+ * que garante que aqueles dados não são reais.
+ */
+describe('as chaves separam os ambientes', () => {
+  it('o nome do projeto vai no meio da chave, não é um prefixo fixo', () => {
+    for (const chave of Object.values(CHAVES)) {
+      expect(chave).not.toMatch(/^gado\.(cache|outbox|falhadas|acesso)\.v1$/);
+      expect(chave).toMatch(/^gado\.[^.]+\.(cache|outbox|falhadas|acesso)\.v1$/);
+    }
+  });
+
+  it('a cache de um projeto não é lida pelo outro', () => {
+    // O que a app de produção teria deixado neste browser.
+    mockMapa.set('gado.outroprojeto.cache.v1', JSON.stringify({ animais: [{ id: 'real' }] }));
+    expect(lerCache()).toBeNull();
+  });
+
+  /**
+   * A herança das chaves antigas é a parte perigosa: quem já tem a app
+   * instalada guarda ali a cache E a fila de escritas por enviar. Não a herdar
+   * em produção seria apagar trabalho feito offline; herdá-la em testes seria
+   * trazer o efetivo real para dentro do ambiente de testes.
+   */
+  it('herda a cache e a fila que existiam antes dos ambientes', () => {
+    mockMapa.clear();
+    mockMapa.set('gado.cache.v1', JSON.stringify({ animais: [{ id: 'legado' }] }));
+    mockMapa.set('gado.outbox.v1', JSON.stringify([{ op: 'delete', entidade: 'animal', id: 'x' }]));
+
+    jest.resetModules();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('../cacheLocal') as typeof import('../cacheLocal');
+    expect(mod.lerCache()?.animais.map((a) => a.id)).toEqual(['legado']);
+    expect(mod.lerOutbox()).toHaveLength(1);
+
+    // E não apaga o que herdou: a app de produção pode partilhar este browser.
+    expect(mockMapa.get('gado.cache.v1')).toBeDefined();
+  });
+
+  // O outro lado da regra — que em `dev` NÃO se herda — não se consegue provar
+  // aqui: o babel do Expo substitui `process.env.EXPO_PUBLIC_*` pelo valor
+  // literal ao compilar, por isso mudá-lo em tempo de execução não muda nada e
+  // um teste desses passaria por engano. Fica a valer a leitura do código.
 });
