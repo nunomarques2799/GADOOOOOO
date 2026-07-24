@@ -49,6 +49,21 @@ const EH_DEV = lerAmbiente() === 'dev';
 // caminho de userData ser resolvido, mudar o nome já não o move.
 if (EH_DEV) app.setName('Terrabovina (DEV)');
 
+// A PASTA DE DADOS NÃO ACOMPANHA O NOME DA APP.
+//
+// O Electron deriva `userData` de `app.getName()`. Quando a app passou a
+// chamar-se Terrabovina, isso mudava a pasta de `Gestao de Gado` para
+// `Terrabovina` — e, do ponto de vista do criador, era uma app vazia: sessão
+// terminada, cache offline perdida e, pior, a fila `gado.outbox.v1` com as
+// escritas ainda por sincronizar desaparecida sem um aviso. Um nome novo é
+// para se ver, não para apagar trabalho.
+//
+// Fixado à mão e antes de a app arrancar, pela mesma razão do `setName` acima.
+app.setPath(
+  'userData',
+  path.join(app.getPath('appData'), EH_DEV ? 'Gestao de Gado (DEV)' : 'Gestao de Gado'),
+);
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
