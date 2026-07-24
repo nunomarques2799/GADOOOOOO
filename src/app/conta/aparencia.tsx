@@ -3,7 +3,16 @@ import { Pressable, View } from 'react-native';
 
 import { Card, Header, Icon, Screen, Text } from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
-import { colors, PALETAS, radii, spacing, type Paleta, type PaletaId } from '@/theme';
+import {
+  colors,
+  FAMILIAS,
+  paletasDe,
+  PALETAS,
+  radii,
+  spacing,
+  type Paleta,
+  type PaletaId,
+} from '@/theme';
 import { mudarPaleta, paletaGuardada } from '@/theme/preferencia';
 
 /**
@@ -53,17 +62,29 @@ export default function AparenciaScreen() {
       <Header title="Aspeto da app" />
       <Screen>
         <Text variant="body" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
-          Escolha as cores com que prefere trabalhar. Só muda o aspeto — os animais, os
-          alertas e os registos ficam exatamente como estão.
+          {PALETAS.length} maneiras de a app se apresentar. Só muda o aspeto — os animais,
+          os alertas e os registos ficam exatamente como estão.
         </Text>
 
-        {PALETAS.map((p) => (
-          <CartaoPaleta
-            key={p.id}
-            paleta={p}
-            selecionada={p.id === escolhida}
-            onPress={() => escolher(p)}
-          />
+        {/* Por famílias de cor: quem quer "um azul" salta direto ao sítio em
+            vez de percorrer vinte cartões à procura. */}
+        {FAMILIAS.map((familia) => (
+          <View key={familia}>
+            <Text
+              variant="label"
+              color={colors.textSecondary}
+              style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
+              {familia.toUpperCase()}
+            </Text>
+            {paletasDe(familia).map((p) => (
+              <CartaoPaleta
+                key={p.id}
+                paleta={p}
+                selecionada={p.id === escolhida}
+                onPress={() => escolher(p)}
+              />
+            ))}
+          </View>
         ))}
 
         <View

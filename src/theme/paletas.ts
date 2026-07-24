@@ -29,6 +29,8 @@
  * não entra — por muito bonita que seja.
  */
 
+import { derivar } from './derivarPaleta';
+
 /** Os tokens que uma paleta pode mudar. */
 export type TokensPaleta = {
   primary: string;
@@ -52,15 +54,40 @@ export type TokensPaleta = {
 };
 
 export type PaletaId =
+  // Verdes
   | 'campo'
-  | 'terra'
   | 'oliveira'
-  | 'ceu'
+  | 'hortela'
   | 'mar'
+  // Azuis
+  | 'ceu'
   | 'indigo'
+  // Roxos e rosas
+  | 'alfazema'
+  | 'amora'
+  | 'cravo'
+  // Quentes
+  | 'papoila'
+  | 'poente'
+  | 'trigo'
+  | 'terra'
+  | 'cafe'
   | 'vinha'
+  // Neutros
   | 'ardosia'
+  | 'pedra'
+  | 'tinta'
   | 'contraste';
+
+/**
+ * Famílias, para a lista se poder percorrer.
+ *
+ * Vinte cartões seguidos não são vinte opções — são uma parede. Agrupados por
+ * cor, quem quer "um azul" salta direto ao sítio em vez de percorrer tudo.
+ */
+export type Familia = 'Verdes' | 'Azuis' | 'Roxos e rosas' | 'Quentes' | 'Neutros';
+
+export const FAMILIAS: Familia[] = ['Verdes', 'Azuis', 'Roxos e rosas', 'Quentes', 'Neutros'];
 
 export type Paleta = {
   id: PaletaId;
@@ -68,14 +95,23 @@ export type Paleta = {
   nome: string;
   /** Uma linha a dizer a quem serve. */
   descricao: string;
+  familia: Familia;
   tokens: TokensPaleta;
 };
 
-export const PALETAS: Paleta[] = [
+/**
+ * As primeiras, desenhadas token a token.
+ *
+ * Ficam à mão porque são as mais usadas e porque a `campo` é a de origem: se
+ * passasse a ser gerada, a app inteira mudava de tom no dia em que alguém
+ * afinasse o gerador. As outras vêm de `derivar()`.
+ */
+const DESENHADAS: Paleta[] = [
   {
     id: 'campo',
     nome: 'Campo',
     descricao: 'O verde de sempre.',
+    familia: 'Verdes',
     tokens: {
       primary: '#1B7A48',
       primaryDark: '#166B3D',
@@ -104,6 +140,7 @@ export const PALETAS: Paleta[] = [
     id: 'terra',
     nome: 'Terra',
     descricao: 'Castanhos quentes, como a courela no verão.',
+    familia: 'Quentes',
     tokens: {
       primary: '#7D5227',
       primaryDark: '#6B4522',
@@ -129,6 +166,7 @@ export const PALETAS: Paleta[] = [
     id: 'oliveira',
     nome: 'Oliveira',
     descricao: 'Verde-oliva acinzentado, mais apagado do que o verde folha.',
+    familia: 'Verdes',
     tokens: {
       primary: '#5F6B2F',
       primaryDark: '#4E5827',
@@ -154,6 +192,7 @@ export const PALETAS: Paleta[] = [
     id: 'ceu',
     nome: 'Céu',
     descricao: 'Azul calmo, descansado para os olhos.',
+    familia: 'Azuis',
     tokens: {
       primary: '#1D5D96',
       primaryDark: '#174E7E',
@@ -179,6 +218,7 @@ export const PALETAS: Paleta[] = [
     id: 'mar',
     nome: 'Mar',
     descricao: 'Verde-azulado fundo, fresco sem ser frio.',
+    familia: 'Verdes',
     tokens: {
       primary: '#106A6E',
       primaryDark: '#0D5A5D',
@@ -204,6 +244,7 @@ export const PALETAS: Paleta[] = [
     id: 'indigo',
     nome: 'Índigo',
     descricao: 'Azul-escuro sério, para quem quer a app discreta.',
+    familia: 'Azuis',
     tokens: {
       primary: '#37458F',
       primaryDark: '#2D3876',
@@ -229,6 +270,7 @@ export const PALETAS: Paleta[] = [
     id: 'vinha',
     nome: 'Vinha',
     descricao: 'Bordô de adega, quente e escuro.',
+    familia: 'Quentes',
     tokens: {
       primary: '#8A2740',
       primaryDark: '#741F35',
@@ -254,6 +296,7 @@ export const PALETAS: Paleta[] = [
     id: 'ardosia',
     nome: 'Ardósia',
     descricao: 'Cinzentos sóbrios, sem cor a puxar pela vista.',
+    familia: 'Neutros',
     tokens: {
       primary: '#3F5261',
       primaryDark: '#33434F',
@@ -279,6 +322,7 @@ export const PALETAS: Paleta[] = [
     id: 'contraste',
     nome: 'Alto contraste',
     descricao: 'Letra escura, fundos claros e linhas bem marcadas.',
+    familia: 'Neutros',
     tokens: {
       primary: '#0B4F9E',
       primaryDark: '#083B78',
@@ -305,9 +349,130 @@ export const PALETAS: Paleta[] = [
   },
 ];
 
+/**
+ * As restantes, a partir da cor da marca e da sua versão escura.
+ *
+ * Duas cores por paleta em vez de dezoito: é a diferença entre acrescentar uma
+ * cor nova em duas linhas e acrescentá-la com um erro de contraste algures no
+ * meio. Os níveis de legibilidade são forçados por `derivar()` — ver
+ * `derivarPaleta.ts`.
+ *
+ * Sobre o amarelo e o laranja: a cor da marca leva SEMPRE texto branco por
+ * cima (é o botão principal), e um amarelo-limão ou um laranja vivo não
+ * aguentam isso — dão 2:1, letra branca sobre fundo claro. Por isso o amarelo
+ * aqui é dourado de trigo e o laranja é de telha: o brilho da cor vive nos
+ * tintes e nos fundos, onde nada tem de se ler por cima.
+ */
+const DERIVADAS: Paleta[] = [
+  /* ---- Verdes ---- */
+  derivar({
+    id: 'hortela',
+    nome: 'Hortelã',
+    descricao: 'Verde-esmeralda vivo, mais fresco do que o verde folha.',
+    familia: 'Verdes',
+    marca: '#0F8A5F',
+    escura: '#064434',
+  }),
+
+  /* ---- Roxos e rosas ---- */
+  derivar({
+    id: 'alfazema',
+    nome: 'Alfazema',
+    descricao: 'Roxo de flor, sereno.',
+    familia: 'Roxos e rosas',
+    marca: '#6E3AA8',
+    escura: '#3D1E63',
+  }),
+  derivar({
+    id: 'amora',
+    nome: 'Amora',
+    descricao: 'Púrpura carregado, entre o roxo e o vinho.',
+    familia: 'Roxos e rosas',
+    marca: '#8B2A7A',
+    escura: '#4C1543',
+  }),
+  derivar({
+    id: 'cravo',
+    nome: 'Cravo',
+    descricao: 'Rosa forte, o mais alegre de todos.',
+    familia: 'Roxos e rosas',
+    marca: '#B02455',
+    escura: '#63122F',
+  }),
+
+  /* ---- Quentes ---- */
+  derivar({
+    id: 'papoila',
+    nome: 'Papoila',
+    descricao: 'Vermelho vivo de flor de trigal.',
+    familia: 'Quentes',
+    marca: '#C0282C',
+    escura: '#6C1416',
+  }),
+  derivar({
+    id: 'poente',
+    nome: 'Poente',
+    descricao: 'Laranja de telha ao fim da tarde.',
+    familia: 'Quentes',
+    marca: '#C05314',
+    escura: '#6B2B08',
+  }),
+  derivar({
+    id: 'trigo',
+    nome: 'Trigo',
+    descricao: 'Amarelo dourado de seara madura.',
+    familia: 'Quentes',
+    marca: '#A67C08',
+    escura: '#5A4204',
+  }),
+  derivar({
+    id: 'cafe',
+    nome: 'Café',
+    descricao: 'Castanho escuro torrado, sem brilho nenhum.',
+    familia: 'Quentes',
+    marca: '#6B4430',
+    escura: '#38221A',
+  }),
+
+  /* ---- Neutros ---- */
+  derivar({
+    id: 'pedra',
+    nome: 'Pedra',
+    descricao: 'Cinzento quente de granito.',
+    familia: 'Neutros',
+    marca: '#6B6357',
+    escura: '#39342C',
+  }),
+  derivar({
+    id: 'tinta',
+    nome: 'Tinta',
+    descricao: 'Preto e branco, sem cor nenhuma pelo meio.',
+    familia: 'Neutros',
+    marca: '#3A3A3A',
+    escura: '#141414',
+  }),
+];
+
+/** Pela ordem das famílias — é assim que a lista se apresenta. */
+export const PALETAS: Paleta[] = FAMILIAS.flatMap((f) =>
+  [...DESENHADAS, ...DERIVADAS].filter((p) => p.familia === f),
+);
+
 export const PALETA_OMISSAO: PaletaId = 'campo';
 
 /** A paleta com este id, ou a de origem se o id não existir (dados antigos). */
 export function paletaPorId(id: string | null | undefined): Paleta {
-  return PALETAS.find((p) => p.id === id) ?? PALETAS[0];
+  return PALETAS.find((p) => p.id === id) ?? paletaOmissao();
+}
+
+/** A paleta de origem, sempre presente. */
+export function paletaOmissao(): Paleta {
+  const p = PALETAS.find((x) => x.id === PALETA_OMISSAO);
+  if (!p) throw new Error('A paleta de origem desapareceu da lista');
+  return p;
+}
+
+/** As paletas de uma família, para a lista as mostrar agrupadas. */
+export function paletasDe(familia: Familia): Paleta[] {
+  return PALETAS.filter((p) => p.familia === familia);
 }

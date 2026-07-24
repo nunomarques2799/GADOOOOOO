@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from '@jest/globals';
 
-import { PALETAS, PALETA_OMISSAO, paletaPorId } from '../paletas';
+import { FAMILIAS, PALETAS, PALETA_OMISSAO, paletaOmissao, paletaPorId, paletasDe } from '../paletas';
 
 /* ---- Contraste WCAG 2.1 ---- */
 
@@ -49,9 +49,43 @@ describe('contraste', () => {
 });
 
 describe('paletas', () => {
-  it('a paleta de origem existe e é a primeira da lista', () => {
+  it('a paleta de origem existe e abre a lista', () => {
     expect(paletaPorId(PALETA_OMISSAO).id).toBe(PALETA_OMISSAO);
+    expect(paletaOmissao().id).toBe(PALETA_OMISSAO);
     expect(PALETAS[0].id).toBe(PALETA_OMISSAO);
+  });
+
+  it('a paleta de origem mantém as cores exatas com que a app foi desenhada', () => {
+    // Esta não é uma paleta como as outras: é a que TODA a gente tem, e quem
+    // nunca abrir o ecrã do aspeto continua com ela. Um acerto no gerador ou
+    // um "arredondar" bem-intencionado destes valores muda a app a toda a
+    // gente de uma vez, sem ninguém ter pedido nada.
+    const t = paletaOmissao().tokens;
+    expect(t.primary).toBe('#1B7A48');
+    expect(t.primaryDark).toBe('#166B3D');
+    expect(t.primaryDarker).toBe('#124D2E');
+    expect(t.background).toBe('#F3F6F2');
+    expect(t.surface).toBe('#FFFFFF');
+    expect(t.text).toBe('#15251C');
+  });
+
+  it('está toda arrumada por famílias', () => {
+    // A ordem da lista é a ordem por que aparecem no ecrã. Uma paleta cuja
+    // família não conste ficava fora da lista sem erro nenhum — desaparecia
+    // simplesmente, e quem a tivesse escolhida caía na de origem.
+    for (const p of PALETAS) expect(FAMILIAS).toContain(p.familia);
+    expect(FAMILIAS.flatMap(paletasDe).length).toBe(PALETAS.length);
+  });
+
+  it('nenhuma família fica vazia', () => {
+    for (const f of FAMILIAS) expect(paletasDe(f).length).toBeGreaterThan(0);
+  });
+
+  it('há escolha que chegue, e de cores diferentes', () => {
+    expect(PALETAS.length).toBeGreaterThanOrEqual(15);
+    // Duas paletas com a mesma cor de marca são uma opção a fingir.
+    const marcas = PALETAS.map((p) => p.tokens.primary);
+    expect(new Set(marcas).size).toBe(marcas.length);
   });
 
   it('um id desconhecido cai na paleta de origem', () => {
