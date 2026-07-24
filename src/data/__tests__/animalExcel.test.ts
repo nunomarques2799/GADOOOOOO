@@ -1,6 +1,11 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { interpretarMatriz, linhaParaAnimal, COLUNAS } from '../animalExcel';
+import {
+  interpretarMatriz,
+  linhaParaAnimal,
+  COLUNAS,
+  type AnimalExistente,
+} from '../animalExcel';
 
 /** Atalho: monta a matriz (cabeçalhos + linhas) e interpreta. */
 function interpretar(cabecalhos: string[], ...linhas: unknown[][]) {
@@ -136,22 +141,31 @@ describe('linhaParaAnimal — regras de domínio', () => {
 describe('interpretarMatriz — duplicados (brinco)', () => {
   const COM_BRINCO = [...MINIMO, 'Nº de brinco (SIA)'];
 
+  /** Um animal que já está na conta, com o mínimo que a deteção precisa. */
+  function jaNaConta(p: Partial<AnimalExistente> = {}): AnimalExistente {
+    return {
+      id: 'a1',
+      especie: 'Bovino',
+      dataNascimento: new Date(2021, 2, 15).toISOString(),
+      ...p,
+    };
+  }
+
   it('salta um brinco que já existe na conta', () => {
-    const r = interpretarMatriz(
-      [COM_BRINCO, ['Bovino', 'Fêmea', '15/03/2021', 'PT 1']],
-      ['PT 1'],
-    );
+    const r = interpretarMatriz([COM_BRINCO, ['Bovino', 'Fêmea', '15/03/2021', 'PT 1']], [
+      jaNaConta({ numeroIdentificacao: 'PT 1' }),
+    ]);
     expect(r.validas).toBe(0);
     expect(r.duplicadas).toBe(1);
     expect(r.linhas[0].duplicado).toBe('ja-existe');
+    expect(r.linhas[0].duplicadoPor).toBe('brinco');
     expect(r.linhas[0].dados).toBeUndefined();
   });
 
   it('reconhece o mesmo brinco escrito com espaçamento diferente', () => {
-    const r = interpretarMatriz(
-      [COM_BRINCO, ['Bovino', 'Fêmea', '15/03/2021', 'pt0001']],
-      ['PT 00 01'],
-    );
+    const r = interpretarMatriz([COM_BRINCO, ['Bovino', 'Fêmea', '15/03/2021', 'pt0001']], [
+      jaNaConta({ numeroIdentificacao: 'PT 00 01' }),
+    ]);
     expect(r.duplicadas).toBe(1);
   });
 
@@ -166,7 +180,65 @@ describe('interpretarMatriz — duplicados (brinco)', () => {
     expect(r.linhas[1].duplicado).toBe('no-ficheiro');
   });
 
-  it('não trata animais sem brinco como duplicados', () => {
+  it('com brincos diferentes, dois animais com o mesmo nome entram os dois', () => {
+    // O brinco é a autoridade: dois "Mimosa" com brincos diferentes são dois
+    // animais, e recusar o segundo era perder um animal do efetivo.
+    const cab = [...COM_BRINCO, 'Nome'];
+    const r = interpretarMatriz(
+      [
+        cab,
+        ['Bovino', 'Fêmea', '15/03/2021', 'PT 1', 'Mimosa'],
+        ['Bovino', 'Fêmea', '15/03/2021', 'PT 2', 'Mimosa'],
+      ],
+      [],
+    );
+    expect(r.validas).toBe(2);
+    expect(r.duplicadas).toBe(0);
+  });
+});
+
+describe('interpretarMatriz — duplicados sem brinco (nome + nascimento)', () => {
+  const COM_NOME = ['Nome', ...MINIMO];
+
+  it('salta um animal sem brinco que já existe com o mesmo nome e nascimento', () => {
+    const r = interpretarMatriz([COM_NOME, ['Mimosa', 'Bovino', 'Fêmea', '15/03/2021']], [
+      {
+        id: 'a1',
+        especie: 'Bovino',
+        nome: 'Mimosa',
+        dataNascimento: new Date(2021, 2, 15).toISOString(),
+      },
+    ]);
+    expect(r.validas).toBe(0);
+    expect(r.duplicadas).toBe(1);
+    expect(r.linhas[0].duplicadoPor).toBe('nome-data');
+  });
+
+  it('deixa entrar o mesmo nome com data de nascimento diferente', () => {
+    const r = interpretarMatriz([COM_NOME, ['Mimosa', 'Bovino', 'Fêmea', '15/03/2020']], [
+      {
+        id: 'a1',
+        especie: 'Bovino',
+        nome: 'Mimosa',
+        dataNascimento: new Date(2021, 2, 15).toISOString(),
+      },
+    ]);
+    expect(r.validas).toBe(1);
+    expect(r.duplicadas).toBe(0);
+  });
+
+  it('salta a linha repetida dentro do próprio ficheiro', () => {
+    const r = interpretarMatriz([
+      COM_NOME,
+      ['Mimosa', 'Bovino', 'Fêmea', '15/03/2021'],
+      ['mimosa', 'Bovino', 'Fêmea', '15/03/2021'],
+    ]);
+    expect(r.validas).toBe(1);
+    expect(r.linhas[1].duplicado).toBe('no-ficheiro');
+    expect(r.linhas[1].duplicadoPor).toBe('nome-data');
+  });
+
+  it('sem brinco nem nome, importa mas avisa que não dá para confirmar', () => {
     const r = interpretarMatriz([
       MINIMO,
       ['Bovino', 'Fêmea', '15/03/2021'],
@@ -174,6 +246,47 @@ describe('interpretarMatriz — duplicados (brinco)', () => {
     ]);
     expect(r.validas).toBe(2);
     expect(r.duplicadas).toBe(0);
+    expect(r.linhas[0].avisos.join(' ')).toMatch(/não conseguimos confirmar/i);
+  });
+});
+
+describe('interpretarMatriz — duplicados por ID (ficheiro exportado pela app)', () => {
+  const COM_ID = [...MINIMO, 'ID Terrabovina'];
+
+  it('salta as linhas cujo ID já está na conta e importa as que o criador acrescentou', () => {
+    // O caso real: exportar o efetivo, escrever animais novos no fim do
+    // ficheiro e reimportar o ficheiro TODO. Sem isto, os animais já
+    // registados entravam segunda vez.
+    const r = interpretarMatriz(
+      [
+        COM_ID,
+        ['Bovino', 'Fêmea', '15/03/2021', 'animal-1'],
+        ['Bovino', 'Macho', '16/03/2021', 'animal-2'],
+        ['Bovino', 'Fêmea', '01/04/2024', ''], // linha nova, sem ID
+      ],
+      [
+        { id: 'animal-1', especie: 'Bovino', dataNascimento: '2021-03-15' },
+        { id: 'animal-2', especie: 'Bovino', dataNascimento: '2021-03-16' },
+      ],
+    );
+    expect(r.duplicadas).toBe(2);
+    expect(r.validas).toBe(1);
+    expect(r.linhas[0].duplicadoPor).toBe('id');
+    expect(r.linhas[2].dados).toBeDefined();
+  });
+
+  it('a coluna do ID não conta como coluna desconhecida', () => {
+    const r = interpretarMatriz([COM_ID, ['Bovino', 'Fêmea', '15/03/2021', 'x']]);
+    expect(r.colunasIgnoradas).toEqual([]);
+  });
+
+  it('as colunas informativas da exportação também não', () => {
+    const r = interpretarMatriz([
+      [...MINIMO, 'Exploração', 'Terreno', 'Estado'],
+      ['Bovino', 'Fêmea', '15/03/2021', 'Quinta do Alto', 'Lameiro', 'Ativo'],
+    ]);
+    expect(r.colunasIgnoradas).toEqual([]);
+    expect(r.validas).toBe(1);
   });
 });
 

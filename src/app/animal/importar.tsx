@@ -8,9 +8,10 @@ import type { LinhaImportacao, ResultadoImportacao } from '@/data/animalExcel';
 import {
   descarregarTemplate,
   escolherELerExcel,
-  importacaoDisponivel,
+  ErroExcel,
 } from '@/data/animalExcelFicheiro';
 import { avisar } from '@/data/avisos';
+import { excelDisponivel } from '@/data/excelFicheiro';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -37,15 +38,9 @@ export default function ImportarAnimaisScreen() {
     [exploracoes, pode],
   );
 
-  // Brincos já na conta — para saltar animais repetidos ao importar. Um brinco
-  // é único, por isso conta o efetivo todo, não só o da exploração de destino.
-  const brincosExistentes = useMemo(
-    () => animais.map((a) => a.numeroIdentificacao).filter((b): b is string => !!b),
-    [animais],
-  );
-
   const [exploracaoId, setExploracaoId] = useState(editaveis[0]?.id ?? '');
   const [resultado, setResultado] = useState<ResultadoImportacao | null>(null);
+  const [erro, setErro] = useState<{ mensagem: string; detalhe?: string } | null>(null);
   const [aLer, setALer] = useState(false);
   const [aImportar, setAImportar] = useState(false);
 
@@ -81,14 +76,28 @@ export default function ImportarAnimaisScreen() {
     [resultado],
   );
 
+  /**
+   * Lê o ficheiro escolhido. O erro fica no ecrã (e não só num alerta que se
+   * fecha): quem carregou o ficheiro errado tem de poder ler o motivo enquanto
+   * o vai corrigir no Excel.
+   */
   async function escolherFicheiro() {
     if (aLer) return;
     setALer(true);
     try {
-      const r = await escolherELerExcel(brincosExistentes);
-      if (r) setResultado(r);
+      // O efetivo todo vai para a leitura — é o que deixa saltar os animais que
+      // já existem em vez de os duplicar (por ID, brinco, ou nome + nascimento).
+      const r = await escolherELerExcel(animais);
+      if (r) {
+        setResultado(r);
+        setErro(null);
+      }
     } catch (e) {
-      avisar('Não foi possível ler o ficheiro', e instanceof Error ? e.message : String(e));
+      const mensagem = e instanceof Error ? e.message : String(e);
+      const detalhe = e instanceof ErroExcel ? e.detalhe : undefined;
+      setResultado(null);
+      setErro({ mensagem, detalhe });
+      avisar('Não foi possível ler o ficheiro', mensagem);
     } finally {
       setALer(false);
     }
@@ -111,7 +120,9 @@ export default function ImportarAnimaisScreen() {
         avisar(
           'Importação parcial',
           `Entraram ${criados}. O servidor recusou ${falhas.length}` +
-            `${nomes ? ` (${nomes}${falhas.length > 5 ? '…' : ''})` : ''}.`,
+            `${nomes ? ` (${nomes}${falhas.length > 5 ? '…' : ''})` : ''}.` +
+            // O motivo do servidor, sem o qual sobra um "recusou" sem explicação.
+            `\n\nMotivo: ${falhas[0].erro}`,
         );
       }
       router.back();
@@ -124,7 +135,7 @@ export default function ImportarAnimaisScreen() {
 
   // No telemóvel não há seletor de ficheiros sem um módulo nativo novo — a
   // importação é do computador/web. Diz-se, em vez de mostrar um botão morto.
-  if (!importacaoDisponivel) {
+  if (!excelDisponivel) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <Header title="Importar de Excel" />
@@ -159,7 +170,8 @@ export default function ImportarAnimaisScreen() {
         <View style={conteudo}>
           <Text variant="secondary" color={colors.textSecondary}>
             Descarregue o modelo, preencha-o no Excel (um animal por linha) e volte aqui
-            para o carregar. Mostramos o que vai entrar antes de gravar.
+            para o carregar. Mostramos o que vai entrar antes de gravar. Os animais que a
+            app já tem não entram outra vez, mesmo que o ficheiro os traga.
           </Text>
 
           {/* Passo 1 — exploração de destino */}
@@ -223,6 +235,31 @@ export default function ImportarAnimaisScreen() {
             onPress={() => void escolherFicheiro()}
           />
 
+          {/* O ficheiro não deu para ler — o motivo fica à vista */}
+          {erro ? (
+            <Card>
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <Icon name="file-alert-outline" size="lg" color={colors.danger} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyStrong" color={colors.danger}>
+                    Não conseguimos ler o ficheiro
+                  </Text>
+                  <Text variant="secondary" color={colors.textSecondary}>
+                    {erro.mensagem}
+                  </Text>
+                  {erro.detalhe ? (
+                    <Text
+                      variant="caption"
+                      color={colors.textMuted}
+                      style={{ marginTop: spacing.xs }}>
+                      Detalhe técnico: {erro.detalhe}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            </Card>
+          ) : null}
+
           {/* Pré-visualização */}
           {resultado ? (
             <Previsualizacao
@@ -264,6 +301,29 @@ export default function ImportarAnimaisScreen() {
       ) : null}
     </View>
   );
+}
+
+/**
+ * Por que razão esta linha foi saltada. Dizer só "já existe" mandava o criador
+ * procurar às cegas: o que ele precisa de saber é o que a app comparou (o ID
+ * que o ficheiro trazia, o brinco, ou o nome com a data de nascimento).
+ */
+function motivoDuplicado(l: LinhaImportacao): string {
+  const naConta = l.duplicado === 'ja-existe';
+  switch (l.duplicadoPor) {
+    case 'id':
+      return naConta
+        ? 'Este animal já está na app — veio deste mesmo ficheiro exportado. Não foi importado outra vez.'
+        : 'Esta linha repete outra do ficheiro (mesmo ID).';
+    case 'nome-data':
+      return naConta
+        ? 'Já existe um animal com este nome e data de nascimento — não foi importado. Se for outro animal, mude-lhe o nome ou dê-lhe brinco.'
+        : 'Outra linha do ficheiro tem o mesmo nome e data de nascimento.';
+    default:
+      return naConta
+        ? 'Já existe um animal com este brinco — não foi importado.'
+        : 'Este brinco aparece mais do que uma vez no ficheiro.';
+  }
 }
 
 function PassoTitulo({ numero, texto }: { numero: number; texto: string }) {
@@ -420,9 +480,7 @@ function Previsualizacao({
                   <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
                     <Icon name="content-duplicate" size="sm" color={colors.textMuted} />
                     <Text variant="caption" color={colors.textSecondary} style={{ flex: 1 }}>
-                      {l.duplicado === 'ja-existe'
-                        ? 'Já existe um animal com este brinco — não foi importado.'
-                        : 'Este brinco aparece mais do que uma vez no ficheiro.'}
+                      {motivoDuplicado(l)}
                     </Text>
                   </View>
                 </View>

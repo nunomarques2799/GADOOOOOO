@@ -16,12 +16,19 @@
  * Uma linha inválida não trava as outras — é reportada e o resto importa.
  */
 
+import { chaveDia } from './calendario';
 import { especies, finalidades, finalidadesPara, sexos } from './constants';
 import { parseDataPt } from './helpers';
 import { coresDe, normalizar, opcoesComUsadas, racasDe } from './racas';
 import type { Animal, Especie, Finalidade, Sexo } from './types';
 
-/** Campo do animal que uma coluna do template preenche. */
+/**
+ * Campo do animal que uma coluna do template preenche.
+ *
+ * O `id` é a exceção: não é um campo do animal a preencher, é o identificador
+ * que a app escreve ao exportar para reconhecer, numa reimportação, os animais
+ * que já tem (ver `interpretarMatriz`).
+ */
 export type CampoImportado =
   | 'nome'
   | 'especie'
@@ -35,7 +42,8 @@ export type CampoImportado =
   | 'casa'
   | 'numeroCasa'
   | 'comunicadoSnira'
-  | 'dataPrevistaParto';
+  | 'dataPrevistaParto'
+  | 'id';
 
 /** Dados de um animal lidos de uma linha — sem id nem exploração (a exploração
  *  escolhe-se na app, o id gera-se ao gravar). */
@@ -197,7 +205,26 @@ export const COLUNAS: ColunaTemplate[] = [
     ajuda: 'Só para fêmeas prenhes (dd/mm/aaaa). Pode ser uma data futura.',
     aliases: ['parto', 'data de parto', 'data prevista parto'],
   },
+  {
+    campo: 'id',
+    rotulo: 'ID Terrabovina',
+    obrigatorio: false,
+    exemplo: '',
+    ajuda:
+      'Preenchido pela app quando exporta — deixe como está. É por aqui que a app '
+      + 'reconhece os animais que já tem e não os importa outra vez. Nas linhas que '
+      + 'acrescentar, deixe em branco.',
+    aliases: ['id', 'id da app', 'identificador'],
+  },
 ];
+
+/**
+ * Colunas que a app ESCREVE ao exportar mas não importa: são relações que se
+ * escolhem na app (a exploração de destino escolhe-se no ecrã de importação) ou
+ * estado que ela própria calcula. Ficam aqui reconhecidas para não aparecerem
+ * como "coluna desconhecida" a quem exporta, edita e reimporta o mesmo ficheiro.
+ */
+export const COLUNAS_INFORMATIVAS = ['Exploração', 'Terreno', 'Estado'] as const;
 
 /** Linhas de exemplo, para a folha de instruções do template. */
 export const EXEMPLOS: Record<CampoImportado, string>[] = [
@@ -215,6 +242,7 @@ export const EXEMPLOS: Record<CampoImportado, string>[] = [
     numeroCasa: '3',
     comunicadoSnira: 'Sim',
     dataPrevistaParto: '',
+    id: '',
   },
   {
     nome: 'Trovão',
@@ -230,6 +258,7 @@ export const EXEMPLOS: Record<CampoImportado, string>[] = [
     numeroCasa: '2',
     comunicadoSnira: 'Sim',
     dataPrevistaParto: '',
+    id: '',
   },
 ];
 
@@ -244,15 +273,28 @@ export type LinhaImportacao = {
   /** Coisas que não impedem a importação, mas convém o criador saber. */
   avisos: string[];
   /**
-   * Brinco repetido: `ja-existe` = já há um animal com este brinco na conta;
-   * `no-ficheiro` = aparece mais do que uma vez no próprio ficheiro. Em ambos
-   * os casos a linha NÃO é importada (não há `dados`) — evita criar o mesmo
-   * animal duas vezes, que é o que acontece quem exporta, edita e reimporta.
+   * Animal repetido: `ja-existe` = já está na conta; `no-ficheiro` = aparece
+   * mais do que uma vez no próprio ficheiro. Em ambos os casos a linha NÃO é
+   * importada (não há `dados`) — evita criar o mesmo animal duas vezes, que é o
+   * que acontece a quem exporta, acrescenta linhas e reimporta o ficheiro todo.
    */
   duplicado?: 'no-ficheiro' | 'ja-existe';
+  /** Por que regra se reconheceu o repetido — é o que se explica ao criador. */
+  duplicadoPor?: 'id' | 'brinco' | 'nome-data';
+  /** O ID que o ficheiro trazia na coluna "ID Terrabovina" (só o que a app escreveu). */
+  idOrigem?: string;
   /** Como referir esta linha na lista (nome, brinco, ou "Linha N"). */
   rotulo: string;
 };
+
+/**
+ * O que a app precisa de saber sobre um animal que JÁ tem, para reconhecer
+ * repetidos. É um subconjunto de `Animal` — quem chama passa o efetivo.
+ */
+export type AnimalExistente = Pick<
+  Animal,
+  'id' | 'especie' | 'dataNascimento' | 'nome' | 'numeroIdentificacao'
+>;
 
 export type ResultadoImportacao = {
   linhas: LinhaImportacao[];
@@ -260,12 +302,14 @@ export type ResultadoImportacao = {
   validas: number;
   /** Linhas com erro de validação. */
   comErro: number;
-  /** Linhas saltadas por brinco repetido (já existe ou repetido no ficheiro). */
+  /** Linhas saltadas por serem animais repetidos (já na conta ou no ficheiro). */
   duplicadas: number;
   /** Rótulos de colunas obrigatórias que o ficheiro não trazia. */
   colunasEmFalta: string[];
   /** Cabeçalhos do ficheiro que não correspondem a nenhuma coluna conhecida. */
   colunasIgnoradas: string[];
+  /** Nome da folha que foi lida (quem lê o ficheiro é que o sabe). */
+  folha?: string;
 };
 
 /* ------------------------------------------------------------------ *
@@ -303,6 +347,9 @@ for (const c of COLUNAS) {
   for (const a of c.aliases ?? []) CHAVE_PARA_CAMPO.set(chaveCol(a), c.campo);
 }
 
+/** Cabeçalhos reconhecidos mas não importados (ver `COLUNAS_INFORMATIVAS`). */
+const INFORMATIVAS = new Set(COLUNAS_INFORMATIVAS.map(chaveCol));
+
 /**
  * Chave para comparar brincos: sem acentos, maiúsculas nem espaços, para que
  * "PT 6120 0011 2201" e "pt612000112201" contem como o mesmo animal (é o mesmo
@@ -310,6 +357,24 @@ for (const c of COLUNAS) {
  */
 export function chaveBrinco(s: string | undefined): string {
   return normalizar(s ?? '').replace(/\s+/g, '');
+}
+
+/**
+ * Chave de um animal SEM brinco: espécie + nome + dia de nascimento. É a rede
+ * de segurança para o efetivo por casa, que muitas vezes ainda não tem brinco
+ * nenhum — sem isto, exportar e reimportar duplicava esses animais.
+ *
+ * Devolve `''` quando não há nome: dois animais sem brinco e sem nome, nascidos
+ * no mesmo dia, são indistinguíveis, e recusá-los seria recusar gémeos.
+ */
+export function chaveNomeData(a: {
+  especie: string;
+  nome?: string;
+  dataNascimento: string;
+}): string {
+  const nome = normalizar(a.nome ?? '').trim();
+  if (!nome) return '';
+  return `${normalizar(a.especie)}|${nome}|${chaveDia(a.dataNascimento)}`;
 }
 
 function parseEspecie(v: unknown): Especie | null {
@@ -361,6 +426,7 @@ export function linhaParaAnimal(
   const cor = texto(valores.corPelagem);
   const casa = texto(valores.casa);
   const numeroCasa = texto(valores.numeroCasa);
+  const idOrigem = texto(valores.id) || undefined;
 
   // ---- Espécie (obrigatória) ----
   const txtEspecie = texto(valores.especie);
@@ -427,7 +493,7 @@ export function linhaParaAnimal(
   const rotulo = nome || brinco || `Linha ${numero}`;
 
   if (erros.length > 0 || !especie || !sexo || !dataNascimento) {
-    return { numero, erros, avisos, rotulo };
+    return { numero, erros, avisos, rotulo, idOrigem };
   }
 
   const temBrinco = brinco.length > 0;
@@ -450,7 +516,78 @@ export function linhaParaAnimal(
     dataIdentificacao: temBrinco ? (dataIdentificacao ?? dataNascimento) : undefined,
     dataPrevistaParto: sexo === 'Fêmea' ? dataPrevistaParto : undefined,
   };
-  return { numero, dados, erros, avisos, rotulo };
+  return { numero, dados, erros, avisos, rotulo, idOrigem };
+}
+
+/* ------------------------------------------------------------------ *
+ *  Repetidos
+ * ------------------------------------------------------------------ */
+
+/**
+ * Marca as linhas que correspondem a animais que a app já tem (ou que se
+ * repetem dentro do próprio ficheiro) e tira-lhes os `dados` — o que impede a
+ * importação de as gravar.
+ *
+ * Três réguas, da mais forte para a mais fraca:
+ *   1. **ID Terrabovina** — a coluna que a app escreve ao exportar. É exata:
+ *      quem exporta o efetivo, acrescenta linhas no fim e reimporta o ficheiro
+ *      todo, só vê entrar o que acrescentou.
+ *   2. **Brinco** — o número oficial, único por animal.
+ *   3. **Espécie + nome + dia de nascimento** — só para linhas SEM brinco, que
+ *      é o caso do efetivo registado por casa. Com brinco manda o brinco: dois
+ *      animais com o mesmo nome e brincos diferentes são dois animais.
+ *
+ * O que não tem nenhuma das três (sem ID, sem brinco e sem nome) entra, com um
+ * aviso — não há por onde o reconhecer, e recusá-lo bloquearia crias novas.
+ */
+function marcarDuplicados(
+  linhas: LinhaImportacao[],
+  existentes: Iterable<AnimalExistente>,
+): void {
+  const idsNaConta = new Set<string>();
+  const brincosNaConta = new Set<string>();
+  const nomesNaConta = new Set<string>();
+  for (const a of existentes) {
+    if (a.id) idsNaConta.add(a.id);
+    const b = chaveBrinco(a.numeroIdentificacao);
+    if (b) brincosNaConta.add(b);
+    const n = chaveNomeData(a);
+    if (n) nomesNaConta.add(n);
+  }
+
+  const idsVistos = new Set<string>();
+  const brincosVistos = new Set<string>();
+  const nomesVistos = new Set<string>();
+
+  for (const l of linhas) {
+    if (!l.dados) continue; // linha com erro: já não vai ser importada
+    const id = l.idOrigem ?? '';
+    const brinco = chaveBrinco(l.dados.numeroIdentificacao);
+    const nomeData = brinco ? '' : chaveNomeData(l.dados);
+
+    const marcar = (onde: 'ja-existe' | 'no-ficheiro', por: LinhaImportacao['duplicadoPor']) => {
+      l.duplicado = onde;
+      l.duplicadoPor = por;
+      l.dados = undefined;
+    };
+
+    if (id && idsNaConta.has(id)) marcar('ja-existe', 'id');
+    else if (id && idsVistos.has(id)) marcar('no-ficheiro', 'id');
+    else if (brinco && brincosNaConta.has(brinco)) marcar('ja-existe', 'brinco');
+    else if (brinco && brincosVistos.has(brinco)) marcar('no-ficheiro', 'brinco');
+    else if (nomeData && nomesNaConta.has(nomeData)) marcar('ja-existe', 'nome-data');
+    else if (nomeData && nomesVistos.has(nomeData)) marcar('no-ficheiro', 'nome-data');
+    else {
+      if (id) idsVistos.add(id);
+      if (brinco) brincosVistos.add(brinco);
+      if (nomeData) nomesVistos.add(nomeData);
+      if (!id && !brinco && !nomeData)
+        l.avisos.push(
+          'Sem brinco nem nome — não conseguimos confirmar se este animal já existe na app. '
+            + 'Confira que não o está a registar duas vezes.',
+        );
+    }
+  }
 }
 
 /**
@@ -458,10 +595,13 @@ export function linhaParaAnimal(
  * os cabeçalhos). Reconhece as colunas pelos cabeçalhos, salta linhas vazias e
  * converte cada linha de dados. Não conhece o SheetJS — quem o chama entrega já
  * a matriz.
+ *
+ * `existentes` é o efetivo que a app já tem: é o que permite saltar os animais
+ * repetidos em vez de os duplicar (ver `marcarDuplicados`).
  */
 export function interpretarMatriz(
   matriz: unknown[][],
-  brincosExistentes: Iterable<string> = [],
+  existentes: Iterable<AnimalExistente> = [],
 ): ResultadoImportacao {
   const linhas: LinhaImportacao[] = [];
   const colunasIgnoradas: string[] = [];
@@ -471,7 +611,7 @@ export function interpretarMatriz(
     const t = texto(h);
     if (!t) return null;
     const campo = CHAVE_PARA_CAMPO.get(chaveCol(t)) ?? null;
-    if (!campo) colunasIgnoradas.push(t);
+    if (!campo && !INFORMATIVAS.has(chaveCol(t))) colunasIgnoradas.push(t);
     return campo;
   });
 
@@ -490,29 +630,7 @@ export function interpretarMatriz(
     linhas.push(linhaParaAnimal(valores, r + 1));
   }
 
-  // Segunda passagem: brincos repetidos. Só as linhas que passaram na validação
-  // e têm brinco entram nesta conta — sem brinco não há como saber se é o mesmo
-  // animal, por isso essas passam sempre.
-  const jaNaConta = new Set<string>();
-  for (const b of brincosExistentes) {
-    const k = chaveBrinco(b);
-    if (k) jaNaConta.add(k);
-  }
-  const vistosNoFicheiro = new Set<string>();
-  for (const l of linhas) {
-    const brinco = l.dados?.numeroIdentificacao;
-    if (!brinco) continue;
-    const k = chaveBrinco(brinco);
-    if (jaNaConta.has(k)) {
-      l.duplicado = 'ja-existe';
-      l.dados = undefined;
-    } else if (vistosNoFicheiro.has(k)) {
-      l.duplicado = 'no-ficheiro';
-      l.dados = undefined;
-    } else {
-      vistosNoFicheiro.add(k);
-    }
-  }
+  marcarDuplicados(linhas, existentes);
 
   const validas = linhas.filter((l) => l.dados).length;
   const duplicadas = linhas.filter((l) => l.duplicado).length;

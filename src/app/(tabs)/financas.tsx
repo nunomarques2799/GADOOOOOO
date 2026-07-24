@@ -14,7 +14,8 @@ import {
   Screen,
   Text,
 } from '@/components/ui';
-import { csvFinancas, guardarFicheiro, hojeISO } from '@/data/exportar';
+import { descarregarTabelaExcel, excelDisponivel } from '@/data/excelFicheiro';
+import { hojeISO, tabelaFinancas } from '@/data/exportar';
 import {
   compararComAnterior,
   lancamentos,
@@ -80,11 +81,12 @@ export default function FinancasScreen() {
     return a?.nome ?? a?.numeroIdentificacao ?? 'Animal removido';
   };
 
-  async function exportar() {
+  function exportar() {
     try {
-      await guardarFicheiro(
-        `financas-${hojeISO()}.csv`,
-        csvFinancas(doPeriodo, animais),
+      descarregarTabelaExcel(
+        `financas-${hojeISO()}.xlsx`,
+        'Movimentos',
+        tabelaFinancas(doPeriodo, animais),
       );
     } catch (e) {
       avisar('Não foi possível exportar', e instanceof Error ? e.message : String(e));
@@ -385,18 +387,30 @@ export default function FinancasScreen() {
               onPress={() => router.push('/movimento/novo')}
               style={{ marginBottom: spacing.sm }}
             />
-            <Button
-              label="Exportar para Excel (CSV)"
-              icon="file-download-outline"
-              variant="secondary"
-              onPress={exportar}
-            />
-            <Text
-              variant="caption"
-              color={colors.textMuted}
-              style={{ marginTop: spacing.sm, textAlign: 'center' }}>
-              Exporta os movimentos do período escolhido.
-            </Text>
+            {/* Sem disco onde escrever o .xlsx (telemóvel) não se mostra o botão. */}
+            {excelDisponivel ? (
+              <>
+                <Button
+                  label="Exportar para Excel"
+                  icon="microsoft-excel"
+                  variant="secondary"
+                  onPress={exportar}
+                />
+                <Text
+                  variant="caption"
+                  color={colors.textMuted}
+                  style={{ marginTop: spacing.sm, textAlign: 'center' }}>
+                  Exporta os movimentos do período escolhido.
+                </Text>
+              </>
+            ) : (
+              <Text
+                variant="caption"
+                color={colors.textMuted}
+                style={{ marginTop: spacing.sm, textAlign: 'center' }}>
+                Exportar as contas para Excel faz-se na app de computador.
+              </Text>
+            )}
           </>
         )}
       </Screen>

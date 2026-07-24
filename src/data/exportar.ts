@@ -1,36 +1,26 @@
 /**
- * Exportação de dados — CSV (animais/eventos) e relatório imprimível (prazos).
+ * Exportação de dados — as tabelas que saem em Excel e o relatório de prazos.
  * ------------------------------------------------------------------
  * Alvo principal: a app desktop (Electron) e a web, onde há descarregamento de
- * ficheiros e impressão para PDF. No nativo, o CSV é partilhado (Share) e o
- * relatório imprimível não está disponível. Tudo funciona offline (dados já
- * em memória) — não é preciso rede.
+ * ficheiros e impressão para PDF. No telemóvel não há disco onde escrever um
+ * `.xlsx`, por isso a exportação é do computador. Tudo funciona offline (dados
+ * já em memória) — não é preciso rede.
+ *
+ * Aqui vive só a parte PURA (o que vai em cada coluna, que prazos entram no
+ * relatório); escrever o ficheiro é do `excelFicheiro.ts`.
+ *
+ * Não há exportação em CSV: o mesmo ficheiro abria em colunas num computador e
+ * numa coluna só noutro, conforme a configuração regional de quem o abria.
  */
 
 import { Platform, Share } from 'react-native';
 
+import type { Tabela } from './excelFicheiro';
 import type { Lancamento } from './financas';
-import { formatDataPt } from './helpers';
-import type { Alerta, Animal, Evento, Exploracao, Terreno } from './types';
+import { formatDataCurta, formatDataPt } from './helpers';
+import type { Alerta, AlertaGravidade, Animal, Evento } from './types';
 
 /* ---------- Primitivas ---------- */
-
-/** Escapa um valor para CSV (aspas, separador, quebras de linha). */
-function celula(v: unknown): string {
-  const s = v == null ? '' : String(v);
-  return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-/**
- * Constrói um CSV. Usa ';' como separador (o Excel em PT usa a vírgula como
- * separador decimal) e um BOM à frente para os acentos abrirem corretos.
- */
-export function construirCSV(cabecalhos: string[], linhas: unknown[][]): string {
-  const sep = ';';
-  const head = cabecalhos.map(celula).join(sep);
-  const corpo = linhas.map((l) => l.map(celula).join(sep)).join('\r\n');
-  return `﻿${head}\r\n${corpo}`;
-}
 
 /** Data de hoje no formato aaaa-mm-dd, para nomes de ficheiro. */
 export function hojeISO(): string {
@@ -41,7 +31,7 @@ export function hojeISO(): string {
 export async function guardarFicheiro(
   nomeFicheiro: string,
   conteudo: string,
-  mime = 'text/csv',
+  mime = 'text/plain',
 ): Promise<void> {
   if (Platform.OS === 'web' && typeof document !== 'undefined') {
     const blob = new Blob([conteudo], { type: `${mime};charset=utf-8` });
@@ -58,75 +48,144 @@ export async function guardarFicheiro(
   await Share.share({ message: conteudo });
 }
 
-/* ---------- CSV específicos do domínio ---------- */
+/* ---------- Tabelas Excel específicas do domínio ---------- */
 
-export function csvAnimais(
-  animais: Animal[],
-  exploracoes: Exploracao[],
-  terrenos: Terreno[],
-): string {
-  const nomeExp = new Map(exploracoes.map((e) => [e.id, e.nome]));
-  const nomeTer = new Map(terrenos.map((t) => [t.id, t.nome]));
-  const cabecalhos = [
-    'Nome', 'Espécie', 'Sexo', 'Data nascimento', 'Nº brinco (SIA)', 'Raça',
-    'Cor pelagem', 'Exploração', 'Terreno', 'Comunicado SNIRA',
-  ];
-  const linhas = [...animais]
-    .sort((a, b) => (a.nome ?? '').localeCompare(b.nome ?? ''))
-    .map((a) => [
-      a.nome ?? '',
-      a.especie,
-      a.sexo,
-      a.dataNascimento ? formatDataPt(a.dataNascimento) : '',
-      a.numeroIdentificacao ?? '',
-      a.raca ?? '',
-      a.corPelagem ?? '',
-      nomeExp.get(a.exploracaoId) ?? '',
-      a.terrenoId ? nomeTer.get(a.terrenoId) ?? '' : '',
-      a.comunicadoSnira == null ? '' : a.comunicadoSnira ? 'Sim' : 'Não',
-    ]);
-  return construirCSV(cabecalhos, linhas);
+/** Como referir um animal numa folha: nome, senão brinco. */
+function rotulosDeAnimais(animais: Animal[]): Map<string, string> {
+  return new Map(animais.map((a) => [a.id, a.nome ?? a.numeroIdentificacao ?? a.id]));
 }
 
-export function csvEventos(eventos: Evento[], animais: Animal[]): string {
-  const rotulo = new Map(
-    animais.map((a) => [a.id, a.nome ?? a.numeroIdentificacao ?? a.id]),
-  );
-  const cabecalhos = ['Animal', 'Tipo', 'Data', 'Descrição', 'Detalhe'];
-  const linhas = [...eventos]
-    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-    .map((e) => [
-      rotulo.get(e.animalId) ?? '',
-      e.tipo,
-      formatDataPt(e.data),
-      e.descricao,
-      e.detalhe ?? '',
-    ]);
-  return construirCSV(cabecalhos, linhas);
+/** A tabela dos eventos, do mais recente para o mais antigo. */
+export function tabelaEventos(eventos: Evento[], animais: Animal[]): Tabela {
+  const rotulo = rotulosDeAnimais(animais);
+  return {
+    cabecalhos: ['Animal', 'Tipo', 'Data', 'Descrição', 'Detalhe'],
+    linhas: [...eventos]
+      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+      .map((e) => [
+        rotulo.get(e.animalId) ?? '',
+        e.tipo,
+        formatDataCurta(e.data),
+        e.descricao,
+        e.detalhe ?? '',
+      ]),
+  };
 }
 
 /**
- * CSV das movimentações financeiras. Recebe lançamentos já normalizados (ver
- * `financas.ts`), o que faz com que as despesas da exploração — ração, energia,
- * rendas — saiam no ficheiro a par das que estão ligadas a um animal.
+ * A tabela das movimentações financeiras. Recebe lançamentos já normalizados
+ * (ver `financas.ts`), o que faz com que as despesas da exploração — ração,
+ * energia, rendas — saiam no ficheiro a par das que estão ligadas a um animal.
+ *
+ * O valor vai como NÚMERO, não como texto: num `.xlsx` o Excel soma a coluna
+ * sem lhe pedir nada, e o sinal negativo distingue a despesa da receita.
  */
-export function csvFinancas(lancamentos: Lancamento[], animais: Animal[]): string {
-  const rotulo = new Map(
-    animais.map((a) => [a.id, a.nome ?? a.numeroIdentificacao ?? a.id]),
+export function tabelaFinancas(lancamentos: Lancamento[], animais: Animal[]): Tabela {
+  const rotulo = rotulosDeAnimais(animais);
+  return {
+    cabecalhos: ['Data', 'Categoria', 'Movimento', 'Animal', 'Valor (€)', 'Descrição'],
+    linhas: [...lancamentos]
+      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+      .map((l) => [
+        formatDataCurta(l.data),
+        l.categoria,
+        l.direcao === 'receita' ? 'Receita' : 'Despesa',
+        l.animalId ? (rotulo.get(l.animalId) ?? '') : '',
+        l.direcao === 'receita' ? l.valor : -l.valor,
+        l.descricao,
+      ]),
+  };
+}
+
+/* ---------- Que prazos entram no relatório ---------- */
+
+/**
+ * Janela de tempo do relatório. `'atraso'` são só os que já passaram do prazo;
+ * os números são "daqui a até N dias" (contando o que está em atraso, que
+ * também é para tratar).
+ */
+export type JanelaPrazo = 'todos' | 'atraso' | 7 | 30;
+
+/**
+ * O que escolher antes de imprimir o relatório de prazos. Listas vazias querem
+ * dizer "não filtrar" — é o estado com que a janela abre, e o mais parecido com
+ * o que a app fazia antes (imprimia tudo).
+ */
+export type FiltroPrazos = {
+  exploracaoId?: string;
+  gravidades: AlertaGravidade[];
+  categorias: Alerta['categoria'][];
+  janela: JanelaPrazo;
+};
+
+export const FILTRO_PRAZOS_TUDO: FiltroPrazos = {
+  gravidades: [],
+  categorias: [],
+  janela: 'todos',
+};
+
+export const ROTULO_GRAVIDADE: Record<AlertaGravidade, string> = {
+  urgente: 'Urgentes',
+  aviso: 'Esta semana',
+  info: 'A acompanhar',
+};
+
+export const ROTULO_CATEGORIA: Record<Alerta['categoria'], string> = {
+  snira: 'SNIRA',
+  identificacao: 'Identificação',
+  parto: 'Partos',
+  medicamento: 'Medicamentos',
+  vacinacao: 'Vacinação',
+};
+
+/**
+ * Aplica os filtros escolhidos. A janela de dias só olha para alertas COM prazo
+ * a correr: "sem registo de vacinação" não tem contagem decrescente (ver o
+ * `diasRestantes` em `types.ts`) e entrar num relatório de "próximos 7 dias"
+ * seria dizer que há um prazo onde não há.
+ */
+export function filtrarAlertas(alertas: Alerta[], filtro: FiltroPrazos): Alerta[] {
+  const { exploracaoId, gravidades, categorias, janela } = filtro;
+  return alertas.filter((a) => {
+    if (exploracaoId && a.exploracaoId !== exploracaoId) return false;
+    if (gravidades.length > 0 && !gravidades.includes(a.gravidade)) return false;
+    if (categorias.length > 0 && !categorias.includes(a.categoria)) return false;
+    if (janela === 'todos') return true;
+    if (a.diasRestantes == null) return false;
+    if (janela === 'atraso') return a.diasRestantes < 0;
+    return a.diasRestantes <= janela;
+  });
+}
+
+/** true se o filtro deixa alguma coisa de fora (ou seja, se não é "tudo"). */
+export function filtroEstreita(f: FiltroPrazos): boolean {
+  return (
+    f.janela !== 'todos'
+    || f.gravidades.length > 0
+    || f.categorias.length > 0
+    || f.exploracaoId != null
   );
-  const cabecalhos = ['Data', 'Categoria', 'Movimento', 'Animal', 'Valor (€)', 'Descrição'];
-  const linhas = [...lancamentos]
-    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-    .map((l) => [
-      formatDataPt(l.data),
-      l.categoria,
-      l.direcao === 'receita' ? 'Receita' : 'Despesa',
-      l.animalId ? rotulo.get(l.animalId) ?? '' : '',
-      // Valor com vírgula decimal (Excel PT) e sinal negativo nas despesas.
-      `${l.direcao === 'receita' ? '' : '-'}${l.valor.toFixed(2).replace('.', ',')}`,
-      l.descricao,
-    ]);
-  return construirCSV(cabecalhos, linhas);
+}
+
+/** Como se lê a janela escolhida, para o cabeçalho do relatório e para a app. */
+export function rotuloJanela(janela: JanelaPrazo): string {
+  if (janela === 'todos') return 'Todos os prazos';
+  if (janela === 'atraso') return 'Só o que está em atraso';
+  return `Próximos ${janela} dias`;
+}
+
+/**
+ * Uma linha a dizer o que o relatório traz. Vai impressa no PDF: uma folha que
+ * mostra 4 prazos quando a exploração tem 30 tem de dizer que foi filtrada, ou
+ * passa por um retrato completo do que está pendente.
+ */
+export function descricaoFiltroPrazos(filtro: FiltroPrazos): string {
+  const partes = [rotuloJanela(filtro.janela)];
+  if (filtro.gravidades.length > 0)
+    partes.push(filtro.gravidades.map((g) => ROTULO_GRAVIDADE[g]).join(', '));
+  if (filtro.categorias.length > 0)
+    partes.push(filtro.categorias.map((c) => ROTULO_CATEGORIA[c]).join(', '));
+  return partes.join(' · ');
 }
 
 /* ---------- Relatório imprimível de prazos (→ PDF via impressão) ---------- */
@@ -145,8 +204,14 @@ function escaparHtml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
-/** Gera o HTML do relatório de prazos legais/sanitários. */
-export function htmlRelatorioPrazos(alertas: Alerta[], nomeExploracao?: string): string {
+/**
+ * Gera o HTML do relatório de prazos legais/sanitários. `filtro` é o que se
+ * escolheu na app — sai impresso, para a folha dizer o que mostra.
+ */
+export function htmlRelatorioPrazos(
+  alertas: Alerta[],
+  { nomeExploracao, filtro }: { nomeExploracao?: string; filtro?: FiltroPrazos } = {},
+): string {
   const dataHoje = formatDataPt(new Date().toISOString());
   const urgentes = alertas.filter((a) => a.gravidade === 'urgente').length;
   const avisos = alertas.filter((a) => a.gravidade === 'aviso').length;
@@ -170,7 +235,13 @@ export function htmlRelatorioPrazos(alertas: Alerta[], nomeExploracao?: string):
     })
     .join('');
 
-  const vazio = `<tr><td colspan="3" class="vazio">Não há prazos pendentes. Tudo em dia.</td></tr>`;
+  const vazio = `<tr><td colspan="3" class="vazio">${
+    filtro && filtroEstreita(filtro)
+      ? 'Nenhum prazo corresponde ao que escolheu.'
+      : 'Não há prazos pendentes. Tudo em dia.'
+  }</td></tr>`;
+
+  const filtrado = filtro ? escaparHtml(descricaoFiltroPrazos(filtro)) : '';
 
   return `
     <header>
@@ -179,6 +250,7 @@ export function htmlRelatorioPrazos(alertas: Alerta[], nomeExploracao?: string):
         <div>
           <h1>Relatório de prazos</h1>
           <p>${nomeExploracao ? escaparHtml(nomeExploracao) + ' · ' : ''}${dataHoje}</p>
+          ${filtrado ? `<p class="filtro">${filtrado}</p>` : ''}
         </div>
       </div>
       <div class="resumo">
@@ -284,6 +356,7 @@ function documentoRelatorio(
   .logo { width: 44px; height: 44px; border-radius: 12px; background: #166b3d; color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 18px; }
   h1 { font-size: 22px; margin: 0; }
   header p { margin: 2px 0 0; color: #54655b; font-size: 13px; }
+  header p.filtro { color: #869184; font-size: 12px; font-style: italic; }
   .resumo { display: flex; gap: 8px; flex-wrap: wrap; }
   .pill { font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 999px; }
   .pill.urg { background: #fbe7e0; color: #d45b3b; }

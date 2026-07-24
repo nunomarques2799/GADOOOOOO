@@ -3,18 +3,12 @@ import { useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ModalRelatorioPrazos } from '@/components/ModalRelatorioPrazos';
 import { Button, Card, Icon, type IconName, Text } from '@/components/ui';
-import { exportarAnimaisExcel, importacaoDisponivel } from '@/data/animalExcelFicheiro';
+import { exportarAnimaisExcel } from '@/data/animalExcelFicheiro';
 import { avisar, confirmar } from '@/data/avisos';
-import {
-  csvAnimais,
-  csvEventos,
-  guardarFicheiro,
-  guardarRelatorio,
-  hojeISO,
-  htmlRelatorioPrazos,
-  imprimirRelatorio,
-} from '@/data/exportar';
+import { descarregarTabelaExcel, excelDisponivel } from '@/data/excelFicheiro';
+import { hojeISO, tabelaEventos } from '@/data/exportar';
 import { formatDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useNotas, type Nota } from '@/data/notas';
@@ -22,12 +16,13 @@ import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, sizes, spacing } from '@/theme';
 
-const TITULO_PRAZOS = 'Relatório de prazos — Terrabovina';
-
 /**
  * Documentos: tudo o que ENTRA e SAI da app em ficheiro (importar animais de
  * Excel, exportar animais/eventos, relatórios) e as NOTAS do utilizador.
  * As exportações vieram das Definições, para o que é ficheiro viver num sítio só.
+ *
+ * Tudo o que é ficheiro precisa de disco: no telemóvel não há, e em vez de
+ * botões que não fazem nada diz-se que isto se faz no computador.
  */
 export default function DocumentosScreen() {
   const insets = useSafeAreaInsets();
@@ -37,37 +32,9 @@ export default function DocumentosScreen() {
   const { contaSuspensa } = useMembros();
   const notasApi = useNotas();
 
-  const naWeb = Platform.OS === 'web';
+  const [relatorioAberto, setRelatorioAberto] = useState(false);
 
-  async function exportar(nomeFicheiro: string, conteudo: string) {
-    try {
-      await guardarFicheiro(nomeFicheiro, conteudo);
-    } catch (e) {
-      avisar('Não foi possível exportar', e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  function imprimirPrazos() {
-    const ok = imprimirRelatorio(TITULO_PRAZOS, htmlRelatorioPrazos(alertas));
-    if (!ok) avisar('Indisponível', 'A impressão do relatório está disponível na versão de computador.');
-  }
-
-  async function descarregarPrazos() {
-    const r = await guardarRelatorio(TITULO_PRAZOS, htmlRelatorioPrazos(alertas), `prazos-${hojeISO()}`);
-    if (r.estado === 'guardado' || r.estado === 'cancelado') return;
-    if (r.estado === 'html') {
-      avisar(
-        'Relatório descarregado',
-        'Guardámos o relatório como página web. Para o ter em PDF, abra-o e use Imprimir → Guardar como PDF.',
-      );
-      return;
-    }
-    if (r.estado === 'indisponivel') {
-      avisar('Indisponível', 'Descarregar o relatório está disponível na versão de computador.');
-      return;
-    }
-    avisar('Não foi possível guardar', r.motivo);
-  }
+  const comFicheiros = Platform.OS === 'web' && excelDisponivel;
 
   const coluna = {
     width: '100%',
@@ -90,7 +57,7 @@ export default function DocumentosScreen() {
 
         <View style={{ ...coluna, gap: spacing.md }}>
           {/* Importar — só web/Electron (o telemóvel não escolhe ficheiros sem build nativo) */}
-          {naWeb && !contaSuspensa ? (
+          {comFicheiros && !contaSuspensa ? (
             <Grupo titulo="IMPORTAR">
               <Linha
                 icon="microsoft-excel"
@@ -103,58 +70,71 @@ export default function DocumentosScreen() {
 
           {/* Exportar e relatórios (vindos das Definições) */}
           <Grupo titulo="EXPORTAR E RELATÓRIOS">
-            {naWeb ? (
-              <Linha
-                icon="microsoft-excel"
-                label="Exportar animais (Excel)"
-                trailing={String(animais.length)}
-                onPress={() => exportarAnimaisExcel(animais)}
-              />
-            ) : null}
-            <Linha
-              icon="cow"
-              label="Exportar animais (CSV)"
-              trailing={String(animais.length)}
-              onPress={() =>
-                void exportar(`animais-${hojeISO()}.csv`, csvAnimais(animais, exploracoes, terrenos))
-              }
-            />
-            <Linha
-              icon="calendar-text-outline"
-              label="Exportar eventos (CSV)"
-              trailing={String(eventos.length)}
-              onPress={() => void exportar(`eventos-${hojeISO()}.csv`, csvEventos(eventos, animais))}
-            />
-            <Linha
-              icon="printer-outline"
-              label="Imprimir relatório de prazos"
-              trailing={String(alertas.length)}
-              onPress={imprimirPrazos}
-            />
-            <Linha
-              icon="file-download-outline"
-              label="Descarregar relatório (PDF)"
-              trailing={String(alertas.length)}
-              onPress={() => void descarregarPrazos()}
-            />
-            <Linha
-              icon="file-export-outline"
-              label="Exportar para o iDigital"
-              trailing="Fase 2"
-              onPress={() =>
-                avisar(
-                  'Ainda em desenvolvimento',
-                  'A exportação para o iDigital chega numa próxima versão. Entretanto pode usar o "Descarregar relatório (PDF)" ou o "Exportar animais".',
-                )
-              }
-              last
-            />
+            {comFicheiros ? (
+              <>
+                <Linha
+                  icon="microsoft-excel"
+                  label="Exportar animais (Excel)"
+                  trailing={String(animais.length)}
+                  onPress={() => exportarAnimaisExcel(animais, exploracoes, terrenos)}
+                />
+                <Linha
+                  icon="calendar-text-outline"
+                  label="Exportar eventos (Excel)"
+                  trailing={String(eventos.length)}
+                  onPress={() =>
+                    descarregarTabelaExcel(
+                      `eventos-${hojeISO()}.xlsx`,
+                      'Eventos',
+                      tabelaEventos(eventos, animais),
+                    )
+                  }
+                />
+                {/* Imprimir e PDF juntos: escolhe-se o que sai e só depois o destino. */}
+                <Linha
+                  icon="printer-outline"
+                  label="Relatório de prazos (imprimir ou PDF)"
+                  trailing={String(alertas.length)}
+                  onPress={() => setRelatorioAberto(true)}
+                />
+                <Linha
+                  icon="file-export-outline"
+                  label="Exportar para o iDigital"
+                  trailing="Fase 2"
+                  onPress={() =>
+                    avisar(
+                      'Ainda em desenvolvimento',
+                      'A exportação para o iDigital chega numa próxima versão. Entretanto pode usar o "Relatório de prazos" ou o "Exportar animais".',
+                    )
+                  }
+                  last
+                />
+              </>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: spacing.sm, padding: spacing.md }}>
+                <Icon name="laptop" size="lg" color={colors.info} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyStrong">Ficheiros são do computador</Text>
+                  <Text variant="secondary" color={colors.textSecondary}>
+                    Exportar para Excel, imprimir e guardar relatórios em PDF faz-se na app
+                    de computador ou no site da app — é lá que há onde guardar os ficheiros.
+                  </Text>
+                </View>
+              </View>
+            )}
           </Grupo>
 
           {/* Notas */}
           <SeccaoNotas notas={notasApi} />
         </View>
       </ScrollView>
+
+      <ModalRelatorioPrazos
+        visivel={relatorioAberto}
+        alertas={alertas}
+        exploracoes={exploracoes}
+        onFechar={() => setRelatorioAberto(false)}
+      />
     </View>
   );
 }
