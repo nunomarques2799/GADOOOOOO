@@ -51,7 +51,16 @@ export type TokensPaleta = {
   overlay: string;
 };
 
-export type PaletaId = 'campo' | 'terra' | 'ceu' | 'ardosia' | 'contraste';
+export type PaletaId =
+  | 'campo'
+  | 'terra'
+  | 'oliveira'
+  | 'ceu'
+  | 'mar'
+  | 'indigo'
+  | 'vinha'
+  | 'ardosia'
+  | 'contraste';
 
 export type Paleta = {
   id: PaletaId;
@@ -117,6 +126,31 @@ export const PALETAS: Paleta[] = [
     },
   },
   {
+    id: 'oliveira',
+    nome: 'Oliveira',
+    descricao: 'Verde-oliva acinzentado, mais apagado do que o verde folha.',
+    tokens: {
+      primary: '#5F6B2F',
+      primaryDark: '#4E5827',
+      primaryDarker: '#3A421C',
+      primaryTint: '#F4F6EA',
+      primaryTintStrong: '#E5EACF',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#3A421C',
+      headerTo: '#5F6B2F',
+      background: '#F5F6EE',
+      surface: '#FFFFFF',
+      surfaceAlt: '#EFF1E5',
+      surfaceSunken: '#E6E9D9',
+      text: '#23281A',
+      textSecondary: '#575E45',
+      textMuted: '#616852',
+      border: '#E5E8D8',
+      borderStrong: '#D3D8C1',
+      overlay: 'rgba(30, 34, 20, 0.55)',
+    },
+  },
+  {
     id: 'ceu',
     nome: 'Céu',
     descricao: 'Azul calmo, descansado para os olhos.',
@@ -139,6 +173,81 @@ export const PALETAS: Paleta[] = [
       border: '#DDE6EC',
       borderStrong: '#C9D6E0',
       overlay: 'rgba(12, 30, 45, 0.55)',
+    },
+  },
+  {
+    id: 'mar',
+    nome: 'Mar',
+    descricao: 'Verde-azulado fundo, fresco sem ser frio.',
+    tokens: {
+      primary: '#106A6E',
+      primaryDark: '#0D5A5D',
+      primaryDarker: '#094245',
+      primaryTint: '#EBF6F6',
+      primaryTintStrong: '#D0EAEA',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#094245',
+      headerTo: '#106A6E',
+      background: '#F0F6F6',
+      surface: '#FFFFFF',
+      surfaceAlt: '#EAF2F2',
+      surfaceSunken: '#DFEBEB',
+      text: '#122627',
+      textSecondary: '#4C6162',
+      textMuted: '#566B6C',
+      border: '#DCE9E9',
+      borderStrong: '#C6D9D9',
+      overlay: 'rgba(10, 32, 33, 0.55)',
+    },
+  },
+  {
+    id: 'indigo',
+    nome: 'Índigo',
+    descricao: 'Azul-escuro sério, para quem quer a app discreta.',
+    tokens: {
+      primary: '#37458F',
+      primaryDark: '#2D3876',
+      primaryDarker: '#212A59',
+      primaryTint: '#F0F1FA',
+      primaryTintStrong: '#DCDFF3',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#212A59',
+      headerTo: '#37458F',
+      background: '#F3F4F9',
+      surface: '#FFFFFF',
+      surfaceAlt: '#EDEFF6',
+      surfaceSunken: '#E3E6F0',
+      text: '#1A1E33',
+      textSecondary: '#545A75',
+      textMuted: '#5D6480',
+      border: '#E1E4EF',
+      borderStrong: '#CBD0E2',
+      overlay: 'rgba(20, 24, 45, 0.55)',
+    },
+  },
+  {
+    id: 'vinha',
+    nome: 'Vinha',
+    descricao: 'Bordô de adega, quente e escuro.',
+    tokens: {
+      primary: '#8A2740',
+      primaryDark: '#741F35',
+      primaryDarker: '#551725',
+      primaryTint: '#FBEFF2',
+      primaryTintStrong: '#F4DAE1',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#551725',
+      headerTo: '#8A2740',
+      background: '#F8F3F4',
+      surface: '#FFFFFF',
+      surfaceAlt: '#F3ECEE',
+      surfaceSunken: '#EBE1E4',
+      text: '#2A1A1E',
+      textSecondary: '#615054',
+      textMuted: '#6B595D',
+      border: '#EBE0E3',
+      borderStrong: '#DACBCF',
+      overlay: 'rgba(40, 20, 26, 0.55)',
     },
   },
   {

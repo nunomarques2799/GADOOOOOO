@@ -12,7 +12,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
 import { avisar } from '@/data/avisos';
 import { especieMeta } from '@/data/constants';
-import { formatDataPt, isoDaysAgo, isoInDays, paraEuro } from '@/data/helpers';
+import {
+  formatDataPt,
+  isoDaysAgo,
+  isoMaisDias,
+  mascaraDataPt,
+  paraEuro,
+  parseDataPt,
+} from '@/data/helpers';
 import { normalizar } from '@/data/racas';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
@@ -85,6 +92,10 @@ export default function NovoEventoScreen() {
   const [animalIds, setAnimalIds] = useState<string[]>(params.animalId ? [params.animalId] : []);
   const [procura, setProcura] = useState('');
   const [diasAtras, setDiasAtras] = useState(0);
+  // Data escrita à mão. Os atalhos cobrem o registo do próprio dia, que é o
+  // caso comum; isto cobre o resto — a vacina que se deu no mês passado e só
+  // agora se está a lançar, ou o parto que aconteceu enquanto não havia rede.
+  const [dataManual, setDataManual] = useState('');
 
   // Parto
   const [tipoParto, setTipoParto] = useState<'Normal' | 'Distócico' | 'Cesariana'>('Normal');
@@ -116,7 +127,11 @@ export default function NovoEventoScreen() {
   const [notas, setNotas] = useState('');
   const [aGuardar, setAGuardar] = useState(false);
 
-  const data = isoDaysAgo(diasAtras);
+  // Uma data escrita à mão manda sobre os atalhos. `parseDataPt` recusa datas
+  // futuras, que é o que se quer: um evento regista o que JÁ aconteceu.
+  const dataManualIso = dataManual.trim() ? parseDataPt(dataManual) : null;
+  const dataManualInvalida = dataManual.trim().length > 0 && !dataManualIso;
+  const data = dataManualIso ?? isoDaysAgo(diasAtras);
   const varios = EM_MASSA.includes(tipo);
   // Um só animal escolhido é o caso normal — é o que dá o cartão com o nome e
   // o brinco, e o que permite calcular o ganho médio diário.
@@ -167,6 +182,7 @@ export default function NovoEventoScreen() {
   const pesoNum = paraNumero(peso);
   const valido =
     animalIds.length > 0 &&
+    !dataManualInvalida &&
     (tipo === 'Parto' ||
       (tipo === 'Vacinação' && vacina.trim().length > 0) ||
       (tipo === 'Medicamento' && medicamento.trim().length > 0) ||
@@ -248,9 +264,15 @@ export default function NovoEventoScreen() {
       try {
         await addEvento({ animalId: id, tipo, data, descricao, detalhe, valor });
 
-        // Efeitos secundários no animal
+        // Efeitos secundários no animal.
+        // O intervalo de segurança conta a partir do dia do TRATAMENTO, não de
+        // hoje. Enquanto a data só podia recuar uma semana o erro passava
+        // despercebido; com a data exata, lançar hoje um medicamento dado há
+        // três meses prendia o animal por mais 14 dias sem razão nenhuma — e o
+        // erro simétrico, num tratamento antigo de intervalo curto, dava por
+        // vencido um prazo que ainda corria.
         if (tipo === 'Medicamento' && seguranca > 0) {
-          await updateAnimal(id, { fimIntervaloSeguranca: isoInDays(seguranca) });
+          await updateAnimal(id, { fimIntervaloSeguranca: isoMaisDias(data, seguranca) });
         }
         if (tipo === 'Parto' && animalById(id)?.dataPrevistaParto) {
           await updateAnimal(id, { dataPrevistaParto: undefined });
@@ -427,12 +449,37 @@ export default function NovoEventoScreen() {
               <Chip
                 key={o.dias}
                 label={o.label}
-                selected={diasAtras === o.dias}
-                onPress={() => setDiasAtras(o.dias)}
+                // Com uma data escrita à mão, nenhum atalho está escolhido —
+                // senão o ecrã mostrava "Hoje" aceso por baixo de outra data.
+                selected={!dataManualIso && diasAtras === o.dias}
+                onPress={() => {
+                  setDiasAtras(o.dias);
+                  setDataManual('');
+                }}
               />
             ))}
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.xs }}>
+
+          <Text
+            variant="caption"
+            color={colors.textMuted}
+            style={{ marginTop: spacing.sm, marginBottom: 4 }}>
+            Ou data exata (dd/mm/aaaa) — para registar o que já aconteceu
+          </Text>
+          <TextField
+            value={dataManual}
+            onChangeText={(t) => setDataManual(mascaraDataPt(t))}
+            placeholder="Ex: 15/03/2026"
+            icon="calendar-edit"
+            keyboardType="number-pad"
+          />
+          {dataManualInvalida ? (
+            <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
+              Data inválida. Use o formato dd/mm/aaaa e uma data não futura.
+            </Text>
+          ) : null}
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm }}>
             <Icon name="calendar-check" size="sm" color={colors.primary} />
             <Text variant="secondary" color={colors.textSecondary}>
               {formatDataPt(data)}
@@ -545,7 +592,7 @@ export default function NovoEventoScreen() {
               </View>
               {seguranca > 0 ? (
                 <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-                  Não vender para abate até {formatDataPt(isoInDays(seguranca))}.
+                  Não vender para abate até {formatDataPt(isoMaisDias(data, seguranca))}.
                 </Text>
               ) : null}
             </Field>
