@@ -40,6 +40,13 @@ export function faixaDe(animal: Animal): FaixaIdade {
 export const SEM_TERRENO = '__sem-terreno__';
 
 export type Filtros = {
+  /**
+   * Só os animais desta exploração. Ao contrário dos outros, este filtro está
+   * SEMPRE à vista no ecrã (chips no topo da lista, não escondido na folha de
+   * filtros): quem tem duas explorações passa o dia a alternar entre elas, e
+   * isso não pode custar dois toques.
+   */
+  exploracaoId?: string;
   especie?: Especie;
   sexo?: Sexo;
   raca?: string;
@@ -77,8 +84,10 @@ export function contarAtivos(f: Filtros): number {
   if (f.prenhe !== undefined) n++;
   if (f.semBrinco) n++;
   if (f.alerta) n++;
-  // `incluirSaidos` e `texto` não contam: o primeiro ALARGA a lista em vez de
-  // a estreitar, e o segundo já se vê escrito na própria caixa de pesquisa.
+  // `incluirSaidos`, `texto` e `exploracaoId` não contam: o primeiro ALARGA a
+  // lista em vez de a estreitar, e os outros dois já se veem no ecrã (a
+  // pesquisa escrita na caixa, a exploração no chip aceso). Contá-los punha o
+  // botão de filtros a anunciar "1" por causa de algo que está à vista.
   return n;
 }
 
@@ -99,6 +108,7 @@ export function filtrarAnimais(
     const saiu = !!a.estado && a.estado !== 'ativo';
     if (saiu && !f.incluirSaidos) return false;
 
+    if (f.exploracaoId && a.exploracaoId !== f.exploracaoId) return false;
     if (f.especie && a.especie !== f.especie) return false;
     if (f.sexo && a.sexo !== f.sexo) return false;
     if (f.finalidade && a.finalidade !== f.finalidade) return false;

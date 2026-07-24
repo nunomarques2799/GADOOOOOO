@@ -26,7 +26,7 @@ export default function AnimaisScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
-  const { animais, alertas, terrenos, terrenoById } = useGado();
+  const { animais, alertas, terrenos, terrenoById, exploracoes } = useGado();
   // Com a conta suspensa nada se grava — o formulário só levaria a um erro no
   // fim. O papel não se verifica aqui porque a exploração ainda não está
   // escolhida (é o formulário que a pede); isso fica para o `guardar`.
@@ -63,6 +63,12 @@ export default function AnimaisScreen() {
 
   const nAtivos = contarAtivos(filtros);
   const temPesquisa = !!filtros.texto?.trim();
+  /** A lista está a mostrar menos do que o efetivo todo? */
+  const estreitada = nAtivos > 0 || temPesquisa || !!filtros.exploracaoId;
+
+  // Com uma exploração só, a linha de chips não decidia nada — ocupava espaço
+  // no topo da lista e dizia sempre a mesma coisa.
+  const podeEscolherExploracao = exploracoes.length > 1;
 
   /** Etiquetas do que está a filtrar, para se poder tirar uma a uma. */
   const etiquetas = useMemo(() => {
@@ -124,11 +130,42 @@ export default function AnimaisScreen() {
               <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 6 }}>
                 {/* Quando há filtros, o que interessa é quantos deles se está a
                     ver — o total do efetivo passa a ser a segunda pergunta. */}
-                {nAtivos > 0 || temPesquisa
-                  ? `${lista.length} de ${ativos.length}`
-                  : `${ativos.length} no efetivo`}
+                {estreitada ? `${lista.length} de ${ativos.length}` : `${ativos.length} no efetivo`}
               </Text>
             </View>
+
+            {/* Exploração à VISTA, sem abrir a folha de filtros: com duas ou
+                mais explorações, "de que quinta são estes animais?" é a
+                primeira pergunta de quem abre esta lista. */}
+            {podeEscolherExploracao ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: spacing.xs,
+                  marginBottom: spacing.sm,
+                }}>
+                <Chip
+                  label="Todas"
+                  icon="barn"
+                  selected={filtros.exploracaoId === undefined}
+                  onPress={() => setFiltros((f) => ({ ...f, exploracaoId: undefined }))}
+                />
+                {exploracoes.map((e) => (
+                  <Chip
+                    key={e.id}
+                    label={e.nome}
+                    selected={filtros.exploracaoId === e.id}
+                    onPress={() =>
+                      setFiltros((f) => ({
+                        ...f,
+                        exploracaoId: f.exploracaoId === e.id ? undefined : e.id,
+                      }))
+                    }
+                  />
+                ))}
+              </View>
+            ) : null}
 
             {/* Pesquisa + botão de filtros */}
             <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>
@@ -222,7 +259,7 @@ export default function AnimaisScreen() {
                 ))}
                 {etiquetas.length > 1 ? (
                   <Pressable
-                    onPress={() => setFiltros({ texto: filtros.texto })}
+                    onPress={() => setFiltros({ texto: filtros.texto, exploracaoId: filtros.exploracaoId })}
                     accessibilityRole="button"
                     accessibilityLabel="Limpar todos os filtros"
                     style={({ pressed }) => [
@@ -243,22 +280,14 @@ export default function AnimaisScreen() {
             icon="cow-off"
             title="Nenhum animal encontrado"
             message={
-              nAtivos > 0 || temPesquisa
+              estreitada
                 ? 'Experimente ajustar a pesquisa ou os filtros.'
                 : 'Ainda não há animais registados. Comece por adicionar o primeiro.'
             }
             actionLabel={
-              nAtivos > 0 || temPesquisa
-                ? 'Limpar filtros'
-                : contaSuspensa
-                  ? undefined
-                  : 'Registar animal'
+              estreitada ? 'Limpar filtros' : contaSuspensa ? undefined : 'Registar animal'
             }
-            onAction={
-              nAtivos > 0 || temPesquisa
-                ? () => setFiltros({})
-                : () => router.push('/animal/novo')
-            }
+            onAction={estreitada ? () => setFiltros({}) : () => router.push('/animal/novo')}
           />
         }
       />
@@ -271,7 +300,7 @@ export default function AnimaisScreen() {
         total={lista.length}
         onFechar={() => setFolhaAberta(false)}
         onMudar={setFiltros}
-        onLimpar={() => setFiltros({ texto: filtros.texto })}
+        onLimpar={() => setFiltros({ texto: filtros.texto, exploracaoId: filtros.exploracaoId })}
       />
 
       {contaSuspensa ? null : (

@@ -189,9 +189,43 @@ describe('contarAtivos', () => {
     expect(contarAtivos({ prenhe: false })).toBe(1);
   });
 
-  it('o arquivo e a pesquisa não contam', () => {
-    // O arquivo ALARGA a lista, e a pesquisa já se lê na própria caixa.
-    expect(contarAtivos({ incluirSaidos: true, texto: 'mimosa' })).toBe(0);
+  it('o arquivo, a pesquisa e a exploração não contam', () => {
+    // O arquivo ALARGA a lista; a pesquisa lê-se na própria caixa; e a
+    // exploração está sempre à vista nos chips do topo da lista. Contá-los
+    // punha o botão de filtros a anunciar filtros que ninguém escondeu.
+    expect(contarAtivos({ incluirSaidos: true, texto: 'mimosa', exploracaoId: 'exp-1' })).toBe(0);
+  });
+});
+
+describe('exploração', () => {
+  const duas = [
+    animal('a1', { exploracaoId: 'exp-1' }),
+    animal('a2', { exploracaoId: 'exp-2' }),
+    animal('a3', { exploracaoId: 'exp-2', estado: 'vendido' }),
+  ];
+
+  it('sem escolha mostra o efetivo das duas', () => {
+    expect(ids(duas, {})).toEqual(['a1', 'a2']);
+  });
+
+  it('escolhida uma exploração, só mostra os animais dela', () => {
+    expect(ids(duas, { exploracaoId: 'exp-2' })).toEqual(['a2']);
+    expect(ids(duas, { exploracaoId: 'exp-1' })).toEqual(['a1']);
+  });
+
+  it('não desfaz a regra do arquivo', () => {
+    // O animal vendido da exp-2 só aparece com o arquivo ligado — a exploração
+    // estreita a lista, nunca a alarga.
+    expect(ids(duas, { exploracaoId: 'exp-2', incluirSaidos: true })).toEqual(['a2', 'a3']);
+  });
+
+  it('combina-se com os outros filtros', () => {
+    const efetivo = [
+      animal('b1', { exploracaoId: 'exp-1', sexo: 'Macho' }),
+      animal('b2', { exploracaoId: 'exp-2', sexo: 'Macho' }),
+      animal('b3', { exploracaoId: 'exp-2', sexo: 'Fêmea' }),
+    ];
+    expect(ids(efetivo, { exploracaoId: 'exp-2', sexo: 'Macho' })).toEqual(['b2']);
   });
 });
 
