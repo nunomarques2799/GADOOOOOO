@@ -1,4 +1,4 @@
-// Gestao de Gado — Electron desktop wrapper.
+// Terrabovina — Electron desktop wrapper.
 // Serves the exported Expo web build (./web) from a local HTTP server on
 // 127.0.0.1 and loads it in a native window. A local server (instead of
 // file://) is required because the SPA references assets with absolute paths
@@ -47,7 +47,7 @@ const EH_DEV = lerAmbiente() === 'dev';
 // Nome diferente => %APPDATA%\<nome> diferente => localStorage separado do da
 // app instalada. Tem de ficar aqui, antes de a app arrancar: depois de o
 // caminho de userData ser resolvido, mudar o nome já não o move.
-if (EH_DEV) app.setName('Gestao de Gado (DEV)');
+if (EH_DEV) app.setName('Terrabovina (DEV)');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -139,7 +139,7 @@ async function createWindow() {
     minWidth: 380,
     minHeight: 640,
     backgroundColor: '#F3F6F2',
-    title: EH_DEV ? 'Gestao de Gado — TESTES' : 'Gestao de Gado',
+    title: EH_DEV ? 'Terrabovina — TESTES' : 'Terrabovina',
     show: false,
     autoHideMenuBar: true,
     icon: path.join(WEB_DIR, 'favicon.ico'),

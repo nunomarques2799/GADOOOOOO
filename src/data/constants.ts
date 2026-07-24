@@ -96,9 +96,24 @@ export const finalidadeMeta: Record<Finalidade, { icon: IconName; descricao: str
   Trabalho: { icon: 'tractor', descricao: 'Boi de trabalho' },
 };
 
+/**
+ * `Misto` e `Outro` seguem a paleta escolhida, por isso são GETTERS: esta
+ * tabela nasce no arranque do módulo, antes de a paleta guardada estar
+ * aplicada, e um valor direto ficava com a cor de origem para sempre.
+ */
 export const tipoTerrenoMeta: Record<TipoTerreno, { icon: IconName; cor: string }> = {
   Pastagem: { icon: 'grass', cor: colors.success },
   Cultivo: { icon: 'sprout', cor: colors.caprino },
-  Misto: { icon: 'leaf', cor: colors.primary },
-  Outro: { icon: 'map-marker-outline', cor: colors.textSecondary },
+  Misto: {
+    icon: 'leaf',
+    get cor() {
+      return colors.primary;
+    },
+  },
+  Outro: {
+    icon: 'map-marker-outline',
+    get cor() {
+      return colors.textSecondary;
+    },
+  },
 };

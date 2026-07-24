@@ -27,7 +27,7 @@ type State = { erro: Error | null };
 /** Texto para o criador enviar a quem dá apoio. */
 function relatorio(erro: Error, pilha?: string): string {
   return [
-    `Gestão de Gado — versão ${VERSAO_APP}`,
+    `Terrabovina — versão ${VERSAO_APP}`,
     `Data: ${new Date().toISOString()}`,
     '',
     `Erro: ${erro.message}`,

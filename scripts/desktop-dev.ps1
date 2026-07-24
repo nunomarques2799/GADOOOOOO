@@ -7,7 +7,7 @@
     projeto Supabase de testes), copia-o para o desktop, marca-o como sendo de
     testes e abre a app.
 
-    NÃO instala nada. Não cria atalho, não mexe no "Gestão de Gado" que já
+    NÃO instala nada. Não cria atalho, não mexe no "Terrabovina" que já
     tens instalado, não se auto-atualiza. É a mesma janela e o mesmo
     comportamento da app a sério — só que descartável.
 

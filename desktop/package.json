@@ -1,9 +1,9 @@
 {
   "name": "gestao-gado-desktop",
-  "productName": "Gestao de Gado",
+  "productName": "Terrabovina",
   "version": "1.0.0",
-  "description": "Gestao de Gado — app de gestao de exploracoes pecuarias (versao Windows).",
-  "author": "Gestao de Gado",
+  "description": "Terrabovina — app de gestao de exploracoes pecuarias (versao Windows).",
+  "author": "Terrabovina",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -18,7 +18,7 @@
   },
   "build": {
     "appId": "com.gestaogado.desktop",
-    "productName": "Gestao de Gado",
+    "productName": "Terrabovina",
     "files": [
       "main.js",
       "preload.js"
@@ -50,7 +50,7 @@
       "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Gestao de Gado",
+      "shortcutName": "Terrabovina",
       "deleteAppDataOnUninstall": false
     },
     "publish": [

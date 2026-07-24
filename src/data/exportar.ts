@@ -191,7 +191,7 @@ export function htmlRelatorioPrazos(alertas: Alerta[], nomeExploracao?: string):
       <thead><tr><th>Alerta</th><th>Descrição</th><th>Prazo</th></tr></thead>
       <tbody>${alertas.length ? linhas : vazio}</tbody>
     </table>
-    <footer>Gerado pela app Gestão de Gado · ${dataHoje}. Documento informativo — confirme sempre os prazos oficiais (DGAV/IFAP/SNIRA).</footer>
+    <footer>Gerado pela app Terrabovina · ${dataHoje}. Documento informativo — confirme sempre os prazos oficiais (DGAV/IFAP/SNIRA).</footer>
   `;
 }
 

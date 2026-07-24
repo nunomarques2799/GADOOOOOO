@@ -41,7 +41,7 @@ export function BarraLateral({ itens }: { itens: ItemNav[] }) {
         }}>
         <Icon name="cow" size="xl" color={colors.textOnDark} />
         <Text variant="h3" color={colors.textOnDark}>
-          Gestão de Gado
+          Terrabovina
         </Text>
       </View>
 

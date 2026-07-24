@@ -49,7 +49,7 @@ export default function AjudaScreen() {
                 onPress={() =>
                   void Linking.openURL(
                     'mailto:apoio@gestaogado.pt?subject=' +
-                      encodeURIComponent('Ajuda — Gestão de Gado'),
+                      encodeURIComponent('Ajuda — Terrabovina'),
                   )
                 }
               />

@@ -7,13 +7,36 @@ import { Text } from './Text';
 
 export type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'brand';
 
+/**
+ * Os tons que dependem da paleta são GETTERS, não valores.
+ *
+ * Esta tabela é criada no arranque do módulo, antes de a paleta escolhida
+ * estar aplicada; com valores diretos, um `neutral` ou um `brand` ficavam
+ * verdes para sempre numa app que o criador pôs azul. Assim a cor só é lida
+ * quando o crachá se desenha. Os tons semânticos não mudam com a paleta e
+ * podem ficar como estão.
+ */
 const tones: Record<Tone, { bg: string; fg: string }> = {
-  neutral: { bg: colors.surfaceSunken, fg: colors.textSecondary },
+  neutral: {
+    get bg() {
+      return colors.surfaceSunken;
+    },
+    get fg() {
+      return colors.textSecondary;
+    },
+  },
   success: { bg: colors.successTint, fg: colors.success },
   warning: { bg: colors.warningTint, fg: '#9A6410' },
   danger: { bg: colors.dangerTint, fg: colors.danger },
   info: { bg: colors.infoTint, fg: colors.info },
-  brand: { bg: colors.primaryTint, fg: colors.primaryDark },
+  brand: {
+    get bg() {
+      return colors.primaryTint;
+    },
+    get fg() {
+      return colors.primaryDark;
+    },
+  },
 };
 
 type Props = {

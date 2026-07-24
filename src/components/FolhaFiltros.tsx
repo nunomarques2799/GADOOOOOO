@@ -8,23 +8,11 @@ import {
   FAIXAS,
   rotuloCategoriaAlerta,
   SEM_TERRENO,
+  type Facetas,
   type Filtros,
 } from '@/data/filtrosAnimais';
-import type { Alerta, Especie, Finalidade, Terreno } from '@/data/types';
+import type { Terreno } from '@/data/types';
 import { colors, radii, shadow, spacing } from '@/theme';
-
-/** O que existe no efetivo — só se oferece o que devolve resultados. */
-export type Disponivel = {
-  especies: Especie[];
-  racas: string[];
-  cores: string[];
-  casas: string[];
-  finalidades: Finalidade[];
-  terrenos: Terreno[];
-  categoriasAlerta: Alerta['categoria'][];
-  temSemTerreno: boolean;
-  temSaidos: number;
-};
 
 /**
  * Folha com todos os filtros da lista de animais.
@@ -34,14 +22,16 @@ export type Disponivel = {
  * meio ecrã de opções antes de ver o primeiro animal. Aqui o cabeçalho fica
  * com a pesquisa e um botão, e quem quer afinar abre.
  *
- * Cada grupo só aparece se houver mais do que uma hipótese no efetivo: uma
- * exploração só de bovinos não precisa de ver um filtro de espécie, e um
- * filtro com uma opção só não filtra nada.
+ * Os grupos encolhem à medida que se escolhe: cada um mostra só as opções que
+ * ainda devolvem animais, tendo em conta o que já está filtrado (ver
+ * `facetasDisponiveis`). Um grupo que fique com uma opção só desaparece —
+ * escolhê-la não mudava nada.
  */
 export function FolhaFiltros({
   aberto,
   filtros,
-  disponivel,
+  facetas,
+  terrenos,
   onFechar,
   onMudar,
   onLimpar,
@@ -49,7 +39,9 @@ export function FolhaFiltros({
 }: {
   aberto: boolean;
   filtros: Filtros;
-  disponivel: Disponivel;
+  facetas: Facetas;
+  /** Todos os terrenos, para dar nome aos ids que as facetas devolvem. */
+  terrenos: Terreno[];
   onFechar: () => void;
   onMudar: (f: Filtros) => void;
   onLimpar: () => void;
@@ -114,9 +106,9 @@ export function FolhaFiltros({
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
-            {disponivel.especies.length > 1 ? (
+            {vale(facetas.especies, filtros.especie) ? (
               <Grupo titulo="Espécie">
-                {disponivel.especies.map((e) => (
+                {facetas.especies.map((e) => (
                   <Chip
                     key={e}
                     label={especieMeta[e].plural}
@@ -128,50 +120,52 @@ export function FolhaFiltros({
               </Grupo>
             ) : null}
 
-            <Grupo titulo="Sexo">
-              <Chip
-                label="Fêmeas"
-                icon="gender-female"
-                selected={filtros.sexo === 'Fêmea'}
-                onPress={() => alternar('sexo', 'Fêmea')}
-              />
-              <Chip
-                label="Machos"
-                icon="gender-male"
-                selected={filtros.sexo === 'Macho'}
-                onPress={() => alternar('sexo', 'Macho')}
-              />
-            </Grupo>
+            {vale(facetas.sexos, filtros.sexo) ? (
+              <Grupo titulo="Sexo">
+                {facetas.sexos.map((s) => (
+                  <Chip
+                    key={s}
+                    label={s === 'Fêmea' ? 'Fêmeas' : 'Machos'}
+                    icon={s === 'Fêmea' ? 'gender-female' : 'gender-male'}
+                    selected={filtros.sexo === s}
+                    onPress={() => alternar('sexo', s)}
+                  />
+                ))}
+              </Grupo>
+            ) : null}
 
-            <Grupo titulo="Cobrição">
-              <Chip
-                label="Cobertas"
-                icon="baby-bottle-outline"
-                selected={filtros.prenhe === true}
-                onPress={() => alternar('prenhe', true)}
-              />
-              <Chip
-                label="Não cobertas"
-                icon="minus-circle-outline"
-                selected={filtros.prenhe === false}
-                onPress={() => alternar('prenhe', false)}
-              />
-            </Grupo>
+            {vale(facetas.prenhez, filtros.prenhe) ? (
+              <Grupo titulo="Cobrição">
+                {facetas.prenhez.map((p) => (
+                  <Chip
+                    key={String(p)}
+                    label={p ? 'Cobertas' : 'Não cobertas'}
+                    icon={p ? 'baby-bottle-outline' : 'minus-circle-outline'}
+                    selected={filtros.prenhe === p}
+                    onPress={() => alternar('prenhe', p)}
+                  />
+                ))}
+              </Grupo>
+            ) : null}
 
-            <Grupo titulo="Idade">
-              {FAIXAS.map((f) => (
-                <Chip
-                  key={f.valor}
-                  label={f.label}
-                  selected={filtros.idade === f.valor}
-                  onPress={() => alternar('idade', f.valor)}
-                />
-              ))}
-            </Grupo>
+            {vale(facetas.idades, filtros.idade) ? (
+              <Grupo titulo="Idade">
+                {/* Pela ordem das faixas, não pela ordem em que apareceram no
+                    efetivo: uma escada de idades baralhada custa a ler. */}
+                {FAIXAS.filter((f) => facetas.idades.includes(f.valor)).map((f) => (
+                  <Chip
+                    key={f.valor}
+                    label={f.label}
+                    selected={filtros.idade === f.valor}
+                    onPress={() => alternar('idade', f.valor)}
+                  />
+                ))}
+              </Grupo>
+            ) : null}
 
-            {disponivel.racas.length > 1 ? (
+            {vale(facetas.racas, filtros.raca) ? (
               <Grupo titulo="Raça">
-                {disponivel.racas.map((r) => (
+                {facetas.racas.map((r) => (
                   <Chip
                     key={r}
                     label={r}
@@ -182,9 +176,9 @@ export function FolhaFiltros({
               </Grupo>
             ) : null}
 
-            {disponivel.cores.length > 1 ? (
+            {vale(facetas.cores, filtros.cor) ? (
               <Grupo titulo="Cor da pelagem">
-                {disponivel.cores.map((c) => (
+                {facetas.cores.map((c) => (
                   <Chip
                     key={c}
                     label={c}
@@ -195,9 +189,9 @@ export function FolhaFiltros({
               </Grupo>
             ) : null}
 
-            {disponivel.finalidades.length > 1 ? (
+            {vale(facetas.finalidades, filtros.finalidade) ? (
               <Grupo titulo="Finalidade">
-                {disponivel.finalidades.map((f) => (
+                {facetas.finalidades.map((f) => (
                   <Chip
                     key={f}
                     label={f}
@@ -209,9 +203,9 @@ export function FolhaFiltros({
               </Grupo>
             ) : null}
 
-            {disponivel.casas.length > 1 ? (
+            {vale(facetas.casas, filtros.casa) ? (
               <Grupo titulo="Casa">
-                {disponivel.casas.map((c) => (
+                {facetas.casas.map((c) => (
                   <Chip
                     key={c}
                     label={c}
@@ -223,37 +217,37 @@ export function FolhaFiltros({
               </Grupo>
             ) : null}
 
-            {disponivel.terrenos.length > 0 ? (
+            {vale(facetas.terrenoIds, filtros.terrenoId) ? (
               <Grupo titulo="Terreno">
-                {disponivel.terrenos.map((t) => (
+                {facetas.terrenoIds.map((id) => (
                   <Chip
-                    key={t.id}
-                    label={t.nome}
-                    icon="map-marker"
-                    selected={filtros.terrenoId === t.id}
-                    onPress={() => alternar('terrenoId', t.id)}
+                    key={id}
+                    label={
+                      id === SEM_TERRENO
+                        ? 'Sem terreno'
+                        : (terrenos.find((t) => t.id === id)?.nome ?? 'Terreno')
+                    }
+                    icon={id === SEM_TERRENO ? 'map-marker-off' : 'map-marker'}
+                    selected={filtros.terrenoId === id}
+                    onPress={() => alternar('terrenoId', id)}
                   />
                 ))}
-                {disponivel.temSemTerreno ? (
-                  <Chip
-                    label="Sem terreno"
-                    icon="map-marker-off"
-                    selected={filtros.terrenoId === SEM_TERRENO}
-                    onPress={() => alternar('terrenoId', SEM_TERRENO)}
-                  />
-                ) : null}
               </Grupo>
             ) : null}
 
-            {disponivel.categoriasAlerta.length > 0 ? (
+            {facetas.categoriasAlerta.length > 0 ? (
               <Grupo titulo="Alertas">
-                <Chip
-                  label="Todos"
-                  icon="alert-circle-outline"
-                  selected={filtros.alerta === true}
-                  onPress={() => alternar('alerta', true)}
-                />
-                {disponivel.categoriasAlerta.map((c) => (
+                {/* "Todos" só vale a pena com mais do que uma categoria: com
+                    uma só, seria o mesmo botão duas vezes. */}
+                {facetas.categoriasAlerta.length > 1 ? (
+                  <Chip
+                    label="Todos"
+                    icon="alert-circle-outline"
+                    selected={filtros.alerta === true}
+                    onPress={() => alternar('alerta', true)}
+                  />
+                ) : null}
+                {facetas.categoriasAlerta.map((c) => (
                   <Chip
                     key={c}
                     label={rotuloCategoriaAlerta[c]}
@@ -264,24 +258,36 @@ export function FolhaFiltros({
               </Grupo>
             ) : null}
 
-            <Grupo titulo="Outros">
-              <Chip
-                label="Sem brinco"
-                icon="tag-off-outline"
-                selected={!!filtros.semBrinco}
-                onPress={() => onMudar({ ...filtros, semBrinco: !filtros.semBrinco || undefined })}
-              />
-              {disponivel.temSaidos > 0 ? (
-                <Chip
-                  label={`Incluir arquivo (${disponivel.temSaidos})`}
-                  icon="archive-outline"
-                  selected={!!filtros.incluirSaidos}
-                  onPress={() =>
-                    onMudar({ ...filtros, incluirSaidos: !filtros.incluirSaidos || undefined })
-                  }
-                />
-              ) : null}
-            </Grupo>
+            {facetas.semBrinco || facetas.nSaidos > 0 ? (
+              <Grupo titulo="Outros">
+                {facetas.semBrinco ? (
+                  <Chip
+                    label="Sem brinco"
+                    icon="tag-off-outline"
+                    selected={!!filtros.semBrinco}
+                    onPress={() =>
+                      onMudar({ ...filtros, semBrinco: !filtros.semBrinco || undefined })
+                    }
+                  />
+                ) : null}
+                {facetas.nSaidos > 0 ? (
+                  <Chip
+                    label={`Incluir arquivo (${facetas.nSaidos})`}
+                    icon="archive-outline"
+                    selected={!!filtros.incluirSaidos}
+                    onPress={() =>
+                      onMudar({ ...filtros, incluirSaidos: !filtros.incluirSaidos || undefined })
+                    }
+                  />
+                ) : null}
+              </Grupo>
+            ) : null}
+
+            {semNadaParaAfinar(facetas, filtros) ? (
+              <Text variant="secondary" color={colors.textMuted} style={{ marginBottom: spacing.lg }}>
+                Não há mais nada para afinar nesta lista.
+              </Text>
+            ) : null}
           </ScrollView>
 
           <View
@@ -308,6 +314,36 @@ export function FolhaFiltros({
         </View>
       </View>
     </Modal>
+  );
+}
+
+/**
+ * Vale a pena mostrar este grupo?
+ *
+ * Com uma opção só não vale: já está a ser cumprida por todos os animais da
+ * lista, e escolhê-la não tirava nenhum. A exceção é o filtro que o criador já
+ * escolheu — esse mostra-se sempre, senão a única forma de o desligar era pelo
+ * "Limpar", que leva os outros à frente.
+ */
+function vale<T>(opcoes: T[], escolhido: T | undefined): boolean {
+  return opcoes.length > 1 || escolhido !== undefined;
+}
+
+/** Nenhum grupo sobreviveu — a folha ficaria em branco sem uma explicação. */
+function semNadaParaAfinar(f: Facetas, filtros: Filtros): boolean {
+  return (
+    !vale(f.especies, filtros.especie) &&
+    !vale(f.sexos, filtros.sexo) &&
+    !vale(f.prenhez, filtros.prenhe) &&
+    !vale(f.idades, filtros.idade) &&
+    !vale(f.racas, filtros.raca) &&
+    !vale(f.cores, filtros.cor) &&
+    !vale(f.casas, filtros.casa) &&
+    !vale(f.finalidades, filtros.finalidade) &&
+    !vale(f.terrenoIds, filtros.terrenoId) &&
+    f.categoriasAlerta.length === 0 &&
+    !f.semBrinco &&
+    f.nSaidos === 0
   );
 }
 

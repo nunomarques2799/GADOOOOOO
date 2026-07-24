@@ -60,7 +60,7 @@ tal e qual como no site publicado — sem gastar um único minuto de build.
 ### A app Windows em testes
 
 Para experimentar na app de desktop a sério — a mesma janela, o mesmo
-comportamento — sem tocar no "Gestão de Gado" que já está instalado:
+comportamento — sem tocar no "Terrabovina" que já está instalado:
 
 ```bash
 powershell scripts/desktop-dev.ps1

@@ -24,13 +24,47 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
+/**
+ * As cores de marca são GETTERS, não valores.
+ *
+ * Esta tabela nasce no arranque do módulo, antes de a paleta escolhida estar
+ * aplicada (ver `theme/paletas.ts`). Com valores diretos, o botão primário
+ * ficava verde numa app que o criador tinha posto azul — e era o único: tudo
+ * o resto, que lê as cores durante o render, mudava. O `danger` não muda com a
+ * paleta e pode ficar como está.
+ *
+ * `node scripts/cores-no-arranque.js` procura este erro no projeto todo.
+ */
 const palette: Record<
   Variant,
   { bg: string; fg: string; border?: string; shadow?: boolean }
 > = {
-  primary: { bg: colors.primary, fg: colors.onPrimary, shadow: true },
-  secondary: { bg: colors.primaryTint, fg: colors.primaryDark },
-  ghost: { bg: 'transparent', fg: colors.primaryDark, border: colors.borderStrong },
+  primary: {
+    get bg() {
+      return colors.primary;
+    },
+    get fg() {
+      return colors.onPrimary;
+    },
+    shadow: true,
+  },
+  secondary: {
+    get bg() {
+      return colors.primaryTint;
+    },
+    get fg() {
+      return colors.primaryDark;
+    },
+  },
+  ghost: {
+    bg: 'transparent',
+    get fg() {
+      return colors.primaryDark;
+    },
+    get border() {
+      return colors.borderStrong;
+    },
+  },
   danger: { bg: colors.danger, fg: '#FFFFFF', shadow: true },
 };
 

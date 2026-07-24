@@ -4,17 +4,17 @@ import { FlatList, Platform, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimalRow } from '@/components/AnimalRow';
-import { FolhaFiltros, type Disponivel } from '@/components/FolhaFiltros';
+import { FolhaFiltros } from '@/components/FolhaFiltros';
 import { Button, Chip, EmptyState, FAB, Icon, Text } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
 import {
   contarAtivos,
+  facetasDisponiveis,
   FAIXAS,
   filtrarAnimais,
   mapaAlertas,
   rotuloCategoriaAlerta,
   SEM_TERRENO,
-  valoresPresentes,
   type Filtros,
 } from '@/data/filtrosAnimais';
 import { useMembros } from '@/data/membros';
@@ -41,21 +41,13 @@ export default function AnimaisScreen() {
     () => animais.filter((a) => !a.estado || a.estado === 'ativo'),
     [animais],
   );
-  const nSaidos = animais.length - ativos.length;
 
-  // As opções saem do efetivo ATIVO: oferecer uma raça que só existe em
-  // animais vendidos dava um filtro que devolve zero sem explicação.
-  const presentes = useMemo(() => valoresPresentes(ativos), [ativos]);
-
-  const disponivel = useMemo<Disponivel>(
-    () => ({
-      ...presentes,
-      terrenos: terrenos.filter((t) => ativos.some((a) => a.terrenoId === t.id)),
-      temSemTerreno: ativos.some((a) => !a.terrenoId),
-      categoriasAlerta: [...new Set(alertas.map((a) => a.categoria))].sort(),
-      temSaidos: nSaidos,
-    }),
-    [presentes, terrenos, ativos, alertas, nSaidos],
+  // As opções encolhem com o que já está filtrado: com "Bovinos" escolhido, o
+  // sexo só oferece o que existe entre os bovinos. Depende dos `filtros`, por
+  // isso recalcula-se a cada escolha — é o que faz as opções desaparecerem.
+  const facetas = useMemo(
+    () => facetasDisponiveis(animais, filtros, porAnimal),
+    [animais, filtros, porAnimal],
   );
 
   const lista = useMemo(
@@ -274,7 +266,8 @@ export default function AnimaisScreen() {
       <FolhaFiltros
         aberto={folhaAberta}
         filtros={filtros}
-        disponivel={disponivel}
+        facetas={facetas}
+        terrenos={terrenos}
         total={lista.length}
         onFechar={() => setFolhaAberta(false)}
         onMudar={setFiltros}

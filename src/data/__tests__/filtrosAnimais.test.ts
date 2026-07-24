@@ -2,11 +2,11 @@ import { describe, expect, it } from '@jest/globals';
 
 import {
   contarAtivos,
+  facetasDisponiveis,
   faixaDe,
   filtrarAnimais,
   mapaAlertas,
   SEM_TERRENO,
-  valoresPresentes,
   type Filtros,
 } from '../filtrosAnimais';
 import { isoDaysAgo } from '../helpers';
@@ -195,16 +195,122 @@ describe('contarAtivos', () => {
   });
 });
 
-describe('valoresPresentes', () => {
+describe('facetasDisponiveis', () => {
+  /** Atalho: as facetas sem filtro nenhum e sem alertas. */
+  const facetas = (animais: Animal[], f: Filtros = {}, m = semAlertas) =>
+    facetasDisponiveis(animais, f, m);
+
   it('devolve só o que existe mesmo no efetivo, sem repetir', () => {
     const efetivo = [
       animal('a1', { raca: 'Mertolenga', corPelagem: 'Preta', casa: 'Monte' }),
       animal('a2', { raca: 'mertolenga', corPelagem: 'Preta' }),
       animal('a3', { raca: 'Minhota' }),
     ];
-    const v = valoresPresentes(efetivo);
+    const v = facetas(efetivo);
     expect(v.racas).toEqual(['Mertolenga', 'Minhota']);
     expect(v.cores).toEqual(['Preta']);
     expect(v.casas).toEqual(['Monte']);
+  });
+
+  it('o efetivo que já saiu não conta para as opções', () => {
+    // Oferecer uma raça que só existe em animais vendidos dá um filtro que
+    // devolve zero — e a culpa não é visível em lado nenhum.
+    const efetivo = [
+      animal('vivo', { raca: 'Mertolenga' }),
+      animal('vendido', { raca: 'Minhota', estado: 'vendido' }),
+    ];
+    expect(facetas(efetivo).racas).toEqual(['Mertolenga']);
+    expect(facetas(efetivo).nSaidos).toBe(1);
+  });
+
+  it('escolher a espécie tira os sexos que essa espécie não tem', () => {
+    // É o caso que motivou tudo isto: uma exploração com bovinos só machos e
+    // ovinos fêmeas. Ao filtrar "Bovinos", "Fêmeas" não pode continuar lá.
+    const efetivo = [
+      animal('boi', { especie: 'Bovino', sexo: 'Macho' }),
+      animal('ovelha', { especie: 'Ovino', sexo: 'Fêmea' }),
+    ];
+    expect(facetas(efetivo).sexos).toEqual(['Fêmea', 'Macho']);
+    expect(facetas(efetivo, { especie: 'Bovino' }).sexos).toEqual(['Macho']);
+    expect(facetas(efetivo, { especie: 'Ovino' }).sexos).toEqual(['Fêmea']);
+  });
+
+  it('a escolha de um grupo não encolhe esse mesmo grupo', () => {
+    // Sem isto, escolher "Fêmeas" apagava o chip "Machos" (a lista já só tem
+    // fêmeas) e prendia o criador na escolha: para ver os machos tinha de
+    // adivinhar que primeiro havia de limpar o filtro.
+    const efetivo = [animal('f', { sexo: 'Fêmea' }), animal('m', { sexo: 'Macho' })];
+    expect(facetas(efetivo, { sexo: 'Fêmea' }).sexos).toEqual(['Fêmea', 'Macho']);
+  });
+
+  it('o filtro escolhido nunca desaparece, mesmo sem devolver nada', () => {
+    // Combinação impossível (raça que só existe noutra espécie): a lista fica
+    // vazia, mas o chip tem de continuar visível para se poder desligar.
+    const efetivo = [
+      animal('boi', { especie: 'Bovino', raca: 'Mertolenga' }),
+      animal('ovelha', { especie: 'Ovino', raca: 'Serra da Estrela' }),
+    ];
+    const v = facetas(efetivo, { especie: 'Ovino', raca: 'Mertolenga' });
+    expect(v.racas).toContain('Mertolenga');
+  });
+
+  it('a cobrição só oferece o que existe entre as fêmeas filtradas', () => {
+    const efetivo = [
+      animal('coberta', { sexo: 'Fêmea', dataPrevistaParto: isoDaysAgo(-30) }),
+      animal('touro', { sexo: 'Macho' }),
+    ];
+    // Só há uma fêmea e está coberta: "Não cobertas" não tem a quem pertencer.
+    expect(facetas(efetivo).prenhez).toEqual([true]);
+    // E entre os machos não há cobrição nenhuma para oferecer.
+    expect(facetas(efetivo, { sexo: 'Macho' }).prenhez).toEqual([]);
+  });
+
+  it('as idades encolhem para as faixas que têm animais', () => {
+    const efetivo = [
+      animal('cria', { dataNascimento: isoDaysAgo(30) }),
+      animal('velho', { dataNascimento: isoDaysAgo(4000) }),
+    ];
+    expect(facetas(efetivo).idades.sort()).toEqual(['cria', 'velho']);
+  });
+
+  it('os terrenos seguem os outros filtros', () => {
+    const efetivo = [
+      animal('b', { especie: 'Bovino', terrenoId: 't1' }),
+      animal('o', { especie: 'Ovino', terrenoId: 't2' }),
+      animal('solto', { especie: 'Ovino' }),
+    ];
+    expect(facetas(efetivo, { especie: 'Bovino' }).terrenoIds).toEqual(['t1']);
+    expect(facetas(efetivo, { especie: 'Ovino' }).terrenoIds.sort()).toEqual([
+      SEM_TERRENO,
+      't2',
+    ]);
+  });
+
+  it('só oferece categorias de alerta dos animais que restam', () => {
+    const efetivo = [
+      animal('b', { especie: 'Bovino' }),
+      animal('o', { especie: 'Ovino' }),
+    ];
+    const m = mapaAlertas([
+      { id: 'x1', animalId: 'b', categoria: 'identificacao', gravidade: 'urgente', titulo: '', descricao: '' },
+      { id: 'x2', animalId: 'o', categoria: 'vacinacao', gravidade: 'info', titulo: '', descricao: '' },
+    ]);
+    expect(facetas(efetivo, {}, m).categoriasAlerta).toEqual(['identificacao', 'vacinacao']);
+    expect(facetas(efetivo, { especie: 'Bovino' }, m).categoriasAlerta).toEqual(['identificacao']);
+  });
+
+  it('"sem brinco" some quando está tudo identificado', () => {
+    const comBrinco = [animal('a', { numeroIdentificacao: 'PT1' })];
+    const semBrinco = [animal('a', {})];
+    expect(facetas(comBrinco).semBrinco).toBe(false);
+    expect(facetas(semBrinco).semBrinco).toBe(true);
+  });
+
+  it('a pesquisa por texto também encolhe as opções', () => {
+    const efetivo = [
+      animal('a1', { nome: 'Mimosa', raca: 'Mertolenga' }),
+      animal('a2', { nome: 'Estrela', raca: 'Minhota' }),
+    ];
+    expect(facetas(efetivo, { texto: 'mimo' }).racas).toEqual(['Mertolenga']);
   });
 });

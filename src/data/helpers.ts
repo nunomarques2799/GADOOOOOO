@@ -181,6 +181,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
         id: `id-${a.id}`,
         categoria: 'identificacao',
         animalId: a.id,
+        exploracaoId: a.exploracaoId,
+        data: isoMaisDias(a.dataNascimento, PrazosLegais.identificacao),
         gravidade: prazo <= 0 ? 'urgente' : prazo <= 5 ? 'aviso' : 'info',
         titulo: prazo <= 0 ? 'Identificação em atraso' : 'Falta identificar (brinco)',
         descricao:
@@ -198,6 +200,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
         id: `snira-${a.id}`,
         categoria: 'snira',
         animalId: a.id,
+        exploracaoId: a.exploracaoId,
+        data: isoMaisDias(a.dataIdentificacao, PrazosLegais.snira),
         gravidade: prazo <= 0 ? 'urgente' : prazo <= 3 ? 'aviso' : 'info',
         titulo: prazo <= 0 ? 'Comunicação SNIRA em atraso' : 'Comunicar ao SNIRA',
         descricao:
@@ -220,6 +224,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
           id: `parto-${a.id}`,
           categoria: 'parto',
           animalId: a.id,
+          exploracaoId: a.exploracaoId,
+          data: a.dataPrevistaParto,
           gravidade: 'info',
           titulo: 'Parto previsto por confirmar',
           descricao: `${rotulo}: a data prevista de parto já passou há mais de ${PartoPrevisaoCaducaDias} dias. Registe o parto ou corrija a previsão.`,
@@ -229,6 +235,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
           id: `parto-${a.id}`,
           categoria: 'parto',
           animalId: a.id,
+          exploracaoId: a.exploracaoId,
+          data: a.dataPrevistaParto,
           gravidade: dias <= 3 ? 'aviso' : 'info',
           titulo: 'Parto previsto',
           descricao:
@@ -248,6 +256,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
           id: `med-${a.id}`,
           categoria: 'medicamento',
           animalId: a.id,
+          exploracaoId: a.exploracaoId,
+          data: a.fimIntervaloSeguranca,
           gravidade: 'info',
           titulo: 'Período de segurança',
           descricao: `${rotulo}: em intervalo de segurança — não vender para abate (faltam ${dias} dia(s)).`,
@@ -267,6 +277,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
           id: `vac-${a.id}`,
           categoria: 'vacinacao',
           animalId: a.id,
+          exploracaoId: a.exploracaoId,
+          data: isoMaisDias(new Date(ultima).toISOString(), PrazosSanitarios.revacinacao),
           gravidade: restam <= 0 ? 'urgente' : 'info',
           titulo: restam <= 0 ? 'Revacinação em atraso' : 'Revacinação a aproximar-se',
           descricao:
@@ -281,6 +293,9 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
         id: `vac-${a.id}`,
         categoria: 'vacinacao',
         animalId: a.id,
+        exploracaoId: a.exploracaoId,
+        // Sem `data` de propósito: não há prazo nenhum a correr, há um registo
+        // em falta. No calendário só apareceria a fingir de tarefa marcada.
         gravidade: 'info',
         titulo: 'Sem registo de vacinação',
         descricao: `${rotulo} não tem nenhuma vacinação registada. Registe a última para acompanhar o plano.`,

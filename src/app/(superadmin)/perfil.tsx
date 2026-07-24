@@ -102,7 +102,7 @@ export default function SuperadminPerfilScreen() {
           </Card>
 
           <Text variant="caption" color={colors.textMuted} center style={{ marginTop: spacing.xs }}>
-            Gestão de Gado · superadmin · v{VERSAO_APP}
+            Terrabovina · superadmin · v{VERSAO_APP}
           </Text>
         </View>
       </ScrollView>

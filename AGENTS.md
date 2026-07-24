@@ -1,4 +1,4 @@
-# Gestão de Gado — contexto para agentes
+# Terrabovina — contexto para agentes
 
 App móvel de gestão de gado (pecuária) em **React Native (Expo SDK 57)**.
 Público-alvo: criadores em Portugal, incluindo utilizadores idosos → **simplicidade
@@ -8,7 +8,7 @@ mercado e legal (DGAV/IFAP/SNIRA) em `../Instruções/`.
 ## Regras do projeto
 
 - **Dois ambientes** (ver `AMBIENTES.md`): trabalha-se no branch `dev`, contra o projeto Supabase de **testes**; o `main` é o que o criador tem instalado e **fazer merge para `main` é publicar** — dispara sozinho o site da app e o instalador Windows. Nunca correr `eas update --branch preview` a partir do `dev`: esse canal é o telemóvel dele. Alterações à base de dados: dev primeiro, `scripts/backup.ps1 -Ambiente prod` depois, produção só no fim — ordem dos ficheiros em `supabase/MIGRACOES.md`.
-- **Design system**: usa sempre os tokens de `@/theme` (ver `DESIGN_SYSTEM.md`). Nunca hex soltos.
+- **Design system**: usa sempre os tokens de `@/theme` (ver `DESIGN_SYSTEM.md`). Nunca hex soltos. As cores de marca e de superfície mudam com a **paleta** que o criador escolhe (`src/theme/paletas.ts`), por isso lê `colors` **dentro do render** — uma constante no topo de um módulo congela a cor de origem. Em tabelas de módulo, usa getters; `node scripts/cores-no-arranque.js` apanha o erro e corre na CI.
 - **Ícones**: só `MaterialCommunityIcons` via `<Icon name="…" />`. Nunca emojis. Confirma que o nome existe no glyphmap.
 - **Texto**: usa `<Text variant="…">` (não `<Text>` do RN diretamente).
 - **Idioma**: toda a UI e nomes de domínio em português de Portugal.

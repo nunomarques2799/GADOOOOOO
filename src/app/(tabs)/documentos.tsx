@@ -22,7 +22,7 @@ import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, sizes, spacing } from '@/theme';
 
-const TITULO_PRAZOS = 'Relatório de prazos — Gestão de Gado';
+const TITULO_PRAZOS = 'Relatório de prazos — Terrabovina';
 
 /**
  * Documentos: tudo o que ENTRA e SAI da app em ficheiro (importar animais de

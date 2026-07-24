@@ -284,6 +284,16 @@ export interface Alerta {
   animalId?: string;
   /** Dias restantes até ao prazo (negativo = vencido). */
   diasRestantes?: number;
+  /**
+   * O dia a que o alerta pertence (ISO) — a data prevista do parto, o fim do
+   * prazo legal, o dia de revacinar. É o que põe o alerta no calendário.
+   *
+   * Nem todos têm: "sem registo de vacinação" não é um prazo, é uma lacuna, e
+   * inventar-lhe um dia era pô-lo no calendário como se fosse tarefa marcada.
+   */
+  data?: string;
+  /** A exploração do animal, para se poderem ver os alertas de uma só. */
+  exploracaoId?: string;
   categoria: 'snira' | 'identificacao' | 'parto' | 'medicamento' | 'vacinacao';
 }
 

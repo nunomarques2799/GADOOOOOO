@@ -8,7 +8,8 @@ import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
 import { VERSAO_APP } from '@/data/versao';
 import { useDesktop } from '@/hooks/useDesktop';
-import { colors, layout, spacing } from '@/theme';
+import { colors, layout, paletaPorId, spacing } from '@/theme';
+import { paletaGuardada } from '@/theme/preferencia';
 
 /**
  * Tudo o que se CONFIGURA e tudo o que se EXPORTA.
@@ -80,6 +81,17 @@ export default function DefinicoesScreen() {
             />
           </Grupo>
 
+          {/* Como a app se apresenta */}
+          <Grupo titulo="ASPETO">
+            <Linha
+              icon="palette-outline"
+              label="Cores da app"
+              trailing={paletaPorId(paletaGuardada()).nome}
+              onPress={() => router.push('/conta/aparencia')}
+              last
+            />
+          </Grupo>
+
           {/* Dados e cópias */}
           {configurado ? (
             <Grupo titulo="DADOS">
@@ -108,7 +120,7 @@ export default function DefinicoesScreen() {
           </Grupo>
 
           <Text variant="caption" color={colors.textMuted} center style={{ marginTop: spacing.xs }}>
-            Gestão de Gado · versão {VERSAO_APP}
+            Terrabovina · versão {VERSAO_APP}
           </Text>
         </View>
       </ScrollView>

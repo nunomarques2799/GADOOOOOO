@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Cópia de segurança de uma base de dados Supabase da Gestão de Gado.
+    Cópia de segurança de uma base de dados Supabase da Terrabovina.
 
 .DESCRIPTION
     O plano grátis do Supabase NÃO tem cópias de segurança automáticas nem

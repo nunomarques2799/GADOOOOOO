@@ -152,35 +152,119 @@ export function mapaAlertas(alertas: Alerta[]): Map<string, Set<Alerta['categori
   return m;
 }
 
-/**
- * Valores que existem mesmo no efetivo, para as escolhas não oferecerem
- * filtros que não devolvem nada. Uma lista de vinte raças onde só três têm
- * animais é uma lista de dezassete becos sem saída.
- */
-export function valoresPresentes(animais: Animal[]): {
+/** Valores distintos de um campo, sem repetir e por ordem alfabética. */
+function juntar(animais: Animal[], f: (a: Animal) => string | undefined): string[] {
+  const vistas = new Map<string, string>();
+  for (const a of animais) {
+    const v = f(a)?.trim();
+    if (!v) continue;
+    const k = normalizar(v);
+    if (!vistas.has(k)) vistas.set(k, v);
+  }
+  return [...vistas.values()].sort((x, y) => x.localeCompare(y, 'pt'));
+}
+
+/** O que cada grupo de filtros ainda tem para oferecer. */
+export type Facetas = {
+  especies: Especie[];
+  sexos: Sexo[];
   racas: string[];
   cores: string[];
   casas: string[];
-  especies: Especie[];
   finalidades: Finalidade[];
-} {
-  const juntar = (f: (a: Animal) => string | undefined) => {
-    const vistas = new Map<string, string>();
-    for (const a of animais) {
-      const v = f(a)?.trim();
-      if (!v) continue;
-      const k = normalizar(v);
-      if (!vistas.has(k)) vistas.set(k, v);
-    }
-    return [...vistas.values()].sort((x, y) => x.localeCompare(y, 'pt'));
-  };
+  /** Ids de terreno, mais `SEM_TERRENO` se houver animais soltos. */
+  terrenoIds: string[];
+  idades: FaixaIdade[];
+  /** Quais das duas hipóteses de cobrição ainda devolvem fêmeas. */
+  prenhez: boolean[];
+  semBrinco: boolean;
+  categoriasAlerta: Alerta['categoria'][];
+  /** Quantos animais do arquivo passariam nos filtros atuais. */
+  nSaidos: number;
+};
+
+/** Junta o valor já escolhido, para nunca ficar um filtro que não se desliga. */
+function comEscolhido<T>(valores: T[], escolhido: T | undefined): T[] {
+  if (escolhido === undefined || valores.includes(escolhido)) return valores;
+  return [...valores, escolhido];
+}
+
+/**
+ * As opções de cada grupo, calculadas sobre os OUTROS filtros ativos.
+ *
+ * Um filtro que não devolve nada é pior do que inútil: numa exploração só de
+ * bovinos machos, oferecer "Fêmeas" é prometer animais que não existem, e quem
+ * lá toca fica com uma lista vazia sem perceber o que fez de errado. Por isso
+ * cada grupo mostra só o que ainda dá resultado — escolher "Bovinos" faz o
+ * "Fêmeas" desaparecer se nenhum bovino for fêmea.
+ *
+ * Cada grupo é calculado com o SEU próprio filtro de fora ("faceting excluding
+ * self"). Sem isso, escolher "Fêmeas" apagava o chip "Machos" — a lista já só
+ * tem fêmeas — e trancava o criador na escolha que acabou de fazer, sem forma
+ * de a trocar sem primeiro a limpar.
+ */
+export function facetasDisponiveis(
+  animais: Animal[],
+  f: Filtros,
+  idsComAlerta: Map<string, Set<Alerta['categoria']>>,
+): Facetas {
+  /** O efetivo que sobra ignorando um dos filtros. */
+  const sem = (chave: keyof Filtros) =>
+    filtrarAnimais(animais, { ...f, [chave]: undefined }, idsComAlerta);
+
+  const porEspecie = sem('especie');
+  const porSexo = sem('sexo');
+  const porRaca = sem('raca');
+  const porCor = sem('cor');
+  const porCasa = sem('casa');
+  const porFinalidade = sem('finalidade');
+  const porTerreno = sem('terrenoId');
+  const porIdade = sem('idade');
+  const porPrenhe = sem('prenhe');
+  const porBrinco = sem('semBrinco');
+  const porAlerta = sem('alerta');
+
+  const categorias = new Set<Alerta['categoria']>();
+  for (const a of porAlerta) {
+    for (const c of idsComAlerta.get(a.id) ?? []) categorias.add(c);
+  }
+
+  // O arquivo é o único que ALARGA a lista: conta-se quantos animais saídos
+  // entrariam se fosse ligado, para o chip não prometer um número que os
+  // outros filtros já excluíram.
+  const saidos = filtrarAnimais(animais, { ...f, incluirSaidos: true }, idsComAlerta).filter(
+    (a) => !!a.estado && a.estado !== 'ativo',
+  );
 
   return {
-    racas: juntar((a) => a.raca),
-    cores: juntar((a) => a.corPelagem),
-    casas: juntar((a) => a.casa),
-    especies: juntar((a) => a.especie) as Especie[],
-    finalidades: juntar((a) => a.finalidade) as Finalidade[],
+    especies: comEscolhido(juntar(porEspecie, (a) => a.especie) as Especie[], f.especie),
+    sexos: comEscolhido(juntar(porSexo, (a) => a.sexo) as Sexo[], f.sexo),
+    racas: comEscolhido(juntar(porRaca, (a) => a.raca), f.raca),
+    cores: comEscolhido(juntar(porCor, (a) => a.corPelagem), f.cor),
+    casas: comEscolhido(juntar(porCasa, (a) => a.casa), f.casa),
+    finalidades: comEscolhido(
+      juntar(porFinalidade, (a) => a.finalidade) as Finalidade[],
+      f.finalidade,
+    ),
+    terrenoIds: comEscolhido(
+      [
+        ...new Set(porTerreno.map((a) => a.terrenoId ?? SEM_TERRENO)),
+      ],
+      f.terrenoId,
+    ),
+    idades: comEscolhido([...new Set(porIdade.map(faixaDe))], f.idade),
+    prenhez: comEscolhido(
+      [true, false].filter((p) =>
+        porPrenhe.some((a) => a.sexo === 'Fêmea' && !!a.dataPrevistaParto === p),
+      ),
+      f.prenhe,
+    ),
+    semBrinco: f.semBrinco || porBrinco.some((a) => !a.numeroIdentificacao),
+    categoriasAlerta: comEscolhido(
+      [...categorias].sort(),
+      f.alerta === true ? undefined : f.alerta,
+    ),
+    nSaidos: saidos.length,
   };
 }
 

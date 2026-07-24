@@ -25,8 +25,14 @@ import { GadoProvider } from '@/data/store';
 import { supabaseConfigurado } from '@/data/supabase';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout } from '@/theme';
+import { arrancarTema } from '@/theme/preferencia';
 
 SplashScreen.preventAutoHideAsync();
+
+// Antes de qualquer ecrã se desenhar. O armazenamento é síncrono de propósito
+// (ver `armazenamento.ts`), o que permite a app abrir já na paleta escolhida em
+// vez de piscar do verde para a cor certa à frente do criador.
+arrancarTema();
 
 /**
  * Em janelas largas (Electron/browser) a app usa o desenho de desktop — barra
@@ -186,6 +192,7 @@ export default function RootLayout() {
                   <Stack.Screen name="conta/notificacoes" />
                   <Stack.Screen name="conta/financas" />
                   <Stack.Screen name="conta/casa" />
+                  <Stack.Screen name="conta/aparencia" />
                   <Stack.Screen name="conta/ajuda" />
                   <Stack.Screen name="inspecionar/exploracao/[id]" />
                   <Stack.Screen name="inspecionar/animal/[id]" />
