@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { EcraACarregar } from '@/components/EcraACarregar';
 import { EcraLogin } from '@/components/EcraLogin';
 import { FaixaAmbiente } from '@/components/FaixaAmbiente';
 import { LimiteDeErro } from '@/components/LimiteDeErro';
@@ -89,7 +90,14 @@ function ColunaEstreita({ children }: { children: ReactNode }) {
  */
 function PortaoAuth({ children }: { children: ReactNode }) {
   const { aCarregar, sessao, emRecuperacao } = useAuth();
-  if (aCarregar) return null; // mantém o splash até saber se há sessão
+  // O `EcraACarregar` só aparece passado quase um segundo, por isso um arranque
+  // normal continua a ser o splash a dar lugar à app, sem nada pelo meio.
+  if (aCarregar)
+    return (
+      <ColunaEstreita>
+        <EcraACarregar />
+      </ColunaEstreita>
+    );
   // O link de recuperação abre uma sessão especial — pede a nova palavra-passe
   // antes de deixar entrar na app.
   if (supabaseConfigurado && emRecuperacao)
@@ -116,7 +124,15 @@ function AppRouter({ children }: { children: ReactNode }) {
   const { sessao } = useAuth();
   const { aCarregar, membros, isSuperadmin } = useMembros();
   if (!supabaseConfigurado || !sessao) return <>{children}</>;
-  if (aCarregar) return null;
+  // Sem a cache do último acesso — primeira vez, ou depois de a app mudar de
+  // pasta de dados — isto espera pelo servidor. Era o segundo sítio onde a app
+  // ficava em branco à espera de uma resposta que podia nunca chegar.
+  if (aCarregar)
+    return (
+      <ColunaEstreita>
+        <EcraACarregar mensagem="A carregar as suas explorações…" />
+      </ColunaEstreita>
+    );
   if (isSuperadmin) return <>{children}</>;
   if (membros.length === 0)
     return (

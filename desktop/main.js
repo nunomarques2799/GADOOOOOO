@@ -168,6 +168,38 @@ async function createWindow() {
   mainWindow.once('ready-to-show', () => mainWindow.show());
   mainWindow.loadURL(`http://127.0.0.1:${port}/`);
 
+  // Na app de TESTES, o que a página diz vai para o terminal onde ela foi
+  // aberta, e as ferramentas de programador abrem com F12.
+  //
+  // Sem isto, uma app que abra em branco é um beco sem saída: o erro existe,
+  // está na consola do Chromium, e não há como lá chegar — a janela não tem
+  // menu e o terminal só mostra "A abrir...". Foi exatamente o que aconteceu.
+  // Em produção nada disto se liga: o criador não tem nada a ver com isto.
+  if (EH_DEV) {
+    const niveis = ['debug', 'aviso', 'ERRO', 'aviso'];
+    mainWindow.webContents.on('console-message', (_e, nivel, mensagem, linha, origem) => {
+      if (nivel < 1) return; // ignora o `console.log` normal da app
+      console.log(`[página ${niveis[nivel] ?? nivel}] ${mensagem}  (${origem}:${linha})`);
+    });
+
+    mainWindow.webContents.on('did-fail-load', (_e, codigo, descricao, url) => {
+      console.log(`[página] NÃO CARREGOU ${url} — ${descricao} (${codigo})`);
+    });
+
+    mainWindow.webContents.on('render-process-gone', (_e, detalhes) => {
+      console.log(`[página] o processo morreu: ${detalhes.reason}`);
+    });
+
+    mainWindow.webContents.on('before-input-event', (evento, entrada) => {
+      const f12 = entrada.key === 'F12';
+      const ctrlShiftI = entrada.control && entrada.shift && entrada.key.toLowerCase() === 'i';
+      if (entrada.type === 'keyDown' && (f12 || ctrlShiftI)) {
+        mainWindow.webContents.toggleDevTools();
+        evento.preventDefault();
+      }
+    });
+  }
+
   // Open external links (http/https) in the system browser, not new windows.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//.test(url)) {

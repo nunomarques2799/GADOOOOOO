@@ -144,6 +144,40 @@ function toConvite(r: RowConvite): Convite {
   };
 }
 
+/**
+ * Quanto tempo se espera por uma resposta antes de desistir dela.
+ *
+ * Estas duas consultas decidem se a app abre. Enquanto não respondem, o ecrã
+ * está à espera — e um pedido a um servidor inalcançável não falha: fica
+ * pendurado. Sem prazo, "sem rede" e "servidor a demorar" tornam-se a mesma
+ * coisa: uma app que nunca abre e não diz porquê.
+ *
+ * Quinze segundos é generoso para uma rede fraca de campo e curto que chegue
+ * para não parecer avaria. Desistir aqui não perde nada: fica-se com o último
+ * acesso conhecido, que é como a app já funciona offline.
+ */
+const PRAZO_MS = 15000;
+
+/** O resultado do pedido, ou um erro de prazo se ele não vier a tempo. */
+async function comPrazo<T>(
+  pedido: PromiseLike<{ data: T; error: unknown }>,
+): Promise<{ data: T | null; error: unknown }> {
+  let temporizador: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      pedido,
+      new Promise<{ data: null; error: unknown }>((resolve) => {
+        temporizador = setTimeout(
+          () => resolve({ data: null, error: new Error('Sem resposta do servidor.') }),
+          PRAZO_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (temporizador) clearTimeout(temporizador);
+  }
+}
+
 export function MembrosProvider({ children }: { children: ReactNode }) {
   const { sessao } = useAuth();
   const userId = sessao?.user.id ?? null;
@@ -175,11 +209,13 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     setACarregar(true);
 
     // Perfil (estado + flag superadmin).
-    const { data: perfil, error: erroPerfil } = await supabase
-      .from('perfil')
-      .select('estado, is_superadmin')
-      .eq('id', userId)
-      .maybeSingle();
+    const { data: perfil, error: erroPerfil } = await comPrazo(
+      supabase
+        .from('perfil')
+        .select('estado, is_superadmin')
+        .eq('id', userId)
+        .maybeSingle(),
+    );
 
     // Sem resposta do servidor (offline) fica-se com o que já se sabia. Tratar
     // a falha como "não tem perfil" transformava cada arranque sem rede numa
@@ -196,10 +232,12 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     setEstadoPerfil(novoEstado);
 
     // Membros do próprio user (para saber a que explorações pertence).
-    const { data: rows, error: erroMembros } = await supabase
-      .from('membro_exploracao')
-      .select('id, user_id, exploracao_id, role, criado_em')
-      .eq('user_id', userId);
+    const { data: rows, error: erroMembros } = await comPrazo(
+      supabase
+        .from('membro_exploracao')
+        .select('id, user_id, exploracao_id, role, criado_em')
+        .eq('user_id', userId),
+    );
     if (erroMembros) {
       setACarregar(false);
       return; // mesma razão: não apagar os membros por causa de uma falha de rede
