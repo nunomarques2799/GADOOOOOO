@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -61,9 +61,16 @@ function idsDescendentes(animais: Animal[], raizId: string): Set<string> {
 
 /**
  * Formulário reutilizável para registar/editar um animal. Sem `animal` cria um
- * novo; com `animal` edita o existente.
+ * novo; com `animal` edita o existente. `exploracaoInicial` é para quem chega
+ * de dentro de uma exploração — vem já escolhida (ver `animal/novo.tsx`).
  */
-export function FormularioAnimal({ animal }: { animal?: Animal }) {
+export function FormularioAnimal({
+  animal,
+  exploracaoInicial,
+}: {
+  animal?: Animal;
+  exploracaoInicial?: string;
+}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { animais, eventos, exploracoes, terrenosByExploracao, addAnimal, updateAnimal, deleteAnimal } = useGado();
@@ -85,7 +92,9 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
   const [finalidade, setFinalidade] = useState<Finalidade | undefined>(animal?.finalidade);
   const [casa, setCasa] = useState<string | undefined>(animal?.casa);
   const [numeroCasa, setNumeroCasa] = useState(animal?.numeroCasa ?? '');
-  const [exploracaoId, setExploracaoId] = useState(animal?.exploracaoId ?? exploracoes[0]?.id ?? '');
+  const [exploracaoId, setExploracaoId] = useState(
+    animal?.exploracaoId ?? exploracaoInicial ?? exploracoes[0]?.id ?? '',
+  );
   // Apagar o registo leva o histórico atrás — fica com quem gere o efetivo,
   // não com o veterinário. Ver `permissoes.ts`.
   const podeEliminar = pode(animal?.exploracaoId ?? exploracaoId, 'eliminarAnimais');
@@ -100,6 +109,15 @@ export function FormularioAnimal({ animal }: { animal?: Animal }) {
   );
   const [erroGuardar, setErroGuardar] = useState<string | null>(null);
   const [aGuardar, setAGuardar] = useState(false);
+
+  // Offline-first: as explorações podem chegar da cache DEPOIS do primeiro
+  // render, e quem abre o formulário nesse instante ficava sem nenhuma
+  // escolhida (com o botão de guardar a recusar sem dizer porquê). Vale também
+  // para um atalho antigo que traga uma exploração já eliminada.
+  useEffect(() => {
+    if (editar || exploracoes.length === 0) return;
+    if (!exploracoes.some((e) => e.id === exploracaoId)) setExploracaoId(exploracoes[0].id);
+  }, [editar, exploracoes, exploracaoId]);
 
   const terrenos = useMemo(
     () => (exploracaoId ? terrenosByExploracao(exploracaoId) : []),

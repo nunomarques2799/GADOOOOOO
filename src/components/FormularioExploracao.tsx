@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CampoLocalidade } from '@/components/CampoLocalidade';
 import { Button, Header, Icon, type IconName, Text } from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
 import { useMembros } from '@/data/membros';
@@ -123,15 +124,13 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
         </Field>
 
         <Field label="Localização" opcional>
-          <TextField
+          <CampoLocalidade
             value={localizacao}
             onChangeText={setLocalizacao}
-            placeholder="Ex: Idanha-a-Nova, Castelo Branco"
-            icon="map-marker"
-            autoCapitalize="words"
+            placeholder="Ex: Idanha-a-Nova"
           />
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-            Usado para obter a meteorologia local.
+            Escreva o nome da terra e escolha da lista. É daqui que sai a meteorologia local.
           </Text>
         </Field>
 
