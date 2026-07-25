@@ -19,6 +19,7 @@ import { hojeISO, tabelaFinancas } from '@/data/exportar';
 import {
   compararComAnterior,
   lancamentos,
+  nomeMes,
   noPeriodo,
   porAnimal,
   PERIODOS,
@@ -26,6 +27,7 @@ import {
   rotuloMovimento,
   serieMensal,
   vendasSemPreco,
+  type BarraMes,
   type Lancamento,
   type LinhaCategoria,
   type Periodo,
@@ -34,6 +36,7 @@ import { formatDataCurta, formatEuro } from '@/data/helpers';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
 import type { CategoriaMovimento } from '@/data/types';
+import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, spacing } from '@/theme';
 
 /** Ícone por categoria. Sem entrada = cai no ícone genérico de dinheiro. */
@@ -475,74 +478,120 @@ function TotalCard({
  * Desenhado com Views em vez de uma biblioteca de gráficos: são duas barras
  * por mês, e uma dependência nova custaria mais ao arranque da app do que isto
  * custa a manter. As alturas são relativas ao maior valor da série.
+ *
+ * OS NÚMEROS TÊM DE APARECER. Só com as barras, o gráfico dizia a forma (subiu,
+ * desceu) e não dizia dinheiro nenhum: duas barras de alturas parecidas podiam
+ * ser 200 € ou 2 000 €, e a única maneira de saber era somar os lançamentos à
+ * mão. Agora aparecem em dois sítios, e não por indecisão:
+ *
+ *   - a linha de cima mostra os valores EXATOS de um mês (o atual, ou aquele em
+ *     que se tocar). É a que funciona sempre — em ecrã estreito e com a letra
+ *     do sistema ampliada ao máximo;
+ *   - por cima de cada barra, em janelas largas, onde há espaço para os doze
+ *     números. No telemóvel não há: "5 725 €" ao lado de outro igual, em 50 px,
+ *     saía por cima do vizinho ou cortado a meio.
  */
-function GraficoMeses({
-  meses,
-}: {
-  meses: { chave: string; rotulo: string; receitas: number; despesas: number }[];
-}) {
+function GraficoMeses({ meses }: { meses: BarraMes[] }) {
+  const desktop = useDesktop();
+  const [escolhido, setEscolhido] = useState<string | undefined>(undefined);
+
   const maximo = Math.max(...meses.map((m) => Math.max(m.receitas, m.despesas)), 1);
   const ALTURA = 96;
+  /** Espaço para o número por cima da barra mais alta. */
+  const TOPO = desktop ? 20 : 0;
+
+  // Por omissão, o mês em curso: é o que o criador está a viver, e é o que ele
+  // vem cá ver. Tocar num mês passa o foco para esse.
+  const foco = meses.find((m) => m.chave === escolhido) ?? meses[meses.length - 1];
+  if (!foco) return null;
 
   return (
     <View>
+      {/* Os valores exatos do mês em foco */}
+      <View style={{ marginBottom: spacing.sm }}>
+        <Text variant="bodyStrong">{nomeMes(foco.chave)}</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: 2 }}>
+          {foco.receitas === 0 && foco.despesas === 0 ? (
+            <Text variant="secondary" color={colors.textSecondary}>
+              Sem registos neste mês.
+            </Text>
+          ) : (
+            <>
+              <ValorMes label="Receitas" valor={foco.receitas} cor={colors.success} />
+              <ValorMes label="Despesas" valor={foco.despesas} cor={colors.danger} />
+              <ValorMes
+                label="Saldo"
+                valor={foco.saldo}
+                cor={foco.saldo < 0 ? colors.danger : colors.success}
+                comSinal
+              />
+            </>
+          )}
+        </View>
+      </View>
+
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'flex-end',
           justifyContent: 'space-between',
-          height: ALTURA,
           gap: spacing.xs,
         }}>
-        {meses.map((m) => (
-          <View key={m.chave} style={{ flex: 1, alignItems: 'center' }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'flex-end',
-                gap: 3,
-                height: ALTURA,
-              }}>
-              {/* `minHeight` de 3: um mês com pouco dinheiro tem de continuar a
-                  ver-se. Sem isso, a barra desaparecia e lia-se como zero. */}
+        {meses.map((m) => {
+          const emFoco = m.chave === foco.chave;
+          return (
+            <Pressable
+              key={m.chave}
+              onPress={() => setEscolhido(m.chave)}
+              accessibilityRole="button"
+              // Lido em voz alta com os números: um gráfico é invisível para
+              // quem usa leitor de ecrã, e este é o único sítio onde eles estão.
+              accessibilityLabel={`${nomeMes(m.chave)}: receitas ${formatEuro(
+                m.receitas,
+                0,
+              )}, despesas ${formatEuro(m.despesas, 0)}`}
+              accessibilityState={{ selected: emFoco }}
+              style={({ pressed }) => [
+                {
+                  flex: 1,
+                  alignItems: 'center',
+                  paddingTop: spacing.xxs,
+                  borderRadius: radii.sm,
+                  backgroundColor: emFoco ? colors.surfaceSunken : 'transparent',
+                },
+                pressed && { opacity: 0.6 },
+              ]}>
               <View
                 style={{
-                  width: 12,
-                  height: Math.max((m.receitas / maximo) * ALTURA, m.receitas > 0 ? 3 : 0),
-                  borderRadius: radii.sm,
-                  backgroundColor: colors.success,
-                }}
-              />
-              <View
-                style={{
-                  width: 12,
-                  height: Math.max((m.despesas / maximo) * ALTURA, m.despesas > 0 ? 3 : 0),
-                  borderRadius: radii.sm,
-                  backgroundColor: colors.danger,
-                }}
-              />
-            </View>
-          </View>
-        ))}
-      </View>
-
-      {/* Eixo */}
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          gap: spacing.xs,
-          marginTop: spacing.xs,
-        }}>
-        {meses.map((m) => (
-          <Text
-            key={m.chave}
-            variant="caption"
-            color={colors.textMuted}
-            style={{ flex: 1, textAlign: 'center' }}>
-            {m.rotulo}
-          </Text>
-        ))}
+                  flexDirection: 'row',
+                  alignItems: 'flex-end',
+                  gap: 3,
+                  height: ALTURA + TOPO,
+                }}>
+                {/* `minHeight` de 3: um mês com pouco dinheiro tem de continuar a
+                    ver-se. Sem isso, a barra desaparecia e lia-se como zero. */}
+                <Barra
+                  valor={m.receitas}
+                  altura={Math.max((m.receitas / maximo) * ALTURA, m.receitas > 0 ? 3 : 0)}
+                  cor={colors.success}
+                  comNumero={desktop}
+                />
+                <Barra
+                  valor={m.despesas}
+                  altura={Math.max((m.despesas / maximo) * ALTURA, m.despesas > 0 ? 3 : 0)}
+                  cor={colors.danger}
+                  comNumero={desktop}
+                />
+              </View>
+              <Text
+                variant="caption"
+                color={emFoco ? colors.text : colors.textMuted}
+                style={{ marginTop: spacing.xxs }}>
+                {m.rotulo}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {/* Legenda — a cor sozinha não chega (daltonismo, ecrã ao sol) */}
@@ -556,6 +605,67 @@ function GraficoMeses({
         <Legenda cor={colors.success} label="Receitas" />
         <Legenda cor={colors.danger} label="Despesas" />
       </View>
+
+      {meses.length > 1 ? (
+        <Text
+          variant="caption"
+          color={colors.textMuted}
+          style={{ textAlign: 'center', marginTop: spacing.xs }}>
+          Toque num mês para ver os valores desse mês.
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+/** Uma barra, com o valor por cima quando há largura para ele. */
+function Barra({
+  valor,
+  altura,
+  cor,
+  comNumero,
+}: {
+  valor: number;
+  altura: number;
+  cor: string;
+  comNumero: boolean;
+}) {
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'flex-end' }}>
+      {comNumero && valor > 0 ? (
+        // Sem cêntimos: o gráfico é para comparar meses, e "5 725,40 €" só rouba
+        // largura ao vizinho. Os cêntimos estão na lista de lançamentos.
+        <Text variant="caption" color={cor} numberOfLines={1} style={{ marginBottom: 2 }}>
+          {formatEuro(valor, 0)}
+        </Text>
+      ) : null}
+      <View style={{ width: 12, height: altura, borderRadius: radii.sm, backgroundColor: cor }} />
+    </View>
+  );
+}
+
+/** "Receitas / 1 250 €" — um dos três números do mês em foco. */
+function ValorMes({
+  label,
+  valor,
+  cor,
+  comSinal,
+}: {
+  label: string;
+  valor: number;
+  cor: string;
+  /** O saldo mostra-se com sinal; receitas e despesas não precisam dele. */
+  comSinal?: boolean;
+}) {
+  return (
+    <View>
+      <Text variant="caption" color={colors.textMuted}>
+        {label.toUpperCase()}
+      </Text>
+      <Text variant="bodyStrong" color={cor}>
+        {comSinal && valor > 0 ? '+' : ''}
+        {formatEuro(valor, 0)}
+      </Text>
     </View>
   );
 }

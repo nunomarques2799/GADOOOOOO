@@ -297,6 +297,24 @@ const MESES_CURTOS = [
   'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
 ];
 
+const MESES_LONGOS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
+/**
+ * O mês por extenso, a partir da chave `aaaa-mm`: "Julho de 2026".
+ *
+ * O ano vai sempre: seis meses atravessam a passagem de ano (Nov, Dez, Jan…) e
+ * "Dezembro" sozinho, num gráfico ao lado de "Janeiro", não diz de que ano é.
+ */
+export function nomeMes(chave: string): string {
+  const [ano, mes] = chave.split('-');
+  const nome = MESES_LONGOS[Number(mes) - 1];
+  if (!nome || !ano) return chave;
+  return `${nome} de ${ano}`;
+}
+
 /**
  * Últimos `n` meses (incluindo o atual), do mais antigo para o mais recente.
  * Meses sem movimento vêm a zero de propósito: um buraco no gráfico esconde

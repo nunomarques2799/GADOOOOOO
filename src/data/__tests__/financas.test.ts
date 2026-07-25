@@ -21,6 +21,7 @@ import {
   porAnimal,
   resumo,
   resumoFinanceiro,
+  nomeMes,
   serieMensal,
   vendasSemPreco,
 } from '../financas';
@@ -235,6 +236,27 @@ describe('comparação com o período anterior', () => {
   it('o período "tudo" não tem anterior com que comparar', () => {
     const c = compararComAnterior(lancamentos([], [gasto(150, 6)]), 'tudo', agora);
     expect(c.disponivel).toBe(false);
+  });
+});
+
+describe('nomeMes', () => {
+  it('escreve o mês por extenso, com o ano', () => {
+    // O ano vai sempre: seis meses atravessam a passagem de ano, e "Dezembro"
+    // ao lado de "Janeiro" não diz de que ano é qual.
+    expect(nomeMes('2026-07')).toBe('Julho de 2026');
+    expect(nomeMes('2025-12')).toBe('Dezembro de 2025');
+    expect(nomeMes('2026-01')).toBe('Janeiro de 2026');
+    expect(nomeMes('2026-03')).toBe('Março de 2026');
+  });
+
+  it('devolve a chave quando não a reconhece, em vez de mentir', () => {
+    expect(nomeMes('2026-13')).toBe('2026-13');
+    expect(nomeMes('lixo')).toBe('lixo');
+  });
+
+  it('todas as chaves da série têm nome', () => {
+    const meses = serieMensal([], 12, new Date('2026-07-15T10:00:00Z'));
+    for (const m of meses) expect(nomeMes(m.chave)).not.toBe(m.chave);
   });
 });
 
