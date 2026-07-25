@@ -1,0 +1,428 @@
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Avatar, Badge, Button, Card, Chip, EmptyState, Icon, Text } from '@/components/ui';
+import { useAuth } from '@/data/auth';
+import { useMembros } from '@/data/membros';
+import { legendaRole } from '@/data/permissoes';
+import { useGado } from '@/data/store';
+import {
+  agruparTrabalhadores,
+  contarPorPapel,
+  iniciais,
+  resumoVinculos,
+  type EquipaExploracao,
+  type Trabalhador,
+} from '@/data/trabalhadores';
+import type { Convite, RoleMembro } from '@/data/types';
+import { useDesktop } from '@/hooks/useDesktop';
+import { colors, layout, radii, spacing } from '@/theme';
+
+/**
+ * Trabalhadores: quem trabalha nas minhas explorações, todos num sítio.
+ * ------------------------------------------------------------------
+ * A equipa geria-se dentro de cada exploração (`/exploracao/equipa/[id]`), o
+ * que respondia a "quem anda nesta quinta?" mas nunca a "quem trabalha para
+ * mim?" — com duas explorações era preciso abrir duas listas e juntá-las de
+ * cabeça, e o mesmo trabalhador aparecia nas duas como se fossem dois homens.
+ *
+ * Este ecrã junta-as por PESSOA (ver `trabalhadores.ts`). Gerir continua a ser
+ * na exploração: convidar e remover mexem numa exploração concreta, e duplicar
+ * esses botões aqui era duplicar as regras de quem pode o quê.
+ */
+export default function TrabalhadoresScreen() {
+  const insets = useSafeAreaInsets();
+  const desktop = useDesktop();
+  const router = useRouter();
+  const { sessao } = useAuth();
+  const { exploracoes } = useGado();
+  const { pode, listarMembrosDe, listarConvites, aCarregar: aCarregarAcesso } = useMembros();
+
+  // Só as explorações onde se pode gerir equipa: nas outras o servidor não
+  // devolve a lista de membros, e mostrar a secção vazia parecia uma equipa
+  // vazia em vez de "isto não é seu".
+  const minhas = useMemo(
+    () => exploracoes.filter((e) => pode(e.id, 'gerirEquipa')),
+    [exploracoes, pode],
+  );
+
+  const [equipas, setEquipas] = useState<EquipaExploracao[]>([]);
+  const [convites, setConvites] = useState<Convite[]>([]);
+  const [aCarregar, setACarregar] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+  const [exploracaoId, setExploracaoId] = useState<string | undefined>(undefined);
+
+  /**
+   * O que faz este ecrã ir buscar a equipa outra vez, escrito como TEXTO e não
+   * como a lista.
+   *
+   * `minhas` é um array novo a cada render (o `pode` que o filtra pertence ao
+   * contexto), e um efeito que dependa dele volta a pedir a equipa a cada
+   * re-render — um pedido por render, em ciclo. Com a chave, só uma exploração
+   * nova, ou um nome mudado, é que manda perguntar de novo.
+   */
+  const chaveExploracoes = useMemo(
+    () => minhas.map((e) => `${e.id}:${e.nome}`).join('|'),
+    [minhas],
+  );
+  const minhasRef = useRef(minhas);
+  minhasRef.current = minhas;
+
+  const carregar = useCallback(async () => {
+    const lista = minhasRef.current;
+    if (lista.length === 0) {
+      setEquipas([]);
+      setConvites([]);
+      setACarregar(false);
+      return;
+    }
+    setACarregar(true);
+    setErro(null);
+    try {
+      const resultados = await Promise.all(
+        lista.map(async (e) => ({
+          exploracaoId: e.id,
+          nomeExploracao: e.nome,
+          membros: await listarMembrosDe(e.id),
+          convites: await listarConvites(e.id),
+        })),
+      );
+      setEquipas(resultados.map(({ convites: _c, ...resto }) => resto));
+      setConvites(resultados.flatMap((r) => r.convites));
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e));
+    } finally {
+      setACarregar(false);
+    }
+    // `chaveExploracoes` está aqui de propósito: é ele que decide quando vale a
+    // pena voltar a perguntar (ver acima). O `minhasRef` traz sempre a lista atual.
+  }, [chaveExploracoes, listarMembrosDe, listarConvites]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  const visiveis = useMemo(
+    () => (exploracaoId ? equipas.filter((e) => e.exploracaoId === exploracaoId) : equipas),
+    [equipas, exploracaoId],
+  );
+
+  // Fora o próprio: um dono não é um dos seus trabalhadores.
+  const pessoas = useMemo(
+    () => agruparTrabalhadores(visiveis, { excluirUserId: sessao?.user.id }),
+    [visiveis, sessao?.user.id],
+  );
+  const conta = useMemo(() => contarPorPapel(pessoas), [pessoas]);
+
+  const convitesPorUsar = useMemo(
+    () =>
+      convites.filter(
+        (c) =>
+          !c.usadoPor
+          && (!c.expiraEm || new Date(c.expiraEm) > new Date())
+          && (!exploracaoId || c.exploracaoId === exploracaoId),
+      ),
+    [convites, exploracaoId],
+  );
+
+  /** A exploração para onde mandar quem quer convidar ou remover alguém. */
+  const exploracaoDeGestao = exploracaoId ?? minhas[0]?.id;
+
+  const coluna = {
+    width: '100%',
+    maxWidth: desktop ? layout.conteudoEstreito : undefined,
+    alignSelf: 'center',
+    paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
+  } as const;
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={aCarregar} onRefresh={() => void carregar()} />
+        }
+        contentContainerStyle={{
+          alignItems: 'center',
+          paddingBottom: insets.bottom + spacing.huge,
+        }}>
+        <View style={{ ...coluna, paddingTop: insets.top + spacing.md }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-end',
+              justifyContent: 'space-between',
+              gap: spacing.sm,
+            }}>
+            <Text variant="display" style={{ flex: 1 }}>
+              Trabalhadores
+            </Text>
+            <Pressable
+              onPress={() => void carregar()}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Atualizar lista"
+              style={({ pressed }) => [{ marginBottom: 8 }, pressed && { opacity: 0.6 }]}>
+              <Icon name="refresh" size="lg" color={colors.primary} />
+            </Pressable>
+          </View>
+          <Text variant="body" color={colors.textSecondary}>
+            Quem trabalha nas suas explorações
+          </Text>
+        </View>
+
+        <View style={{ ...coluna, gap: spacing.md, marginTop: spacing.md }}>
+          {/* Por exploração — como nos Animais, à vista e não escondido */}
+          {minhas.length > 1 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+              <Chip
+                label="Todas"
+                icon="barn"
+                selected={exploracaoId === undefined}
+                onPress={() => setExploracaoId(undefined)}
+              />
+              {minhas.map((e) => (
+                <Chip
+                  key={e.id}
+                  label={e.nome}
+                  selected={exploracaoId === e.id}
+                  onPress={() => setExploracaoId(exploracaoId === e.id ? undefined : e.id)}
+                />
+              ))}
+            </View>
+          ) : null}
+
+          {erro ? (
+            <Card style={{ backgroundColor: colors.dangerTint }}>
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <Icon name="alert-circle-outline" size="lg" color={colors.danger} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyStrong" color={colors.danger}>
+                    Não foi possível carregar a equipa
+                  </Text>
+                  <Text variant="secondary" color={colors.textSecondary}>
+                    {erro}
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          ) : null}
+
+          {/* Resumo: quantos são e de que tipo */}
+          {pessoas.length > 0 ? (
+            <Card>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+                {conta.trabalhador > 0 ? (
+                  <Badge
+                    tone="warning"
+                    icon="account-hard-hat"
+                    label={`${conta.trabalhador} trabalhador${conta.trabalhador > 1 ? 'es' : ''}`}
+                  />
+                ) : null}
+                {conta.veterinario > 0 ? (
+                  <Badge
+                    tone="info"
+                    icon="medical-bag"
+                    label={`${conta.veterinario} veterinário${conta.veterinario > 1 ? 's' : ''}`}
+                  />
+                ) : null}
+                {conta.admin > 0 ? (
+                  <Badge
+                    tone="success"
+                    icon="shield-crown"
+                    label={`${conta.admin} dono${conta.admin > 1 ? 's' : ''}`}
+                  />
+                ) : null}
+              </View>
+            </Card>
+          ) : null}
+
+          {/* A lista */}
+          {minhas.length === 0 ? (
+            <EmptyState
+              icon="account-hard-hat"
+              title="Sem equipa para gerir"
+              message="Só o dono de uma exploração vê e convida a equipa. Se entrou por convite, fale com quem o convidou."
+            />
+          ) : aCarregar && pessoas.length === 0 ? (
+            <Card>
+              <Text variant="body" color={colors.textSecondary}>
+                A carregar a equipa…
+              </Text>
+            </Card>
+          ) : pessoas.length === 0 ? (
+            <EmptyState
+              icon="account-plus-outline"
+              title="Ainda não tem trabalhadores"
+              message="Convide alguém com um código: ele entra na app e fica logo ligado à sua exploração, a ver os animais e a registar o que faz."
+              actionLabel={exploracaoDeGestao ? 'Convidar alguém' : undefined}
+              onAction={
+                exploracaoDeGestao
+                  ? () => router.push(`/exploracao/equipa/${exploracaoDeGestao}`)
+                  : undefined
+              }
+            />
+          ) : (
+            <Card padded={false}>
+              <View style={{ paddingHorizontal: spacing.md }}>
+                {pessoas.map((p, i) => (
+                  <LinhaPessoa
+                    key={p.userId}
+                    pessoa={p}
+                    ultimo={i === pessoas.length - 1}
+                    onPress={() =>
+                      router.push(`/exploracao/equipa/${p.vinculos[0].exploracaoId}`)
+                    }
+                  />
+                ))}
+              </View>
+            </Card>
+          )}
+
+          {/* Convites à espera de quem os use */}
+          {convitesPorUsar.length > 0 ? (
+            <View>
+              <Text
+                variant="label"
+                color={colors.textSecondary}
+                style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
+                CONVITES À ESPERA ({convitesPorUsar.length})
+              </Text>
+              <Card padded={false}>
+                <View style={{ paddingHorizontal: spacing.md }}>
+                  {convitesPorUsar.map((c, i) => (
+                    <Pressable
+                      key={c.codigo}
+                      onPress={() => router.push(`/exploracao/equipa/${c.exploracaoId}`)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Convite ${c.codigo}`}
+                      style={({ pressed }) => [
+                        {
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: spacing.sm,
+                          paddingVertical: spacing.sm,
+                          borderBottomWidth: i < convitesPorUsar.length - 1 ? 1 : 0,
+                          borderBottomColor: colors.border,
+                        },
+                        pressed && { opacity: 0.6 },
+                      ]}>
+                      <View
+                        style={{
+                          paddingHorizontal: spacing.sm,
+                          paddingVertical: 4,
+                          borderRadius: radii.sm,
+                          backgroundColor: colors.primaryTint,
+                        }}>
+                        <Text variant="bodyStrong" color={colors.primaryDark} style={{ letterSpacing: 2 }}>
+                          {c.codigo}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text variant="body">{legendaRole(c.role)}</Text>
+                        <Text variant="caption" color={colors.textSecondary} numberOfLines={1}>
+                          {nomeDe(minhas, c.exploracaoId)}
+                          {c.descricao ? ` · ${c.descricao}` : ''}
+                        </Text>
+                      </View>
+                      <Icon name="chevron-right" size="md" color={colors.textMuted} />
+                    </Pressable>
+                  ))}
+                </View>
+              </Card>
+            </View>
+          ) : null}
+
+          {/* Convidar — a gestão continua a ser dentro da exploração */}
+          {exploracaoDeGestao && pessoas.length > 0 ? (
+            <Button
+              label={
+                minhas.length > 1 && exploracaoId
+                  ? `Convidar para ${nomeDe(minhas, exploracaoId)}`
+                  : 'Convidar trabalhador ou veterinário'
+              }
+              icon="account-multiple-plus"
+              variant="secondary"
+              onPress={() => router.push(`/exploracao/equipa/${exploracaoDeGestao}`)}
+            />
+          ) : null}
+
+          {minhas.length > 1 && !exploracaoId && pessoas.length > 0 ? (
+            <Text variant="caption" color={colors.textMuted} style={{ textAlign: 'center' }}>
+              Para convidar ou remover alguém numa exploração à escolha, toque nela em cima.
+            </Text>
+          ) : null}
+
+          {aCarregarAcesso ? (
+            <Text variant="caption" color={colors.textMuted} style={{ textAlign: 'center' }}>
+              A confirmar os seus acessos…
+            </Text>
+          ) : null}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+/** Nome da exploração, para as legendas. */
+function nomeDe(lista: { id: string; nome: string }[], id: string): string {
+  return lista.find((e) => e.id === id)?.nome ?? 'Exploração';
+}
+
+const ICONE_PAPEL: Record<RoleMembro, 'shield-crown' | 'medical-bag' | 'account-hard-hat'> = {
+  admin: 'shield-crown',
+  veterinario: 'medical-bag',
+  trabalhador: 'account-hard-hat',
+};
+
+function LinhaPessoa({
+  pessoa,
+  ultimo,
+  onPress,
+}: {
+  pessoa: Trabalhador;
+  ultimo: boolean;
+  onPress: () => void;
+}) {
+  // As cores lêem-se aqui dentro, no render (ver DESIGN_SYSTEM.md).
+  const cor =
+    pessoa.papelPrincipal === 'admin'
+      ? colors.primary
+      : pessoa.papelPrincipal === 'veterinario'
+        ? colors.info
+        : colors.warning;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${pessoa.nome}, ${legendaRole(pessoa.papelPrincipal).toLowerCase()}`}
+      style={({ pressed }) => [
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+          paddingVertical: spacing.md,
+          borderBottomWidth: ultimo ? 0 : 1,
+          borderBottomColor: colors.border,
+        },
+        pressed && { opacity: 0.6 },
+      ]}>
+      <Avatar initials={iniciais(pessoa.nome)} size={48} background={colors.surfaceSunken} foreground={cor} />
+      <View style={{ flex: 1 }}>
+        <Text variant="bodyStrong" numberOfLines={1}>
+          {pessoa.nome}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Icon name={ICONE_PAPEL[pessoa.papelPrincipal]} size="sm" color={cor} />
+          <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }} numberOfLines={2}>
+            {resumoVinculos(pessoa)}
+          </Text>
+        </View>
+      </View>
+      <Icon name="chevron-right" size="md" color={colors.textMuted} />
+    </Pressable>
+  );
+}

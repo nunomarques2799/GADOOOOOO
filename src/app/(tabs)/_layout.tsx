@@ -1,10 +1,11 @@
 import { Tabs, useRouter, type Href } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BarraLateral, type ItemNav } from '@/components/BarraLateral';
 import { Icon, type IconName, Text } from '@/components/ui';
+import { useMembros } from '@/data/membros';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, spacing } from '@/theme';
 
@@ -20,12 +21,23 @@ type TabBarProps = {
 };
 
 type Rota = Extract<Href, string>;
-type Destino = { nome: string; rota: Rota; label: string; icon: IconName };
+type Destino = {
+  nome: string;
+  rota: Rota;
+  label: string;
+  icon: IconName;
+  /** Só aparece a quem gere a equipa de alguma exploração. */
+  soComEquipa?: boolean;
+};
 
 /**
- * Os nove destinos, pela ordem em que aparecem na barra lateral.
+ * Os destinos, pela ordem em que aparecem na barra lateral.
  * `nome` é o ficheiro dentro de `(tabs)/`; `rota` é o URL (o grupo `(tabs)`
  * não aparece no caminho, por isso `(tabs)/alertas.tsx` serve `/alertas`).
+ *
+ * `soComEquipa` marca os que só fazem sentido a quem tem equipa para gerir:
+ * um trabalhador convidado não vê a lista de colegas (a RLS também não lha
+ * daria), e um destino que abre sempre vazio é um destino a mais na barra.
  */
 const DESTINOS: Destino[] = [
   { nome: 'index', rota: '/', label: 'Início', icon: 'home-variant' },
@@ -33,6 +45,13 @@ const DESTINOS: Destino[] = [
   { nome: 'terrenos', rota: '/terrenos', label: 'Terrenos', icon: 'grass' },
   { nome: 'animais', rota: '/animais', label: 'Animais', icon: 'cow' },
   { nome: 'alertas', rota: '/alertas', label: 'Alertas', icon: 'bell-outline' },
+  {
+    nome: 'trabalhadores',
+    rota: '/trabalhadores',
+    label: 'Trabalhadores',
+    icon: 'account-hard-hat',
+    soComEquipa: true,
+  },
   { nome: 'financas', rota: '/financas', label: 'Finanças', icon: 'cash-multiple' },
   { nome: 'documentos', rota: '/documentos', label: 'Documentos', icon: 'file-document-outline' },
   { nome: 'definicoes', rota: '/definicoes', label: 'Definições', icon: 'cog-outline' },
@@ -50,19 +69,25 @@ const DESTINOS: Destino[] = [
  */
 const NO_TELEMOVEL = ['index', 'animais', 'exploracoes', 'alertas'];
 
-const NAV_DESKTOP: ItemNav[] = DESTINOS.map((d) => ({
-  rota: d.rota,
-  label: d.label,
-  icon: d.icon,
-}));
+/**
+ * Os destinos que esta pessoa pode ver. A rota continua declarada (quem chegar
+ * lá por um link encontra o ecrã, que se explica a si mesmo) — o que se filtra
+ * é a NAVEGAÇÃO, para ninguém tropeçar num ecrã que a RLS lhe fecha.
+ */
+function useDestinos(): Destino[] {
+  const { podeEmAlguma } = useMembros();
+  const comEquipa = podeEmAlguma('gerirEquipa');
+  return useMemo(() => DESTINOS.filter((d) => !d.soComEquipa || comEquipa), [comEquipa]);
+}
 
 function TabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const destinos = useDestinos();
   const [maisAberto, setMaisAberto] = useState(false);
 
   const visiveis = state.routes.filter((r) => NO_TELEMOVEL.includes(r.name));
-  const escondidos = DESTINOS.filter((d) => !NO_TELEMOVEL.includes(d.nome));
+  const escondidos = destinos.filter((d) => !NO_TELEMOVEL.includes(d.nome));
   const rotaAtual = state.routes[state.index]?.name;
   // O "Mais" acende-se quando se está num dos destinos que ele guarda — senão
   // a barra não mostrava nada selecionado e a app parecia ter-se perdido.
@@ -86,7 +111,7 @@ function TabBar({ state, navigation }: TabBarProps) {
           shadow.lg,
         ]}>
         {visiveis.map((route) => {
-          const cfg = DESTINOS.find((d) => d.nome === route.name);
+          const cfg = destinos.find((d) => d.nome === route.name);
           if (!cfg) return null;
           const focused = rotaAtual === route.name;
 
@@ -240,11 +265,21 @@ function Botao({
 
 export default function TabsLayout() {
   const desktop = useDesktop();
+  const destinos = useDestinos();
+
+  const navDesktop: ItemNav[] = destinos.map((d) => ({
+    rota: d.rota,
+    label: d.label,
+    icon: d.icon,
+  }));
 
   const ecrans = (
     <Tabs
       tabBar={desktop ? () => null : (props) => <TabBar {...props} />}
       screenOptions={{ headerShown: false }}>
+      {/* Todas as rotas declaradas, mesmo as que esta pessoa não vê na
+          navegação: retirá-las daqui fazia o expo-router dar 404 a um link
+          direto, e o ecrã já sabe explicar-se a quem não tem equipa. */}
       {DESTINOS.map((d) => (
         <Tabs.Screen key={d.nome} name={d.nome} />
       ))}
@@ -255,7 +290,7 @@ export default function TabsLayout() {
 
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
-      <BarraLateral itens={NAV_DESKTOP} />
+      <BarraLateral itens={navDesktop} />
       <View style={{ flex: 1 }}>{ecrans}</View>
     </View>
   );
