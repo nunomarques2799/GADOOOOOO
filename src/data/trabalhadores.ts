@@ -11,7 +11,7 @@
  * poder mostrar uma linha por gente e, dentro dela, onde é que ela entra.
  */
 
-import { legendaRole } from './permissoes';
+import { legendaRole, type PermissoesMembro } from './permissoes';
 import type { MembroExploracao, RoleMembro } from './types';
 
 /** Um membro com o nome do perfil, como o `listarMembrosDe` o devolve. */
@@ -32,6 +32,11 @@ export type Vinculo = {
   nomeExploracao: string;
   role: RoleMembro;
   criadoEm?: string;
+  /**
+   * Ajustes de permissões nesta exploração (o que o dono deu ou tirou por cima
+   * do papel). Ausente = segue o papel. Ver `permissoes.ts`.
+   */
+  permissoes?: PermissoesMembro;
 };
 
 export type Trabalhador = {
@@ -79,6 +84,7 @@ export function agruparTrabalhadores(
         nomeExploracao: equipa.nomeExploracao,
         role: m.role,
         criadoEm: m.criadoEm,
+        permissoes: m.permissoes,
       };
       const ja = porPessoa.get(m.userId);
       if (ja) {

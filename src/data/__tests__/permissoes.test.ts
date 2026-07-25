@@ -1,8 +1,13 @@
 import { describe, expect, it } from '@jest/globals';
 
 import {
+  CAPACIDADES_GERIVEIS,
+  capacidadeGerivel,
   exigeFinancasAtivas,
+  explicacaoCapacidade,
+  legendaCapacidade,
   legendaRole,
+  permissoesEfetivas,
   podeConsultar,
   podeEscrever,
   rolePode,
@@ -227,6 +232,112 @@ describe('exigeFinancasAtivas', () => {
       'registarSaida',
     ];
     for (const cap of alheias) expect(exigeFinancasAtivas(cap)).toBe(false);
+  });
+});
+
+/**
+ * Os ajustes por pessoa (folha "O que pode alterar", no separador
+ * Trabalhadores). Espelham `pode_cap()` de `supabase/schema_permissoes.sql`, e
+ * cada um destes casos é uma forma de a permissão ficar mais larga do que quem a
+ * deu quis.
+ */
+describe('rolePode com ajustes por pessoa', () => {
+  it('tirar uma capacidade que o papel dá', () => {
+    expect(rolePode('trabalhador', 'eliminarAnimais')).toBe(true);
+    expect(rolePode('trabalhador', 'eliminarAnimais', { eliminarAnimais: false })).toBe(false);
+  });
+
+  it('dar uma capacidade que o papel não dá', () => {
+    expect(rolePode('veterinario', 'gerirTerrenos')).toBe(false);
+    expect(rolePode('veterinario', 'gerirTerrenos', { gerirTerrenos: true })).toBe(true);
+  });
+
+  it('o que não vem nos ajustes segue o papel', () => {
+    // É esta a razão de guardar só as exceções: mudar a regra de um papel tem de
+    // alcançar quem nunca foi afinado à mão.
+    const ajustes = { eliminarAnimais: false };
+    expect(rolePode('trabalhador', 'editarAnimais', ajustes)).toBe(true);
+    expect(rolePode('trabalhador', 'registarReceita', ajustes)).toBe(false);
+  });
+
+  it('o dono não se ajusta — nem para menos, nem para mais', () => {
+    // Uma exploração tem de ficar sempre com alguém que lhe consiga mexer; um
+    // ajuste gravado por engano na linha do dono fechava-o fora dela.
+    expect(rolePode('admin', 'eliminarAnimais', { eliminarAnimais: false })).toBe(true);
+    expect(rolePode('admin', 'gerirEquipa', { gerirEquipa: false } as never)).toBe(true);
+  });
+
+  it('as capacidades do dono não se dão a mais ninguém, mesmo pedidas', () => {
+    // O caminho curto para um convidado se promover: receber `gerirEquipa` e
+    // convidar-se a si próprio como dono. A lista das ajustáveis fecha-o.
+    const forcado = { gerirEquipa: true, editarExploracao: true, eliminarExploracao: true } as never;
+    expect(rolePode('trabalhador', 'gerirEquipa', forcado)).toBe(false);
+    expect(rolePode('trabalhador', 'editarExploracao', forcado)).toBe(false);
+    expect(rolePode('veterinario', 'eliminarExploracao', forcado)).toBe(false);
+  });
+
+  it('capacidadeGerivel diz o mesmo que a lista', () => {
+    for (const c of CAPACIDADES_GERIVEIS) expect(capacidadeGerivel(c)).toBe(true);
+    const donoApenas: Capacidade[] = ['editarExploracao', 'eliminarExploracao', 'gerirEquipa'];
+    for (const c of donoApenas) expect(capacidadeGerivel(c)).toBe(false);
+  });
+
+  it('podeEscrever leva os ajustes em conta, e a suspensão vence-os', () => {
+    const base: ContextoAcesso = {
+      supabaseConfigurado: true,
+      temSessao: true,
+      isSuperadmin: false,
+      estadoPerfil: 'ativo',
+      role: 'veterinario',
+      permissoes: { gerirTerrenos: true },
+    };
+    expect(podeEscrever(base, 'gerirTerrenos')).toBe(true);
+    // Dar permissões a alguém não desfaz uma conta suspensa.
+    expect(podeEscrever({ ...base, estadoPerfil: 'pendente' }, 'gerirTerrenos')).toBe(false);
+  });
+});
+
+describe('permissoesEfetivas — o que a folha mostra', () => {
+  it('devolve uma linha por capacidade ajustável, com o efeito e a marca', () => {
+    const linhas = permissoesEfetivas('veterinario', { gerirTerrenos: true });
+    expect(linhas.map((l) => l.capacidade)).toEqual([...CAPACIDADES_GERIVEIS]);
+
+    const terrenos = linhas.find((l) => l.capacidade === 'gerirTerrenos')!;
+    expect(terrenos.pode).toBe(true);
+    expect(terrenos.ajustada).toBe(true);
+
+    // Uma capacidade que o papel já dava não conta como alterada.
+    const animais = linhas.find((l) => l.capacidade === 'editarAnimais')!;
+    expect(animais.pode).toBe(true);
+    expect(animais.ajustada).toBe(false);
+  });
+
+  it('um ajuste igual ao que o papel dá não aparece como alterado', () => {
+    // É o que sustenta o "Repor o que o papel dá" da folha: gravar o valor do
+    // papel é o mesmo que não gravar ajuste nenhum.
+    const linhas = permissoesEfetivas('trabalhador', { editarAnimais: true });
+    expect(linhas.find((l) => l.capacidade === 'editarAnimais')!.ajustada).toBe(false);
+  });
+
+  it('sem ajustes, nada está alterado', () => {
+    for (const l of permissoesEfetivas('trabalhador')) expect(l.ajustada).toBe(false);
+  });
+});
+
+describe('legendas das capacidades', () => {
+  it('toda a capacidade tem nome e explicação em PT-PT', () => {
+    // Uma capacidade nova sem legenda apareceria na folha como um interruptor
+    // sem nome — o `switch` é exaustivo, e isto apanha o esquecimento.
+    const todas: Capacidade[] = [
+      'editarExploracao',
+      'eliminarExploracao',
+      'gerirEquipa',
+      ...CAPACIDADES_GERIVEIS,
+    ];
+    for (const c of todas) {
+      expect(legendaCapacidade(c).length).toBeGreaterThan(3);
+      expect(explicacaoCapacidade(c).length).toBeGreaterThan(10);
+    }
   });
 });
 

@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AnfitriaoToasts } from '@/components/AnfitriaoToasts';
 import { EcraACarregar } from '@/components/EcraACarregar';
 import { EcraLogin } from '@/components/EcraLogin';
 import { FaixaAmbiente } from '@/components/FaixaAmbiente';
@@ -23,6 +24,7 @@ import { AuthProvider, useAuth } from '@/data/auth';
 import { MembrosProvider, useMembros } from '@/data/membros';
 import { NotificacoesProvider } from '@/data/notificacoes';
 import { GadoProvider } from '@/data/store';
+import { ToastsProvider } from '@/data/toasts';
 import { supabaseConfigurado } from '@/data/supabase';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout } from '@/theme';
@@ -43,9 +45,13 @@ arrancarTema();
  */
 function ColunaApp({ children }: { children: ReactNode }) {
   const desktop = useDesktop();
-  if (Platform.OS !== 'web') return <>{children}</>;
+  if (Platform.OS !== 'web') return <ComToasts>{children}</ComToasts>;
   if (desktop) {
-    return <View style={{ flex: 1, backgroundColor: colors.background }}>{children}</View>;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <ComToasts>{children}</ComToasts>
+      </View>
+    );
   }
   return (
     <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceSunken }}>
@@ -56,8 +62,24 @@ function ColunaApp({ children }: { children: ReactNode }) {
           maxWidth: layout.colunaMobile,
           backgroundColor: colors.background,
         }}>
-        {children}
+        <ComToasts>{children}</ComToasts>
       </View>
+    </View>
+  );
+}
+
+/**
+ * A camada onde os avisos curtos aparecem, por cima de qualquer ecrã.
+ *
+ * Fica DENTRO da coluna da app (e não no topo da árvore) para o aviso nascer
+ * alinhado com o conteúdo: numa janela larga de browser, a app vive numa coluna
+ * estreita ao meio e um cartão ancorado à janela aparecia-lhe ao lado.
+ */
+function ComToasts({ children }: { children: ReactNode }) {
+  return (
+    <View style={{ flex: 1 }}>
+      {children}
+      <AnfitriaoToasts />
     </View>
   );
 }
@@ -168,6 +190,9 @@ export default function RootLayout() {
           logo no ecrã de entrada, que é onde se percebe que se está a escrever
           na base errada — antes de lá escrever seja o que for. */}
       <FaixaAmbiente>
+      {/* Por fora de tudo o que grava: um aviso de "gravado" tem de sobreviver
+          ao ecrã que o mandou, que quase sempre se fecha logo a seguir. */}
+      <ToastsProvider>
       <AuthProvider>
         <ColunaApp>
         <PortaoAuth>
@@ -220,6 +245,7 @@ export default function RootLayout() {
         </PortaoAuth>
         </ColunaApp>
       </AuthProvider>
+      </ToastsProvider>
       </FaixaAmbiente>
     </SafeAreaProvider>
     </LimiteDeErro>

@@ -5,6 +5,7 @@ import { Alert, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Button, Card, Chip, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { useToasts } from '@/data/toasts';
 import type { Convite, MembroExploracao, RoleMembro } from '@/data/types';
 import { colors, radii, spacing } from '@/theme';
 
@@ -21,6 +22,8 @@ export default function EquipaExploracaoScreen() {
   const { exploracaoById } = useGado();
   const { roleEm, listarMembrosDe, removerMembro, listarConvites, criarConvite, removerConvite, isSuperadmin } =
     useMembros();
+
+  const toast = useToasts();
 
   const exploracao = id ? exploracaoById(id) : undefined;
   const podeGerir = id ? roleEm(id) === 'admin' || isSuperadmin : false;
@@ -63,11 +66,13 @@ export default function EquipaExploracaoScreen() {
     setAGerar(false);
     if (r.erro) {
       setErro(r.erro);
+      toast.erro('Código não criado', r.erro);
       return;
     }
     if (r.codigo) {
       setCodigoNovo(r.codigo);
       setDescricao('');
+      toast.sucesso('Código criado', `${r.codigo} · ${legendaRole(rolePedido)}`);
       await carregar();
     }
   }
@@ -78,7 +83,12 @@ export default function EquipaExploracaoScreen() {
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(codigo);
-      } catch { /* ignora — o utilizador vê o código na mesma */ }
+        toast.sucesso('Código copiado', codigo);
+      } catch {
+        // O browser pode recusar a área de transferência (sem HTTPS, sem foco).
+        // O código continua à vista no ecrã — é só dizer que não foi copiado.
+        toast.erro('Não foi possível copiar', 'Escreva o código à mão.');
+      }
       return;
     }
     Alert.alert('Código', codigo, [{ text: 'OK' }]);
@@ -87,8 +97,13 @@ export default function EquipaExploracaoScreen() {
   async function confirmarRemover(membro: MembroComNome) {
     const executar = async () => {
       const e = await removerMembro(membro.id);
-      if (e) setErro(e);
-      else await carregar();
+      if (e) {
+        setErro(e);
+        toast.erro(`${membro.nome} não foi removido`, e);
+        return;
+      }
+      toast.sucesso('Removido da equipa', membro.nome);
+      await carregar();
     };
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm(`Remover ${membro.nome} desta exploração?`)) await executar();
@@ -102,8 +117,13 @@ export default function EquipaExploracaoScreen() {
 
   async function apagarConvite(codigo: string) {
     const e = await removerConvite(codigo);
-    if (e) setErro(e);
-    else await carregar();
+    if (e) {
+      setErro(e);
+      toast.erro('Convite não apagado', e);
+      return;
+    }
+    toast.sucesso('Convite apagado', codigo);
+    await carregar();
   }
 
   if (!exploracao) {

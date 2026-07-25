@@ -29,6 +29,7 @@ import {
 import { impedimentoParaEliminar, rotuloAnimal } from '@/data/genealogia';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { Animal, Especie, Finalidade, Sexo } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
@@ -75,6 +76,7 @@ export function FormularioAnimal({
   const insets = useSafeAreaInsets();
   const { animais, eventos, exploracoes, terrenosByExploracao, addAnimal, updateAnimal, deleteAnimal } = useGado();
   const { pode } = useMembros();
+  const toast = useToasts();
 
   const editar = !!animal;
   // Um animal com histórico não se elimina — marca-se a saída. O servidor
@@ -250,15 +252,19 @@ export function FormularioAnimal({
       };
       if (animal) {
         await updateAnimal(animal.id, dados);
+        toast.sucesso('Animal guardado', rotuloAnimal({ ...animal, ...dados }));
         router.back();
       } else {
         const novo = await addAnimal(dados);
+        toast.sucesso('Animal registado', rotuloAnimal(novo));
         router.replace(`/animal/${novo.id}`);
       }
     } catch (e) {
       // Falha ao persistir (ex.: sem permissão para esta exploração). Mostra o
       // erro em vez de deixar o animal só no estado local (que nunca sincroniza).
-      setErroGuardar(e instanceof Error ? e.message : 'Não foi possível guardar o animal.');
+      const razao = mensagemDeErro(e);
+      setErroGuardar(razao);
+      toast.erro(animal ? 'Animal não guardado' : 'Animal não registado', razao);
     } finally {
       setAGuardar(false);
     }
@@ -272,9 +278,10 @@ export function FormularioAnimal({
     const executar = async () => {
       try {
         await deleteAnimal(animal.id);
+        toast.sucesso('Animal eliminado', rotulo);
         router.dismissTo('/(tabs)/animais');
       } catch (e) {
-        avisar('Não foi possível eliminar', e instanceof Error ? e.message : String(e));
+        avisar('Não foi possível eliminar', mensagemDeErro(e));
       }
     };
     confirmar(

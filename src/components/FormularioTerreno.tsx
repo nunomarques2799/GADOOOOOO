@@ -9,6 +9,7 @@ import { avisar, confirmar } from '@/data/avisos';
 import { tiposTerreno, tipoTerrenoMeta } from '@/data/constants';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { Terreno, TipoTerreno } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
@@ -24,6 +25,7 @@ export function FormularioTerreno({
   const insets = useSafeAreaInsets();
   const { addTerreno, updateTerreno, deleteTerreno, exploracaoById } = useGado();
   const { pode } = useMembros();
+  const toast = useToasts();
 
   const editar = !!terreno;
   const podeEliminar = pode(exploracaoId, 'gerirTerrenos');
@@ -78,9 +80,20 @@ export function FormularioTerreno({
       } else {
         await addTerreno({ ...dados, exploracaoId });
       }
+      // O aviso é dado pela raiz da app (ver `toasts.tsx`), por isso sobrevive
+      // ao `router.back()` desta linha — este ecrã já não existe quando ele
+      // aparece, e é esse o objetivo: confirma-se em cima da lista.
+      toast.sucesso(
+        editar ? 'Terreno guardado' : 'Terreno adicionado',
+        `${dados.nome}${exploracao ? ` · ${exploracao.nome}` : ''}`,
+      );
       router.back();
     } catch (e) {
-      setErroGuardar(e instanceof Error ? e.message : 'Não foi possível guardar o terreno.');
+      // Duas vias de propósito: o toast chama a atenção de quem já ia a sair, a
+      // linha por baixo do botão fica lá para se poder ler com calma.
+      const razao = mensagemDeErro(e);
+      setErroGuardar(razao);
+      toast.erro(editar ? 'Terreno não guardado' : 'Terreno não adicionado', razao);
       setAGravar(false);
     }
   }
@@ -90,9 +103,10 @@ export function FormularioTerreno({
     const executar = async () => {
       try {
         await deleteTerreno(terreno.id);
+        toast.sucesso('Terreno eliminado', terreno.nome);
         router.back();
       } catch (e) {
-        avisar('Não foi possível eliminar', e instanceof Error ? e.message : String(e));
+        avisar('Não foi possível eliminar', mensagemDeErro(e));
       }
     };
     confirmar(

@@ -4,6 +4,10 @@
  * local (expo-sqlite) possa entrar mais tarde sem alterar a UI.
  */
 
+// Só o tipo, e por isso não há ciclo em execução: `permissoes.ts` também
+// importa daqui, mas as duas importações desaparecem na compilação.
+import type { PermissoesMembro } from './permissoes';
+
 export type Especie = 'Bovino' | 'Equídeo' | 'Ovino' | 'Caprino' | 'Suíno';
 export type Sexo = 'Macho' | 'Fêmea';
 export type TipoTerreno = 'Pastagem' | 'Cultivo' | 'Misto' | 'Outro';
@@ -45,6 +49,11 @@ export interface MembroExploracao {
   exploracaoId: string;
   role: RoleMembro;
   criadoEm?: string;
+  /**
+   * O que o dono mudou às permissões desta pessoa, por cima do que o papel dá.
+   * Vazio (ou ausente) = segue o papel. Ver `permissoes.ts`.
+   */
+  permissoes?: PermissoesMembro;
 }
 
 export interface Convite {

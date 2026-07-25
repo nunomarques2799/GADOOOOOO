@@ -3,11 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FolhaPermissoes } from '@/components/FolhaPermissoes';
 import { Avatar, Badge, Button, Card, Chip, EmptyState, Icon, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { useMembros } from '@/data/membros';
 import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
+import { useToasts } from '@/data/toasts';
 import {
   agruparTrabalhadores,
   contarPorPapel,
@@ -38,7 +40,14 @@ export default function TrabalhadoresScreen() {
   const router = useRouter();
   const { sessao } = useAuth();
   const { exploracoes } = useGado();
-  const { pode, listarMembrosDe, listarConvites, aCarregar: aCarregarAcesso } = useMembros();
+  const {
+    pode,
+    listarMembrosDe,
+    listarConvites,
+    definirPermissoes,
+    aCarregar: aCarregarAcesso,
+  } = useMembros();
+  const toast = useToasts();
 
   // Só as explorações onde se pode gerir equipa: nas outras o servidor não
   // devolve a lista de membros, e mostrar a secção vazia parecia uma equipa
@@ -53,6 +62,8 @@ export default function TrabalhadoresScreen() {
   const [aCarregar, setACarregar] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [exploracaoId, setExploracaoId] = useState<string | undefined>(undefined);
+  /** Quem está com a folha de permissões aberta (pelo id de utilizador). */
+  const [aAjustar, setAAjustar] = useState<string | undefined>(undefined);
 
   /**
    * O que faz este ecrã ir buscar a equipa outra vez, escrito como TEXTO e não
@@ -129,6 +140,28 @@ export default function TrabalhadoresScreen() {
 
   /** A exploração para onde mandar quem quer convidar ou remover alguém. */
   const exploracaoDeGestao = exploracaoId ?? minhas[0]?.id;
+
+  /** A pessoa cuja folha de permissões está aberta, já com os vínculos atuais. */
+  const pessoaAAjustar = useMemo(
+    () => pessoas.find((p) => p.userId === aAjustar),
+    [pessoas, aAjustar],
+  );
+
+  /**
+   * Grava as permissões e diz o que aconteceu. Recarrega a lista a seguir: os
+   * vínculos que alimentam a folha vêm daqui, e sem isto reabri-la mostrava os
+   * interruptores como estavam antes de gravar.
+   */
+  async function guardarPermissoes(
+    membroId: string,
+    permissoes: Parameters<typeof definirPermissoes>[1],
+  ): Promise<string | null> {
+    const razao = await definirPermissoes(membroId, permissoes);
+    if (razao) return razao;
+    toast.sucesso('Permissões guardadas', pessoaAAjustar?.nome);
+    await carregar();
+    return null;
+  }
 
   const coluna = {
     width: '100%',
@@ -272,9 +305,10 @@ export default function TrabalhadoresScreen() {
                     key={p.userId}
                     pessoa={p}
                     ultimo={i === pessoas.length - 1}
-                    onPress={() =>
-                      router.push(`/exploracao/equipa/${p.vinculos[0].exploracaoId}`)
-                    }
+                    // Tocar na pessoa abre o que ela pode alterar — é a pergunta
+                    // que se faz nesta lista. Convidar e remover continuam a ser
+                    // na equipa da exploração, com a ligação lá dentro.
+                    onPress={() => setAAjustar(p.userId)}
                   />
                 ))}
               </View>
@@ -349,9 +383,12 @@ export default function TrabalhadoresScreen() {
             />
           ) : null}
 
-          {minhas.length > 1 && !exploracaoId && pessoas.length > 0 ? (
+          {pessoas.length > 0 ? (
             <Text variant="caption" color={colors.textMuted} style={{ textAlign: 'center' }}>
-              Para convidar ou remover alguém numa exploração à escolha, toque nela em cima.
+              Toque numa pessoa para escolher o que ela pode alterar na app.
+              {minhas.length > 1 && !exploracaoId
+                ? ' Para convidar ou remover numa exploração à escolha, toque nela em cima.'
+                : ''}
             </Text>
           ) : null}
 
@@ -362,6 +399,22 @@ export default function TrabalhadoresScreen() {
           ) : null}
         </View>
       </ScrollView>
+
+      {/* Montada só quando é preciso: fora disso não há folha nenhuma a manter
+          rascunhos de permissões de alguém que já não está na lista. */}
+      {pessoaAAjustar ? (
+        <FolhaPermissoes
+          aberto
+          pessoa={pessoaAAjustar}
+          onFechar={() => setAAjustar(undefined)}
+          onGuardar={guardarPermissoes}
+          financasAtivasEm={(id) => !!exploracoes.find((e) => e.id === id)?.financasAtivas}
+          onAbrirEquipa={(id) => {
+            setAAjustar(undefined);
+            router.push(`/exploracao/equipa/${id}`);
+          }}
+        />
+      ) : null}
     </View>
   );
 }
@@ -394,11 +447,16 @@ function LinhaPessoa({
         ? colors.info
         : colors.warning;
 
+  const ajustada = pessoa.vinculos.some(
+    (v) => v.permissoes && Object.keys(v.permissoes).length > 0,
+  );
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${pessoa.nome}, ${legendaRole(pessoa.papelPrincipal).toLowerCase()}`}
+      accessibilityHint="Toque para escolher o que esta pessoa pode alterar"
       style={({ pressed }) => [
         {
           flexDirection: 'row',
@@ -421,8 +479,19 @@ function LinhaPessoa({
             {resumoVinculos(pessoa)}
           </Text>
         </View>
+        {/* Quem tem permissões mexidas dá sinal na lista: sem isto, a única
+            forma de saber que uma pessoa está fora do que o papel dá era abrir
+            a folha de cada uma, uma a uma. */}
+        {ajustada ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+            <Icon name="tune-variant" size="xs" color={colors.warning} />
+            <Text variant="caption" color={colors.warning}>
+              Permissões ajustadas
+            </Text>
+          </View>
+        ) : null}
       </View>
-      <Icon name="chevron-right" size="md" color={colors.textMuted} />
+      <Icon name="tune-variant" size="md" color={colors.textMuted} />
     </Pressable>
   );
 }

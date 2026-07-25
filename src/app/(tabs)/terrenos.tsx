@@ -1,23 +1,30 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
-import { FlatList, View } from 'react-native';
+import { Pressable, SectionList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Badge, Card, EmptyState, FAB, Icon, IconBadge, Text } from '@/components/ui';
 import { tipoTerrenoMeta } from '@/data/constants';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { agruparTerrenosPorExploracao, emLinhas } from '@/data/terrenos';
 import type { Terreno } from '@/data/types';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, spacing } from '@/theme';
 
 /**
- * Todos os terrenos, de todas as explorações, num sítio só.
+ * Todos os terrenos, de todas as explorações, num sítio só — mas separados por
+ * exploração.
  *
- * Até aqui os terrenos só existiam dentro da ficha da exploração — para ver
- * onde está o gado era preciso saber primeiro a que exploração pertence, o que
- * é uma pergunta que o criador não faz. Quem tem uma exploração só passava por
- * dois ecrãs para chegar a uma lista de três terrenos.
+ * Até aqui os terrenos só existiam dentro da ficha da exploração: para ver onde
+ * está o gado era preciso saber primeiro a que exploração pertence, o que é uma
+ * pergunta que o criador não faz. Depois passaram a estar todos nesta lista, e
+ * apareceu o problema oposto — os de duas quintas seguidos uns aos outros, sem
+ * nada a marcar onde uma acaba e a outra começa.
+ *
+ * Cada exploração tem agora o seu grupo, com o nome no cabeçalho e o botão de
+ * criar ali mesmo: o terreno novo nasce na exploração que se está a ver, e não
+ * na primeira da lista.
  */
 export default function TerrenosScreen() {
   const insets = useSafeAreaInsets();
@@ -25,10 +32,6 @@ export default function TerrenosScreen() {
   const desktop = useDesktop();
   const { terrenos, exploracoes, animais } = useGado();
   const { pode } = useMembros();
-
-  // Só se oferece criar quando há onde: o formulário exige uma exploração.
-  const podeCriar =
-    exploracoes.length > 0 && exploracoes.some((e) => pode(e.id, 'gerirTerrenos'));
 
   // Quantos animais em cada terreno — é a informação que dá sentido à lista.
   // Só o efetivo ativo: contar falecidos e vendidos dava um número que não
@@ -42,46 +45,74 @@ export default function TerrenosScreen() {
     return m;
   }, [animais]);
 
-  const nomeExploracao = useMemo(
-    () => new Map(exploracoes.map((e) => [e.id, e.nome])),
-    [exploracoes],
-  );
+  const colunas = desktop ? 2 : 1;
 
-  // Agrupados por exploração e depois por nome: com mais do que uma exploração,
-  // uma lista alfabética misturava terrenos de sítios diferentes.
-  const lista = useMemo(
+  // Uma secção por exploração (ver `terrenos.ts`), com os terrenos já em linhas
+  // de uma ou duas colunas — uma lista por secções não tem `numColumns`.
+  const secoes = useMemo(
     () =>
-      [...terrenos].sort((a, b) => {
-        const ea = nomeExploracao.get(a.exploracaoId) ?? '';
-        const eb = nomeExploracao.get(b.exploracaoId) ?? '';
-        if (ea !== eb) return ea.localeCompare(eb, 'pt');
-        return a.nome.localeCompare(b.nome, 'pt');
-      }),
-    [terrenos, nomeExploracao],
+      agruparTerrenosPorExploracao(terrenos, exploracoes).map((g) => ({
+        ...g,
+        data: emLinhas(g.terrenos, colunas),
+      })),
+    [terrenos, exploracoes, colunas],
   );
 
-  const varias = exploracoes.length > 1;
+  function criarEm(exploracaoId: string) {
+    router.push({ pathname: '/terreno/novo', params: { exploracaoId } });
+  }
+
+  // Para a lista inteira estar vazia basta não haver terreno nenhum: as
+  // explorações sem terrenos aparecem como grupos vazios, com o seu convite.
+  const semTerrenos = terrenos.length === 0;
+  const primeiraEditavel = exploracoes.find((e) => pode(e.id, 'gerirTerrenos'));
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FlatList
-        // Ver nota em animais.tsx: numColumns exige remontar a lista.
+      <SectionList
+        // Ver nota em animais.tsx: mudar o número de colunas exige remontar.
         key={desktop ? 'grelha' : 'pilha'}
-        data={lista}
-        keyExtractor={(t) => t.id}
-        numColumns={desktop ? 2 : 1}
-        columnWrapperStyle={desktop ? { gap: spacing.sm } : undefined}
-        renderItem={({ item }) => {
-          const linha = (
-            <TerrenoRow
-              terreno={item}
-              animais={contagem.get(item.id) ?? 0}
-              exploracao={varias ? nomeExploracao.get(item.exploracaoId) : undefined}
-              onPress={() => router.push(`/terreno/${item.id}`)}
-            />
-          );
-          return desktop ? <View style={{ flex: 1 }}>{linha}</View> : linha;
-        }}
+        sections={secoes}
+        keyExtractor={(linha) => linha.map((t) => t.id).join('+')}
+        renderItem={({ item: linha }) => (
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            {linha.map((t) => (
+              <View key={t.id} style={{ flex: 1 }}>
+                <TerrenoRow
+                  terreno={t}
+                  animais={contagem.get(t.id) ?? 0}
+                  onPress={() => router.push(`/terreno/${t.id}`)}
+                />
+              </View>
+            ))}
+            {/* Uma linha ímpar em duas colunas deixa metade por preencher: sem
+                este vazio, o último cartão esticava para o dobro da largura. */}
+            {linha.length < colunas ? <View style={{ flex: linha.length }} /> : null}
+          </View>
+        )}
+        renderSectionHeader={({ section }) => (
+          <CabecalhoExploracao
+            nome={section.nome}
+            quantos={section.terrenos.length}
+            onNovo={
+              section.exploracaoId && pode(section.exploracaoId, 'gerirTerrenos')
+                ? () => criarEm(section.exploracaoId!)
+                : undefined
+            }
+          />
+        )}
+        renderSectionFooter={({ section }) =>
+          section.terrenos.length === 0 ? (
+            <Card style={{ marginBottom: spacing.md }}>
+              <Text variant="secondary" color={colors.textSecondary}>
+                Esta exploração ainda não tem terrenos registados.
+              </Text>
+            </Card>
+          ) : (
+            <View style={{ height: spacing.sm }} />
+          )
+        }
+        stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           width: '100%',
@@ -94,7 +125,7 @@ export default function TerrenosScreen() {
           <View style={{ paddingTop: insets.top + spacing.md, marginBottom: spacing.md }}>
             <Text variant="display">Terrenos</Text>
             <Text variant="body" color={colors.textSecondary}>
-              {terrenos.length === 0
+              {semTerrenos
                 ? 'Onde o gado anda'
                 : `${terrenos.length} ${terrenos.length === 1 ? 'terreno' : 'terrenos'}`}
             </Text>
@@ -109,29 +140,65 @@ export default function TerrenosScreen() {
                 ? 'Crie primeiro uma exploração — os terrenos pertencem a uma.'
                 : 'Registe os terrenos onde o gado anda para saber onde está cada animal.'
             }
-            actionLabel={podeCriar ? 'Novo terreno' : undefined}
-            onAction={
-              podeCriar
-                ? () =>
-                    router.push({
-                      pathname: '/terreno/novo',
-                      params: { exploracaoId: exploracoes[0].id },
-                    })
-                : undefined
-            }
+            actionLabel={primeiraEditavel ? 'Novo terreno' : undefined}
+            onAction={primeiraEditavel ? () => criarEm(primeiraEditavel.id) : undefined}
           />
         }
       />
-      {podeCriar && terrenos.length > 0 ? (
-        <FAB
-          label="Novo"
-          onPress={() =>
-            router.push({
-              pathname: '/terreno/novo',
-              params: { exploracaoId: exploracoes[0].id },
-            })
-          }
-        />
+      {/* O botão flutuante só faz sentido quando há UMA exploração: com várias,
+          criar é dentro do grupo certo — o "Novo" do cabeçalho — em vez de
+          adivinhar a primeira da lista. */}
+      {primeiraEditavel && exploracoes.length === 1 && !semTerrenos ? (
+        <FAB label="Novo" onPress={() => criarEm(primeiraEditavel.id)} />
+      ) : null}
+    </View>
+  );
+}
+
+/** Nome da exploração, quantos terrenos tem, e o atalho para criar mais um. */
+function CabecalhoExploracao({
+  nome,
+  quantos,
+  onNovo,
+}: {
+  nome: string;
+  quantos: number;
+  onNovo?: () => void;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+        paddingBottom: spacing.xs,
+        // O fundo é o que impede o cabeçalho de se confundir com um cartão
+        // quando a lista rola por trás dele.
+        backgroundColor: colors.background,
+      }}>
+      <Icon name="barn" size="sm" color={colors.textSecondary} />
+      <Text variant="label" color={colors.textSecondary} style={{ flex: 1 }} numberOfLines={1}>
+        {nome.toUpperCase()}
+        <Text variant="caption" color={colors.textMuted}>
+          {'  '}
+          {quantos}
+        </Text>
+      </Text>
+      {onNovo ? (
+        <Pressable
+          onPress={onNovo}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={`Novo terreno em ${nome}`}
+          style={({ pressed }) => [
+            { flexDirection: 'row', alignItems: 'center', gap: 2 },
+            pressed && { opacity: 0.6 },
+          ]}>
+          <Icon name="plus" size="sm" color={colors.primary} />
+          <Text variant="caption" color={colors.primary}>
+            NOVO
+          </Text>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -140,13 +207,10 @@ export default function TerrenosScreen() {
 function TerrenoRow({
   terreno,
   animais,
-  exploracao,
   onPress,
 }: {
   terreno: Terreno;
   animais: number;
-  /** Só vem preenchido quando há mais do que uma exploração. */
-  exploracao?: string;
   onPress: () => void;
 }) {
   const meta = tipoTerrenoMeta[terreno.tipo ?? 'Outro'];
@@ -178,14 +242,6 @@ function TerrenoRow({
             {terreno.tipo ?? 'Sem tipo'}
             {terreno.area != null ? ` · ${terreno.area} ha` : ''}
           </Text>
-          {exploracao ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 }}>
-              <Icon name="barn" size={12} color={colors.textMuted} />
-              <Text variant="caption" color={colors.textMuted} numberOfLines={1}>
-                {exploracao}
-              </Text>
-            </View>
-          ) : null}
         </View>
         <Badge
           tone={animais > 0 ? 'brand' : 'neutral'}

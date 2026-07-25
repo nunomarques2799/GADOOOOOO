@@ -14,6 +14,7 @@ import { avisar } from '@/data/avisos';
 import { excelDisponivel } from '@/data/excelFicheiro';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
 
@@ -32,6 +33,7 @@ export default function ImportarAnimaisScreen() {
   const desktop = useDesktop();
   const { animais, exploracoes, importarAnimais } = useGado();
   const { pode, contaSuspensa } = useMembros();
+  const toast = useToasts();
 
   const editaveis = useMemo(
     () => exploracoes.filter((e) => pode(e.id, 'editarAnimais')),
@@ -97,7 +99,9 @@ export default function ImportarAnimaisScreen() {
       const detalhe = e instanceof ErroExcel ? e.detalhe : undefined;
       setResultado(null);
       setErro({ mensagem, detalhe });
-      avisar('Não foi possível ler o ficheiro', mensagem);
+      // O motivo fica no ecrã (acima), por isso o aviso não precisa de exigir um
+      // "OK" para se poder voltar ao Excel.
+      toast.erro('Ficheiro não lido', mensagem);
     } finally {
       setALer(false);
     }
@@ -111,9 +115,9 @@ export default function ImportarAnimaisScreen() {
       const { criados, falhas } = await importarAnimais(exploracaoId, dados);
       const exp = editaveis.find((e) => e.id === exploracaoId);
       if (falhas.length === 0) {
-        avisar(
-          'Importação concluída',
-          `Foram importados ${criados} animais para "${exp?.nome ?? ''}".`,
+        toast.sucesso(
+          `${criados} ${criados === 1 ? 'animal importado' : 'animais importados'}`,
+          exp?.nome,
         );
       } else {
         const nomes = falhas.slice(0, 5).map((f) => f.rotulo).join(', ');
@@ -127,7 +131,7 @@ export default function ImportarAnimaisScreen() {
       }
       router.back();
     } catch (e) {
-      avisar('Não foi possível importar', e instanceof Error ? e.message : String(e));
+      toast.erro('Não foi possível importar', mensagemDeErro(e));
     } finally {
       setAImportar(false);
     }
@@ -220,7 +224,14 @@ export default function ImportarAnimaisScreen() {
               label="Descarregar modelo"
               icon="tray-arrow-down"
               variant="secondary"
-              onPress={descarregarTemplate}
+              onPress={() => {
+                try {
+                  descarregarTemplate();
+                  toast.sucesso('Modelo descarregado', 'Procure na pasta das transferências.');
+                } catch (e) {
+                  toast.erro('Não foi possível descarregar', mensagemDeErro(e));
+                }
+              }}
               style={{ marginTop: spacing.md }}
             />
           </Card>

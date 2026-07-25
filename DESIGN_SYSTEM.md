@@ -138,7 +138,22 @@ Um só set garante consistência de traço e estilo.
 Badge · Chip · IconBadge · SectionHeader · FAB · Avatar · EmptyState · Header`.
 
 `src/components/` (domínio): `WeatherCard · AlertItem · AnimalRow ·
-ExploracaoRow · StatCard · QuickAction`.
+ExploracaoRow · StatCard · QuickAction · AnfitriaoToasts · FolhaPermissoes`.
+
+### Dizer que correu bem (ou mal)
+
+Três registos, e a escolha entre eles não é de gosto:
+
+| O quê | Quando | Como |
+| --- | --- | --- |
+| **Toast** (`useToasts()`) | Confirmar o que o criador acabou de fazer, e as falhas de que ele se pode simplesmente esquecer. | Aparece em baixo, some sozinho, não pede nada. |
+| **`avisar()`** (`data/avisos.ts`) | O que ele **tem** de ler antes de continuar: uma lista de animais que ficaram por gravar, um texto que se perde sem ligação. | Interrompe e exige "OK". |
+| **Linha no formulário** | A razão de uma gravação recusada, enquanto ele corrige os campos. | Fica no ecrã até mudar algo. |
+
+Um erro de gravação num formulário leva os dois últimos: o toast chama a atenção
+de quem já ia a sair, a linha fica para se ler com calma. Confirmações que
+interrompem ensinam a tocar em "OK" sem ler — e isso estraga também os avisos a
+sério.
 
 ---
 

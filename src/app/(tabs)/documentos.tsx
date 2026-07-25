@@ -13,6 +13,7 @@ import { formatDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useNotas, type Nota } from '@/data/notas';
 import { useGado } from '@/data/store';
+import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, sizes, spacing } from '@/theme';
 
@@ -31,10 +32,28 @@ export default function DocumentosScreen() {
   const { animais, eventos, exploracoes, terrenos, alertas } = useGado();
   const { contaSuspensa } = useMembros();
   const notasApi = useNotas();
+  const toast = useToasts();
 
   const [relatorioAberto, setRelatorioAberto] = useState(false);
 
   const comFicheiros = Platform.OS === 'web' && excelDisponivel;
+
+  /**
+   * Escreve um ficheiro e diz o que aconteceu.
+   *
+   * A escrita passa por um `<a download>` (ver `excelFicheiro.ts`): quando corre
+   * bem, o browser guarda o ficheiro sem a app dar sinal nenhum, e quando o
+   * browser bloqueia o download — ou a folha rebenta a meio — também não. Tocar
+   * no botão e não ver nada era a mesma coisa nos dois casos.
+   */
+  function descarregar(nomeFicheiro: string, quantos: string, escrever: () => void) {
+    try {
+      escrever();
+      toast.sucesso('Ficheiro descarregado', `${nomeFicheiro} · ${quantos}`);
+    } catch (e) {
+      toast.erro('Não foi possível descarregar', mensagemDeErro(e));
+    }
+  }
 
   const coluna = {
     width: '100%',
@@ -76,17 +95,28 @@ export default function DocumentosScreen() {
                   icon="microsoft-excel"
                   label="Exportar animais (Excel)"
                   trailing={String(animais.length)}
-                  onPress={() => exportarAnimaisExcel(animais, exploracoes, terrenos)}
+                  onPress={() =>
+                    descarregar(
+                      `animais-${hojeISO()}.xlsx`,
+                      `${animais.length} ${animais.length === 1 ? 'animal' : 'animais'}`,
+                      () => exportarAnimaisExcel(animais, exploracoes, terrenos),
+                    )
+                  }
                 />
                 <Linha
                   icon="calendar-text-outline"
                   label="Exportar eventos (Excel)"
                   trailing={String(eventos.length)}
                   onPress={() =>
-                    descarregarTabelaExcel(
+                    descarregar(
                       `eventos-${hojeISO()}.xlsx`,
-                      'Eventos',
-                      tabelaEventos(eventos, animais),
+                      `${eventos.length} ${eventos.length === 1 ? 'registo' : 'registos'}`,
+                      () =>
+                        descarregarTabelaExcel(
+                          `eventos-${hojeISO()}.xlsx`,
+                          'Eventos',
+                          tabelaEventos(eventos, animais),
+                        ),
                     )
                   }
                 />
@@ -148,6 +178,7 @@ type Rascunho = { id?: string; titulo: string; texto: string };
 function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
   const [editor, setEditor] = useState<Rascunho | null>(null);
   const [aGuardar, setAGuardar] = useState(false);
+  const toast = useToasts();
 
   async function guardar() {
     if (!editor || aGuardar) return;
@@ -158,8 +189,12 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
     setAGuardar(true);
     try {
       await notas.guardarNota({ id: editor.id, titulo: editor.titulo, texto: editor.texto });
+      toast.sucesso(editor.id ? 'Nota guardada' : 'Nota criada', editor.titulo.trim() || undefined);
       setEditor(null);
     } catch (e) {
+      // Fica a interromper: ao contrário do resto da app, as notas NÃO têm fila
+      // de sincronização — sem ligação o texto perde-se, e isso tem de ser lido
+      // antes de se fechar a folha.
       avisar(
         'Não foi possível guardar',
         e instanceof Error ? `${e.message}\n\nAs notas precisam de ligação para gravar.` : String(e),
@@ -179,9 +214,10 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
         void (async () => {
           try {
             await notas.eliminarNota(id);
+            toast.sucesso('Nota eliminada');
             setEditor(null);
           } catch (e) {
-            avisar('Não foi possível eliminar', e instanceof Error ? e.message : String(e));
+            toast.erro('Não foi possível eliminar', mensagemDeErro(e));
           }
         })();
       },

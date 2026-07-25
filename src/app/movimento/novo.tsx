@@ -3,11 +3,11 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { avisar } from '@/data/avisos';
 import { Button, Chip, EmptyState, Header, Icon, type IconName, Screen, Text } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
-import { formatDataPt, isoDaysAgo, paraEuro } from '@/data/helpers';
+import { formatDataPt, formatEuro, isoDaysAgo, paraEuro } from '@/data/helpers';
 import { useGado } from '@/data/store';
+import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
 import type { CategoriaDespesa, CategoriaReceita, Direcao } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
@@ -48,6 +48,7 @@ export default function NovoMovimentoScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { exploracoes, animais, terrenos, addMovimento } = useGado();
+  const toast = useToasts();
 
   const params = useLocalSearchParams<{
     direcao?: string;
@@ -127,6 +128,10 @@ export default function NovoMovimentoScreen() {
         animalId,
         terrenoId,
       });
+      toast.sucesso(
+        direcaoEfetiva === 'receita' ? 'Receita registada' : 'Despesa registada',
+        `${formatEuro(valorNum)} · ${descricao.trim()}`,
+      );
       // `back()` sozinho não chega: quem abre este ecrã por link direto (a app
       // instalada, um atalho) não tem histórico para onde voltar, e o botão
       // ficava preso em "A gravar…" com o movimento já gravado.
@@ -135,7 +140,10 @@ export default function NovoMovimentoScreen() {
     } catch (e) {
       // A recusa vem do servidor (RLS) e tem de aparecer: o movimento já foi
       // mostrado como gravado, e desaparecer em silêncio é o pior dos casos.
-      avisar('Não foi possível gravar', e instanceof Error ? e.message : String(e));
+      toast.erro(
+        direcaoEfetiva === 'receita' ? 'Receita não registada' : 'Despesa não registada',
+        mensagemDeErro(e),
+      );
       setAGravar(false);
     }
   }

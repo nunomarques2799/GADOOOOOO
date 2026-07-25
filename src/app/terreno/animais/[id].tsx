@@ -10,10 +10,10 @@ import {
   Screen,
   Text,
 } from '@/components/ui';
-import { avisar } from '@/data/avisos';
 import { especieMeta } from '@/data/constants';
 import { idadeExtenso } from '@/data/helpers';
 import { useGado } from '@/data/store';
+import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { colors, radii, spacing } from '@/theme';
 
 /**
@@ -24,6 +24,7 @@ import { colors, radii, spacing } from '@/theme';
 export default function AssociarAnimaisScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { terrenoById, exploracaoById, animaisByExploracao, terrenos, updateAnimal } = useGado();
+  const toast = useToasts();
 
   const terreno = id ? terrenoById(id) : undefined;
 
@@ -44,11 +45,14 @@ export default function AssociarAnimaisScreen() {
   // automaticamente" — então uma recusa do servidor tem de aparecer. Sem o
   // `catch`, a marca de visto ficava no sítio e a promessa era falsa: o animal
   // aparecia neste terreno até à sincronização seguinte o pôr de volta.
-  const alternar = async (animalId: string, dentro: boolean) => {
+  const alternar = async (animalId: string, dentro: boolean, rotulo: string) => {
     try {
       await updateAnimal(animalId, { terrenoId: dentro ? undefined : terreno.id });
+      // Sem aviso, a única prova de que ficou gravado era o visto — que aparece
+      // logo, mesmo quando a gravação ainda não chegou ao servidor.
+      toast.sucesso(dentro ? `Tirado de ${terreno.nome}` : `Colocado em ${terreno.nome}`, rotulo);
     } catch (e) {
-      avisar('Não foi possível guardar', e instanceof Error ? e.message : String(e));
+      toast.erro('Não foi possível guardar', mensagemDeErro(e));
     }
   };
 
@@ -75,7 +79,9 @@ export default function AssociarAnimaisScreen() {
             return (
               <Pressable
                 key={a.id}
-                onPress={() => void alternar(a.id, dentro)}
+                onPress={() =>
+                  void alternar(a.id, dentro, a.nome ?? a.numeroIdentificacao ?? 'Sem nome')
+                }
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: dentro }}
                 accessibilityLabel={`${a.nome ?? 'Animal'} ${dentro ? 'neste terreno' : 'fora do terreno'}`}

@@ -19,6 +19,7 @@ import {
   type FiltroPrazos,
   type JanelaPrazo,
 } from '@/data/exportar';
+import { useToasts } from '@/data/toasts';
 import type { Alerta, AlertaGravidade, Exploracao } from '@/data/types';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, spacing } from '@/theme';
@@ -59,6 +60,7 @@ export function ModalRelatorioPrazos({
 }) {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
+  const toast = useToasts();
   const [filtro, setFiltro] = useState<FiltroPrazos>(FILTRO_PRAZOS_TUDO);
 
   const escolhidos = useMemo(() => filtrarAlertas(alertas, filtro), [alertas, filtro]);
@@ -73,12 +75,16 @@ export function ModalRelatorioPrazos({
 
   const html = () => htmlRelatorioPrazos(escolhidos, { nomeExploracao, filtro });
 
+  /** "3 prazos", para os avisos dizerem o que saiu e não só que saiu. */
+  const quantos = `${escolhidos.length} ${escolhidos.length === 1 ? 'prazo' : 'prazos'}`;
+
   function imprimir() {
     const ok = imprimirRelatorio(TITULO, html());
     if (!ok) {
       avisar('Indisponível', 'Imprimir o relatório está disponível na versão de computador.');
       return;
     }
+    toast.sucesso('Relatório aberto para impressão', quantos);
     onFechar();
   }
 
@@ -86,6 +92,7 @@ export function ModalRelatorioPrazos({
     const r = await guardarRelatorio(TITULO, html(), `prazos-${hojeISO()}`);
     if (r.estado === 'cancelado') return;
     if (r.estado === 'guardado') {
+      toast.sucesso('Relatório guardado', quantos);
       onFechar();
       return;
     }
@@ -101,7 +108,9 @@ export function ModalRelatorioPrazos({
       avisar('Indisponível', 'Descarregar o relatório está disponível na versão de computador.');
       return;
     }
-    avisar('Não foi possível guardar', r.motivo);
+    // A folha fica aberta para se poder tentar outra vez, por isso o aviso não
+    // precisa de interromper — só de aparecer.
+    toast.erro('Relatório não guardado', r.motivo);
   }
 
   return (

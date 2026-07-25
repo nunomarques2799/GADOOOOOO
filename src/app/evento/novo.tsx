@@ -22,6 +22,7 @@ import {
 } from '@/data/helpers';
 import { normalizar } from '@/data/racas';
 import { useGado } from '@/data/store';
+import { useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
 import type { EventoTipo, Sexo } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
@@ -46,8 +47,16 @@ type Registavel = (typeof REGISTAVEIS)[number];
  */
 const EM_MASSA: Registavel[] = ['Vacinação', 'Medicamento'];
 
-const META: Record<Registavel, { icon: IconName; cor: string; titulo: string }> = {
-  Parto: { icon: 'baby-bottle-outline', cor: colors.info, titulo: 'Registar parto' },
+const META: Record<
+  Registavel,
+  { icon: IconName; cor: string; titulo: string; feito: string }
+> = {
+  Parto: {
+    icon: 'baby-bottle-outline',
+    cor: colors.info,
+    titulo: 'Registar parto',
+    feito: 'Parto registado',
+  },
   Vacinação: {
     icon: 'needle',
     // Getter porque segue a paleta escolhida: esta tabela é criada no arranque
@@ -56,9 +65,15 @@ const META: Record<Registavel, { icon: IconName; cor: string; titulo: string }> 
       return colors.primary;
     },
     titulo: 'Registar vacina',
+    feito: 'Vacina registada',
   },
-  Medicamento: { icon: 'medical-bag', cor: colors.danger, titulo: 'Registar medicamento' },
-  Pesagem: { icon: 'scale', cor: colors.warning, titulo: 'Registar pesagem' },
+  Medicamento: {
+    icon: 'medical-bag',
+    cor: colors.danger,
+    titulo: 'Registar medicamento',
+    feito: 'Medicamento registado',
+  },
+  Pesagem: { icon: 'scale', cor: colors.warning, titulo: 'Registar pesagem', feito: 'Pesagem registada' },
 };
 
 const opcoesData = [
@@ -82,6 +97,7 @@ export default function NovoEventoScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { animais, especieDe, addEvento, updateAnimal, animalById, eventosByAnimal } = useGadoAdaptado();
+  const toast = useToasts();
 
   const params = useLocalSearchParams<{ tipo?: string; animalId?: string }>();
   const tipoInicial: Registavel = (REGISTAVEIS as readonly string[]).includes(params.tipo ?? '')
@@ -288,7 +304,7 @@ export default function NovoEventoScreen() {
     }
 
     if (gravados === 0) {
-      avisar('Não foi possível guardar', falhados[0]?.erro ?? 'Tente novamente.');
+      toast.erro('Registo não guardado', falhados[0]?.erro ?? 'Tente novamente.');
       setAGuardar(false);
       return;
     }
@@ -296,23 +312,29 @@ export default function NovoEventoScreen() {
     if (falhados.length > 0) {
       // Nomear quem ficou de fora é o que permite repetir só esses. Um
       // "gravado com erros" sem dizer quais obrigava a conferir trinta fichas.
+      //
+      // Este continua a interromper, e não é um toast: é uma lista de nomes
+      // para ir buscar, que não pode desaparecer sozinha ao fim de segundos.
       avisar(
         'Guardado, com falhas',
         `Ficou registado em ${gravados} ${gravados === 1 ? 'animal' : 'animais'}. ` +
           `Não foi possível em: ${falhados.map((f) => f.nome).join(', ')}.`,
       );
+      if (animalIds.length === 1) router.replace(`/animal/${animalIds[0]}`);
+      else router.back();
+      return;
     }
+
+    toast.sucesso(
+      META[tipo].feito,
+      gravados === 1
+        ? `${descricao} · ${formatDataPt(data)}`
+        : `${descricao} em ${gravados} animais, a ${formatDataPt(data)}`,
+    );
 
     if (animalIds.length === 1) {
       router.replace(`/animal/${animalIds[0]}`);
       return;
-    }
-
-    if (falhados.length === 0) {
-      avisar(
-        'Registo guardado',
-        `${descricao} em ${gravados} animais, a ${formatDataPt(data)}.`,
-      );
     }
     router.back();
   }

@@ -21,10 +21,12 @@ import {
 import { useAuth } from './auth';
 import { cacheDisponivel, guardarAcesso, lerAcesso } from './cacheLocal';
 import {
+  CAPACIDADES_GERIVEIS,
   podeConsultar,
   podeEscrever,
   type Capacidade,
   type CapacidadeLeitura,
+  type PermissoesMembro,
 } from './permissoes';
 import { supabase, supabaseConfigurado } from './supabase';
 import type {
@@ -42,6 +44,8 @@ type MembrosContext = {
   estadoPerfil: EstadoPerfil | null;
   /** Devolve o role do utilizador nesta exploração (ou undefined). */
   roleEm: (exploracaoId: string) => RoleMembro | undefined;
+  /** Ajustes de permissões do próprio utilizador nesta exploração, se houver. */
+  permissoesEm: (exploracaoId: string) => PermissoesMembro | undefined;
   /**
    * true se o utilizador pode exercer esta capacidade nesta exploração.
    * Usar para esconder controlos que o servidor iria recusar — ver
@@ -93,6 +97,15 @@ type MembrosContext = {
     (MembroExploracao & { nome: string })[]
   >;
   removerMembro: (membroId: string) => Promise<string | null>;
+  /**
+   * Grava o que esta pessoa pode alterar nesta exploração. Substitui os ajustes
+   * anteriores — o que não vier fica a seguir o papel. Devolve a razão da recusa
+   * ou `null` se ficou gravado.
+   */
+  definirPermissoes: (
+    membroId: string,
+    permissoes: PermissoesMembro,
+  ) => Promise<string | null>;
 
   /* ---- Qualquer user autenticado ---- */
   resgatarConvite: (codigo: string) => Promise<string | null>;
@@ -106,6 +119,7 @@ type RowMembro = {
   exploracao_id: string;
   role: RoleMembro;
   criado_em?: string | null;
+  permissoes?: Record<string, unknown> | null;
 };
 
 function toMembro(r: RowMembro): MembroExploracao {
@@ -115,7 +129,27 @@ function toMembro(r: RowMembro): MembroExploracao {
     exploracaoId: r.exploracao_id,
     role: r.role,
     criadoEm: r.criado_em ?? undefined,
+    permissoes: limparPermissoes(r.permissoes),
   };
+}
+
+/**
+ * A coluna `permissoes` como a app a quer: só capacidades ajustáveis, só
+ * verdadeiro/falso.
+ *
+ * É jsonb livre no Postgres e chega da rede (e da cache local, que é um
+ * ficheiro que se pode editar à mão). Uma chave desconhecida ou um valor que não
+ * seja booleano viraria uma permissão a mais ou a menos calada — aqui é
+ * simplesmente ignorada, e o que fica sem ajuste segue o papel.
+ */
+function limparPermissoes(bruto: unknown): PermissoesMembro | undefined {
+  if (!bruto || typeof bruto !== 'object') return undefined;
+  const limpo: PermissoesMembro = {};
+  for (const c of CAPACIDADES_GERIVEIS) {
+    const v = (bruto as Record<string, unknown>)[c];
+    if (typeof v === 'boolean') limpo[c] = v;
+  }
+  return Object.keys(limpo).length > 0 ? limpo : undefined;
 }
 
 type RowConvite = {
@@ -235,7 +269,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     const { data: rows, error: erroMembros } = await comPrazo(
       supabase
         .from('membro_exploracao')
-        .select('id, user_id, exploracao_id, role, criado_em')
+        .select('id, user_id, exploracao_id, role, criado_em, permissoes')
         .eq('user_id', userId),
     );
     if (erroMembros) {
@@ -266,6 +300,13 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     [membros],
   );
 
+  /** Os ajustes que o dono fez a ESTE utilizador nesta exploração. */
+  const permissoesEm = useCallback(
+    (exploracaoId: string): PermissoesMembro | undefined =>
+      membros.find((m) => m.exploracaoId === exploracaoId)?.permissoes,
+    [membros],
+  );
+
   // A decisão em si vive em `permissoes.ts` (lógica pura, testada); aqui só se
   // reúne o contexto. Ver `podeEscrever` para o porquê de cada ramo.
   const contexto = useMemo(
@@ -275,8 +316,15 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
 
   const pode = useCallback(
     (exploracaoId: string | undefined, capacidade: Capacidade): boolean =>
-      podeEscrever({ ...contexto, role: exploracaoId ? roleEm(exploracaoId) : undefined }, capacidade),
-    [contexto, roleEm],
+      podeEscrever(
+        {
+          ...contexto,
+          role: exploracaoId ? roleEm(exploracaoId) : undefined,
+          permissoes: exploracaoId ? permissoesEm(exploracaoId) : undefined,
+        },
+        capacidade,
+      ),
+    [contexto, roleEm, permissoesEm],
   );
 
   const podeEmAlguma = useCallback(
@@ -284,7 +332,9 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       // Sem membros (modo local/demo, ou ainda a carregar) a decisão é a mesma
       // que `pode` toma sem papel — deixa o modo demo funcionar sem equipa.
       if (membros.length === 0) return podeEscrever({ ...contexto, role: undefined }, capacidade);
-      return membros.some((m) => podeEscrever({ ...contexto, role: m.role }, capacidade));
+      return membros.some((m) =>
+        podeEscrever({ ...contexto, role: m.role, permissoes: m.permissoes }, capacidade),
+      );
     },
     [contexto, membros],
   );
@@ -372,7 +422,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     if (!supabase) return [];
     const { data } = await supabase
       .from('membro_exploracao')
-      .select('id, user_id, exploracao_id, role, criado_em, perfil:user_id ( nome )')
+      .select('id, user_id, exploracao_id, role, criado_em, permissoes, perfil:user_id ( nome )')
       .eq('exploracao_id', exploracaoId);
     type Row = RowMembro & { perfil?: { nome?: string } | null };
     return ((data ?? []) as Row[]).map((r) => ({
@@ -386,6 +436,35 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.from('membro_exploracao').delete().eq('id', membroId);
     return error?.message ?? null;
   }, []);
+
+  const definirPermissoes = useCallback(
+    async (membroId: string, permissoes: PermissoesMembro): Promise<string | null> => {
+      if (!supabase) return 'Isto exige ligação à conta — a app está em modo local.';
+      // Escreve-se o conjunto todo, não uma capacidade de cada vez: um pedido
+      // por interruptor, numa rede de campo, deixava a pessoa com metade das
+      // permissões gravadas e a outra metade não.
+      //
+      // Só as chaves ajustáveis vão para o servidor (a RLS aceitaria a coluna
+      // inteira, mas há uma restrição na tabela que recusa chaves que não
+      // conheça — e é melhor recusar aqui do que ver a gravação toda falhar).
+      const limpo: PermissoesMembro = {};
+      for (const c of CAPACIDADES_GERIVEIS) {
+        const v = permissoes[c];
+        if (typeof v === 'boolean') limpo[c] = v;
+      }
+      const { error } = await supabase
+        .from('membro_exploracao')
+        .update({ permissoes: limpo })
+        .eq('id', membroId);
+      if (error) return error.message;
+      // O próprio pode estar a mudar as suas permissões noutra exploração (um
+      // superadmin a assistir, por exemplo) — recarregar mantém o que a app
+      // mostra igual ao que o servidor vai aceitar.
+      await recarregar();
+      return null;
+    },
+    [recarregar],
+  );
 
   /* ---------------- Resgatar convite ---------------- */
 
@@ -404,6 +483,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       isSuperadmin,
       estadoPerfil,
       roleEm,
+      permissoesEm,
       pode,
       podeVer,
       podeEmAlguma,
@@ -418,14 +498,16 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       removerConvite,
       listarMembrosDe,
       removerMembro,
+      definirPermissoes,
       resgatarConvite,
     }),
     [
-      aCarregar, membros, isSuperadmin, estadoPerfil, roleEm, pode, podeVer, podeEmAlguma,
+      aCarregar, membros, isSuperadmin, estadoPerfil, roleEm, permissoesEm,
+      pode, podeVer, podeEmAlguma,
       contaSuspensa, isAdminEmAlguma,
       recarregar, listarPendentes, aprovarCliente, bloquearCliente,
       listarConvites, criarConvite, removerConvite, listarMembrosDe,
-      removerMembro, resgatarConvite,
+      removerMembro, definirPermissoes, resgatarConvite,
     ],
   );
 

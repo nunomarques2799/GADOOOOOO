@@ -29,6 +29,7 @@ Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
 | 10 | `schema_financas_opcional.sql` | Finanças passam a opt-in por cliente. | **8** |
 | 11 | `schema_animal_campos.sql` | Casa/número e finalidade do animal; opt-in da casa. | **10** |
 | 12 | `schema_notas.sql` | Notas pessoais (tabela `nota`, por utilizador). | 1 |
+| 13 | `schema_permissoes.sql` | Permissões por pessoa (coluna `permissoes`) e as políticas de escrita a passarem por `pode_cap()`. | 1, 2, **6**, **9**, **10** |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 
@@ -39,6 +40,12 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
   e a app diz que sim. É um problema de RGPD, não de arrumação.
 - **8 depende de 7.** As finanças escrevem com deteção de conflitos.
 - **10 depende de 8.** Não há como tornar opcional uma tabela que não existe.
+- **13 depende de 6, 9 e 10.** O 13 **reescreve** as políticas de escrita de
+  terreno/animal/evento (que vêm do 6), o RPC `eliminar_animal` (do 9) e as
+  políticas de `movimento` (na versão mais recente, que é a do 10). Aplicado
+  antes de qualquer um deles, é esse que fica por cima — e as permissões por
+  pessoa passam a existir na coluna sem nenhuma política as ler. A app esconde os
+  botões, o servidor aceita tudo, e nada no SQL indica que falta um passo.
 - **11 depende de 10.** Ambos substituem o trigger `handle_new_exploracao`. O
   11 reescreve-o a herdar as DUAS opções (finanças e casa); aplicá-lo antes do
   10 fazia o 10 sobrepor-se-lhe e as explorações novas nasciam sem a casa
@@ -55,7 +62,7 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 powershell scripts/gerar-schema-completo.ps1
 ```
 
-Isso gera `supabase/_completo.sql` com os 12 ficheiros pela ordem certa. Colar
+Isso gera `supabase/_completo.sql` com os 13 ficheiros pela ordem certa. Colar
 **tudo de uma vez** no *SQL Editor* → *Run*.
 
 Colar tudo junto é mais seguro do que ficheiro a ficheiro, ao contrário do que

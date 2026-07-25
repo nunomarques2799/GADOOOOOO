@@ -8,6 +8,7 @@ import { Button, Header, Icon, type IconName, Text } from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { Exploracao } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
@@ -17,6 +18,7 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
   const insets = useSafeAreaInsets();
   const { addExploracao, updateExploracao, deleteExploracao } = useGado();
   const { pode } = useMembros();
+  const toast = useToasts();
 
   const editar = !!exploracao;
   const podeEliminar = pode(exploracao?.id, 'eliminarExploracao');
@@ -42,6 +44,7 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
           nifDetentor: nifDetentor.trim(),
           localizacao: localizacao.trim() || undefined,
         });
+        toast.sucesso('Exploração guardada', nome.trim());
         router.back();
       } else {
         const nova = await addExploracao({
@@ -50,10 +53,13 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
           nifDetentor: nifDetentor.trim(),
           localizacao: localizacao.trim() || undefined,
         });
+        toast.sucesso('Exploração criada', nova.nome);
         router.replace(`/exploracao/${nova.id}`);
       }
     } catch (e) {
-      setErroGuardar((e as Error).message ?? 'Erro ao guardar.');
+      const razao = mensagemDeErro(e);
+      setErroGuardar(razao);
+      toast.erro(editar ? 'Exploração não guardada' : 'Exploração não criada', razao);
     } finally {
       setAGravar(false);
     }
@@ -69,9 +75,10 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
     const executar = async () => {
       try {
         await deleteExploracao(exploracao.id);
+        toast.sucesso('Exploração eliminada', exploracao.nome);
         router.replace('/exploracoes');
       } catch (e) {
-        avisar('Não foi possível eliminar', e instanceof Error ? e.message : String(e));
+        avisar('Não foi possível eliminar', mensagemDeErro(e));
       }
     };
     confirmar(
