@@ -3,6 +3,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 import type { Animal, Evento } from '../types';
 import {
   computeAlertas,
+  diaIso,
   diasAte,
   idadeDias,
   isoDaysAgo,
@@ -111,6 +112,25 @@ describe('mascaraDataPt', () => {
     // As duas peças têm de encaixar: não vale a máscara escrever num formato
     // que a validação depois recusa.
     expect(parseDataPt(mascaraDataPt('15032021'))).not.toBeNull();
+  });
+});
+
+describe('diaIso', () => {
+  it('lê o dia em hora local, não em UTC', () => {
+    // O caso que interessa: entre a meia-noite e a uma da manhã, com o país em
+    // UTC+1, o `toISOString()` ainda dá o dia anterior. É a conta que decide o
+    // dia com que um movimento é gravado na coluna `date` do servidor.
+    const instante = new Date(2026, 6, 25, 0, 30);
+    expect(diaIso(instante)).toBe('2026-07-25');
+    expect(diaIso(instante.toISOString())).toBe('2026-07-25');
+  });
+
+  it('não mexe num dia que já vem sem hora', () => {
+    // O servidor devolve `date` sem hora. Passá-lo por `new Date` fazia o JS
+    // lê-lo como meia-noite UTC, e num fuso a oeste a ida e volta recuava um
+    // dia de cada vez que o mesmo movimento fosse gravado outra vez.
+    expect(diaIso('2026-07-25')).toBe('2026-07-25');
+    expect(diaIso('2026-01-01')).toBe('2026-01-01');
   });
 });
 

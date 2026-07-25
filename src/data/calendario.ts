@@ -11,6 +11,7 @@
  * que só aparece no fim do mês ou na mudança da hora.
  */
 
+import { diaIso } from './helpers';
 import type { Alerta, AlertaGravidade } from './types';
 
 /** Dias da semana, começados à SEGUNDA como em Portugal. */
@@ -49,12 +50,12 @@ export const MESES = [
  * previsto para as 23:00 de dia 3 em Lisboa é, em UTC, dia 3 às 22:00 no
  * inverno mas dia 4 no verão. Agrupar por UTC punha o mesmo parto num dia
  * diferente conforme o mês do ano.
+ *
+ * A conta vive em `helpers.diaIso` — é a mesma que decide o dia com que uma
+ * despesa é gravada no servidor, e duas versões dela acabariam a divergir.
  */
 export function chaveDia(d: Date | string): string {
-  const data = typeof d === 'string' ? new Date(d) : d;
-  const mes = `${data.getMonth() + 1}`.padStart(2, '0');
-  const dia = `${data.getDate()}`.padStart(2, '0');
-  return `${data.getFullYear()}-${mes}-${dia}`;
+  return diaIso(d);
 }
 
 /** Alertas com dia marcado, agrupados pelo dia a que pertencem. */

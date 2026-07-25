@@ -34,29 +34,37 @@ const mockRespostas: {
   updateDireto: { error: null },
 };
 
-const mockChamadas: { tabela: string; op: string; filtros: Record<string, unknown> }[] = [];
+const mockChamadas: {
+  tabela: string;
+  op: string;
+  filtros: Record<string, unknown>;
+  /** O payload que a app mandou gravar — é onde se vê o mapeamento das colunas. */
+  dados?: Record<string, unknown>;
+}[] = [];
 
 jest.mock('../supabase', () => {
   const construir = (tabela: string) => {
     let op = '';
+    let dados: Record<string, unknown> | undefined;
     const filtros: Record<string, unknown> = {};
     const cadeia: Record<string, unknown> = {
-      update() { op = 'update'; return cadeia; },
-      insert() {
+      update(payload: Record<string, unknown>) { op = 'update'; dados = payload; return cadeia; },
+      insert(payload: Record<string, unknown>) {
         op = 'insert';
-        mockChamadas.push({ tabela, op, filtros });
+        dados = payload;
+        mockChamadas.push({ tabela, op, filtros, dados });
         return Promise.resolve(mockRespostas.insert);
       },
       // Um UPDATE sem `.select()` no fim resolve-se ao ser esperado. É o
       // recurso do insert duplicado, e sem isto o `await` devolvia a própria
       // cadeia e o teste passava sem chamada nenhuma ter acontecido.
       then(resolve: (v: unknown) => void) {
-        mockChamadas.push({ tabela, op, filtros });
+        mockChamadas.push({ tabela, op, filtros, dados });
         resolve(mockRespostas.updateDireto);
       },
       select() {
         if (op === 'update') {
-          mockChamadas.push({ tabela, op, filtros });
+          mockChamadas.push({ tabela, op, filtros, dados });
           return Promise.resolve(mockRespostas.update);
         }
         op = 'select';
@@ -74,8 +82,13 @@ jest.mock('../supabase', () => {
   return { supabase: { from: (tabela: string) => construir(tabela) }, supabaseConfigurado: true };
 });
 
-import { eConflito, mensagemLegivel, upsertAnimalSupabase } from '../supabaseRepo';
-import type { Animal } from '../types';
+import {
+  eConflito,
+  mensagemLegivel,
+  upsertAnimalSupabase,
+  upsertMovimentoSupabase,
+} from '../supabaseRepo';
+import type { Animal, Movimento } from '../types';
 
 function animal(patch: Partial<Animal> = {}): Animal {
   return {
@@ -194,6 +207,56 @@ describe('gravação com versão conhecida', () => {
     await upsertAnimalSupabase(animal({ atualizadoEm: versao }));
 
     expect(mockChamadas.filter((c) => c.op === 'select')).toHaveLength(0);
+  });
+});
+
+/**
+ * A coluna `movimento.data` é um `date` do Postgres e o domínio guarda um ISO
+ * completo, por isso há uma conversão à saída. Ela tem de ler o dia LOCAL: o
+ * atalho de cortar os dez primeiros caracteres do ISO lê o dia em UTC, e em
+ * Portugal (UTC+1 de março a outubro) isso grava a despesa da meia-noite no dia
+ * anterior — com o formulário a confirmar a data certa por cima.
+ *
+ * Os dois primeiros casos são simétricos de propósito: qual deles apanhava o
+ * `slice(0, 10)` depende do sinal do fuso da máquina que corre os testes, e um
+ * só deles deixava a CI a passar em metade do mundo.
+ */
+describe('movimento — o dia que vai para a coluna `date`', () => {
+  function movimento(data: string): Movimento {
+    return {
+      id: 'm1',
+      exploracaoId: 'exp-1',
+      direcao: 'despesa',
+      categoria: 'Alimentação',
+      valor: 860,
+      data,
+      descricao: 'Ração',
+    };
+  }
+
+  /** O que o servidor recebeu na coluna `data`. */
+  async function diaGravado(data: string): Promise<unknown> {
+    mockChamadas.length = 0;
+    await upsertMovimentoSupabase(movimento(data));
+    return mockChamadas[0]?.dados?.data;
+  }
+
+  it('grava o dia local de um instante que em UTC já é o dia anterior', async () => {
+    // 25/07 às 00:30 em Lisboa = 24/07T23:30Z. É o caso que estava errado.
+    const meiaNoiteEMeia = new Date(2026, 6, 25, 0, 30).toISOString();
+    expect(await diaGravado(meiaNoiteEMeia)).toBe('2026-07-25');
+  });
+
+  it('grava o dia local de um instante que em UTC ainda é o dia seguinte', async () => {
+    // O simétrico, para o fuso não ser assumido: com TZ a oeste de Greenwich as
+    // 23:30 locais são já o dia seguinte em UTC, e o dia a gravar continua a ser
+    // o que o criador vê no ecrã.
+    const quaseMeiaNoite = new Date(2026, 6, 25, 23, 30).toISOString();
+    expect(await diaGravado(quaseMeiaNoite)).toBe('2026-07-25');
+  });
+
+  it('deixa intacta uma data que já vem só com o dia (vinda do servidor)', async () => {
+    expect(await diaGravado('2026-07-25')).toBe('2026-07-25');
   });
 });
 

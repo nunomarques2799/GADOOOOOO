@@ -113,6 +113,17 @@ describe('htmlRelatorioPrazos', () => {
     expect(html).not.toContain('<script>mau()');
     expect(html).toContain('&lt;script&gt;');
   });
+
+  it('assina com o nome atual da app, no cabeçalho e no rodapé', () => {
+    // A folha impressa ficou a assinar "GG" (de "Gestão de Gado") depois de a app
+    // passar a chamar-se Terrabovina: o rodapé mudou, o logótipo do cabeçalho
+    // não. É o único sítio onde a app sai em papel, muitas vezes para entregar
+    // a um veterinário ou a um técnico — o nome tem de ser um só.
+    const html = htmlRelatorioPrazos([]);
+    expect(html).not.toContain('>GG<');
+    expect(html).toContain('>TB<');
+    expect(html).toContain('Terrabovina');
+  });
 });
 
 /* ------------------------------------------------------------------ *

@@ -10,6 +10,7 @@
  */
 
 import { traduzErroServidor } from './errosServidor';
+import { diaIso } from './helpers';
 import { supabase } from './supabase';
 import type {
   Animal,
@@ -288,7 +289,14 @@ const movimentoPayload = (m: Movimento) => ({
   direcao: m.direcao,
   categoria: m.categoria,
   valor: m.valor,
-  data: m.data.slice(0, 10), // a coluna é `date`; o domínio guarda ISO completo
+  // A coluna é `date` e o domínio guarda um ISO completo, por isso há aqui uma
+  // conversão obrigatória — e é o dia LOCAL que se grava, não os dez primeiros
+  // caracteres do ISO. O atalho do `slice(0, 10)` lia o dia em UTC: em Portugal,
+  // de março a outubro (UTC+1), uma despesa lançada entre a meia-noite e a uma
+  // da manhã ia para a base no dia ANTERIOR, com o formulário a confirmar a data
+  // certa por cima. Depois de sincronizar, a lista passava a mostrar o dia de
+  // trás, e o lançamento do dia 1 caía no mês passado nas contas do mês.
+  data: diaIso(m.data),
   descricao: m.descricao,
   contraparte: m.contraparte ?? null,
   animal_id: m.animalId ?? null,

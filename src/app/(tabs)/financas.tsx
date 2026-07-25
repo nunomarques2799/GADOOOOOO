@@ -443,7 +443,17 @@ function TotalCard({
   // Uma despesa a subir é má notícia, uma receita a subir é boa: a cor da seta
   // segue o que aquilo significa para o criador, não o sinal do número.
   const subiu = (variacao ?? 0) > 0;
-  const corVariacao = subiu === subirEBom ? colors.success : colors.danger;
+  // Zero é "igual ao período anterior", e não merece cor nenhuma. Sem esta
+  // exceção, uma receita que se manteve saía com uma seta para baixo VERMELHA a
+  // dizer 0% — a leitura era de queda, exatamente onde não houve queda nenhuma.
+  // O teste é sobre a percentagem ARREDONDADA, que é a que aparece: meio por
+  // cento de subida também sai "0%", e uma seta ao lado de um zero não diz nada.
+  const igual = variacao !== undefined && Math.round(variacao) === 0;
+  const corVariacao = igual
+    ? colors.textMuted
+    : subiu === subirEBom
+      ? colors.success
+      : colors.danger;
 
   return (
     <Card style={{ flex: 1 }} padded={false}>
@@ -458,12 +468,12 @@ function TotalCard({
         {variacao !== undefined ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Icon
-              name={subiu ? 'arrow-up' : 'arrow-down'}
+              name={igual ? 'equal' : subiu ? 'arrow-up' : 'arrow-down'}
               size="xs"
               color={corVariacao}
             />
             <Text variant="caption" color={corVariacao}>
-              {Math.abs(Math.round(variacao))}%
+              {igual ? 'igual' : `${Math.abs(Math.round(variacao))}%`}
             </Text>
           </View>
         ) : null}

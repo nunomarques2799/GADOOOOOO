@@ -533,6 +533,64 @@ describe('cascatas locais', () => {
     expect(ctx().animais).toHaveLength(1);
     expect(ctx().animais[0].terrenoId).toBeUndefined();
   });
+
+  it('uma exploração recusada volta inteira ao ecrã', async () => {
+    // Só o admin elimina uma exploração, e uma conta suspensa não elimina nada.
+    // Quando a recusa chega, a cascata local já tirou do ecrã a exploração, os
+    // terrenos, o efetivo, o histórico e o dinheiro — e é a maior perda de vista
+    // que a app pode causar. Sem reposição ficava tudo em branco por trás da
+    // mensagem de erro, para só voltar na sincronização seguinte.
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [{ id: 't1', exploracaoId: 'exp-1', nome: 'Courela', tipo: 'Pastagem' }],
+      animais: [animal('a1')],
+      eventos: [
+        { id: 'e1', animalId: 'a1', tipo: 'Pesagem', data: new Date().toISOString(), descricao: '' },
+      ],
+      movimentos: [
+        {
+          id: 'm1',
+          exploracaoId: 'exp-1',
+          direcao: 'despesa',
+          categoria: 'Alimentação',
+          valor: 860,
+          data: '2026-07-01',
+          descricao: 'Ração',
+        },
+      ],
+    };
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Não tem permissão para eliminar esta exploração.';
+    const erro = await falhaCom(() => ctx().deleteExploracao('exp-1'));
+    expect(erro.message).toMatch(/permissão/);
+
+    expect(ctx().exploracoes.map((e) => e.id)).toEqual(['exp-1']);
+    expect(ctx().terrenos.map((t) => t.id)).toEqual(['t1']);
+    expect(ctx().animais.map((a) => a.id)).toEqual(['a1']);
+    expect(ctx().eventos.map((e) => e.id)).toEqual(['e1']);
+    expect(ctx().movimentos.map((m) => m.id)).toEqual(['m1']);
+  });
+
+  it('um terreno recusado volta, e os animais voltam a estar nele', async () => {
+    // A cascata local desafeta os animais do terreno. Se o servidor recusar, o
+    // terreno voltava mas o efetivo ficava "sem terreno" até à sincronização
+    // seguinte — e é por terreno que se sabe onde o gado está.
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [{ id: 't1', exploracaoId: 'exp-1', nome: 'Courela', tipo: 'Pastagem' }],
+      animais: [animal('a1', { terrenoId: 't1' })],
+      eventos: [],
+    };
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Não tem permissão para eliminar terrenos.';
+    const erro = await falhaCom(() => ctx().deleteTerreno('t1'));
+    expect(erro.message).toMatch(/permissão/);
+
+    expect(ctx().terrenos.map((t) => t.id)).toEqual(['t1']);
+    expect(ctx().animalById('a1')?.terrenoId).toBe('t1');
+  });
 });
 
 describe('saída do efetivo', () => {

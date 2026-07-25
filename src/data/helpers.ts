@@ -87,6 +87,29 @@ export function mascaraDataPt(texto: string): string {
   return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
 }
 
+/**
+ * O DIA a que um instante pertence, em hora local: `2026-07-25`.
+ *
+ * Local e não UTC, e a diferença não é teórica. Portugal está em UTC+1 de
+ * março a outubro, portanto entre a meia-noite e a uma da manhã o `toISOString()`
+ * ainda dá o dia ANTERIOR. Cortar os dez primeiros caracteres desse texto — que
+ * é o atalho óbvio para chegar a um `aaaa-mm-dd` — gravava a despesa lançada à
+ * 00:30 no dia errado, com o formulário a mostrar a data certa por cima.
+ *
+ * É a mesma conta que `chaveDia()` faz para o calendário (`calendario.ts`), que
+ * delega aqui para não haver duas versões da regra.
+ */
+export function diaIso(d: Date | string): string {
+  // Um texto que já é só o dia devolve-se como está. Passá-lo por `new Date`
+  // faria o JS lê-lo como meia-noite UTC, e um dia sem hora não tem fuso para
+  // converter: seria inventar uma hora para depois a interpretar. A ida e volta
+  // ao servidor (que devolve `date` sem hora) tem de ser inofensiva.
+  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.trim())) return d.trim();
+  const data = typeof d === 'string' ? new Date(d) : d;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${data.getFullYear()}-${p(data.getMonth() + 1)}-${p(data.getDate())}`;
+}
+
 /** Data ISO ao meio-dia, `dias` depois de `iso`. Usado para prever o parto. */
 export function isoMaisDias(iso: string, dias: number): string {
   const d = new Date(iso);

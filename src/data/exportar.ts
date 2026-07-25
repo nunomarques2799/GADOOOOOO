@@ -17,14 +17,19 @@ import { Platform, Share } from 'react-native';
 
 import type { Tabela } from './excelFicheiro';
 import type { Lancamento } from './financas';
-import { formatDataCurta, formatDataPt } from './helpers';
+import { diaIso, formatDataCurta, formatDataPt } from './helpers';
 import type { Alerta, AlertaGravidade, Animal, Evento } from './types';
 
 /* ---------- Primitivas ---------- */
 
-/** Data de hoje no formato aaaa-mm-dd, para nomes de ficheiro. */
+/**
+ * Data de hoje no formato aaaa-mm-dd, para nomes de ficheiro. Dia local, pela
+ * mesma razão que em `diaIso`: exportar às 00:30 de verão datava o ficheiro de
+ * ontem, e quem exporta duas vezes na mesma noite fica com dois nomes que
+ * mentem sobre o que têm dentro.
+ */
 export function hojeISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return diaIso(new Date());
 }
 
 /** Descarrega (web/Electron) ou partilha (nativo) um ficheiro de texto. */
@@ -246,7 +251,11 @@ export function htmlRelatorioPrazos(
   return `
     <header>
       <div class="marca">
-        <span class="logo">GG</span>
+        <!-- As iniciais da app, que se chama Terrabovina. Ficou "GG" (de
+             "Gestão de Gado") na folha impressa depois de a app mudar de nome:
+             o rodapé já dizia Terrabovina e o cabeçalho continuava a assinar
+             com o nome antigo, na única coisa que sai da app em papel. -->
+        <span class="logo">TB</span>
         <div>
           <h1>Relatório de prazos</h1>
           <p>${nomeExploracao ? escaparHtml(nomeExploracao) + ' · ' : ''}${dataHoje}</p>

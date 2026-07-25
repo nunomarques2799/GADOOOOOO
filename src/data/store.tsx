@@ -856,20 +856,43 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
   const deleteExploracao = useCallback(
     async (id: string): Promise<void> => {
+      // Guarda TUDO o que a cascata vai levar, para poder repor se o servidor
+      // recusar — é a mesma rede de segurança do `deleteAnimal`, e aqui pesa
+      // mais do que em qualquer outro sítio: a recusa é provável (só o admin
+      // elimina, e uma conta suspensa não elimina nada) e o que desaparece do
+      // ecrã é a exploração inteira, com terrenos, efetivo, histórico e
+      // dinheiro. Sem isto, o criador via tudo sumir por trás da mensagem de
+      // erro e só a sincronização seguinte lho devolvia — sem uma palavra.
+      const exploracaoRemovida = exploracoesRef.current.find((e) => e.id === id);
+      const terrenosRemovidos = terrenosRef.current.filter((t) => t.exploracaoId === id);
+      const animaisDaExploracao = animaisRef.current.filter((a) => a.exploracaoId === id);
+      const animaisRemovidos = new Set(animaisDaExploracao.map((a) => a.id));
+      const eventosRemovidos = eventosRef.current.filter((e) => animaisRemovidos.has(e.animalId));
+      const movimentosRemovidos = movimentosRef.current.filter((m) => m.exploracaoId === id);
+
       // Cascata local (funciona offline). O servidor faz a sua própria cascata.
-      const animaisRemovidos = new Set(
-        animaisRef.current.filter((a) => a.exploracaoId === id).map((a) => a.id),
-      );
       setEventos((prev) => prev.filter((e) => !animaisRemovidos.has(e.animalId)));
       setMovimentos((prev) => prev.filter((m) => m.exploracaoId !== id));
       setAnimais((prev) => prev.filter((a) => a.exploracaoId !== id));
       setTerrenos((prev) => prev.filter((t) => t.exploracaoId !== id));
       setExploracoes((prev) => prev.filter((e) => e.id !== id));
-      if (usaSupabase) {
+
+      if (!usaSupabase) {
+        gravarSqlite((db) => bdEliminarExploracao(db, id));
+        return;
+      }
+      try {
         const enviado = await empurrar({ op: 'delete', entidade: 'exploracao', id });
         if (enviado) await puxarDoServidor();
-      } else {
-        gravarSqlite((db) => bdEliminarExploracao(db, id));
+      } catch (e) {
+        if (exploracaoRemovida) setExploracoes((prev) => [...prev, exploracaoRemovida]);
+        if (terrenosRemovidos.length > 0) setTerrenos((prev) => [...prev, ...terrenosRemovidos]);
+        if (animaisDaExploracao.length > 0)
+          setAnimais((prev) => [...animaisDaExploracao, ...prev]);
+        if (eventosRemovidos.length > 0) setEventos((prev) => [...eventosRemovidos, ...prev]);
+        if (movimentosRemovidos.length > 0)
+          setMovimentos((prev) => [...movimentosRemovidos, ...prev]);
+        throw e; // quem chamou mostra a razão da recusa
       }
     },
     [usaSupabase, gravarSqlite, empurrar, puxarDoServidor],
@@ -900,10 +923,30 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
   const deleteTerreno = useCallback(
     async (id: string): Promise<void> => {
+      // Guarda o terreno e os animais que a cascata local desafeta dele: só
+      // quem gere terrenos pode eliminá-los, e a recusa só se sabe depois. Sem
+      // reposição, o terreno sumia do ecrã e o efetivo aparecia "sem terreno"
+      // até à sincronização seguinte — de onde voltava tudo, sem explicação.
+      const terrenoRemovido = terrenosRef.current.find((t) => t.id === id);
+      const animaisDesafetados = animaisRef.current.filter((a) => a.terrenoId === id);
+
       setAnimais((prev) => prev.map((a) => (a.terrenoId === id ? { ...a, terrenoId: undefined } : a)));
       setTerrenos((prev) => prev.filter((t) => t.id !== id));
-      if (usaSupabase) await empurrar({ op: 'delete', entidade: 'terreno', id });
-      else gravarSqlite((db) => bdEliminarTerreno(db, id));
+
+      if (!usaSupabase) {
+        gravarSqlite((db) => bdEliminarTerreno(db, id));
+        return;
+      }
+      try {
+        await empurrar({ op: 'delete', entidade: 'terreno', id });
+      } catch (e) {
+        if (terrenoRemovido) setTerrenos((prev) => [...prev, terrenoRemovido]);
+        if (animaisDesafetados.length > 0) {
+          const repor = new Map(animaisDesafetados.map((a) => [a.id, a]));
+          setAnimais((prev) => prev.map((a) => repor.get(a.id) ?? a));
+        }
+        throw e; // quem chamou mostra a razão da recusa
+      }
     },
     [usaSupabase, gravarSqlite, empurrar],
   );
