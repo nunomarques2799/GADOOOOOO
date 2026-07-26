@@ -1,13 +1,15 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
 import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
+import { avisar, confirmar } from '@/data/avisos';
 import { tiposTerreno, tipoTerrenoMeta } from '@/data/constants';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { Terreno, TipoTerreno } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
@@ -23,6 +25,7 @@ export function FormularioTerreno({
   const insets = useSafeAreaInsets();
   const { addTerreno, updateTerreno, deleteTerreno, exploracaoById } = useGado();
   const { pode } = useMembros();
+  const toast = useToasts();
 
   const editar = !!terreno;
   const podeEliminar = pode(exploracaoId, 'gerirTerrenos');
@@ -33,6 +36,8 @@ export function FormularioTerreno({
   const [latitude, setLatitude] = useState(terreno?.latitude != null ? String(terreno.latitude) : '');
   const [longitude, setLongitude] = useState(terreno?.longitude != null ? String(terreno.longitude) : '');
   const [manual, setManual] = useState(false);
+  const [erroGuardar, setErroGuardar] = useState<string | null>(null);
+  const [aGravar, setAGravar] = useState(false);
 
   const exploracao = exploracaoById(exploracaoId);
   const valido = nome.trim().length > 0;
@@ -53,8 +58,14 @@ export function FormularioTerreno({
     setLongitude('');
   }
 
-  function guardar() {
-    if (!valido) return;
+  // Esperar pela gravação antes de sair do ecrã: sem o `await`, uma recusa do
+  // servidor (RLS — um veterinário não gere terrenos — ou conflito de versão)
+  // ficava numa promessa sem dono e a app voltava atrás como se tivesse
+  // gravado. Offline não muda nada: a escrita entra na fila e isto devolve já.
+  async function guardar() {
+    if (!valido || aGravar) return;
+    setErroGuardar(null);
+    setAGravar(true);
     const dados = {
       nome: nome.trim(),
       tipo,
@@ -63,28 +74,47 @@ export function FormularioTerreno({
       latitude: latNum,
       longitude: lngNum,
     };
-    if (editar && terreno) {
-      updateTerreno(terreno.id, dados);
-    } else {
-      addTerreno({ ...dados, exploracaoId });
+    try {
+      if (editar && terreno) {
+        await updateTerreno(terreno.id, dados);
+      } else {
+        await addTerreno({ ...dados, exploracaoId });
+      }
+      // O aviso é dado pela raiz da app (ver `toasts.tsx`), por isso sobrevive
+      // ao `router.back()` desta linha — este ecrã já não existe quando ele
+      // aparece, e é esse o objetivo: confirma-se em cima da lista.
+      toast.sucesso(
+        editar ? 'Terreno guardado' : 'Terreno adicionado',
+        `${dados.nome}${exploracao ? ` · ${exploracao.nome}` : ''}`,
+      );
+      router.back();
+    } catch (e) {
+      // Duas vias de propósito: o toast chama a atenção de quem já ia a sair, a
+      // linha por baixo do botão fica lá para se poder ler com calma.
+      const razao = mensagemDeErro(e);
+      setErroGuardar(razao);
+      toast.erro(editar ? 'Terreno não guardado' : 'Terreno não adicionado', razao);
+      setAGravar(false);
     }
-    router.back();
   }
 
   function confirmarEliminar() {
     if (!terreno) return;
-    const executar = () => {
-      deleteTerreno(terreno.id);
-      router.back();
+    const executar = async () => {
+      try {
+        await deleteTerreno(terreno.id);
+        toast.sucesso('Terreno eliminado', terreno.nome);
+        router.back();
+      } catch (e) {
+        avisar('Não foi possível eliminar', mensagemDeErro(e));
+      }
     };
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(`Eliminar o terreno "${terreno.nome}"?`)) executar();
-      return;
-    }
-    Alert.alert('Eliminar terreno', `Vai eliminar "${terreno.nome}". Os animais lá afetos ficarão sem terreno.`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: executar },
-    ]);
+    confirmar(
+      'Eliminar terreno',
+      `Vai eliminar "${terreno.nome}". Os animais lá afetos ficarão sem terreno.`,
+      () => void executar(),
+      { rotuloConfirmar: 'Eliminar', destrutivo: true },
+    );
   }
 
   return (
@@ -238,11 +268,26 @@ export function FormularioTerreno({
           },
           shadow.lg,
         ]}>
+        {erroGuardar ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.xs,
+              marginBottom: spacing.sm,
+            }}>
+            <Icon name="alert-circle-outline" size="sm" color={colors.danger} />
+            <Text variant="secondary" color={colors.danger} style={{ flex: 1 }}>
+              {erroGuardar}
+            </Text>
+          </View>
+        ) : null}
         <Button
           label={editar ? 'Guardar alterações' : 'Criar terreno'}
           icon="check"
           onPress={guardar}
-          disabled={!valido}
+          disabled={!valido || aGravar}
+          loading={aGravar}
         />
       </View>
     </View>

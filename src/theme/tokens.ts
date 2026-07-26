@@ -1,5 +1,5 @@
 /**
- * DESIGN SYSTEM — Gestão de Gado
+ * DESIGN SYSTEM — Terrabovina
  * ------------------------------------------------------------------
  * Fonte de verdade única para cores, tipografia, espaçamento, raios e
  * sombras. Derivado da inspiração visual (app agrícola verde, cartões
@@ -13,56 +13,25 @@
 
 import { Platform, type TextStyle, type ViewStyle } from 'react-native';
 
+import { paletaPorId, PALETA_OMISSAO, type PaletaId, type TokensPaleta } from './paletas';
+
 /* ------------------------------------------------------------------ *
  *  COR
  * ------------------------------------------------------------------ */
 
-/** Escala da marca — verde folha profundo (agricultura, confiança, vida). */
-const green = {
-  900: '#0C3A22',
-  800: '#124D2E',
-  700: '#166B3D', // primaryDark — headers, gradientes
-  600: '#1B7A48', // primary — CTA, marca
-  500: '#2E9E5B',
-  400: '#57B97D',
-  300: '#8FD3A9',
-  100: '#DCF2E4',
-  50: '#EEF8F1', // tinte de superfície
-};
-
-export const colors = {
-  /* Marca */
-  primary: green[600],
-  primaryDark: green[700],
-  primaryDarker: green[800],
-  primaryTint: green[50],
-  primaryTintStrong: green[100],
-  onPrimary: '#FFFFFF',
-
-  /* Gradiente do cabeçalho / cartões escuros (meteo) */
-  headerFrom: green[800],
-  headerTo: green[600],
-
-  /* Superfícies e fundo (bege-verde muito claro, como a inspiração) */
-  background: '#F3F6F2',
-  surface: '#FFFFFF',
-  surfaceAlt: '#F0F4EE',
-  surfaceSunken: '#E9EFE7',
-
-  /* Texto — alto contraste para visão reduzida */
-  text: '#15251C', // ~near-black esverdeado
-  textSecondary: '#54655B',
-  // Atenção ao formato: um hex de 4 dígitos NÃO é um cinzento abreviado — o
-  // React Native lê-o como #RGBA. Este token esteve escrito '#8593' e saía
-  // rgba(136,85,153,0.20): um roxo quase invisível (1,30:1 sobre o fundo) em
-  // mais de 100 sítios, incluindo os separadores inativos e os placeholders.
-  textMuted: '#647268', // 4,65:1 sobre o fundo · 5,06:1 sobre branco (WCAG AA)
+/**
+ * As cores que NÃO mudam com a paleta escolhida.
+ *
+ * São as que querem dizer alguma coisa: o vermelho de um prazo vencido, o
+ * âmbar de "esta semana", o azul da meteorologia, a cor de cada espécie, o
+ * rosa e o azul do sexo. Deixar o criador trocá-las era deixá-lo trocar o
+ * significado — e um alerta vermelho que num telemóvel é castanho deixa de se
+ * reconhecer num relance, que é a única forma como estas cores funcionam.
+ */
+const fixas = {
+  /* Texto sobre superfícies escuras (cabeçalhos, cartão da meteo) */
   textOnDark: '#FFFFFF',
   textOnDarkMuted: 'rgba(255,255,255,0.82)',
-
-  /* Linhas / bordas */
-  border: '#E3EAE0',
-  borderStrong: '#D2DCCD',
 
   /* Semântica (funcional — nunca só cor, sempre com ícone/texto) */
   success: '#2E9E5B',
@@ -81,14 +50,60 @@ export const colors = {
   suino: '#C56B8A',
   equideo: '#8A5A3B',
 
+  /* Sexo — o fundo do ícone na lista de animais e nos filtros.
+     A cor sozinha nunca decide nada: vai sempre acompanhada do ícone de
+     género (♀/♂) e do rótulo, porque um em cada doze homens não distingue
+     estes dois tons — e o utilizador-alvo é um criador de 82 anos, muitas
+     vezes com o telemóvel ao sol. */
+  femea: '#B8447C', // 4,58:1 sobre o seu tinte
+  femeaTint: '#FBE6F1',
+  macho: '#2F6FB5', // 4,71:1 sobre o seu tinte
+  machoTint: '#E3EEFA',
+
   /* Utilitário */
-  overlay: 'rgba(15, 40, 26, 0.55)', // scrim de modais (>40%)
+  // A sombra fica de fora das paletas de propósito: as elevações são criadas
+  // uma única vez, no arranque deste módulo (ver `shadowPreset`), e uma cor
+  // trocada depois disso nunca lá chegava. Às opacidades que a app usa
+  // (6–16%) o tom da sombra é indistinguível em qualquer das paletas.
   shadow: '#0C3A22',
   white: '#FFFFFF',
   black: '#15251C',
+
+  /* Faixa do ambiente de testes — ver `FaixaAmbiente.tsx`.
+   * O roxo é DELIBERADAMENTE estranho a esta paleta: não é verde de marca,
+   * não é âmbar de prazo, não é terracota de urgência. É a única cor da app
+   * que não quer dizer nada sobre o gado, e é por isso que serve — não há
+   * como confundir esta faixa com um alerta do próprio domínio. Só aparece
+   * quando EXPO_PUBLIC_AMBIENTE=dev, portanto nunca chega a produção. */
+  ambienteDev: '#6B3FA0',
+  onAmbienteDev: '#FFFFFF',
 } as const;
 
-export type ColorToken = keyof typeof colors;
+export type Cores = TokensPaleta & typeof fixas;
+
+/**
+ * As cores da app. Começa na paleta de origem e é REESCRITA no arranque, se o
+ * criador tiver escolhido outra (ver `aplicarPaletaNasCores`).
+ *
+ * Continua a ler-se como sempre — `colors.primary` — e é por isso que muda de
+ * paleta sem tocar nos ~950 sítios que a usam. Em troca, há uma regra a
+ * respeitar: **ler `colors` só dentro do render**. Uma constante no topo de um
+ * módulo copia o valor no momento do import, antes de a paleta guardada ser
+ * aplicada, e fica verde numa app azul para o resto da execução.
+ */
+export const colors: Cores = { ...paletaPorId(PALETA_OMISSAO).tokens, ...fixas };
+
+/**
+ * Passa a app para uma paleta. Chamada uma vez, no arranque, antes de se
+ * desenhar seja o que for — trocar de paleta com a app a correr recarrega-a
+ * (ver `src/theme/preferencia.ts`), porque metade do ecrã já tem as cores
+ * antigas guardadas em memória e não há como as mandar redesenhar todas.
+ */
+export function aplicarPaletaNasCores(id: PaletaId): void {
+  Object.assign(colors, paletaPorId(id).tokens);
+}
+
+export type ColorToken = keyof Cores;
 
 /* ------------------------------------------------------------------ *
  *  ESPAÇAMENTO — escala base 4 (ritmo 4/8dp)

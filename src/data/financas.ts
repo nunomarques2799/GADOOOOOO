@@ -88,22 +88,48 @@ export interface Lancamento {
 export type FiltroExploracao = { exploracaoId: string; animais: Animal[] };
 
 /**
+ * Restringir a um CONJUNTO de explorações.
+ *
+ * Existe por causa do "Todas" do ecrã Finanças, que não quer dizer "tudo o que
+ * está na app": quer dizer tudo aquilo cujas contas esta pessoa pode consultar.
+ * Consultar contas é do dono (ver `permissoes.ts`), e quem é dono de uma
+ * exploração e trabalhador de outra via as duas somadas no mesmo saldo — os
+ * eventos com custo não são filtrados por papel, ao contrário dos movimentos.
+ * Dois negócios num número só não são as contas de nenhum dos dois.
+ *
+ * Uma lista VAZIA não conta nada, e é de propósito: é a resposta certa a quem
+ * não pode ver contas nenhumas.
+ */
+export type FiltroExploracoes = { exploracaoIds: string[]; animais: Animal[] };
+
+/** Um dos dois: uma exploração, ou um conjunto delas. */
+export type Filtro = FiltroExploracao | FiltroExploracoes;
+
+/** As explorações que o filtro deixa passar, seja ele de uma ou de várias. */
+function idsDoFiltro(filtro: Filtro): Set<string> {
+  return new Set('exploracaoIds' in filtro ? filtro.exploracaoIds : [filtro.exploracaoId]);
+}
+
+/** Os animais que pertencem às explorações do filtro (um evento só sabe o animal). */
+function animaisDoFiltro(filtro: Filtro): Set<string> {
+  const ids = idsDoFiltro(filtro);
+  return new Set(filtro.animais.filter((a) => ids.has(a.exploracaoId)).map((a) => a.id));
+}
+
+/**
  * Converte eventos e movimentos numa lista única, do mais recente para o mais
  * antigo. Sem `filtro`, conta tudo o que lhe for dado.
  */
 export function lancamentos(
   eventos: Evento[],
   movimentos: Movimento[],
-  filtro?: FiltroExploracao,
+  filtro?: Filtro,
 ): Lancamento[] {
-  // Nota: quando há filtro, este conjunto pode legitimamente ser vazio (uma
+  // Nota: quando há filtro, estes conjuntos podem legitimamente ser vazios (uma
   // exploração ainda sem animais). Por isso a decisão é "há filtro?", nunca
   // "o conjunto tem elementos?" — a segunda deixava passar os eventos todos.
-  const permitidos = filtro
-    ? new Set(
-        filtro.animais.filter((a) => a.exploracaoId === filtro.exploracaoId).map((a) => a.id),
-      )
-    : undefined;
+  const exploracoes = filtro ? idsDoFiltro(filtro) : undefined;
+  const permitidos = filtro ? animaisDoFiltro(filtro) : undefined;
 
   const deEventos: Lancamento[] = eventos
     .filter((e) => eventoTemValor(e) && (!permitidos || permitidos.has(e.animalId)))
@@ -121,7 +147,7 @@ export function lancamentos(
   // Um movimento já sabe a que exploração pertence — a fatura da luz não tem
   // animal nenhum e continua a ser custo da exploração.
   const deMovimentos: Lancamento[] = movimentos
-    .filter((m) => !filtro || m.exploracaoId === filtro.exploracaoId)
+    .filter((m) => !exploracoes || exploracoes.has(m.exploracaoId))
     .map((m) => ({
       id: m.id,
       data: m.data,
@@ -272,7 +298,7 @@ export function resumo(lista: Lancamento[]): ResumoFinanceiro {
 export function resumoFinanceiro(
   eventos: Evento[],
   movimentos: Movimento[] = [],
-  opcoes?: { filtro?: FiltroExploracao; periodo?: Periodo; agora?: Date },
+  opcoes?: { filtro?: Filtro; periodo?: Periodo; agora?: Date },
 ): ResumoFinanceiro {
   const lista = lancamentos(eventos, movimentos, opcoes?.filtro);
   return resumo(noPeriodo(lista, opcoes?.periodo ?? 'tudo', opcoes?.agora));
@@ -296,6 +322,24 @@ const MESES_CURTOS = [
   'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
   'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
 ];
+
+const MESES_LONGOS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
+/**
+ * O mês por extenso, a partir da chave `aaaa-mm`: "Julho de 2026".
+ *
+ * O ano vai sempre: seis meses atravessam a passagem de ano (Nov, Dez, Jan…) e
+ * "Dezembro" sozinho, num gráfico ao lado de "Janeiro", não diz de que ano é.
+ */
+export function nomeMes(chave: string): string {
+  const [ano, mes] = chave.split('-');
+  const nome = MESES_LONGOS[Number(mes) - 1];
+  if (!nome || !ano) return chave;
+  return `${nome} de ${ano}`;
+}
 
 /**
  * Últimos `n` meses (incluindo o atual), do mais antigo para o mais recente.
@@ -462,15 +506,33 @@ export function porAnimal(lista: Lancamento[]): LinhaAnimal[] {
  * o animal para o camião regista a saída, mas não pode lançar receitas — o
  * preço fica para o dono. Sem esta lista, essas vendas ficavam invisíveis e as
  * receitas apareciam em baixo sem ninguém perceber porquê.
+ *
+ * O que fecha uma venda é uma receita de "Venda de animais", não qualquer
+ * receita imputada ao animal: uma entrega de leite lançada na vaca dava a venda
+ * dela por fechada, e o preço ficava a faltar sem aparecer em lado nenhum.
+ *
+ * `filtro` restringe às explorações que se está a ver (ver `Filtro`). Sem ele
+ * conta tudo o que lhe for dado — que era o comportamento antigo, e punha o
+ * cartão de aviso a falar de uma venda de outra quinta.
  */
-export function vendasSemPreco(eventos: Evento[], movimentos: Movimento[]): Evento[] {
+export function vendasSemPreco(
+  eventos: Evento[],
+  movimentos: Movimento[],
+  filtro?: Filtro,
+): Evento[] {
+  const permitidos = filtro ? animaisDoFiltro(filtro) : undefined;
   const comPreco = new Set(
     movimentos
-      .filter((m) => m.direcao === 'receita' && m.animalId)
+      .filter((m) => m.direcao === 'receita' && m.categoria === 'Venda de animais' && m.animalId)
       .map((m) => m.animalId as string),
   );
   return eventos
-    .filter((e) => e.tipo === 'Venda' && !comPreco.has(e.animalId))
+    .filter(
+      (e) =>
+        e.tipo === 'Venda'
+        && !comPreco.has(e.animalId)
+        && (!permitidos || permitidos.has(e.animalId)),
+    )
     .sort((a, b) => b.data.localeCompare(a.data));
 }
 

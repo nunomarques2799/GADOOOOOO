@@ -11,6 +11,7 @@ import {
 import { AppState, Platform } from 'react-native';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import type { DadosAnimalImportado } from './animalExcel';
 import { useAuth } from './auth';
 import { abrirBd, inicializarBd } from './db/database';
 import {
@@ -67,6 +68,7 @@ import {
 import { supabaseConfigurado } from './supabase';
 import {
   carregarTudoSupabase,
+  definirCasaAtiva as definirCasaAtivaSupabase,
   definirFinancasAtivas as definirFinancasAtivasSupabase,
   eConflito,
   mensagemLegivel,
@@ -223,6 +225,18 @@ type GadoContext = {
   reativarAlerta: (id: string) => void;
   /** Há ligação para sincronizar com o servidor? (offline-first) */
   online: boolean;
+  /**
+   * Porque é que a última leitura do servidor falhou, tal como o servidor a
+   * explicou. `null` quando correu bem.
+   *
+   * A leitura falha em silêncio de propósito — é o que permite continuar a
+   * mostrar a cache em vez de um ecrã de erro no meio do campo. Mas "em
+   * silêncio" não pode querer dizer "sem forma nenhuma de saber": sem isto,
+   * uma app a mostrar dados antigos era indistinguível de uma conta vazia, e
+   * a única maneira de descobrir a razão era abrir as ferramentas do
+   * programador. O ecrã de Sincronização mostra isto a quem for lá ver.
+   */
+  erroSincronizacao: string | null;
   /** Nº de alterações locais ainda por enviar ao Supabase. */
   pendentesSinc: number;
   /**
@@ -247,6 +261,16 @@ type GadoContext = {
   movimentosByExploracao: (id: string) => Movimento[];
   // ações (async quando batem no Supabase; devolvem o objeto criado)
   addAnimal: (a: Omit<Animal, 'id'>) => Promise<Animal>;
+  /**
+   * Importa vários animais de uma vez (ex.: de um ficheiro Excel) para uma
+   * exploração. Faz um único acréscimo ao estado — não N — e só depois envia
+   * cada um ao servidor. Devolve quantos entraram e as recusas do servidor
+   * (erros de rede não contam: esses ficam na fila e sincronizam mais tarde).
+   */
+  importarAnimais: (
+    exploracaoId: string,
+    novos: DadosAnimalImportado[],
+  ) => Promise<{ criados: number; falhas: { rotulo: string; erro: string }[] }>;
   updateAnimal: (id: string, patch: Partial<Animal>) => Promise<void>;
   deleteAnimal: (id: string) => Promise<void>;
   /**
@@ -276,6 +300,12 @@ type GadoContext = {
    * apaga: nenhum movimento é removido e religar devolve as contas intactas.
    */
   definirFinancasAtivas: (ativas: boolean) => Promise<void>;
+  /**
+   * Liga ou desliga o registo por casa/número em toda a conta. Como as
+   * finanças, desligar ESCONDE: nenhuma casa já escrita é apagada, e religar
+   * devolve tudo como estava.
+   */
+  definirCasaAtiva: (ativa: boolean) => Promise<void>;
   addMovimento: (m: Omit<Movimento, 'id'>) => Promise<Movimento>;
   updateMovimento: (id: string, patch: Partial<Movimento>) => Promise<void>;
   deleteMovimento: (id: string) => Promise<void>;
@@ -385,6 +415,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   const [falhadas, setFalhadas] = useState<OpFalhada[]>(
     cacheDisponivel ? lerFalhadas() : [],
   );
+  const [erroSincronizacao, setErroSincronizacao] = useState<string | null>(null);
 
   const limparFalhadas = useCallback(() => {
     esquecerFalhadas();
@@ -413,8 +444,14 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       setAnimais(snap.animais);
       setEventos(snap.eventos);
       setMovimentos(snap.movimentos);
+      setErroSincronizacao(null);
       return true;
-    } catch {
+    } catch (e) {
+      // Guarda-se a razão em vez de a deitar fora. Continuar a mostrar a cache
+      // é a decisão certa — o criador está no campo e os dados dele são estes
+      // — mas atirar o motivo ao lixo transformava qualquer falha de leitura
+      // numa app calada e vazia, sem ninguém saber de onde partir.
+      setErroSincronizacao(e instanceof Error ? e.message : String(e));
       return false; // offline — fica com o que está em cache
     }
   }, []);
@@ -488,8 +525,15 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       setPendentesSinc(ops.length);
     }
     if (ops.length === 0) {
-      setOnline(true);
-      await puxarDoServidor();
+      // O estado de ligação segue o RESULTADO da leitura, não o facto de a
+      // fila ter esvaziado. Marcar `online` antes de puxar escondia a única
+      // falha que interessa: com o servidor a recusar a leitura, a app ficava
+      // a mostrar a cache — dados antigos, ou nenhuns — a dizer que estava
+      // tudo bem. Sem aviso, sem erro, e sem nada que distinga isso de uma
+      // conta mesmo vazia. Agora aparece o cartão de "sem ligação" do ecrã
+      // Início, que é o que dá ao criador alguma coisa em que reparar.
+      const leu = await puxarDoServidor();
+      setOnline(leu);
     }
   }, [usaSupabase, puxarDoServidor]);
 
@@ -589,6 +633,44 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     [usaSupabase, gravarSqlite, empurrar],
   );
 
+  const importarAnimais = useCallback(
+    async (
+      exploracaoId: string,
+      novos: DadosAnimalImportado[],
+    ): Promise<{ criados: number; falhas: { rotulo: string; erro: string }[] }> => {
+      const comId: Animal[] = novos.map((a) => ({ ...a, id: novoId(), exploracaoId }));
+      // Um só acréscimo, não um por animal: uma folha com centenas de linhas
+      // provocaria centenas de re-renders se cada um chamasse `addAnimal`.
+      setAnimais((prev) => [...comId, ...prev]);
+
+      if (!usaSupabase) {
+        gravarSqlite((db) => comId.forEach((a) => guardarAnimal(db, a)));
+        return { criados: comId.length, falhas: [] };
+      }
+
+      const falhas: { rotulo: string; erro: string }[] = [];
+      let criados = 0;
+      for (const a of comId) {
+        try {
+          // `empurrar` mete os erros de REDE na fila (devolve sem lançar) — esses
+          // sincronizam depois e contam como criados. Só os erros lógicos (RLS,
+          // validação) chegam ao catch: aí tira-se o animal do ecrã, que de outra
+          // forma ficava a aparentar gravado sem nunca existir no servidor.
+          await empurrar({ op: 'upsert', entidade: 'animal', dados: a });
+          criados++;
+        } catch (e) {
+          setAnimais((prev) => prev.filter((x) => x.id !== a.id));
+          falhas.push({
+            rotulo: a.nome ?? a.numeroIdentificacao ?? a.id,
+            erro: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }
+      return { criados, falhas };
+    },
+    [usaSupabase, gravarSqlite, empurrar],
+  );
+
   const updateAnimal = useCallback(
     async (id: string, patch: Partial<Animal>): Promise<void> => {
       const atual = animaisRef.current.find((a) => a.id === id);
@@ -610,6 +692,11 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       // sincronização seguinte — o criador via-o sumir e depois ressuscitar.
       const animalRemovido = animaisRef.current.find((a) => a.id === id);
       const eventosRemovidos = eventosRef.current.filter((e) => e.animalId === id);
+      // Também os movimentos imputados: a recusa tem de repor TUDO o que a
+      // cascata local mexeu. Sem isto, o animal voltava ao ecrã mas o dinheiro
+      // que lhe estava imputado ficava órfão até à sincronização seguinte — e
+      // no meio disso a ficha dele mostrava um balanço a menos.
+      const movimentosDesligados = movimentosRef.current.filter((m) => m.animalId === id);
 
       setAnimais((prev) => prev.filter((a) => a.id !== id));
       setEventos((prev) => prev.filter((e) => e.animalId !== id));
@@ -629,6 +716,10 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         if (animalRemovido) setAnimais((prev) => [animalRemovido, ...prev]);
         if (eventosRemovidos.length > 0) setEventos((prev) => [...eventosRemovidos, ...prev]);
+        if (movimentosDesligados.length > 0) {
+          const repor = new Map(movimentosDesligados.map((m) => [m.id, m]));
+          setMovimentos((prev) => prev.map((m) => repor.get(m.id) ?? m));
+        }
         throw e; // quem chamou mostra a razão da recusa
       }
     },
@@ -691,9 +782,21 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       if (receita) setMovimentos((prev) => [receita, ...prev]);
 
       if (usaSupabase) {
-        await empurrar({ op: 'upsert', entidade: 'animal', dados: atualizado });
-        await empurrar({ op: 'upsert', entidade: 'evento', dados: evento });
-        if (receita) await empurrar({ op: 'upsert', entidade: 'movimento', dados: receita });
+        try {
+          await empurrar({ op: 'upsert', entidade: 'animal', dados: atualizado });
+          await empurrar({ op: 'upsert', entidade: 'evento', dados: evento });
+          if (receita) await empurrar({ op: 'upsert', entidade: 'movimento', dados: receita });
+        } catch (e) {
+          // Uma saída são três escritas ligadas entre si. Se a primeira for
+          // recusada, as outras nem chegam a ser tentadas — e sem esta
+          // reposição o ecrã ficava a mostrar o animal como vendido, com um
+          // evento de Venda e uma receita que não existem em lado nenhum. O
+          // criador via o erro e, por trás dele, tudo com ar de gravado.
+          setAnimais((prev) => prev.map((a) => (a.id === id ? atual : a)));
+          setEventos((prev) => prev.filter((ev) => ev.id !== evento.id));
+          if (receita) setMovimentos((prev) => prev.filter((m) => m.id !== receita.id));
+          throw e;
+        }
       } else {
         gravarSqlite((db) => {
           guardarAnimal(db, atualizado);
@@ -753,20 +856,43 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
   const deleteExploracao = useCallback(
     async (id: string): Promise<void> => {
+      // Guarda TUDO o que a cascata vai levar, para poder repor se o servidor
+      // recusar — é a mesma rede de segurança do `deleteAnimal`, e aqui pesa
+      // mais do que em qualquer outro sítio: a recusa é provável (só o admin
+      // elimina, e uma conta suspensa não elimina nada) e o que desaparece do
+      // ecrã é a exploração inteira, com terrenos, efetivo, histórico e
+      // dinheiro. Sem isto, o criador via tudo sumir por trás da mensagem de
+      // erro e só a sincronização seguinte lho devolvia — sem uma palavra.
+      const exploracaoRemovida = exploracoesRef.current.find((e) => e.id === id);
+      const terrenosRemovidos = terrenosRef.current.filter((t) => t.exploracaoId === id);
+      const animaisDaExploracao = animaisRef.current.filter((a) => a.exploracaoId === id);
+      const animaisRemovidos = new Set(animaisDaExploracao.map((a) => a.id));
+      const eventosRemovidos = eventosRef.current.filter((e) => animaisRemovidos.has(e.animalId));
+      const movimentosRemovidos = movimentosRef.current.filter((m) => m.exploracaoId === id);
+
       // Cascata local (funciona offline). O servidor faz a sua própria cascata.
-      const animaisRemovidos = new Set(
-        animaisRef.current.filter((a) => a.exploracaoId === id).map((a) => a.id),
-      );
       setEventos((prev) => prev.filter((e) => !animaisRemovidos.has(e.animalId)));
       setMovimentos((prev) => prev.filter((m) => m.exploracaoId !== id));
       setAnimais((prev) => prev.filter((a) => a.exploracaoId !== id));
       setTerrenos((prev) => prev.filter((t) => t.exploracaoId !== id));
       setExploracoes((prev) => prev.filter((e) => e.id !== id));
-      if (usaSupabase) {
+
+      if (!usaSupabase) {
+        gravarSqlite((db) => bdEliminarExploracao(db, id));
+        return;
+      }
+      try {
         const enviado = await empurrar({ op: 'delete', entidade: 'exploracao', id });
         if (enviado) await puxarDoServidor();
-      } else {
-        gravarSqlite((db) => bdEliminarExploracao(db, id));
+      } catch (e) {
+        if (exploracaoRemovida) setExploracoes((prev) => [...prev, exploracaoRemovida]);
+        if (terrenosRemovidos.length > 0) setTerrenos((prev) => [...prev, ...terrenosRemovidos]);
+        if (animaisDaExploracao.length > 0)
+          setAnimais((prev) => [...animaisDaExploracao, ...prev]);
+        if (eventosRemovidos.length > 0) setEventos((prev) => [...eventosRemovidos, ...prev]);
+        if (movimentosRemovidos.length > 0)
+          setMovimentos((prev) => [...movimentosRemovidos, ...prev]);
+        throw e; // quem chamou mostra a razão da recusa
       }
     },
     [usaSupabase, gravarSqlite, empurrar, puxarDoServidor],
@@ -797,10 +923,30 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
   const deleteTerreno = useCallback(
     async (id: string): Promise<void> => {
+      // Guarda o terreno e os animais que a cascata local desafeta dele: só
+      // quem gere terrenos pode eliminá-los, e a recusa só se sabe depois. Sem
+      // reposição, o terreno sumia do ecrã e o efetivo aparecia "sem terreno"
+      // até à sincronização seguinte — de onde voltava tudo, sem explicação.
+      const terrenoRemovido = terrenosRef.current.find((t) => t.id === id);
+      const animaisDesafetados = animaisRef.current.filter((a) => a.terrenoId === id);
+
       setAnimais((prev) => prev.map((a) => (a.terrenoId === id ? { ...a, terrenoId: undefined } : a)));
       setTerrenos((prev) => prev.filter((t) => t.id !== id));
-      if (usaSupabase) await empurrar({ op: 'delete', entidade: 'terreno', id });
-      else gravarSqlite((db) => bdEliminarTerreno(db, id));
+
+      if (!usaSupabase) {
+        gravarSqlite((db) => bdEliminarTerreno(db, id));
+        return;
+      }
+      try {
+        await empurrar({ op: 'delete', entidade: 'terreno', id });
+      } catch (e) {
+        if (terrenoRemovido) setTerrenos((prev) => [...prev, terrenoRemovido]);
+        if (animaisDesafetados.length > 0) {
+          const repor = new Map(animaisDesafetados.map((a) => [a.id, a]));
+          setAnimais((prev) => prev.map((a) => repor.get(a.id) ?? a));
+        }
+        throw e; // quem chamou mostra a razão da recusa
+      }
     },
     [usaSupabase, gravarSqlite, empurrar],
   );
@@ -839,6 +985,29 @@ export function GadoProvider({ children }: { children: ReactNode }) {
         exploracoesRef.current.forEach((e) =>
           guardarExploracao(db, { ...e, financasAtivas: ativas }),
         );
+      });
+    },
+    [usaSupabase, gravarSqlite, puxarDoServidor],
+  );
+
+  const definirCasaAtiva = useCallback(
+    async (ativa: boolean): Promise<void> => {
+      // Mesmo desenho que `definirFinancasAtivas`, e pelas mesmas razões:
+      // otimista para o interruptor responder no dedo, pelo RPC porque a
+      // coluna é do servidor, e a repor o que estava se o servidor recusar.
+      setExploracoes((prev) => prev.map((e) => ({ ...e, casaAtiva: ativa })));
+
+      if (usaSupabase) {
+        const erro = await definirCasaAtivaSupabase(ativa);
+        if (erro) {
+          setExploracoes((prev) => prev.map((e) => ({ ...e, casaAtiva: !ativa })));
+          throw new Error(mensagemLegivel(erro));
+        }
+        await puxarDoServidor();
+        return;
+      }
+      gravarSqlite((db) => {
+        exploracoesRef.current.forEach((e) => guardarExploracao(db, { ...e, casaAtiva: ativa }));
       });
     },
     [usaSupabase, gravarSqlite, puxarDoServidor],
@@ -903,6 +1072,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       dispensarAlerta,
       reativarAlerta,
       online,
+      erroSincronizacao,
       pendentesSinc,
       falhadas,
       limparFalhadas,
@@ -916,6 +1086,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       movimentosByAnimal,
       movimentosByExploracao,
       addAnimal,
+      importarAnimais,
       updateAnimal,
       deleteAnimal,
       marcarSaida,
@@ -928,6 +1099,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       deleteTerreno,
       addEvento,
       definirFinancasAtivas,
+      definirCasaAtiva,
       addMovimento,
       updateMovimento,
       deleteMovimento,
@@ -936,15 +1108,16 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     [
       utilizador, exploracoes, terrenos, animais, eventos, movimentos, alertas,
       alertasDispensados, dispensarAlerta, reativarAlerta,
-      online, pendentesSinc, falhadas, limparFalhadas,
+      online, erroSincronizacao, pendentesSinc, falhadas, limparFalhadas,
       exploracaoById, animalById, terrenoById, animaisByExploracao,
       animaisByExploracaoIncluindoSaidos,
       terrenosByExploracao, eventosByAnimal, movimentosByAnimal,
-      movimentosByExploracao, addAnimal, updateAnimal,
+      movimentosByExploracao, addAnimal, importarAnimais, updateAnimal,
       deleteAnimal, marcarSaida, reativarAnimal,
       addExploracao, updateExploracao, deleteExploracao,
       addTerreno, updateTerreno, deleteTerreno, addEvento,
-      definirFinancasAtivas, addMovimento, updateMovimento, deleteMovimento,
+      definirFinancasAtivas, definirCasaAtiva,
+      addMovimento, updateMovimento, deleteMovimento,
       recarregar,
     ],
   );

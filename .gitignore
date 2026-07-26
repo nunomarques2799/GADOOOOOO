@@ -34,6 +34,16 @@ yarn-error.*
 .env
 .env*.local
 
+# Ligações às bases de dados (contêm a palavra-passe do Postgres) e as cópias
+# de segurança, que têm dados pessoais reais de criadores. O repositório é
+# público — nada disto pode entrar aqui, nem por engano num `git add -A`.
+.env.backup
+backups/
+
+# Derivado de supabase/*.sql por scripts/gerar-schema-completo.ps1. Committá-lo
+# criava uma segunda cópia do schema, que envelhece sem ninguém reparar.
+supabase/_completo.sql
+
 # typescript
 *.tsbuildinfo
 

@@ -100,7 +100,7 @@ export function EcraLogin() {
               <Icon name="cow" size={48} color={colors.textOnDark} />
             </View>
             <Text variant="display" color={colors.textOnDark}>
-              Gestão de Gado
+              Terrabovina
             </Text>
             <Text variant="body" color={colors.textOnDarkMuted} style={{ marginTop: 2 }}>
               {recuperar ? 'Recuperar o acesso' : registo ? 'Criar a sua conta' : 'Entrar na sua conta'}

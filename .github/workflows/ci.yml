@@ -36,5 +36,11 @@ jobs:
       - name: Verificar tipos (tsc)
         run: npx tsc --noEmit
 
+      # Uma cor de paleta lida no arranque de um módulo fica presa na cor de
+      # origem: a app muda de paleta menos aquele sítio. O `tsc` não vê isto —
+      # é código correto que faz a coisa errada.
+      - name: Cores de paleta lidas no arranque
+        run: node scripts/cores-no-arranque.js
+
       - name: Correr os testes
         run: npm test -- --ci

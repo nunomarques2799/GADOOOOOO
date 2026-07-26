@@ -18,13 +18,14 @@ import {
   Text,
   TextField,
 } from '@/components/ui';
-import { especieMeta } from '@/data/constants';
-import { avisar, confirmar } from '@/data/avisos';
+import { especieMeta, finalidadeMeta } from '@/data/constants';
+import { confirmar } from '@/data/avisos';
 import { filhosDe, rotuloAnimal } from '@/data/genealogia';
 import { balancoAnimal } from '@/data/financas';
-import { diasAte, formatDataCurta, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
+import { diasAte, formatDataCurta, formatDataPt, formatEuro, idadeExtenso, mascaraDataPt, paraEuro, parseDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
 import type { EstadoAnimal, EventoTipo } from '@/data/types';
 import { colors, radii, shadow, spacing } from '@/theme';
@@ -56,6 +57,7 @@ export default function AnimalDetalheScreen() {
   } = useGado();
 
   const { pode } = useMembros();
+  const toast = useToasts();
 
   const animal = animalById(id);
   // Todos os papéis mexem na ficha e nos eventos; marcar a saída (uma venda,
@@ -120,8 +122,14 @@ export default function AnimalDetalheScreen() {
       setSaidaOpen(false);
       setSaidaMotivo('');
       setSaidaPreco('');
+      toast.sucesso(
+        saidaTipo === 'vendido' ? 'Venda registada' : 'Morte registada',
+        rotuloAnimal(animal!),
+      );
     } catch (e) {
-      avisar('Não foi possível guardar', e instanceof Error ? e.message : String(e));
+      const razao = mensagemDeErro(e);
+      setSaidaErro(razao);
+      toast.erro('Saída não registada', razao);
     } finally {
       setAGuardar(false);
     }
@@ -132,7 +140,17 @@ export default function AnimalDetalheScreen() {
       'Voltar a ativar?',
       'O animal vai voltar a aparecer no efetivo. O evento anterior (Morte/Venda) permanece no histórico.',
       () => {
-        void reativarAnimal(animal!.id);
+        void (async () => {
+          try {
+            await reativarAnimal(animal!.id);
+            toast.sucesso('Animal reativado', rotuloAnimal(animal!));
+          } catch (e) {
+            // A reposição era feita sem ninguém olhar para o resultado: se o
+            // servidor recusasse, o animal voltava ao efetivo no ecrã e saía
+            // outra vez na sincronização seguinte, sem uma palavra.
+            toast.erro('Não foi possível reativar', mensagemDeErro(e));
+          }
+        })();
       },
       { rotuloConfirmar: 'Reativar' },
     );
@@ -235,6 +253,22 @@ export default function AnimalDetalheScreen() {
         </Text>
         <Card>
           <InfoField icon="tag-outline" label="Nº de identificação (brinco)" value={animal.numeroIdentificacao ?? '—'} />
+          {/* Casa e número só aparecem quando o animal os tem: uma linha com
+              travessão a quem nunca registou por casa é ruído puro. */}
+          {animal.casa || animal.numeroCasa ? (
+            <InfoField
+              icon="home-outline"
+              label="Casa e número"
+              value={[animal.casa, animal.numeroCasa].filter(Boolean).join(' · ')}
+            />
+          ) : null}
+          {animal.finalidade ? (
+            <InfoField
+              icon={finalidadeMeta[animal.finalidade].icon}
+              label="Finalidade"
+              value={animal.finalidade}
+            />
+          ) : null}
           <InfoField icon="calendar-check" label="Data de identificação" value={animal.dataIdentificacao ? formatDataPt(animal.dataIdentificacao) : '—'} />
           <InfoField
             icon="cloud-upload-outline"
@@ -476,10 +510,10 @@ function FormularioSaida({
       <View style={{ marginBottom: spacing.md }}>
         <TextField
           value={data}
-          onChangeText={onChangeData}
+          onChangeText={(t) => onChangeData(mascaraDataPt(t))}
           placeholder="dd/mm/aaaa"
           icon="calendar"
-          keyboardType="numbers-and-punctuation"
+          keyboardType="number-pad"
         />
       </View>
       {tipo === 'vendido' && podeDefinirPreco ? (

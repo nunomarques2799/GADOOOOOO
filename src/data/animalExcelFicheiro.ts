@@ -1,0 +1,476 @@
+/**
+ * Geração e leitura do ficheiro Excel.
+ * ------------------------------------------------------------------
+ * Só web/Electron: usa o DOM (Blob + <input type="file">) para escrever e ler
+ * ficheiros. No telemóvel, escolher um ficheiro precisa de um módulo nativo
+ * (expo-document-picker) e de um build novo.
+ *
+ * O que é comum a todas as folhas da app (estilos, bytes, descarregar) vive em
+ * `excelFicheiro.ts`; aqui fica o que é próprio dos animais.
+ *
+ * Duas bibliotecas, de propósito:
+ *   - ESCRITA (`xlsx-js-style`) — o SheetJS gratuito não escreve estilos; este
+ *     fork escreve (cores, negrito), e é o que dá cabeçalhos coloridos ao modelo
+ *     e à exportação.
+ *   - LEITURA (`xlsx`, build 0.20.3 do CDN) — mantém-se a versão sem o advisory
+ *     de segurança, que é a que interessa ao abrir ficheiros que podem vir de
+ *     fora.
+ * A validação vive em `animalExcel.ts`, testável e sem estas dependências.
+ *
+ * As listas pendentes (dropdowns) do Excel são cosidas à mão no XML da folha —
+ * ver `comValidacoes`. Nenhum dos dois SheetJS as sabe escrever, e sem elas o
+ * criador escrevia "AAAA" na espécie e só descobria o erro no fim da
+ * importação, quando já tinha a folha toda preenchida.
+ */
+
+import * as XLSX from 'xlsx';
+import * as XLSXStyle from 'xlsx-js-style';
+
+import {
+  COLUNAS,
+  COLUNAS_INFORMATIVAS,
+  EXEMPLOS,
+  interpretarMatriz,
+  type AnimalExistente,
+  type CampoImportado,
+  type ResultadoImportacao,
+} from './animalExcel';
+import {
+  bytes,
+  COR,
+  descarregarBytes,
+  estiloCabecalho,
+  estilizar,
+  excelDisponivel,
+} from './excelFicheiro';
+import { hojeISO } from './exportar';
+import { formatDataCurta } from './helpers';
+import type { Animal, Exploracao, Terreno } from './types';
+
+const NOME_FOLHA = 'Animais';
+/** Folha onde vivem os valores das listas pendentes (as dropdowns apontam-lhe). */
+const NOME_FOLHA_LISTAS = 'Listas';
+
+/**
+ * Até que linha da folha "Animais" as listas pendentes chegam. O Excel não tem
+ * "a coluna toda" sem custo — cada validação guarda o intervalo — por isso vai
+ * folgado até onde ninguém escreve à mão, e a exportação estica-o se trouxer
+ * mais animais do que isto.
+ */
+const LINHAS_COM_LISTA = 1000;
+
+/** Colunas que oferecem lista pendente, pela ordem em que entram na folha "Listas". */
+const COLUNAS_COM_LISTA = COLUNAS.filter((c) => c.opcoes);
+
+/* ------------------------------------------------------------------ *
+ *  Animal → linha (mesma ordem das colunas do modelo de importação)
+ * ------------------------------------------------------------------ */
+
+function valorDaColuna(a: Animal, campo: CampoImportado): string {
+  switch (campo) {
+    case 'nome':
+      return a.nome ?? '';
+    case 'especie':
+      return a.especie;
+    case 'sexo':
+      return a.sexo;
+    case 'dataNascimento':
+      return a.dataNascimento ? formatDataCurta(a.dataNascimento) : '';
+    case 'raca':
+      return a.raca ?? '';
+    case 'corPelagem':
+      return a.corPelagem ?? '';
+    case 'numeroIdentificacao':
+      return a.numeroIdentificacao ?? '';
+    case 'dataIdentificacao':
+      return a.dataIdentificacao ? formatDataCurta(a.dataIdentificacao) : '';
+    case 'finalidade':
+      return a.finalidade ?? '';
+    case 'casa':
+      return a.casa ?? '';
+    case 'numeroCasa':
+      return a.numeroCasa ?? '';
+    case 'comunicadoSnira':
+      return a.comunicadoSnira == null ? '' : a.comunicadoSnira ? 'Sim' : 'Não';
+    case 'dataPrevistaParto':
+      return a.dataPrevistaParto ? formatDataCurta(a.dataPrevistaParto) : '';
+    case 'id':
+      // O que evita duplicados numa reimportação — ver `marcarDuplicados`.
+      return a.id;
+  }
+}
+
+const ESTADO_ROTULO: Record<NonNullable<Animal['estado']>, string> = {
+  ativo: 'Ativo',
+  falecido: 'Falecido',
+  vendido: 'Vendido',
+};
+
+/** Nomes para as colunas que a app escreve mas não importa (`COLUNAS_INFORMATIVAS`). */
+function valoresInformativos(a: Animal, nomes: NomesRelacionados): string[] {
+  return [
+    nomes.exploracao.get(a.exploracaoId) ?? '',
+    a.terrenoId ? (nomes.terreno.get(a.terrenoId) ?? '') : '',
+    ESTADO_ROTULO[a.estado ?? 'ativo'],
+  ];
+}
+
+/** Mapas id → nome, para a exportação escrever nomes em vez de identificadores. */
+type NomesRelacionados = { exploracao: Map<string, string>; terreno: Map<string, string> };
+
+function nomesRelacionados(exploracoes: Exploracao[], terrenos: Terreno[]): NomesRelacionados {
+  return {
+    exploracao: new Map(exploracoes.map((e) => [e.id, e.nome])),
+    terreno: new Map(terrenos.map((t) => [t.id, t.nome])),
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ *  Construção do workbook (modelo vazio ou já com animais)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Um workbook com a folha "Animais" (cabeçalhos coloridos + as linhas dos
+ * animais dados) e a folha "Instruções". Com `animais` vazio é o modelo em
+ * branco; com animais é a exportação — e as duas têm exatamente as mesmas
+ * colunas, para o que se exporta poder voltar a ser importado.
+ *
+ * A exportação acrescenta à direita as colunas informativas (exploração,
+ * terreno, estado): são o retrato que o criador quer ver na folha, e a
+ * importação reconhece-as para não as dar como erro (`COLUNAS_INFORMATIVAS`).
+ */
+export function construirWorkbookAnimais(
+  animais: Animal[],
+  exploracoes: Exploracao[] = [],
+  terrenos: Terreno[] = [],
+): XLSX.WorkBook {
+  const wb = XLSXStyle.utils.book_new();
+  const comInformativas = animais.length > 0;
+  const cabecalhos = [
+    ...COLUNAS.map((c) => c.rotulo),
+    ...(comInformativas ? COLUNAS_INFORMATIVAS : []),
+  ];
+  const nomes = nomesRelacionados(exploracoes, terrenos);
+  const linhas = animais.map((a) => [
+    ...COLUNAS.map((c) => valorDaColuna(a, c.campo)),
+    ...(comInformativas ? valoresInformativos(a, nomes) : []),
+  ]);
+
+  const ws = XLSXStyle.utils.aoa_to_sheet([cabecalhos, ...linhas]);
+  ws['!cols'] = cabecalhos.map((r) => ({ wch: Math.max(14, r.length + 2) }));
+  ws['!rows'] = [{ hpt: 22 }];
+  cabecalhos.forEach((_, i) =>
+    estilizar(ws, 0, i, estiloCabecalho(COLUNAS[i]?.obrigatorio ?? false)),
+  );
+  XLSXStyle.utils.book_append_sheet(wb, ws, NOME_FOLHA);
+
+  // Folha de instruções.
+  const CABECALHO_TABELA = ['Coluna', 'Obrigatória?', 'O que escrever'];
+  const linhasInstr: string[][] = [
+    ['Como preencher'],
+    ['Escreva um animal por linha na folha "Animais". As datas em dd/mm/aaaa.'],
+    ['As colunas a verde são obrigatórias.'],
+    [
+      'Clique numa célula: as colunas com lista mostram uma seta à direita — escolha o valor em vez de o escrever.',
+    ],
+    ['Todos os valores aceites estão na folha "Listas".'],
+    [''],
+    CABECALHO_TABELA,
+    ...COLUNAS.map((c) => [c.rotulo, c.obrigatorio ? 'Sim' : 'Não', c.ajuda]),
+    [''],
+    ['Exemplos:'],
+    cabecalhos,
+    ...EXEMPLOS.map((ex) => COLUNAS.map((c) => ex[c.campo] ?? '')),
+  ];
+  const wsInstr = XLSXStyle.utils.aoa_to_sheet(linhasInstr);
+  wsInstr['!cols'] = [{ wch: 24 }, { wch: 12 }, { wch: 72 }];
+  estilizar(wsInstr, 0, 0, { font: { bold: true, sz: 14, color: { rgb: COR.texto } } });
+  // Linha de cabeçalho da tabela de colunas — onde quer que ela tenha calhado.
+  const linhaTabela = linhasInstr.indexOf(CABECALHO_TABELA);
+  CABECALHO_TABELA.forEach((_, i) => estilizar(wsInstr, linhaTabela, i, estiloCabecalho(true)));
+  XLSXStyle.utils.book_append_sheet(wb, wsInstr, 'Instruções');
+
+  // Folha "Listas": uma coluna por cada campo com lista pendente. É a fonte
+  // das dropdowns — fica à vista (e não escondida) porque é também onde o
+  // criador vai ver, sem sair do Excel, o que a app aceita.
+  const maxValores = Math.max(...COLUNAS_COM_LISTA.map((c) => c.opcoes!.valores.length));
+  const linhasListas: string[][] = [COLUNAS_COM_LISTA.map((c) => c.rotulo)];
+  for (let i = 0; i < maxValores; i++) {
+    linhasListas.push(COLUNAS_COM_LISTA.map((c) => c.opcoes!.valores[i] ?? ''));
+  }
+  const wsListas = XLSXStyle.utils.aoa_to_sheet(linhasListas);
+  wsListas['!cols'] = COLUNAS_COM_LISTA.map((c) => ({ wch: Math.max(16, c.rotulo.length + 2) }));
+  COLUNAS_COM_LISTA.forEach((_, i) => estilizar(wsListas, 0, i, estiloCabecalho(true)));
+  XLSXStyle.utils.book_append_sheet(wb, wsListas, NOME_FOLHA_LISTAS);
+
+  return wb;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Listas pendentes (dataValidation) — escritas à mão no XML
+ * ------------------------------------------------------------------ */
+
+/** Texto seguro dentro de um atributo XML. */
+function esc(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** O Excel corta os títulos aos 32 caracteres e as mensagens aos 255. */
+function cortar(s: string, max: number): string {
+  return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
+}
+
+/**
+ * O bloco `<dataValidations>` da folha "Animais": uma entrada por coluna, da
+ * linha 2 até `ultimaLinha`.
+ *
+ * Todas as colunas ganham a mensagem de ajuda que aparece ao clicar na célula
+ * (é a mesma da folha "Instruções", agora onde ela faz falta). As que têm
+ * valores conhecidos ganham além disso a lista pendente, a apontar para a
+ * coluna respetiva da folha "Listas".
+ */
+function xmlValidacoes(ultimaLinha: number): string {
+  const blocos = COLUNAS.map((c, i) => {
+    const col = XLSXStyle.utils.encode_col(i);
+    const sqref = `${col}2:${col}${ultimaLinha}`;
+    const prompt =
+      ` promptTitle="${esc(cortar(c.rotulo, 32))}" prompt="${esc(cortar(c.ajuda, 255))}"` +
+      ' showInputMessage="1"';
+
+    if (!c.opcoes) {
+      return `<dataValidation type="none" allowBlank="1"${prompt} sqref="${sqref}"/>`;
+    }
+
+    const { valores, estrita } = c.opcoes;
+    const colLista = XLSXStyle.utils.encode_col(COLUNAS_COM_LISTA.indexOf(c));
+    const intervalo = `${NOME_FOLHA_LISTAS}!$${colLista}$2:$${colLista}$${valores.length + 1}`;
+    // Só as listas estritas recusam o que não conhecem; nas outras a dropdown
+    // sugere e o criador pode escrever outra coisa (ver `OpcoesColuna`).
+    const erro = estrita
+      ? ' showErrorMessage="1" errorStyle="stop" errorTitle="Valor não aceite"' +
+        ` error="${esc(cortar(`A app não conhece este valor. Escolha da lista: ${valores.join(', ')}.`, 255))}"`
+      : ' showErrorMessage="0"';
+    return (
+      `<dataValidation type="list" allowBlank="1"${prompt}${erro} sqref="${sqref}">` +
+      `<formula1>${esc(intervalo)}</formula1></dataValidation>`
+    );
+  });
+  return `<dataValidations count="${blocos.length}">${blocos.join('')}</dataValidations>`;
+}
+
+/** O modelo em branco (usado no teste de round-trip e no download). */
+export function construirTemplate(): XLSX.WorkBook {
+  return construirWorkbookAnimais([]);
+}
+
+/* ------------------------------------------------------------------ *
+ *  Escrita dos bytes (write + costura das listas pendentes)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Enfia o bloco de listas pendentes na folha "Animais" do `.xlsx` já escrito.
+ *
+ * Um `.xlsx` é um zip de XML, e o `CFB` que vem com o SheetJS abre-o e volta a
+ * fechá-lo — é por aí que se acrescenta o que a biblioteca não escreve. O bloco
+ * tem de ficar ANTES de `<ignoredErrors>`: o Excel valida a ordem dos elementos
+ * da folha e, trocada, pede para reparar o ficheiro ao abri-lo.
+ */
+function comValidacoes(
+  ficheiro: Uint8Array<ArrayBuffer>,
+  indiceFolha: number,
+  ultimaLinha: number,
+): Uint8Array<ArrayBuffer> {
+  const caminho = `/xl/worksheets/sheet${indiceFolha + 1}.xml`;
+  const zip = XLSX.CFB.read(ficheiro, { type: 'array' });
+  const entrada = XLSX.CFB.find(zip, caminho);
+  if (!entrada) return ficheiro; // sem a folha esperada, entrega-se o original
+
+  const xml = new TextDecoder().decode(bytes(entrada.content));
+  const corte = xml.indexOf('<ignoredErrors');
+  const pos = corte >= 0 ? corte : xml.lastIndexOf('</worksheet>');
+  if (pos < 0) return ficheiro;
+
+  const novo = xml.slice(0, pos) + xmlValidacoes(ultimaLinha) + xml.slice(pos);
+  XLSX.CFB.utils.cfb_add(zip, caminho, new TextEncoder().encode(novo));
+  return bytes(XLSX.CFB.write(zip, { fileType: 'zip', type: 'array', compression: true }));
+}
+
+/**
+ * O `.xlsx` em bytes: o que o SheetJS escreve (com estilos) mais as listas
+ * pendentes. É por aqui que passam o download e o teste de round-trip.
+ */
+export function escreverWorkbook(wb: XLSX.WorkBook, linhasDados = 0): Uint8Array<ArrayBuffer> {
+  // `XLSXStyle.write` é o que preserva os estilos das células.
+  const escrito = bytes(XLSXStyle.write(wb, { type: 'array', bookType: 'xlsx' }));
+  const indice = wb.SheetNames.indexOf(NOME_FOLHA);
+  if (indice < 0) return escrito;
+  return comValidacoes(escrito, indice, Math.max(LINHAS_COM_LISTA, linhasDados + 1));
+}
+
+/* ------------------------------------------------------------------ *
+ *  Descarregar (web/Electron)
+ * ------------------------------------------------------------------ */
+
+function descarregarWorkbook(wb: XLSX.WorkBook, nomeFicheiro: string, linhasDados = 0): void {
+  if (!excelDisponivel) return;
+  descarregarBytes(nomeFicheiro, escreverWorkbook(wb, linhasDados));
+}
+
+/** Gera o modelo em branco e descarrega-o. */
+export function descarregarTemplate(): void {
+  descarregarWorkbook(construirTemplate(), `modelo-animais-${hojeISO()}.xlsx`);
+}
+
+/**
+ * Exporta os animais dados num `.xlsx` com as mesmas colunas do modelo de
+ * importação — para se exportar, editar/acrescentar no Excel e reimportar sem
+ * duplicar nada (a coluna "ID Terrabovina" é o que trata disso).
+ */
+export function exportarAnimaisExcel(
+  animais: Animal[],
+  exploracoes: Exploracao[] = [],
+  terrenos: Terreno[] = [],
+): void {
+  descarregarWorkbook(
+    construirWorkbookAnimais(animais, exploracoes, terrenos),
+    `animais-${hojeISO()}.xlsx`,
+    animais.length,
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ *  Ler (xlsx 0.20.3 — leitura segura)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Uma importação que não chegou a acontecer, com a razão em português.
+ *
+ * O que o SheetJS lança são mensagens em inglês do género "Corrupted zip: bad
+ * signature" — dizer isso a um criador é o mesmo que não dizer nada. Aqui a
+ * `message` é o que se mostra e o `detalhe` fica para quem quiser ver o erro
+ * técnico (a app mostra-o em letra pequena, para dar para relatar um problema).
+ */
+export class ErroExcel extends Error {
+  readonly detalhe?: string;
+
+  constructor(mensagem: string, detalhe?: string) {
+    super(mensagem);
+    this.name = 'ErroExcel';
+    this.detalhe = detalhe;
+  }
+}
+
+/** Extensão do ficheiro em minúsculas, sem ponto (`''` se não tiver). */
+function extensao(nome: string): string {
+  const i = nome.lastIndexOf('.');
+  return i < 0 ? '' : nome.slice(i + 1).toLowerCase();
+}
+
+/**
+ * Lê um ficheiro já escolhido e interpreta-o. `existentes` é o efetivo que a
+ * app já tem, para a validação saltar os animais repetidos.
+ *
+ * Lança `ErroExcel` sempre que o ficheiro não dá para ler — e nunca devolve um
+ * resultado vazio sem explicação: um ecrã a dizer "0 animais" sem dizer porquê
+ * deixava o criador a carregar o mesmo ficheiro outra vez.
+ */
+export async function lerFicheiroExcel(
+  file: File,
+  existentes: AnimalExistente[] = [],
+): Promise<ResultadoImportacao> {
+  const ext = extensao(file.name);
+  if (ext && !['xlsx', 'xlsm', 'xls'].includes(ext)) {
+    throw new ErroExcel(
+      `“${file.name}” não é um ficheiro Excel. Guarde a folha como .xlsx `
+        + '(no Excel: Ficheiro → Guardar como → Livro do Excel) e tente outra vez.',
+    );
+  }
+  if (file.size === 0) {
+    throw new ErroExcel(`“${file.name}” está vazio (0 bytes) — não tem nada para importar.`);
+  }
+
+  let wb: XLSX.WorkBook;
+  try {
+    const buf = await file.arrayBuffer();
+    // `cellDates` faz as datas do Excel virem como `Date` em vez de número de
+    // série — é o que a validação sabe converter sem depender do fuso horário.
+    wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true });
+  } catch (e) {
+    throw new ErroExcel(
+      `Não conseguimos abrir “${file.name}”. Confirme que é um Excel (.xlsx), que não `
+        + 'está protegido por palavra-passe e que o guardou depois da última alteração.',
+      e instanceof Error ? e.message : String(e),
+    );
+  }
+
+  const nome =
+    wb.SheetNames.find((n) => n.trim().toLowerCase() === NOME_FOLHA.toLowerCase()) ??
+    wb.SheetNames[0];
+  const ws = nome ? wb.Sheets[nome] : undefined;
+  if (!ws) {
+    throw new ErroExcel(
+      `“${file.name}” não tem nenhuma folha com dados. Use o modelo que a app `
+        + 'descarrega e escreva os animais na folha “Animais”.',
+    );
+  }
+
+  const matriz = XLSX.utils.sheet_to_json<unknown[]>(ws, {
+    header: 1,
+    raw: true,
+    blankrows: false,
+    defval: '',
+  });
+  if (matriz.length === 0) {
+    throw new ErroExcel(
+      `A folha “${nome}” está vazia. Escreva os animais debaixo da linha de `
+        + 'cabeçalhos (um por linha) e volte a carregar o ficheiro.',
+    );
+  }
+
+  return { ...interpretarMatriz(matriz, existentes), folha: nome };
+}
+
+/**
+ * Abre o seletor de ficheiros e devolve o resultado da leitura, ou `null` se o
+ * criador cancelar. Só web/Electron. Os erros de leitura chegam como `ErroExcel`
+ * a quem chama, para os mostrar.
+ */
+export function escolherELerExcel(
+  existentes: AnimalExistente[] = [],
+): Promise<ResultadoImportacao | null> {
+  return new Promise((resolve, reject) => {
+    if (!excelDisponivel) {
+      resolve(null);
+      return;
+    }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept =
+      '.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    input.style.display = 'none';
+
+    const limpar = () => {
+      if (input.parentNode) document.body.removeChild(input);
+    };
+    input.onchange = () => {
+      const file = input.files?.[0];
+      limpar();
+      if (!file) {
+        resolve(null);
+        return;
+      }
+      lerFicheiroExcel(file, existentes).then(resolve, reject);
+    };
+    input.oncancel = () => {
+      limpar();
+      resolve(null);
+    };
+
+    document.body.appendChild(input);
+    input.click();
+  });
+}

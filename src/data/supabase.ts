@@ -42,3 +42,25 @@ export const supabase: SupabaseClient | null = supabaseConfigurado
       },
     })
   : null;
+
+/**
+ * Só no ambiente de TESTES: deixa o cliente à mão na consola do navegador,
+ * como `window.gado`.
+ *
+ * Existe por causa dos erros que só se percebem do lado de quem faz o pedido.
+ * A app mostra a `message` do erro; o Postgres manda também `code`, `details` e
+ * `hint`, e é aí que costuma estar a resposta ("42501" = a RLS recusou vs.
+ * "PGRST204" = a API não conhece a coluna). Reproduzir na consola dá o objeto
+ * inteiro, e com a MESMA sessão que a app usa — que é a diferença entre isto e
+ * repetir o comando no SQL Editor, onde se corre como `postgres` e a RLS nem
+ * chega a ser avaliada.
+ *
+ *   await gado.auth.getSession()               // quem é que a app diz que sou
+ *   await gado.from('exploracao').insert({…})  // erro completo, não só a frase
+ *
+ * Fora do `dev` não é definido: em produção seria uma consola aberta sobre a
+ * base de dados de quem usa a app a sério.
+ */
+if (supabase && process.env.EXPO_PUBLIC_AMBIENTE === 'dev') {
+  (globalThis as { gado?: SupabaseClient }).gado = supabase;
+}

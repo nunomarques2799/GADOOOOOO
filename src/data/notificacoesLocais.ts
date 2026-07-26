@@ -68,35 +68,73 @@ export async function pedirPermissao(): Promise<boolean> {
 }
 
 /**
+ * Uma fila de uma só via, para nunca haver dois reagendamentos em voo.
+ * ------------------------------------------------------------------
+ * `agendar` cancela tudo e depois agenda até 50 avisos, um a um, com um `await`
+ * em cada. Não é instantâneo — e o store reagenda a cada mudança de alertas, o
+ * que numa sincronização acontece várias vezes seguidas. Sem esta fila, uma
+ * segunda passagem entrava a meio da primeira: o `cancelAll` dela apagava os
+ * avisos que a anterior tinha acabado de pôr, e a anterior continuava a agendar
+ * por cima do plano novo. O resultado é imprevisível — avisos a dobrar, ou um
+ * prazo legal que simplesmente não fica agendado.
+ *
+ * `sequencia` é a segunda metade da rede: quando várias chamadas esperam na
+ * fila, só a ÚLTIMA chega a mexer no sistema. As do meio já estão desatualizadas
+ * — reagendar por elas seria trabalho deitado fora, e cada passagem custa 50
+ * idas ao sistema operativo.
+ */
+let sequencia = 0;
+let fila: Promise<unknown> = Promise.resolve();
+
+/** Põe `trabalho` na fila. Se entretanto chegar outro pedido, este desiste. */
+function enfileirar<T>(trabalho: () => Promise<T>, seDesistir: T): Promise<T> {
+  const minha = ++sequencia;
+  const resultado = fila.then(() => (minha === sequencia ? trabalho() : seDesistir));
+  // A fila não pode ficar rejeitada: um erro numa passagem (permissão retirada
+  // a meio, por exemplo) travaria todas as seguintes para sempre.
+  fila = resultado.catch(() => undefined);
+  return resultado;
+}
+
+/**
  * Substitui tudo o que estava agendado pelo plano atual. Cancelar antes de
  * agendar evita avisos duplicados e avisos de situações já resolvidas — se o
  * criador pôs o brinco, o aviso tem de desaparecer do telemóvel também.
  *
- * Devolve quantos ficaram agendados.
+ * Devolve quantos ficaram agendados (0 se foi ultrapassada por um plano mais
+ * recente antes de chegar a sua vez).
  */
 export async function agendar(alertas: Alerta[], p: Preferencias): Promise<number> {
-  if (!(await temPermissao())) return 0;
-  await garantirCanal();
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  return enfileirar(async () => {
+    if (!(await temPermissao())) return 0;
+    await garantirCanal();
+    await Notifications.cancelAllScheduledNotificationsAsync();
 
-  const plano = planear(alertas, p);
-  for (const { alerta, quando } of plano) {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: alerta.titulo,
-        body: alerta.descricao,
-        data: { alertaId: alerta.id, animalId: alerta.animalId },
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: quando,
-        channelId: CANAL_ANDROID,
-      },
-    });
-  }
-  return plano.length;
+    const plano = planear(alertas, p);
+    for (const { alerta, quando } of plano) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: alerta.titulo,
+          body: alerta.descricao,
+          data: { alertaId: alerta.id, animalId: alerta.animalId },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: quando,
+          channelId: CANAL_ANDROID,
+        },
+      });
+    }
+    return plano.length;
+  }, 0);
 }
 
+/**
+ * Na mesma fila que o `agendar`, e não à parte: desligar os avisos enquanto um
+ * reagendamento estava a correr deixava lá o que ele agendasse a seguir.
+ */
 export async function cancelarTudo(): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await enfileirar(async () => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+  }, undefined);
 }

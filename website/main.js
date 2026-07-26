@@ -1,4 +1,4 @@
-// Gestão de Gado — interações da landing page
+// Terrabovina — interações da landing page
 
 // Ano no rodapé
 document.getElementById('year').textContent = new Date().getFullYear();

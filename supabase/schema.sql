@@ -144,3 +144,14 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user ();
+
+-- O trigger só apanha quem se regista DEPOIS dele existir. Numa base montada
+-- de raiz há quase sempre contas anteriores: quem criou o projeto Supabase e
+-- se registou na app antes de colar este ficheiro. Essas contas entravam na
+-- app e não conseguiam gravar nada — sem linha em `perfil`, o `perfil_ativo()`
+-- do `schema_roles.sql` responde false e a RLS recusa tudo, sem dizer porquê.
+insert into public.perfil (id, nome)
+select u.id, coalesce(u.raw_user_meta_data ->> 'nome', '')
+  from auth.users u
+  left join public.perfil p on p.id = u.id
+ where p.id is null;

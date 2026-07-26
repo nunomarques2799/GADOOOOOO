@@ -1,71 +1,119 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, TextInput, View } from 'react-native';
+import { FlatList, Platform, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimalRow } from '@/components/AnimalRow';
-import { Chip, EmptyState, FAB, Icon, Text } from '@/components/ui';
-import { especieMeta, especies } from '@/data/constants';
+import { FolhaFiltros } from '@/components/FolhaFiltros';
+import { Button, Chip, EmptyState, FAB, Icon, Text } from '@/components/ui';
+import { especieMeta } from '@/data/constants';
+import {
+  contarAtivos,
+  facetasDisponiveis,
+  FAIXAS,
+  filtrarAnimais,
+  mapaAlertas,
+  rotuloCategoriaAlerta,
+  SEM_TERRENO,
+  type Filtros,
+} from '@/data/filtrosAnimais';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
-import type { Especie } from '@/data/types';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
-
-type Filtro = 'Todos' | Especie;
 
 export default function AnimaisScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
-  const { animais, alertas } = useGado();
+  const { animais, alertas, terrenos, terrenoById, exploracoes } = useGado();
   // Com a conta suspensa nada se grava — o formulário só levaria a um erro no
   // fim. O papel não se verifica aqui porque a exploração ainda não está
   // escolhida (é o formulário que a pede); isso fica para o `guardar`.
   const { contaSuspensa } = useMembros();
 
-  const [query, setQuery] = useState('');
-  const [filtro, setFiltro] = useState<Filtro>('Todos');
-  const [soAlertas, setSoAlertas] = useState(false);
-  const [incluirSaidos, setIncluirSaidos] = useState(false);
+  const [filtros, setFiltros] = useState<Filtros>({});
+  const [folhaAberta, setFolhaAberta] = useState(false);
 
-  // Conjunto de animais com pelo menos um alerta pendente.
-  const idsComAlerta = useMemo(
-    () => new Set(alertas.map((al) => al.animalId).filter((id): id is string => !!id)),
-    [alertas],
-  );
+  const porAnimal = useMemo(() => mapaAlertas(alertas), [alertas]);
 
+  /**
+   * O efetivo com que a lista se compara — "3 de 28".
+   *
+   * Segue a exploração escolhida, e não a conta toda: com duas quintas, os 8
+   * animais de uma apareciam como "8 de 28" e a conta lia-se como filtro mal
+   * feito. A exploração não é um filtro como os outros — é o contexto em que se
+   * está a olhar, e o total tem de ser o desse contexto.
+   */
   const ativos = useMemo(
-    () => animais.filter((a) => !a.estado || a.estado === 'ativo'),
-    [animais],
+    () =>
+      animais.filter(
+        (a) =>
+          (!a.estado || a.estado === 'ativo')
+          && (!filtros.exploracaoId || a.exploracaoId === filtros.exploracaoId),
+      ),
+    [animais, filtros.exploracaoId],
   );
-  const saidos = useMemo(
-    () => animais.filter((a) => a.estado === 'falecido' || a.estado === 'vendido'),
-    [animais],
+
+  // As opções encolhem com o que já está filtrado: com "Bovinos" escolhido, o
+  // sexo só oferece o que existe entre os bovinos. Depende dos `filtros`, por
+  // isso recalcula-se a cada escolha — é o que faz as opções desaparecerem.
+  const facetas = useMemo(
+    () => facetasDisponiveis(animais, filtros, porAnimal),
+    [animais, filtros, porAnimal],
   );
-  const universo = incluirSaidos ? animais : ativos;
 
-  // Espécies efetivamente presentes no efetivo (só ativos, para não sujar o filtro)
-  const filtrosDisponiveis = useMemo<Filtro[]>(() => {
-    const presentes = especies.filter((e) => ativos.some((a) => a.especie === e));
-    return ['Todos', ...presentes];
-  }, [ativos]);
+  const lista = useMemo(
+    () =>
+      filtrarAnimais(animais, filtros, porAnimal).sort((a, b) =>
+        (a.nome ?? a.numeroIdentificacao ?? '').localeCompare(
+          b.nome ?? b.numeroIdentificacao ?? '',
+          'pt',
+        ),
+      ),
+    [animais, filtros, porAnimal],
+  );
 
-  const lista = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return universo
-      .filter((a) => filtro === 'Todos' || a.especie === filtro)
-      .filter((a) => !soAlertas || idsComAlerta.has(a.id))
-      .filter((a) => {
-        if (!q) return true;
-        return (
-          a.nome?.toLowerCase().includes(q) ||
-          a.numeroIdentificacao?.toLowerCase().includes(q) ||
-          a.raca?.toLowerCase().includes(q)
-        );
-      })
-      .sort((a, b) => (a.nome ?? '').localeCompare(b.nome ?? ''));
-  }, [universo, filtro, query, soAlertas, idsComAlerta]);
+  const nAtivos = contarAtivos(filtros);
+  const temPesquisa = !!filtros.texto?.trim();
+  /**
+   * A lista está a mostrar menos do que o efetivo à vista?
+   *
+   * A exploração NÃO conta para isto — ela já mudou o `ativos` acima. Contá-la
+   * punha "8 de 8" no topo de uma quinta com oito animais, e o estado vazio de
+   * uma quinta ainda sem gado oferecia "limpar filtros" em vez de "registar".
+   */
+  const estreitada = nAtivos > 0 || temPesquisa;
+
+  // Com uma exploração só, a linha de chips não decidia nada — ocupava espaço
+  // no topo da lista e dizia sempre a mesma coisa.
+  const podeEscolherExploracao = exploracoes.length > 1;
+
+  /** Etiquetas do que está a filtrar, para se poder tirar uma a uma. */
+  const etiquetas = useMemo(() => {
+    const out: { chave: string; label: string; limpar: () => void }[] = [];
+    const tirar = (k: keyof Filtros) => () => setFiltros((f) => ({ ...f, [k]: undefined }));
+
+    if (filtros.especie) out.push({ chave: 'especie', label: especieMeta[filtros.especie].plural, limpar: tirar('especie') });
+    if (filtros.sexo) out.push({ chave: 'sexo', label: filtros.sexo === 'Fêmea' ? 'Fêmeas' : 'Machos', limpar: tirar('sexo') });
+    if (filtros.prenhe !== undefined) out.push({ chave: 'prenhe', label: filtros.prenhe ? 'Cobertas' : 'Não cobertas', limpar: tirar('prenhe') });
+    if (filtros.idade) out.push({ chave: 'idade', label: FAIXAS.find((f) => f.valor === filtros.idade)?.label ?? '', limpar: tirar('idade') });
+    if (filtros.raca) out.push({ chave: 'raca', label: filtros.raca, limpar: tirar('raca') });
+    if (filtros.cor) out.push({ chave: 'cor', label: filtros.cor, limpar: tirar('cor') });
+    if (filtros.finalidade) out.push({ chave: 'finalidade', label: filtros.finalidade, limpar: tirar('finalidade') });
+    if (filtros.casa) out.push({ chave: 'casa', label: `Casa ${filtros.casa}`, limpar: tirar('casa') });
+    if (filtros.terrenoId) {
+      const nome = filtros.terrenoId === SEM_TERRENO ? 'Sem terreno' : (terrenoById(filtros.terrenoId)?.nome ?? 'Terreno');
+      out.push({ chave: 'terreno', label: nome, limpar: tirar('terrenoId') });
+    }
+    if (filtros.alerta) {
+      const label = filtros.alerta === true ? 'Com alertas' : rotuloCategoriaAlerta[filtros.alerta];
+      out.push({ chave: 'alerta', label, limpar: tirar('alerta') });
+    }
+    if (filtros.semBrinco) out.push({ chave: 'semBrinco', label: 'Sem brinco', limpar: tirar('semBrinco') });
+    if (filtros.incluirSaidos) out.push({ chave: 'arquivo', label: 'Com arquivo', limpar: tirar('incluirSaidos') });
+    return out;
+  }, [filtros, terrenoById]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -99,79 +147,151 @@ export default function AnimaisScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: spacing.md }}>
               <Text variant="display">Animais</Text>
               <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 6 }}>
-                {ativos.length} no efetivo
+                {/* Quando há filtros, o que interessa é quantos deles se está a
+                    ver — o total do efetivo passa a ser a segunda pergunta. */}
+                {estreitada ? `${lista.length} de ${ativos.length}` : `${ativos.length} no efetivo`}
               </Text>
             </View>
 
-            {/* Pesquisa */}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spacing.xs,
-                backgroundColor: colors.surface,
-                borderRadius: radii.pill,
-                borderWidth: 1,
-                borderColor: colors.border,
-                paddingHorizontal: spacing.md,
-                height: 52,
-                marginBottom: spacing.md,
-              }}>
-              <Icon name="magnify" size="md" color={colors.textMuted} />
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Procurar por nome, brinco ou raça"
-                placeholderTextColor={colors.textMuted}
+            {/* Exploração à VISTA, sem abrir a folha de filtros: com duas ou
+                mais explorações, "de que quinta são estes animais?" é a
+                primeira pergunta de quem abre esta lista. */}
+            {podeEscolherExploracao ? (
+              <View
                 style={{
-                  flex: 1,
-                  fontFamily: 'Nunito_500Medium',
-                  fontSize: 16,
-                  color: colors.text,
-                }}
-                returnKeyType="search"
-                clearButtonMode="while-editing"
-              />
-            </View>
-
-            {/* Filtros rápidos: alertas e arquivo (falecidos/vendidos) */}
-            {idsComAlerta.size > 0 || saidos.length > 0 ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm }}>
-                {idsComAlerta.size > 0 ? (
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: spacing.xs,
+                  marginBottom: spacing.sm,
+                }}>
+                <Chip
+                  label="Todas"
+                  icon="barn"
+                  selected={filtros.exploracaoId === undefined}
+                  onPress={() => setFiltros((f) => ({ ...f, exploracaoId: undefined }))}
+                />
+                {exploracoes.map((e) => (
                   <Chip
-                    label={`Com alertas (${idsComAlerta.size})`}
-                    icon="alert-circle-outline"
-                    selected={soAlertas}
-                    onPress={() => setSoAlertas((v) => !v)}
+                    key={e.id}
+                    label={e.nome}
+                    selected={filtros.exploracaoId === e.id}
+                    onPress={() =>
+                      setFiltros((f) => ({
+                        ...f,
+                        exploracaoId: f.exploracaoId === e.id ? undefined : e.id,
+                      }))
+                    }
                   />
-                ) : null}
-                {saidos.length > 0 ? (
-                  <Chip
-                    label={`Mostrar arquivo (${saidos.length})`}
-                    icon="archive-outline"
-                    selected={incluirSaidos}
-                    onPress={() => setIncluirSaidos((v) => !v)}
-                  />
-                ) : null}
+                ))}
               </View>
             ) : null}
 
-            {/* Filtros por espécie */}
-            <FlatList
-              horizontal
-              data={filtrosDisponiveis}
-              keyExtractor={(f) => f}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: spacing.xs, paddingBottom: spacing.md }}
-              renderItem={({ item }) => (
-                <Chip
-                  label={item === 'Todos' ? 'Todos' : especieMeta[item].plural}
-                  icon={item === 'Todos' ? 'paw' : especieMeta[item].icon}
-                  selected={filtro === item}
-                  onPress={() => setFiltro(item)}
+            {/* Pesquisa + botão de filtros */}
+            <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm }}>
+              <View
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.pill,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  paddingHorizontal: spacing.md,
+                  height: 52,
+                }}>
+                <Icon name="magnify" size="md" color={colors.textMuted} />
+                <TextInput
+                  value={filtros.texto ?? ''}
+                  onChangeText={(t) => setFiltros((f) => ({ ...f, texto: t }))}
+                  placeholder="Nome, brinco, raça ou casa"
+                  placeholderTextColor={colors.textMuted}
+                  style={{
+                    flex: 1,
+                    fontFamily: 'Nunito_500Medium',
+                    fontSize: 16,
+                    color: colors.text,
+                  }}
+                  returnKeyType="search"
+                  clearButtonMode="while-editing"
                 />
-              )}
-            />
+              </View>
+              <Pressable
+                onPress={() => setFolhaAberta(true)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  nAtivos > 0 ? `Filtros, ${nAtivos} ativos` : 'Filtros'
+                }
+                style={({ pressed }) => [
+                  {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    paddingHorizontal: spacing.md,
+                    height: 52,
+                    borderRadius: radii.pill,
+                    borderWidth: 1,
+                    borderColor: nAtivos > 0 ? colors.primary : colors.border,
+                    backgroundColor: nAtivos > 0 ? colors.primaryTint : colors.surface,
+                  },
+                  pressed && { opacity: 0.8 },
+                ]}>
+                <Icon
+                  name="filter-variant"
+                  size="md"
+                  color={nAtivos > 0 ? colors.primary : colors.textMuted}
+                />
+                {nAtivos > 0 ? (
+                  <Text variant="bodyStrong" color={colors.primaryDark}>
+                    {nAtivos}
+                  </Text>
+                ) : null}
+              </Pressable>
+            </View>
+
+            {/* Importar de Excel — só web/Electron, onde há seletor de ficheiros.
+                No telemóvel a lista continua a registar-se com o "Registar". */}
+            {Platform.OS === 'web' && !contaSuspensa ? (
+              <View style={{ alignItems: 'flex-start', marginBottom: spacing.sm }}>
+                <Button
+                  label="Importar de Excel"
+                  icon="microsoft-excel"
+                  variant="secondary"
+                  fullWidth={false}
+                  onPress={() => router.push('/animal/importar')}
+                />
+              </View>
+            ) : null}
+
+            {/* O que está a filtrar, para se tirar sem reabrir a folha */}
+            {etiquetas.length > 0 ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: spacing.xs,
+                  marginBottom: spacing.md,
+                }}>
+                {etiquetas.map((e) => (
+                  <Chip key={e.chave} label={e.label} icon="close" selected onPress={e.limpar} />
+                ))}
+                {etiquetas.length > 1 ? (
+                  <Pressable
+                    onPress={() => setFiltros({ texto: filtros.texto, exploracaoId: filtros.exploracaoId })}
+                    accessibilityRole="button"
+                    accessibilityLabel="Limpar todos os filtros"
+                    style={({ pressed }) => [
+                      { justifyContent: 'center', paddingHorizontal: spacing.xs },
+                      pressed && { opacity: 0.6 },
+                    ]}>
+                    <Text variant="bodyStrong" color={colors.danger}>
+                      Limpar
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         }
         ListEmptyComponent={
@@ -179,19 +299,29 @@ export default function AnimaisScreen() {
             icon="cow-off"
             title="Nenhum animal encontrado"
             message={
-              query || filtro !== 'Todos' || soAlertas
+              estreitada
                 ? 'Experimente ajustar a pesquisa ou os filtros.'
                 : 'Ainda não há animais registados. Comece por adicionar o primeiro.'
             }
             actionLabel={
-              !contaSuspensa && !query && filtro === 'Todos' && !soAlertas
-                ? 'Registar animal'
-                : undefined
+              estreitada ? 'Limpar filtros' : contaSuspensa ? undefined : 'Registar animal'
             }
-            onAction={() => router.push('/animal/novo')}
+            onAction={estreitada ? () => setFiltros({}) : () => router.push('/animal/novo')}
           />
         }
       />
+
+      <FolhaFiltros
+        aberto={folhaAberta}
+        filtros={filtros}
+        facetas={facetas}
+        terrenos={terrenos}
+        total={lista.length}
+        onFechar={() => setFolhaAberta(false)}
+        onMudar={setFiltros}
+        onLimpar={() => setFiltros({ texto: filtros.texto, exploracaoId: filtros.exploracaoId })}
+      />
+
       {contaSuspensa ? null : (
         <FAB label="Registar" onPress={() => router.push('/animal/novo')} />
       )}

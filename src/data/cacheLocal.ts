@@ -66,10 +66,70 @@ export type AcessoLocal = {
   membros: unknown[];
 };
 
-const CHAVE_CACHE = 'gado.cache.v1';
-const CHAVE_OUTBOX = 'gado.outbox.v1';
-const CHAVE_FALHADAS = 'gado.falhadas.v1';
-const CHAVE_ACESSO = 'gado.acesso.v1';
+/**
+ * Referência do projeto Supabase a que esta app está ligada — o `wkax…` de
+ * `https://wkax….supabase.co`. As chaves da cache levam-na à frente.
+ *
+ * Até 2026-07-23 não levavam, e o efeito só se vê quando existem dois
+ * ambientes: o mesmo `localhost:8081` que outrora falou com PRODUÇÃO guarda a
+ * cache em `gado.cache.v1`; trocar o `.env` para o projeto de testes não mexe
+ * nessa chave, e a app de testes abre a mostrar o efetivo real — 28 animais,
+ * as explorações de quem usa a app a sério — por baixo da faixa roxa que jura
+ * que aqueles dados não são reais. É o contrário do que a faixa promete.
+ *
+ * Sem projeto configurado fica 'local', que é o caso da app sem Supabase.
+ */
+const PROJETO =
+  process.env.EXPO_PUBLIC_SUPABASE_URL?.match(/https?:\/\/([^.]+)\./)?.[1] ?? 'local';
+
+/**
+ * As chaves onde tudo isto vive. Exportadas por causa dos testes: escritas à
+ * mão, ficavam a apontar para as antigas assim que o prefixo mudasse, e um
+ * teste que prepara uma chave que ninguém lê passa a verificar o vazio.
+ */
+export const CHAVES = {
+  cache: `gado.${PROJETO}.cache.v1`,
+  outbox: `gado.${PROJETO}.outbox.v1`,
+  falhadas: `gado.${PROJETO}.falhadas.v1`,
+  acesso: `gado.${PROJETO}.acesso.v1`,
+} as const;
+
+const CHAVE_CACHE = CHAVES.cache;
+const CHAVE_OUTBOX = CHAVES.outbox;
+const CHAVE_FALHADAS = CHAVES.falhadas;
+const CHAVE_ACESSO = CHAVES.acesso;
+
+/**
+ * As chaves de antes de existirem ambientes. Só se herdam em PRODUÇÃO, e só
+ * uma vez: é lá que estão os dados de quem já tinha a app instalada, incluindo
+ * a fila de escritas por enviar — apagá-las às cegas era perder trabalho feito
+ * offline. Em testes ficam quietas onde estão: não são para ali chamadas, e
+ * mexer nelas podia estragar a cache da app de produção que partilha este
+ * `localhost`.
+ */
+const LEGADO: [string, string][] = [
+  ['gado.cache.v1', CHAVE_CACHE],
+  ['gado.outbox.v1', CHAVE_OUTBOX],
+  ['gado.falhadas.v1', CHAVE_FALHADAS],
+  ['gado.acesso.v1', CHAVE_ACESSO],
+];
+
+let herdado = false;
+
+/**
+ * Corre uma vez, à primeira leitura — e não ao importar o módulo: o
+ * armazenamento pode ainda não estar de pé, e um efeito no topo do ficheiro
+ * dispara antes de quem o usa ter oportunidade de o preparar.
+ */
+function herdarLegado(): void {
+  if (herdado) return;
+  herdado = true;
+  if (!armazenamentoDisponivel || process.env.EXPO_PUBLIC_AMBIENTE === 'dev') return;
+  for (const [antiga, nova] of LEGADO) {
+    const valor = ler(antiga);
+    if (valor != null && ler(nova) == null) guardar(nova, valor);
+  }
+}
 
 /** Teto da lista de falhadas — é um registo para ler, não um arquivo. */
 const MAX_FALHADAS = 50;
@@ -79,6 +139,7 @@ export const cacheDisponivel = armazenamentoDisponivel;
 
 /** Lê o último instantâneo guardado, ou null se ainda não houver. */
 export function lerCache(): DadosGado | null {
+  herdarLegado();
   const bruto = ler(CHAVE_CACHE);
   if (!bruto) return null;
   try {
@@ -106,6 +167,7 @@ export function guardarCache(dados: DadosGado): void {
 
 /** Fila de operações à espera de envio ao Supabase (por ordem). */
 export function lerOutbox(): OpPendente[] {
+  herdarLegado();
   const bruto = ler(CHAVE_OUTBOX);
   if (!bruto) return [];
   try {
@@ -134,6 +196,7 @@ export function adicionarOutbox(op: OpPendente): number {
 
 /** Último acesso conhecido, ou null se nunca chegou a haver um. */
 export function lerAcesso(): AcessoLocal | null {
+  herdarLegado();
   const bruto = ler(CHAVE_ACESSO);
   if (!bruto) return null;
   try {
@@ -163,6 +226,7 @@ export function guardarAcesso(a: AcessoLocal): void {
  * mostrar e a pessoa saber o que se perdeu e porquê.
  */
 export function lerFalhadas(): OpFalhada[] {
+  herdarLegado();
   const bruto = ler(CHAVE_FALHADAS);
   if (!bruto) return [];
   try {

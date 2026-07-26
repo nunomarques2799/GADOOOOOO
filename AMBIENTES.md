@@ -1,0 +1,188 @@
+# Ambientes — produção e testes
+
+Há um criador a usar esta app **todos os dias, a sério**, com os animais dele lá
+dentro. Não é um utilizador de demonstração: se os dados desaparecerem, são os
+registos de identificação e os prazos legais (DGAV/SNIRA) de uma exploração real
+que desaparecem, e uma coima é uma consequência possível.
+
+Este documento existe para que experimentar deixe de ser arriscado.
+
+## Os dois ambientes
+
+| | **Produção** | **Testes (dev)** |
+| --- | --- | --- |
+| Quem usa | o criador | tu |
+| Base de dados | projeto Supabase `qmkafibxlmgouslybafy` | projeto Supabase próprio |
+| Site da app | `app-gestaogado.netlify.app` | `localhost` (ver abaixo) |
+| Branch | `main` | `dev` |
+| Faixa roxa no topo | não | **sim** |
+| Se partires isto | mau dia | não acontece nada |
+
+A faixa roxa ([`FaixaAmbiente.tsx`](src/components/FaixaAmbiente.tsx)) é a parte
+que parece menos séria e é das mais importantes: as duas apps são idênticas ao
+pixel, e a diferença entre elas é uma variável de ambiente que não se vê. Se
+alguma vez estiveres a apagar dados de teste **sem** a faixa roxa no ecrã, para.
+
+## O dia a dia
+
+```
+trabalhas em `dev`  →  testas em localhost  →  PR para `main`
+```
+
+1. `git checkout dev` — é aqui que se trabalha. Nunca direto no `main`.
+2. `npm run web` — a app inteira, ligada à base de testes, com a faixa roxa.
+3. Commit + push para `dev`. Não publica nada a ninguém.
+4. Quando estiver bom: pull request `dev` → `main`. A CI corre `tsc` + testes.
+5. Merge. **É o merge que publica** — ver a secção seguinte.
+
+### Testar o que o `npm run web` não consegue provar
+
+O servidor de desenvolvimento não é o bundle que as pessoas recebem. A app
+instalável, o service worker e o arranque sem rede só se testam a sério contra
+um *export* de produção:
+
+```bash
+npx expo export --platform web
+npx serve dist -s -l 8090
+```
+
+`http://localhost:8090` é o bundle real. O navegador trata `localhost` como
+contexto seguro, por isso a instalação como app e o service worker funcionam
+tal e qual como no site publicado — sem gastar um único minuto de build.
+
+> ⚠️ Depois disto, o `dist/` local fica com um build apontado à base de
+> **testes**. Não o publiques à mão em lado nenhum, e não construas o `.exe`
+> localmente a partir dele sem voltar a exportar com as chaves de produção. O
+> instalador que sai da CI não tem este problema: o
+> [`build-windows.yml`](.github/workflows/build-windows.yml) exporta de novo
+> com as chaves certas.
+
+### A app Windows em testes
+
+Para experimentar na app de desktop a sério — a mesma janela, o mesmo
+comportamento — sem tocar no "Terrabovina" que já está instalado:
+
+```bash
+powershell scripts/desktop-dev.ps1
+```
+
+Constrói o bundle, marca-o como sendo de testes e abre a app. **Não instala
+nada**: sem atalho, sem entrada em "Aplicações", sem auto-atualização. Podes
+ter as duas abertas lado a lado.
+
+O que faz a separação, e porque é que não era opcional: a app serve-se de
+`127.0.0.1` numa porta fixa, e o Chromium isola o armazenamento por origem mais
+a pasta de dados do utilizador — que sai do nome da app. Duas cópias com o
+mesmo nome e a mesma porta partilhariam o `localStorage`, e lá dentro vive o
+`gado.outbox.v1`, a fila de escritas ainda por sincronizar. Um animal de teste
+criado em dev ficava nessa fila e a app de produção, ao abrir, empurrava-o para
+a base de dados do criador. Por isso o build de testes corre como
+**`Gestao de Gado (DEV)`** (pasta `%APPDATA%` própria) na **porta 41280**, e
+nunca procura atualizações — ver a secção "Ambiente" em
+[`desktop/main.js`](desktop/main.js).
+
+A marca vai dentro do bundle (`web/ambiente.json`), não numa variável de
+ambiente do arranque: assim não há como abrir o bundle de testes com a
+identidade da app de produção por se ter esquecido um passo. E o script
+**recusa-se a construir** se o `.env` não estiver em `dev` — sem isso, um
+`.env` apontado a produção dava uma app ligada aos dados reais a ostentar o
+nome "DEV".
+
+### E o site de testes no Netlify?
+
+A configuração já está no [`netlify.toml`](netlify.toml) e não custa nada
+enquanto ninguém a ativar, mas **os branch deploys estão desligados de
+propósito**. A 2026-07-22 a conta tinha 44 dos 300 créditos mensais e faltavam
+15 dias para renovar — a um ritmo de ~17/dia. Um segundo alvo de build gastava
+em testes a quota necessária para publicar em produção, que é o contrário do
+que este documento existe para garantir.
+
+Para ativar quando houver folga: Netlify → `app-gestaogado` → *Site
+configuration* → *Build & deploy* → *Branches and deploy contexts* → *Configure*
+→ **Branch deploys: Let me add individual branches** → `dev`. Fica em
+`dev--app-gestaogado.netlify.app`, já com as chaves certas.
+
+## O que o merge para `main` dispara (e o que não dispara)
+
+| Canal | Como chega ao criador | Automático? |
+| --- | --- | --- |
+| App web / PWA instalada | build do Netlify → service worker anuncia versão nova | **sim, no merge** |
+| App Windows (.exe) | GitHub Actions → Release → electron-updater | **sim, no merge** |
+| Telemóvel (Android) | `eas update --branch preview` | não — só quando o corres |
+
+Ou seja: **fazer merge para `main` é publicar**. Não há um botão separado a
+dizer "publicar agora". Trata o merge com esse peso.
+
+### A armadilha do telemóvel
+
+O canal EAS `preview` **é o canal do criador** — é o que está dentro do APK que
+ele tem instalado. Portanto:
+
+> ❌ Nunca correr `eas update --branch preview` a partir do branch `dev`.
+
+Para testar no telemóvel sem lhe tocar: `npx expo start` e abrir com o **Expo
+Go**. Não gasta quota de build e não chega a ninguém.
+
+## Alterações à base de dados
+
+É aqui que mora o risco a sério. O plano grátis do Supabase **não tem cópias de
+segurança automáticas**: um `alter table` mal pensado em produção não tem
+marcha-atrás nenhuma.
+
+A ordem, sem exceções:
+
+1. Escrever o `schema_*.sql` novo, idempotente. Ver
+   [`supabase/MIGRACOES.md`](supabase/MIGRACOES.md).
+2. Aplicar **no projeto de dev** e testar a app contra ele.
+3. Cópia de segurança de produção:
+   ```bash
+   powershell scripts/backup.ps1 -Ambiente prod
+   ```
+4. Só então aplicar em produção (SQL Editor).
+5. Acrescentar a linha à tabela de ordem em `MIGRACOES.md`.
+
+**O passo 3 não é opcional.** É literalmente a única coisa entre um erro de
+sintaxe e perder os dados de uma pessoa.
+
+Precisa do `pg_dump` e do `psql` na máquina — `winget install -e --id
+PostgreSQL.PostgreSQL.17`. Sem eles o script cai no `npx supabase db dump`, que
+corre o pg_dump dentro de um contentor e exige o Docker Desktop; e o Docker
+sozinho dava a cópia mas não dava com que a **restaurar**. E a ligação à base
+vive no `.env.backup` (fora do git), que tem de se criar à mão a partir do
+*Dashboard → Project Settings → Database → Connection string*.
+
+Antes de saber se a cópia serve, ela é uma promessa: **ensaia o restauro** num
+projeto Supabase novo e descartável. Isso prova as duas coisas de uma vez — que
+os ficheiros voltam a montar a base, e que a migração corre por cima do estado
+real de produção (e não do de dev, que já tem tudo aplicado). Para saber que
+ficheiros de schema faltam a uma base: [`supabase/estado.sql`](supabase/estado.sql).
+
+## Onde vivem as chaves de cada ambiente
+
+Não há um sítio só — cada canal de distribuição traz as suas:
+
+| Onde | Ficheiro | Serve |
+| --- | --- | --- |
+| Site da app (prod) | [`netlify.toml`](netlify.toml) → `[build.environment]` | produção |
+| Site da app (dev) | [`netlify.toml`](netlify.toml) → `[context.dev.environment]` | testes |
+| App Windows | [`build-windows.yml`](.github/workflows/build-windows.yml) | produção |
+| Android / iOS | [`eas.json`](eas.json) → `build.<perfil>.env` | produção |
+| A tua máquina | `.env` (fora do git) | **testes** |
+
+O `.env` local aponta para **dev**. Até 2026-07-22 apontava para produção, o que
+queria dizer que um `npm run web` na máquina de desenvolvimento escrevia na base
+de dados do criador — sem aviso nenhum, porque nessa altura ainda não havia
+faixa roxa a dizê-lo.
+
+> As chaves `sb_publishable_*` são para o cliente e estão protegidas por RLS —
+> já vão embutidas no JavaScript que qualquer pessoa descarrega. Não são segredo
+> e por isso podem estar nestes ficheiros. A que **nunca** pode aparecer aqui é a
+> `secret`/`service_role`, que ignora o RLS todo.
+
+## Checklist antes de fazer merge para `main`
+
+- [ ] `npx tsc --noEmit` e `npm test` passam
+- [ ] Testado no site de testes, não só em `localhost`
+- [ ] Se mexe na base de dados: aplicado em dev **e** backup de produção feito
+- [ ] Se mexe em `app.json`/`package.json`: lembrar que exige `eas build` novo,
+      não chega o `eas update` (ver `AGENTS.md`)

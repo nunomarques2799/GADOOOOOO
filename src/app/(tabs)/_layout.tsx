@@ -1,9 +1,11 @@
-import { Tabs } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { Tabs, useRouter, type Href } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BarraLateral, type ItemNav } from '@/components/BarraLateral';
 import { Icon, type IconName, Text } from '@/components/ui';
+import { useMembros } from '@/data/membros';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, spacing } from '@/theme';
 
@@ -18,99 +20,274 @@ type TabBarProps = {
   };
 };
 
-const TABS: Record<string, { label: string; icon: IconName }> = {
-  index: { label: 'Início', icon: 'home-variant' },
-  animais: { label: 'Animais', icon: 'cow' },
-  exploracoes: { label: 'Explorações', icon: 'barn' },
-  perfil: { label: 'Perfil', icon: 'account' },
+type Rota = Extract<Href, string>;
+type Destino = {
+  nome: string;
+  rota: Rota;
+  label: string;
+  icon: IconName;
+  /** Só aparece a quem gere a equipa de alguma exploração. */
+  soComEquipa?: boolean;
 };
+
+/**
+ * Os destinos, pela ordem em que aparecem na barra lateral.
+ * `nome` é o ficheiro dentro de `(tabs)/`; `rota` é o URL (o grupo `(tabs)`
+ * não aparece no caminho, por isso `(tabs)/alertas.tsx` serve `/alertas`).
+ *
+ * `soComEquipa` marca os que só fazem sentido a quem tem equipa para gerir:
+ * um trabalhador convidado não vê a lista de colegas (a RLS também não lha
+ * daria), e um destino que abre sempre vazio é um destino a mais na barra.
+ */
+const DESTINOS: Destino[] = [
+  { nome: 'index', rota: '/', label: 'Início', icon: 'home-variant' },
+  { nome: 'exploracoes', rota: '/exploracoes', label: 'Explorações', icon: 'barn' },
+  { nome: 'terrenos', rota: '/terrenos', label: 'Terrenos', icon: 'grass' },
+  { nome: 'animais', rota: '/animais', label: 'Animais', icon: 'cow' },
+  { nome: 'alertas', rota: '/alertas', label: 'Alertas', icon: 'bell-outline' },
+  {
+    nome: 'trabalhadores',
+    rota: '/trabalhadores',
+    label: 'Trabalhadores',
+    icon: 'account-hard-hat',
+    soComEquipa: true,
+  },
+  { nome: 'financas', rota: '/financas', label: 'Finanças', icon: 'cash-multiple' },
+  { nome: 'documentos', rota: '/documentos', label: 'Documentos', icon: 'file-document-outline' },
+  { nome: 'definicoes', rota: '/definicoes', label: 'Definições', icon: 'cog-outline' },
+  { nome: 'perfil', rota: '/perfil', label: 'Perfil', icon: 'account' },
+];
+
+/**
+ * O que fica na barra de baixo do TELEMÓVEL.
+ *
+ * São cinco lugares para os dez destinos do `DESTINOS`: a barra reparte a
+ * largura por todos, e com dez cada um ficaria espremido num ecrã de 375px —
+ * bem menos ainda com a letra do sistema no máximo, que é o cenário que esta
+ * app tem de aguentar. Ficam os quatro do dia-a-dia e um botão "Mais" para os
+ * restantes, que a folha de baixo mostra em lista.
+ *
+ * No computador não há este problema: a barra lateral é vertical e leva-os
+ * todos. (Contas: quatro aqui + "Mais" = cinco lugares. Ao acrescentar um
+ * destino ao `DESTINOS`, ele aparece no "Mais" sozinho — só se mexe nesta lista
+ * para o promover, e aí tem de sair outro.)
+ */
+const NO_TELEMOVEL = ['index', 'animais', 'exploracoes', 'alertas'];
+
+/**
+ * Os destinos que esta pessoa pode ver. A rota continua declarada (quem chegar
+ * lá por um link encontra o ecrã, que se explica a si mesmo) — o que se filtra
+ * é a NAVEGAÇÃO, para ninguém tropeçar num ecrã que a RLS lhe fecha.
+ */
+function useDestinos(): Destino[] {
+  const { podeEmAlguma } = useMembros();
+  const comEquipa = podeEmAlguma('gerirEquipa');
+  return useMemo(() => DESTINOS.filter((d) => !d.soComEquipa || comEquipa), [comEquipa]);
+}
 
 function TabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const destinos = useDestinos();
+  const [maisAberto, setMaisAberto] = useState(false);
+
+  const visiveis = state.routes.filter((r) => NO_TELEMOVEL.includes(r.name));
+  const escondidos = destinos.filter((d) => !NO_TELEMOVEL.includes(d.nome));
+  const rotaAtual = state.routes[state.index]?.name;
+  // O "Mais" acende-se quando se está num dos destinos que ele guarda — senão
+  // a barra não mostrava nada selecionado e a app parecia ter-se perdido.
+  const maisAtivo = escondidos.some((d) => d.nome === rotaAtual);
+
   return (
-    <View
-      style={[
-        {
-          flexDirection: 'row',
-          backgroundColor: colors.surface,
-          paddingTop: spacing.sm,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.sm,
-          paddingHorizontal: spacing.xs,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          borderTopLeftRadius: radii.xl,
-          borderTopRightRadius: radii.xl,
-        },
-        shadow.lg,
-      ]}>
-      {state.routes.map((route, index) => {
-        const cfg = TABS[route.name];
-        if (!cfg) return null;
-        const focused = state.index === index;
+    <>
+      <View
+        style={[
+          {
+            flexDirection: 'row',
+            backgroundColor: colors.surface,
+            paddingTop: spacing.sm,
+            paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.sm,
+            paddingHorizontal: spacing.xs,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            borderTopLeftRadius: radii.xl,
+            borderTopRightRadius: radii.xl,
+          },
+          shadow.lg,
+        ]}>
+        {visiveis.map((route) => {
+          const cfg = destinos.find((d) => d.nome === route.name);
+          if (!cfg) return null;
+          const focused = rotaAtual === route.name;
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
-        };
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+          };
 
-        return (
+          return (
+            <Botao
+              key={route.key}
+              label={cfg.label}
+              icon={cfg.icon}
+              focused={focused}
+              onPress={onPress}
+            />
+          );
+        })}
+        <Botao
+          label="Mais"
+          icon="dots-horizontal"
+          focused={maisAtivo}
+          onPress={() => setMaisAberto(true)}
+        />
+      </View>
+
+      <Modal
+        visible={maisAberto}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setMaisAberto(false)}>
+        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
           <Pressable
-            key={route.key}
-            onPress={onPress}
-            accessibilityRole="button"
-            accessibilityState={{ selected: focused }}
-            accessibilityLabel={cfg.label}
-            style={{ flex: 1, alignItems: 'center', gap: 4, paddingVertical: 2 }}>
+            style={{ flex: 1 }}
+            onPress={() => setMaisAberto(false)}
+            accessibilityLabel="Fechar"
+          />
+          <View
+            style={[
+              {
+                backgroundColor: colors.background,
+                borderTopLeftRadius: radii.xl,
+                borderTopRightRadius: radii.xl,
+                paddingTop: spacing.md,
+                paddingBottom: insets.bottom + spacing.md,
+                paddingHorizontal: spacing.lg,
+              },
+              shadow.lg,
+            ]}>
             <View
               style={{
-                width: 56,
-                height: 34,
-                borderRadius: radii.pill,
+                flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: focused ? colors.primaryTint : 'transparent',
+                marginBottom: spacing.sm,
               }}>
-              <Icon
-                name={cfg.icon}
-                size={26}
-                color={focused ? colors.primary : colors.textMuted}
-              />
+              <Text variant="h3" style={{ flex: 1 }}>
+                Mais
+              </Text>
+              <Pressable
+                onPress={() => setMaisAberto(false)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Fechar">
+                <Icon name="close" size="lg" color={colors.textSecondary} />
+              </Pressable>
             </View>
-            <Text
-              variant="caption"
-              color={focused ? colors.primaryDark : colors.textMuted}>
-              {cfg.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+
+            {escondidos.map((d, i) => (
+              <Pressable
+                key={d.nome}
+                onPress={() => {
+                  setMaisAberto(false);
+                  router.navigate(d.rota);
+                }}
+                accessibilityRole="link"
+                accessibilityLabel={d.label}
+                accessibilityState={{ selected: rotaAtual === d.nome }}
+                style={({ pressed }) => [
+                  {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing.sm,
+                    // Alvo grande: é uma folha usada com o polegar, muitas
+                    // vezes de pé no campo.
+                    minHeight: 60,
+                    borderBottomWidth: i < escondidos.length - 1 ? 1 : 0,
+                    borderBottomColor: colors.border,
+                  },
+                  pressed && { opacity: 0.6 },
+                ]}>
+                <Icon
+                  name={d.icon}
+                  size="lg"
+                  color={rotaAtual === d.nome ? colors.primary : colors.textSecondary}
+                />
+                <Text
+                  variant={rotaAtual === d.nome ? 'bodyStrong' : 'body'}
+                  color={rotaAtual === d.nome ? colors.primaryDark : colors.text}
+                  style={{ flex: 1 }}>
+                  {d.label}
+                </Text>
+                <Icon name="chevron-right" size="md" color={colors.textMuted} />
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
-/** Mesmos destinos da barra inferior, na ordem em que aparecem na lateral. */
-const NAV_DESKTOP: ItemNav[] = [
-  { rota: '/', label: 'Início', icon: TABS.index.icon },
-  { rota: '/animais', label: 'Animais', icon: TABS.animais.icon },
-  { rota: '/exploracoes', label: 'Explorações', icon: TABS.exploracoes.icon },
-  { rota: '/perfil', label: 'Perfil', icon: TABS.perfil.icon },
-];
+function Botao({
+  label,
+  icon,
+  focused,
+  onPress,
+}: {
+  label: string;
+  icon: IconName;
+  focused: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: focused }}
+      accessibilityLabel={label}
+      style={{ flex: 1, alignItems: 'center', gap: 4, paddingVertical: 2 }}>
+      <View
+        style={{
+          width: 56,
+          height: 34,
+          borderRadius: radii.pill,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: focused ? colors.primaryTint : 'transparent',
+        }}>
+        <Icon name={icon} size={26} color={focused ? colors.primary : colors.textMuted} />
+      </View>
+      <Text variant="caption" color={focused ? colors.primaryDark : colors.textMuted}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
 
 export default function TabsLayout() {
   const desktop = useDesktop();
+  const destinos = useDestinos();
+
+  const navDesktop: ItemNav[] = destinos.map((d) => ({
+    rota: d.rota,
+    label: d.label,
+    icon: d.icon,
+  }));
 
   const ecrans = (
     <Tabs
       tabBar={desktop ? () => null : (props) => <TabBar {...props} />}
       screenOptions={{ headerShown: false }}>
-      <Tabs.Screen name="index" />
-      <Tabs.Screen name="animais" />
-      <Tabs.Screen name="exploracoes" />
-      <Tabs.Screen name="perfil" />
+      {/* Todas as rotas declaradas, mesmo as que esta pessoa não vê na
+          navegação: retirá-las daqui fazia o expo-router dar 404 a um link
+          direto, e o ecrã já sabe explicar-se a quem não tem equipa. */}
+      {DESTINOS.map((d) => (
+        <Tabs.Screen key={d.nome} name={d.nome} />
+      ))}
     </Tabs>
   );
 
@@ -118,7 +295,7 @@ export default function TabsLayout() {
 
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
-      <BarraLateral itens={NAV_DESKTOP} />
+      <BarraLateral itens={navDesktop} />
       <View style={{ flex: 1 }}>{ecrans}</View>
     </View>
   );

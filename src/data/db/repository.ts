@@ -29,6 +29,7 @@ import type {
   EstadoAnimal,
   Evento,
   Exploracao,
+  Finalidade,
   Movimento,
   Sexo,
   Terreno,
@@ -75,6 +76,7 @@ function toExploracao(r: Row): Exploracao {
     localizacao: asStr(r.localizacao),
     fotografia: asStr(r.fotografia),
     financasAtivas: asBool(r.financasAtivas) ?? false,
+    casaAtiva: asBool(r.casaAtiva) ?? false,
   };
 }
 
@@ -104,6 +106,9 @@ function toAnimal(r: Row): Animal {
     dataNascimento: String(r.dataNascimento),
     raca: asStr(r.raca),
     corPelagem: asStr(r.corPelagem),
+    casa: asStr(r.casa),
+    numeroCasa: asStr(r.numeroCasa),
+    finalidade: asStr(r.finalidade) as Finalidade | undefined,
     numeroIdentificacao: asStr(r.numeroIdentificacao),
     dataIdentificacao: asStr(r.dataIdentificacao),
     tipoIdentificacao: asStr(r.tipoIdentificacao),
@@ -184,11 +189,12 @@ export function guardarUtilizador(db: SQLiteDatabase, u: Utilizador): void {
 
 export function guardarExploracao(db: SQLiteDatabase, e: Exploracao): void {
   db.runSync(
-    `INSERT OR REPLACE INTO exploracao (id, utilizadorId, nome, marcaExploracao, nifDetentor, localizacao, fotografia, financasAtivas, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO exploracao (id, utilizadorId, nome, marcaExploracao, nifDetentor, localizacao, fotografia, financasAtivas, casaAtiva, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       e.id, e.utilizadorId, e.nome, e.marcaExploracao, e.nifDetentor,
-      txt(e.localizacao), txt(e.fotografia), bool(e.financasAtivas ?? false), agora(),
+      txt(e.localizacao), txt(e.fotografia), bool(e.financasAtivas ?? false),
+      bool(e.casaAtiva ?? false), agora(),
     ],
   );
 }
@@ -205,12 +211,15 @@ export function guardarAnimal(db: SQLiteDatabase, a: Animal): void {
   db.runSync(
     `INSERT OR REPLACE INTO animal
      (id, exploracaoId, terrenoId, maeId, paiId, nome, especie, sexo, dataNascimento, raca, corPelagem,
+      casa, numeroCasa, finalidade,
       numeroIdentificacao, dataIdentificacao, tipoIdentificacao, fotografia, fimIntervaloSeguranca,
       dataPrevistaParto, comunicadoSnira, estado, dataSaida, motivoSaida, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       a.id, a.exploracaoId, txt(a.terrenoId), txt(a.maeId), txt(a.paiId), txt(a.nome), a.especie, a.sexo,
-      a.dataNascimento, txt(a.raca), txt(a.corPelagem), txt(a.numeroIdentificacao), txt(a.dataIdentificacao),
+      a.dataNascimento, txt(a.raca), txt(a.corPelagem),
+      txt(a.casa), txt(a.numeroCasa), txt(a.finalidade),
+      txt(a.numeroIdentificacao), txt(a.dataIdentificacao),
       txt(a.tipoIdentificacao), txt(a.fotografia), txt(a.fimIntervaloSeguranca), txt(a.dataPrevistaParto),
       bool(a.comunicadoSnira), txt(a.estado), txt(a.dataSaida), txt(a.motivoSaida), agora(),
     ],

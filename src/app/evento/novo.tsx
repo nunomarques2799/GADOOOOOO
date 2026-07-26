@@ -10,9 +10,19 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
+import { avisar } from '@/data/avisos';
 import { especieMeta } from '@/data/constants';
-import { formatDataPt, isoDaysAgo, isoInDays, paraEuro } from '@/data/helpers';
+import {
+  formatDataPt,
+  isoDaysAgo,
+  isoMaisDias,
+  mascaraDataPt,
+  paraEuro,
+  parseDataPt,
+} from '@/data/helpers';
+import { normalizar } from '@/data/racas';
 import { useGado } from '@/data/store';
+import { useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
 import type { EventoTipo, Sexo } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
@@ -24,11 +34,46 @@ import { colors, radii, shadow, sizes, spacing } from '@/theme';
 const REGISTAVEIS = ['Parto', 'Vacinação', 'Medicamento', 'Pesagem'] as const;
 type Registavel = (typeof REGISTAVEIS)[number];
 
-const META: Record<Registavel, { icon: IconName; cor: string; titulo: string }> = {
-  Parto: { icon: 'baby-bottle-outline', cor: colors.info, titulo: 'Registar parto' },
-  Vacinação: { icon: 'needle', cor: colors.primary, titulo: 'Registar vacina' },
-  Medicamento: { icon: 'medical-bag', cor: colors.danger, titulo: 'Registar medicamento' },
-  Pesagem: { icon: 'scale', cor: colors.warning, titulo: 'Registar pesagem' },
+/**
+ * O que se pode registar a vários animais de uma vez.
+ *
+ * Vacinar e medicar fazem-se a um lote inteiro no mesmo dia, com a mesma
+ * vacina e o mesmo lote — obrigar a repetir o formulário trinta vezes é o
+ * caminho mais curto para se deixar de registar de todo.
+ *
+ * Parto e pesagem ficam de fora porque o que se regista é diferente em cada
+ * animal: um peso igual para trinta vacas não é um registo, é ruído que ainda
+ * por cima estraga o cálculo do ganho médio diário.
+ */
+const EM_MASSA: Registavel[] = ['Vacinação', 'Medicamento'];
+
+const META: Record<
+  Registavel,
+  { icon: IconName; cor: string; titulo: string; feito: string }
+> = {
+  Parto: {
+    icon: 'baby-bottle-outline',
+    cor: colors.info,
+    titulo: 'Registar parto',
+    feito: 'Parto registado',
+  },
+  Vacinação: {
+    icon: 'needle',
+    // Getter porque segue a paleta escolhida: esta tabela é criada no arranque
+    // do módulo, antes de a paleta guardada estar aplicada.
+    get cor() {
+      return colors.primary;
+    },
+    titulo: 'Registar vacina',
+    feito: 'Vacina registada',
+  },
+  Medicamento: {
+    icon: 'medical-bag',
+    cor: colors.danger,
+    titulo: 'Registar medicamento',
+    feito: 'Medicamento registado',
+  },
+  Pesagem: { icon: 'scale', cor: colors.warning, titulo: 'Registar pesagem', feito: 'Pesagem registada' },
 };
 
 const opcoesData = [
@@ -52,6 +97,7 @@ export default function NovoEventoScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { animais, especieDe, addEvento, updateAnimal, animalById, eventosByAnimal } = useGadoAdaptado();
+  const toast = useToasts();
 
   const params = useLocalSearchParams<{ tipo?: string; animalId?: string }>();
   const tipoInicial: Registavel = (REGISTAVEIS as readonly string[]).includes(params.tipo ?? '')
@@ -59,8 +105,13 @@ export default function NovoEventoScreen() {
     : 'Pesagem';
 
   const [tipo, setTipo] = useState<Registavel>(tipoInicial);
-  const [animalId, setAnimalId] = useState<string | undefined>(params.animalId);
+  const [animalIds, setAnimalIds] = useState<string[]>(params.animalId ? [params.animalId] : []);
+  const [procura, setProcura] = useState('');
   const [diasAtras, setDiasAtras] = useState(0);
+  // Data escrita à mão. Os atalhos cobrem o registo do próprio dia, que é o
+  // caso comum; isto cobre o resto — a vacina que se deu no mês passado e só
+  // agora se está a lançar, ou o parto que aconteceu enquanto não havia rede.
+  const [dataManual, setDataManual] = useState('');
 
   // Parto
   const [tipoParto, setTipoParto] = useState<'Normal' | 'Distócico' | 'Cesariana'>('Normal');
@@ -90,11 +141,19 @@ export default function NovoEventoScreen() {
 
   // Comum
   const [notas, setNotas] = useState('');
+  const [aGuardar, setAGuardar] = useState(false);
 
-  const data = isoDaysAgo(diasAtras);
-  const animal = animalId ? animalById(animalId) : undefined;
+  // Uma data escrita à mão manda sobre os atalhos. `parseDataPt` recusa datas
+  // futuras, que é o que se quer: um evento regista o que JÁ aconteceu.
+  const dataManualIso = dataManual.trim() ? parseDataPt(dataManual) : null;
+  const dataManualInvalida = dataManual.trim().length > 0 && !dataManualIso;
+  const data = dataManualIso ?? isoDaysAgo(diasAtras);
+  const varios = EM_MASSA.includes(tipo);
+  // Um só animal escolhido é o caso normal — é o que dá o cartão com o nome e
+  // o brinco, e o que permite calcular o ganho médio diário.
+  const animal = animalIds.length === 1 ? animalById(animalIds[0]) : undefined;
   const { podeRegistarCustoTratamento: podeRegistarCusto } = useFinancas(
-    animal?.exploracaoId,
+    (animal ?? (animalIds[0] ? animalById(animalIds[0]) : undefined))?.exploracaoId,
   );
 
   // Lista para escolher o animal (só fêmeas quando é um parto).
@@ -105,9 +164,41 @@ export default function NovoEventoScreen() {
     );
   }, [animais, tipo]);
 
+  /** O que a pesquisa deixa à vista — é sobre isto que age o "escolher todos". */
+  const aVista = useMemo(() => {
+    const q = normalizar(procura.trim());
+    if (!q) return animaisEscolha;
+    return animaisEscolha.filter((a) =>
+      [a.nome, a.numeroIdentificacao, a.raca, a.casa].some(
+        (c) => c && normalizar(c).includes(q),
+      ),
+    );
+  }, [animaisEscolha, procura]);
+
+  /**
+   * Trocar para um tipo que não é de massa com vinte animais escolhidos não
+   * pode gravar vinte partos. Fica o primeiro, que é o que o criador vê no
+   * cartão — em vez de a app apagar a escolha toda sem dizer nada.
+   */
+  function mudarTipo(t: Registavel) {
+    setTipo(t);
+    if (!EM_MASSA.includes(t)) setAnimalIds((ids) => ids.slice(0, 1));
+  }
+
+  function alternarAnimal(id: string) {
+    setAnimalIds((ids) => {
+      if (ids.includes(id)) return ids.filter((x) => x !== id);
+      return varios ? [...ids, id] : [id];
+    });
+  }
+
+  /** Escolhidos que a procura atual não mostra — senão gravava-se às cegas. */
+  const escondidos = animalIds.filter((id) => !aVista.some((a) => a.id === id)).length;
+
   const pesoNum = paraNumero(peso);
   const valido =
-    !!animalId &&
+    animalIds.length > 0 &&
+    !dataManualInvalida &&
     (tipo === 'Parto' ||
       (tipo === 'Vacinação' && vacina.trim().length > 0) ||
       (tipo === 'Medicamento' && medicamento.trim().length > 0) ||
@@ -115,6 +206,7 @@ export default function NovoEventoScreen() {
 
   /** Ganho médio diário desde a última pesagem registada, se existir. */
   function calcularGmd(kg: number): string | undefined {
+    const animalId = animalIds[0];
     if (!animalId) return undefined;
     const ultima = eventosByAnimal(animalId).find((e) => e.tipo === 'Pesagem');
     if (!ultima) return undefined;
@@ -128,8 +220,8 @@ export default function NovoEventoScreen() {
     return `GMD ${gmd.toFixed(2).replace('.', ',')} kg/dia`;
   }
 
-  function guardar() {
-    if (!animalId || !valido) return;
+  async function guardar() {
+    if (animalIds.length === 0 || !valido || aGuardar) return;
 
     let descricao = '';
     const partes: string[] = [];
@@ -169,17 +261,82 @@ export default function NovoEventoScreen() {
       if (Number.isFinite(n) && n > 0) valor = n;
     }
 
-    addEvento({ animalId, tipo, data, descricao, detalhe, valor });
+    // Esperar pela gravação antes de sair do ecrã. Sem o `await` e sem o
+    // `catch`, uma recusa do servidor (RLS, conflito de versão) ficava numa
+    // promessa sem dono: a app navegava para a ficha do animal como se tivesse
+    // gravado, e o registo sanitário — uma vacina, um medicamento com intervalo
+    // de segurança — desaparecia sem ninguém saber. Offline não muda nada: aí a
+    // escrita entra na fila e isto devolve logo sem erro.
+    setAGuardar(true);
 
-    // Efeitos secundários no animal
-    if (tipo === 'Medicamento' && seguranca > 0) {
-      updateAnimal(animalId, { fimIntervaloSeguranca: isoInDays(seguranca) });
-    }
-    if (tipo === 'Parto' && animal?.dataPrevistaParto) {
-      updateAnimal(animalId, { dataPrevistaParto: undefined });
+    // Um a um, e não em paralelo: são escritas com fila de sincronização por
+    // trás, e trinta pedidos ao mesmo tempo numa rede de campo dão trinta
+    // hipóteses de falhar em vez de uma. Os que passam ficam gravados — um
+    // erro a meio não desfaz o que já foi feito.
+    const falhados: { nome: string; erro: string }[] = [];
+    let gravados = 0;
+
+    for (const id of animalIds) {
+      try {
+        await addEvento({ animalId: id, tipo, data, descricao, detalhe, valor });
+
+        // Efeitos secundários no animal.
+        // O intervalo de segurança conta a partir do dia do TRATAMENTO, não de
+        // hoje. Enquanto a data só podia recuar uma semana o erro passava
+        // despercebido; com a data exata, lançar hoje um medicamento dado há
+        // três meses prendia o animal por mais 14 dias sem razão nenhuma — e o
+        // erro simétrico, num tratamento antigo de intervalo curto, dava por
+        // vencido um prazo que ainda corria.
+        if (tipo === 'Medicamento' && seguranca > 0) {
+          await updateAnimal(id, { fimIntervaloSeguranca: isoMaisDias(data, seguranca) });
+        }
+        if (tipo === 'Parto' && animalById(id)?.dataPrevistaParto) {
+          await updateAnimal(id, { dataPrevistaParto: undefined });
+        }
+        gravados++;
+      } catch (e) {
+        const a = animalById(id);
+        falhados.push({
+          nome: a?.nome ?? a?.numeroIdentificacao ?? 'Sem nome',
+          erro: e instanceof Error ? e.message : String(e),
+        });
+      }
     }
 
-    router.replace(`/animal/${animalId}`);
+    if (gravados === 0) {
+      toast.erro('Registo não guardado', falhados[0]?.erro ?? 'Tente novamente.');
+      setAGuardar(false);
+      return;
+    }
+
+    if (falhados.length > 0) {
+      // Nomear quem ficou de fora é o que permite repetir só esses. Um
+      // "gravado com erros" sem dizer quais obrigava a conferir trinta fichas.
+      //
+      // Este continua a interromper, e não é um toast: é uma lista de nomes
+      // para ir buscar, que não pode desaparecer sozinha ao fim de segundos.
+      avisar(
+        'Guardado, com falhas',
+        `Ficou registado em ${gravados} ${gravados === 1 ? 'animal' : 'animais'}. ` +
+          `Não foi possível em: ${falhados.map((f) => f.nome).join(', ')}.`,
+      );
+      if (animalIds.length === 1) router.replace(`/animal/${animalIds[0]}`);
+      else router.back();
+      return;
+    }
+
+    toast.sucesso(
+      META[tipo].feito,
+      gravados === 1
+        ? `${descricao} · ${formatDataPt(data)}`
+        : `${descricao} em ${gravados} animais, a ${formatDataPt(data)}`,
+    );
+
+    if (animalIds.length === 1) {
+      router.replace(`/animal/${animalIds[0]}`);
+      return;
+    }
+    router.back();
   }
 
   return (
@@ -199,38 +356,111 @@ export default function NovoEventoScreen() {
                 icon={META[t].icon}
                 cor={META[t].cor}
                 selected={tipo === t}
-                onPress={() => setTipo(t)}
+                onPress={() => mudarTipo(t)}
               />
             ))}
           </View>
         </Field>
 
-        {/* Animal */}
-        <Field label={tipo === 'Parto' ? 'Mãe (fêmea)' : 'Animal'} obrigatorio>
-          {animal ? (
+        {/* Animal(is) */}
+        <Field
+          label={
+            tipo === 'Parto'
+              ? 'Mãe (fêmea)'
+              : varios
+                ? `Animais${animalIds.length > 0 ? ` (${animalIds.length} escolhidos)` : ''}`
+                : 'Animal'
+          }
+          obrigatorio>
+          {/* Um só animal escolhido, num tipo individual: o cartão com o nome
+              e o brinco confirma em quem se está a registar. */}
+          {!varios && animal ? (
             <AnimalSelecionado
               icone={especieDe(animal.especie)}
               nome={animal.nome ?? 'Sem nome'}
               brinco={animal.numeroIdentificacao ?? 'Sem brinco'}
-              onTrocar={() => setAnimalId(undefined)}
+              onTrocar={() => setAnimalIds([])}
             />
           ) : (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-              {animaisEscolha.map((a) => (
-                <Chip
-                  key={a.id}
-                  label={a.nome ?? a.numeroIdentificacao ?? 'Sem nome'}
-                  icon={especieDe(a.especie)}
-                  selected={false}
-                  onPress={() => setAnimalId(a.id)}
-                />
-              ))}
-              {animaisEscolha.length === 0 ? (
-                <Text variant="secondary" color={colors.textMuted}>
-                  Não há fêmeas registadas para associar a um parto.
+            <>
+              {/* Com efetivo grande, percorrer cem chips à procura de um animal
+                  é pior do que escrever três letras do nome. */}
+              {animaisEscolha.length > 8 ? (
+                <View style={{ marginBottom: spacing.xs }}>
+                  <TextField
+                    value={procura}
+                    onChangeText={setProcura}
+                    placeholder="Procurar por nome, brinco, raça ou casa"
+                    icon="magnify"
+                  />
+                </View>
+              ) : null}
+
+              {varios && aVista.length > 0 ? (
+                <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xs }}>
+                  {/* Age sobre o que a pesquisa deixou à vista, não sobre o
+                      efetivo todo: é assim que se vacina "os Mertolengos"
+                      sem os escolher um a um. */}
+                  <Button
+                    label={
+                      procura.trim()
+                        ? `Escolher os ${aVista.length} à vista`
+                        : `Escolher todos (${aVista.length})`
+                    }
+                    icon="checkbox-multiple-marked-outline"
+                    variant="secondary"
+                    fullWidth={false}
+                    onPress={() =>
+                      setAnimalIds((ids) => [
+                        ...new Set([...ids, ...aVista.map((a) => a.id)]),
+                      ])
+                    }
+                  />
+                  {animalIds.length > 0 ? (
+                    <Button
+                      label="Limpar"
+                      icon="close"
+                      variant="ghost"
+                      fullWidth={false}
+                      onPress={() => setAnimalIds([])}
+                    />
+                  ) : null}
+                </View>
+              ) : null}
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+                {aVista.map((a) => (
+                  <Chip
+                    key={a.id}
+                    label={a.nome ?? a.numeroIdentificacao ?? 'Sem nome'}
+                    icon={animalIds.includes(a.id) ? 'check' : especieDe(a.especie)}
+                    selected={animalIds.includes(a.id)}
+                    onPress={() => alternarAnimal(a.id)}
+                  />
+                ))}
+                {animaisEscolha.length === 0 ? (
+                  <Text variant="secondary" color={colors.textMuted}>
+                    {tipo === 'Parto'
+                      ? 'Não há fêmeas registadas para associar a um parto.'
+                      : 'Ainda não há animais registados.'}
+                  </Text>
+                ) : aVista.length === 0 ? (
+                  <Text variant="secondary" color={colors.textMuted}>
+                    Nenhum animal corresponde a “{procura.trim()}”.
+                  </Text>
+                ) : null}
+              </View>
+
+              {/* Os que estão escolhidos mas a pesquisa escondeu continuam
+                  escolhidos — sem este aviso, gravava-se em animais que já não
+                  estavam à vista sem se perceber porquê. */}
+              {varios && escondidos > 0 ? (
+                <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.xs }}>
+                  Mais {escondidos} {escondidos === 1 ? 'animal escolhido' : 'animais escolhidos'}{' '}
+                  fora desta procura.
                 </Text>
               ) : null}
-            </View>
+            </>
           )}
         </Field>
 
@@ -241,12 +471,37 @@ export default function NovoEventoScreen() {
               <Chip
                 key={o.dias}
                 label={o.label}
-                selected={diasAtras === o.dias}
-                onPress={() => setDiasAtras(o.dias)}
+                // Com uma data escrita à mão, nenhum atalho está escolhido —
+                // senão o ecrã mostrava "Hoje" aceso por baixo de outra data.
+                selected={!dataManualIso && diasAtras === o.dias}
+                onPress={() => {
+                  setDiasAtras(o.dias);
+                  setDataManual('');
+                }}
               />
             ))}
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.xs }}>
+
+          <Text
+            variant="caption"
+            color={colors.textMuted}
+            style={{ marginTop: spacing.sm, marginBottom: 4 }}>
+            Ou data exata (dd/mm/aaaa) — para registar o que já aconteceu
+          </Text>
+          <TextField
+            value={dataManual}
+            onChangeText={(t) => setDataManual(mascaraDataPt(t))}
+            placeholder="Ex: 15/03/2026"
+            icon="calendar-edit"
+            keyboardType="number-pad"
+          />
+          {dataManualInvalida ? (
+            <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
+              Data inválida. Use o formato dd/mm/aaaa e uma data não futura.
+            </Text>
+          ) : null}
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm }}>
             <Icon name="calendar-check" size="sm" color={colors.primary} />
             <Text variant="secondary" color={colors.textSecondary}>
               {formatDataPt(data)}
@@ -359,7 +614,7 @@ export default function NovoEventoScreen() {
               </View>
               {seguranca > 0 ? (
                 <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-                  Não vender para abate até {formatDataPt(isoInDays(seguranca))}.
+                  Não vender para abate até {formatDataPt(isoMaisDias(data, seguranca))}.
                 </Text>
               ) : null}
             </Field>
@@ -380,8 +635,17 @@ export default function NovoEventoScreen() {
             só não se pede o dinheiro. É também a única coisa financeira que o
             veterinário preenche. */}
         {podeRegistarCusto && (tipo === 'Vacinação' || tipo === 'Medicamento') ? (
-          <Field label="Custo (€)" opcional>
+          <Field label={animalIds.length > 1 ? 'Custo por animal (€)' : 'Custo (€)'} opcional>
             <TextField value={custo} onChangeText={setCusto} placeholder="Ex: 45" icon="cash" keyboardType="decimal-pad" />
+            {/* O valor é gravado em CADA animal. Mostrar a conta feita evita o
+                engano de escrever aqui o total da fatura e ficar com trinta
+                vezes esse total lançado na exploração. */}
+            {animalIds.length > 1 && Number.isFinite(paraEuro(custo)) && paraEuro(custo) > 0 ? (
+              <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
+                {animalIds.length} animais × {paraEuro(custo).toFixed(2).replace('.', ',')} € ={' '}
+                {(paraEuro(custo) * animalIds.length).toFixed(2).replace('.', ',')} € no total.
+              </Text>
+            ) : null}
           </Field>
         ) : null}
 
@@ -408,7 +672,18 @@ export default function NovoEventoScreen() {
           },
           shadow.lg,
         ]}>
-        <Button label="Guardar registo" icon="check" onPress={guardar} disabled={!valido} />
+        <Button
+          label={
+            aGuardar
+              ? 'A guardar…'
+              : animalIds.length > 1
+                ? `Guardar em ${animalIds.length} animais`
+                : 'Guardar registo'
+          }
+          icon="check"
+          onPress={guardar}
+          disabled={!valido || aGuardar}
+        />
       </View>
     </View>
   );

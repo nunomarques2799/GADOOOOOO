@@ -1,4 +1,4 @@
-# Gestão de Gado — contexto para agentes
+# Terrabovina — contexto para agentes
 
 App móvel de gestão de gado (pecuária) em **React Native (Expo SDK 57)**.
 Público-alvo: criadores em Portugal, incluindo utilizadores idosos → **simplicidade
@@ -7,13 +7,16 @@ mercado e legal (DGAV/IFAP/SNIRA) em `../Instruções/`.
 
 ## Regras do projeto
 
-- **Design system**: usa sempre os tokens de `@/theme` (ver `DESIGN_SYSTEM.md`). Nunca hex soltos.
+- **Dois ambientes** (ver `AMBIENTES.md`): trabalha-se no branch `dev`, contra o projeto Supabase de **testes**; o `main` é o que o criador tem instalado e **fazer merge para `main` é publicar** — dispara sozinho o site da app e o instalador Windows. Nunca correr `eas update --branch preview` a partir do `dev`: esse canal é o telemóvel dele. Alterações à base de dados: dev primeiro, `scripts/backup.ps1 -Ambiente prod` depois, produção só no fim — ordem dos ficheiros em `supabase/MIGRACOES.md`.
+- **Design system**: usa sempre os tokens de `@/theme` (ver `DESIGN_SYSTEM.md`). Nunca hex soltos. As cores de marca e de superfície mudam com a **paleta** que o criador escolhe (`src/theme/paletas.ts`), por isso lê `colors` **dentro do render** — uma constante no topo de um módulo congela a cor de origem. Em tabelas de módulo, usa getters; `node scripts/cores-no-arranque.js` apanha o erro e corre na CI.
 - **Ícones**: só `MaterialCommunityIcons` via `<Icon name="…" />`. Nunca emojis. Confirma que o nome existe no glyphmap.
 - **Texto**: usa `<Text variant="…">` (não `<Text>` do RN diretamente).
 - **Idioma**: toda a UI e nomes de domínio em português de Portugal.
 - **Dados**: acede via `useGado()` (`src/data/store.tsx`). A UI nunca toca na BD diretamente — os tipos em `src/data/types.ts` espelham o schema Drift para a futura persistência (`expo-sqlite`) entrar sem alterar ecrãs.
 - **Offline-first**: com sessão Supabase, a cache local (`src/data/cacheLocal.ts`) é a fonte para a UI e as escritas falhadas por rede ficam numa fila. Assenta em `src/data/armazenamento.ts` — chave-valor **síncrono** (SQLite no telemóvel, `localStorage` na web). Tem de ser síncrono porque o arranque desenha o primeiro ecrã a partir da cache. Nunca voltar a usar `localStorage` diretamente: não existe em React Native e isso deixou o Android sem offline nenhum durante semanas.
 - **Navegação**: expo-router. Separadores em `src/app/(tabs)/`, ecrãs de detalhe/formulário empilhados na raiz.
+- **Avisos de ação**: toda a ação que grava, apaga ou escreve um ficheiro dá sinal — `useToasts().sucesso(...)` quando corre bem, `.erro(...)` com a razão do servidor quando não. A fila vive na raiz (`data/toasts.tsx`), por isso o aviso sobrevive ao `router.back()` que vem a seguir. O `avisar()` continua a existir para o que TEM de ser lido antes de continuar (ver a tabela no `DESIGN_SYSTEM.md`) — não para confirmar gravações.
+- **Permissões**: o papel dá o conjunto de partida e a coluna `membro_exploracao.permissoes` guarda as EXCEÇÕES de cada pessoa (aba Trabalhadores → tocar na pessoa). Ao mexer nisto, mexe-se nos três sítios ao mesmo tempo: `src/data/permissoes.ts`, `supabase/schema_permissoes.sql` (é a RLS que decide de verdade) e `permissoes.test.ts`.
 - **Alertas**: só os que não têm prazo a correr (`gravidade: 'info'` **e** sem `diasRestantes`) podem ser calados pelo criador — ver `src/data/dispensados.ts`. Nada com contagem decrescente é silenciável, e uma dispensa cai sozinha se a gravidade piorar. Um alerta que nunca desaparece nem se pode dispensar enche a lista e faz perder os urgentes.
 - **Atualizações**: três vias, um só banner (`BannerAtualizacao` → `useAtualizacao()`). Desktop = instalador Electron; telemóvel = **EAS Update** (`eas update --branch preview`), que entrega **só alterações de JS**; web instalada (PWA) = service worker. Mexer em código nativo — plugin novo no `app.json`, permissão, dependência nativa — continua a exigir `eas build`. Na dúvida: se editou `app.json`/`package.json`, é build; se só editou `src/`, chega o update.
 - **Web instalável**: a app é publicada num site Netlify próprio e instala-se pelo navegador, sem download nem o aviso "Editor desconhecido" do Windows (ver `website/COMO-PUBLICAR.md`). O HTML da web sai de `public/index.html` — **não** de um `+html.tsx`, que com `web.output: "single"` é ignorado. O service worker (`public/sw.js`) nunca corre dentro do Electron: lá quem atualiza é o electron-updater, e uma cache por cima servia a versão anterior.

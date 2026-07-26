@@ -36,6 +36,13 @@ export function isoInDays(n: number): string {
  * Devolve null se inválida. Por omissão recusa datas futuras — quase tudo o
  * que se regista já aconteceu; `permitirFuturo` abre a exceção para os campos
  * que são futuros por definição, como a data prevista do parto.
+ *
+ * "Futuro" é medido em DIAS, não em horas: a data fica ao meio-dia, e comparar
+ * esse meio-dia com o instante atual recusava a data de HOJE a quem a
+ * escrevesse de manhã. Era o caso mais comum de todos — o campo "Marcar saída"
+ * já vem preenchido com hoje, e antes das 12h o criador carregava em Confirmar
+ * e recebia "Data inválida" por cima de uma data correta, sem nada que
+ * indicasse o que fazer a seguir.
  */
 export function parseDataPt(
   texto: string,
@@ -49,8 +56,58 @@ export function parseDataPt(
   if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
   const d = new Date(ano, mes - 1, dia, 12, 0, 0);
   if (d.getFullYear() !== ano || d.getMonth() !== mes - 1 || d.getDate() !== dia) return null;
-  if (!opcoes?.permitirFuturo && d.getTime() > Date.now()) return null;
+  if (!opcoes?.permitirFuturo && d.getTime() > fimDeHoje()) return null;
   return d.toISOString();
+}
+
+/** Último instante do dia de hoje, em hora local. */
+function fimDeHoje(): number {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
+  return d.getTime();
+}
+
+/**
+ * Põe as barras de uma data à medida que se escreve: `15032021` → `15/03/2021`.
+ *
+ * Escrever barras num teclado numérico de telemóvel obriga a trocar de
+ * teclado, e é onde as datas se enganavam — a app aceita `dd/mm/aaaa` e mais
+ * nada, mas o teclado que abre para as escrever nem sempre tem a tecla. Aqui a
+ * pontuação é posta pela app e o criador só carrega em números.
+ *
+ * Trabalha só sobre os dígitos, o que também endireita o que vem colado
+ * (`15-03-2021`, `15.03.2021`) e corta o que passa dos oito. Nunca deixa uma
+ * barra no fim: assim apagar tira sempre um dígito, em vez de tirar uma barra
+ * que a máscara voltava a pôr — que é a tecla de apagar a parecer avariada.
+ */
+export function mascaraDataPt(texto: string): string {
+  const d = texto.replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
+/**
+ * O DIA a que um instante pertence, em hora local: `2026-07-25`.
+ *
+ * Local e não UTC, e a diferença não é teórica. Portugal está em UTC+1 de
+ * março a outubro, portanto entre a meia-noite e a uma da manhã o `toISOString()`
+ * ainda dá o dia ANTERIOR. Cortar os dez primeiros caracteres desse texto — que
+ * é o atalho óbvio para chegar a um `aaaa-mm-dd` — gravava a despesa lançada à
+ * 00:30 no dia errado, com o formulário a mostrar a data certa por cima.
+ *
+ * É a mesma conta que `chaveDia()` faz para o calendário (`calendario.ts`), que
+ * delega aqui para não haver duas versões da regra.
+ */
+export function diaIso(d: Date | string): string {
+  // Um texto que já é só o dia devolve-se como está. Passá-lo por `new Date`
+  // faria o JS lê-lo como meia-noite UTC, e um dia sem hora não tem fuso para
+  // converter: seria inventar uma hora para depois a interpretar. A ida e volta
+  // ao servidor (que devolve `date` sem hora) tem de ser inofensiva.
+  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.trim())) return d.trim();
+  const data = typeof d === 'string' ? new Date(d) : d;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${data.getFullYear()}-${p(data.getMonth() + 1)}-${p(data.getDate())}`;
 }
 
 /** Data ISO ao meio-dia, `dias` depois de `iso`. Usado para prever o parto. */
@@ -147,6 +204,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
         id: `id-${a.id}`,
         categoria: 'identificacao',
         animalId: a.id,
+        exploracaoId: a.exploracaoId,
+        data: isoMaisDias(a.dataNascimento, PrazosLegais.identificacao),
         gravidade: prazo <= 0 ? 'urgente' : prazo <= 5 ? 'aviso' : 'info',
         titulo: prazo <= 0 ? 'Identificação em atraso' : 'Falta identificar (brinco)',
         descricao:
@@ -164,6 +223,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
         id: `snira-${a.id}`,
         categoria: 'snira',
         animalId: a.id,
+        exploracaoId: a.exploracaoId,
+        data: isoMaisDias(a.dataIdentificacao, PrazosLegais.snira),
         gravidade: prazo <= 0 ? 'urgente' : prazo <= 3 ? 'aviso' : 'info',
         titulo: prazo <= 0 ? 'Comunicação SNIRA em atraso' : 'Comunicar ao SNIRA',
         descricao:
@@ -186,6 +247,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
           id: `parto-${a.id}`,
           categoria: 'parto',
           animalId: a.id,
+          exploracaoId: a.exploracaoId,
+          data: a.dataPrevistaParto,
           gravidade: 'info',
           titulo: 'Parto previsto por confirmar',
           descricao: `${rotulo}: a data prevista de parto já passou há mais de ${PartoPrevisaoCaducaDias} dias. Registe o parto ou corrija a previsão.`,
@@ -195,6 +258,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
           id: `parto-${a.id}`,
           categoria: 'parto',
           animalId: a.id,
+          exploracaoId: a.exploracaoId,
+          data: a.dataPrevistaParto,
           gravidade: dias <= 3 ? 'aviso' : 'info',
           titulo: 'Parto previsto',
           descricao:
@@ -214,6 +279,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
           id: `med-${a.id}`,
           categoria: 'medicamento',
           animalId: a.id,
+          exploracaoId: a.exploracaoId,
+          data: a.fimIntervaloSeguranca,
           gravidade: 'info',
           titulo: 'Período de segurança',
           descricao: `${rotulo}: em intervalo de segurança — não vender para abate (faltam ${dias} dia(s)).`,
@@ -233,6 +300,8 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
           id: `vac-${a.id}`,
           categoria: 'vacinacao',
           animalId: a.id,
+          exploracaoId: a.exploracaoId,
+          data: isoMaisDias(new Date(ultima).toISOString(), PrazosSanitarios.revacinacao),
           gravidade: restam <= 0 ? 'urgente' : 'info',
           titulo: restam <= 0 ? 'Revacinação em atraso' : 'Revacinação a aproximar-se',
           descricao:
@@ -247,6 +316,9 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
         id: `vac-${a.id}`,
         categoria: 'vacinacao',
         animalId: a.id,
+        exploracaoId: a.exploracaoId,
+        // Sem `data` de propósito: não há prazo nenhum a correr, há um registo
+        // em falta. No calendário só apareceria a fingir de tarefa marcada.
         gravidade: 'info',
         titulo: 'Sem registo de vacinação',
         descricao: `${rotulo} não tem nenhuma vacinação registada. Registe a última para acompanhar o plano.`,

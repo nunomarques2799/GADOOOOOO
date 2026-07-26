@@ -1,4 +1,4 @@
-# Gestão de Gado 🐄
+# Terrabovina 🐄
 
 App móvel para **gestão de explorações pecuárias em Portugal**. Mobile-first,
 offline-first, em português de Portugal, com terminologia correta do sector

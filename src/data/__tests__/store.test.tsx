@@ -116,7 +116,7 @@ jest.mock('../supabaseRepo', () => ({
       : msg,
 }));
 
-import { lerOutbox } from '../cacheLocal';
+import { CHAVES, lerOutbox } from '../cacheLocal';
 import { NotificacoesProvider } from '../notificacoes';
 import { GadoProvider, useGado } from '../store';
 
@@ -143,6 +143,32 @@ async function montar(): Promise<{ ctx: () => Ctx; arvore: ReactTestRenderer }> 
     );
   });
   return { ctx: () => atual as Ctx, arvore };
+}
+
+/**
+ * Corre uma ação que se espera falhar e devolve o erro que ela lançou.
+ *
+ * A rejeição TEM de ser apanhada aqui dentro, antes de sair do `act`. Deixá-la
+ * escapar — `await expect(act(...)).rejects.toThrow(...)` — faz o `act`
+ * propagar o erro sem descarregar as atualizações de estado que ficaram em
+ * fila, e a sonda continua a devolver o contexto de ANTES da ação. Os testes
+ * de reposição escritos assim passavam com a reposição removida do store:
+ * comparavam o estado inicial consigo próprio e davam por boa uma rede de
+ * segurança que não estava lá.
+ */
+async function falhaCom(acao: () => Promise<unknown>): Promise<Error> {
+  let capturado: unknown = null;
+  await act(async () => {
+    try {
+      await acao();
+    } catch (e) {
+      capturado = e;
+    }
+  });
+  if (!(capturado instanceof Error)) {
+    throw new Error('esperava-se que a ação falhasse, e não falhou');
+  }
+  return capturado;
 }
 
 function animal(id: string, patch: Partial<Animal> = {}): Animal {
@@ -194,7 +220,7 @@ describe('arranque', () => {
     // A cache é o que o criador viu da última vez. Sem ela, abrir a app no
     // mato mostrava um efetivo vazio — como se tivesse perdido os animais.
     mockMapa.set(
-      'gado.cache.v1',
+      CHAVES.cache,
       JSON.stringify({ exploracoes: [exploracao], terrenos: [], animais: [animal('a9')], eventos: [] }),
     );
     mockServidor.falhasCarregar = 1;
@@ -202,6 +228,47 @@ describe('arranque', () => {
     const { ctx } = await montar();
 
     expect(ctx().animais.map((a) => a.id)).toEqual(['a9']);
+    // O nome deste teste sempre prometeu isto, mas ninguém o verificava — e
+    // era mesmo aqui que estava o buraco: o store dava `online: true` antes de
+    // puxar do servidor, por isso uma leitura recusada deixava a app a mostrar
+    // a cache com ar de estar tudo bem. Sem este `expect`, distinguir uma
+    // conta vazia de uma leitura falhada só olhando ao ecrã era impossível.
+    expect(ctx().online).toBe(false);
+  });
+
+  it('uma leitura recusada pelo servidor não se disfarça de conta vazia', async () => {
+    // Sem cache nenhuma: é o caso em que a app abre a zeros. Se além disso
+    // disser que está online, o criador conclui que perdeu o efetivo.
+    mockServidor.falhasCarregar = 1;
+
+    const { ctx } = await montar();
+
+    expect(ctx().animais).toEqual([]);
+    expect(ctx().online).toBe(false);
+  });
+
+  it('guarda a razão da recusa, para o ecrã de Sincronização a mostrar', async () => {
+    // Sem isto, descobrir porque é que a app não traz dados exigia abrir as
+    // ferramentas do programador — que é pedir de mais a quem está no campo,
+    // e a quem o ajuda ao telefone.
+    mockServidor.falhasCarregar = 1;
+
+    const { ctx } = await montar();
+    expect(ctx().erroSincronizacao).toMatch(/Network request failed/);
+
+    // E some assim que uma leitura corre bem, para não ficar um aviso velho
+    // a assustar depois de o problema estar resolvido.
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [],
+      animais: [animal('a1')],
+      eventos: [],
+    };
+    await act(async () => {
+      await ctx().recarregar();
+    });
+    expect(ctx().erroSincronizacao).toBeNull();
+    expect(ctx().online).toBe(true);
   });
 });
 
@@ -240,11 +307,8 @@ describe('escritas otimistas', () => {
     const { ctx } = await montar();
     mockServidor.erroSeguinte = 'new row violates row-level security policy';
 
-    await expect(
-      act(async () => {
-        await ctx().addAnimal(animal('recusado') as Omit<Animal, 'id'>);
-      }),
-    ).rejects.toThrow(/row-level security/);
+    const erro = await falhaCom(() => ctx().addAnimal(animal('recusado') as Omit<Animal, 'id'>));
+    expect(erro.message).toMatch(/row-level security/);
 
     expect(lerOutbox()).toEqual([]);
   });
@@ -256,7 +320,7 @@ describe('escritas otimistas', () => {
       await ctx().addAnimal(animal('a1') as Omit<Animal, 'id'>);
     });
 
-    const cache = JSON.parse(mockMapa.get('gado.cache.v1') as string);
+    const cache = JSON.parse(mockMapa.get(CHAVES.cache) as string);
     expect(cache.animais).toHaveLength(1);
   });
 });
@@ -365,14 +429,45 @@ describe('sincronização da fila', () => {
     expect(ctx().animais).toHaveLength(1);
 
     mockServidor.erroSeguinte = 'Este animal tem 1 registo(s) no histórico.';
-    await expect(
-      act(async () => {
-        await ctx().deleteAnimal('a1');
-      }),
-    ).rejects.toThrow(/histórico/);
+    const erro = await falhaCom(() => ctx().deleteAnimal('a1'));
+    expect(erro.message).toMatch(/histórico/);
 
     expect(ctx().animais.map((a) => a.id)).toEqual(['a1']);
     expect(ctx().eventos.map((e) => e.id)).toEqual(['e1']);
+  });
+
+  it('uma eliminação recusada devolve o dinheiro imputado ao animal', async () => {
+    // A cascata local desliga os movimentos do animal (espelha o `on delete
+    // set null` do servidor). Quando a eliminação é recusada, esse desligar
+    // tem de ser desfeito com o resto: sem isso o animal voltava ao ecrã mas
+    // sem o balanço dele — a despesa continuava lá, já sem dono.
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [],
+      animais: [animal('a1')],
+      eventos: [],
+      movimentos: [
+        {
+          id: 'm1',
+          exploracaoId: 'exp-1',
+          animalId: 'a1',
+          direcao: 'despesa',
+          categoria: 'Sanidade',
+          valor: 45,
+          data: '2026-01-01',
+          descricao: 'Vacina',
+        },
+      ],
+    };
+    const { ctx } = await montar();
+    expect(ctx().movimentosByAnimal('a1')).toHaveLength(1);
+
+    mockServidor.erroSeguinte = 'Este animal é mãe ou pai de 1 animais registados.';
+    const erro = await falhaCom(() => ctx().deleteAnimal('a1'));
+    expect(erro.message).toMatch(/mãe ou pai/);
+
+    expect(ctx().animais.map((a) => a.id)).toEqual(['a1']);
+    expect(ctx().movimentosByAnimal('a1').map((m) => m.id)).toEqual(['m1']);
   });
 
   it('limpar a lista de falhadas esvazia-a', async () => {
@@ -437,6 +532,64 @@ describe('cascatas locais', () => {
 
     expect(ctx().animais).toHaveLength(1);
     expect(ctx().animais[0].terrenoId).toBeUndefined();
+  });
+
+  it('uma exploração recusada volta inteira ao ecrã', async () => {
+    // Só o admin elimina uma exploração, e uma conta suspensa não elimina nada.
+    // Quando a recusa chega, a cascata local já tirou do ecrã a exploração, os
+    // terrenos, o efetivo, o histórico e o dinheiro — e é a maior perda de vista
+    // que a app pode causar. Sem reposição ficava tudo em branco por trás da
+    // mensagem de erro, para só voltar na sincronização seguinte.
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [{ id: 't1', exploracaoId: 'exp-1', nome: 'Courela', tipo: 'Pastagem' }],
+      animais: [animal('a1')],
+      eventos: [
+        { id: 'e1', animalId: 'a1', tipo: 'Pesagem', data: new Date().toISOString(), descricao: '' },
+      ],
+      movimentos: [
+        {
+          id: 'm1',
+          exploracaoId: 'exp-1',
+          direcao: 'despesa',
+          categoria: 'Alimentação',
+          valor: 860,
+          data: '2026-07-01',
+          descricao: 'Ração',
+        },
+      ],
+    };
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Não tem permissão para eliminar esta exploração.';
+    const erro = await falhaCom(() => ctx().deleteExploracao('exp-1'));
+    expect(erro.message).toMatch(/permissão/);
+
+    expect(ctx().exploracoes.map((e) => e.id)).toEqual(['exp-1']);
+    expect(ctx().terrenos.map((t) => t.id)).toEqual(['t1']);
+    expect(ctx().animais.map((a) => a.id)).toEqual(['a1']);
+    expect(ctx().eventos.map((e) => e.id)).toEqual(['e1']);
+    expect(ctx().movimentos.map((m) => m.id)).toEqual(['m1']);
+  });
+
+  it('um terreno recusado volta, e os animais voltam a estar nele', async () => {
+    // A cascata local desafeta os animais do terreno. Se o servidor recusar, o
+    // terreno voltava mas o efetivo ficava "sem terreno" até à sincronização
+    // seguinte — e é por terreno que se sabe onde o gado está.
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [{ id: 't1', exploracaoId: 'exp-1', nome: 'Courela', tipo: 'Pastagem' }],
+      animais: [animal('a1', { terrenoId: 't1' })],
+      eventos: [],
+    };
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Não tem permissão para eliminar terrenos.';
+    const erro = await falhaCom(() => ctx().deleteTerreno('t1'));
+    expect(erro.message).toMatch(/permissão/);
+
+    expect(ctx().terrenos.map((t) => t.id)).toEqual(['t1']);
+    expect(ctx().animalById('a1')?.terrenoId).toBe('t1');
   });
 });
 
@@ -511,6 +664,26 @@ describe('saída do efetivo', () => {
     expect(ctx().animaisByExploracao('exp-1')).toEqual([]);
     expect(ctx().animaisByExploracaoIncluindoSaidos('exp-1')).toHaveLength(1);
     expect(ctx().alertas.filter((al) => al.animalId === 'a1')).toEqual([]);
+  });
+
+  it('uma saída recusada não deixa venda nem receita no ecrã', async () => {
+    // Uma saída são três escritas ligadas. Se a do animal for recusada, as
+    // outras duas nem são tentadas — e o que ficava no ecrã era o pior dos
+    // mundos: o erro à frente e, por trás dele, o animal vendido, o evento de
+    // Venda e uma receita de 850 € que não existem em servidor nenhum.
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Não tem permissão para alterar este registo.';
+    const erro = await falhaCom(() =>
+      ctx().marcarSaida('a1', 'vendido', new Date().toISOString(), 'Feira', 850),
+    );
+    expect(erro.message).toMatch(/permissão/);
+
+    const a = ctx().animalById('a1')!;
+    expect(a.estado).toBeUndefined();
+    expect(a.terrenoId).toBe('t1'); // continua no terreno onde estava
+    expect(ctx().eventosByAnimal('a1')).toEqual([]);
+    expect(ctx().movimentosByAnimal('a1')).toEqual([]);
   });
 });
 

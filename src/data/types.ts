@@ -4,9 +4,31 @@
  * local (expo-sqlite) possa entrar mais tarde sem alterar a UI.
  */
 
+// Só o tipo, e por isso não há ciclo em execução: `permissoes.ts` também
+// importa daqui, mas as duas importações desaparecem na compilação.
+import type { PermissoesMembro } from './permissoes';
+
 export type Especie = 'Bovino' | 'Equídeo' | 'Ovino' | 'Caprino' | 'Suíno';
 export type Sexo = 'Macho' | 'Fêmea';
 export type TipoTerreno = 'Pastagem' | 'Cultivo' | 'Misto' | 'Outro';
+
+/**
+ * Para que serve o animal na exploração. Só se pergunta a BOVINOS: é onde a
+ * distinção manda no maneio (uma vaca de leite ordenha-se todos os dias, uma
+ * de criação não) e no que faz sentido filtrar. Nos pequenos ruminantes o
+ * rebanho tende a ter um destino só, e perguntar animal a animal seria um
+ * campo a mais em cada registo.
+ *
+ * Nem todas se aplicam aos dois sexos — ver `finalidadesPara()` em
+ * `constants.ts`. Um macho não é de "Criação" e uma fêmea não é "Semental".
+ */
+export type Finalidade =
+  | 'Leite'
+  | 'Carne'
+  | 'Criação'
+  | 'Semental'
+  | 'Recria'
+  | 'Trabalho';
 
 /**
  * Estado do animal no efetivo. `falecido` e `vendido` mantêm o registo em BD
@@ -27,6 +49,11 @@ export interface MembroExploracao {
   exploracaoId: string;
   role: RoleMembro;
   criadoEm?: string;
+  /**
+   * O que o dono mudou às permissões desta pessoa, por cima do que o papel dá.
+   * Vazio (ou ausente) = segue o papel. Ver `permissoes.ts`.
+   */
+  permissoes?: PermissoesMembro;
 }
 
 export interface Convite {
@@ -103,6 +130,20 @@ export interface Exploracao extends ComVersao {
    * `definir_financas_ativas` (ver `supabase/schema_financas_opcional.sql`).
    */
   financasAtivas?: boolean;
+  /**
+   * O registo por casa e número está ligado nesta exploração? Desligado (o
+   * valor por omissão) esconde os dois campos do formulário do animal.
+   *
+   * Vive aqui, e não no perfil, pela mesma razão que `financasAtivas`: a RLS de
+   * `perfil` só deixa cada um ver o seu, e o trabalhador precisa de a ler para
+   * saber que campos preencher. Escrita só pelo RPC `definir_casa_ativa`.
+   *
+   * Ao contrário das finanças, isto não fecha nenhuma porta no servidor: são
+   * duas colunas de texto sem regra de permissão própria. O interruptor existe
+   * para não encher o formulário a quem nunca registou gado por casa — não é
+   * uma medida de segurança, e não se deve passar a tratá-lo como tal.
+   */
+  casaAtiva?: boolean;
 }
 
 export interface Terreno extends ComVersao {
@@ -128,6 +169,19 @@ export interface Animal extends ComVersao {
   dataNascimento: string; // ISO
   raca?: string;
   corPelagem?: string;
+  /**
+   * Registo tradicional por casa: o nome da casa e o número do animal dentro
+   * dela ("Casa do Monte, 12"). Muitos criadores identificam assim os animais
+   * há gerações, ao lado (ou em vez) do brinco.
+   *
+   * Os campos só aparecem no formulário com `Exploracao.casaAtiva` ligada, mas
+   * um animal que já os tenha preenchido mostra-os SEMPRE — desligar a opção
+   * esconde o que ainda não foi escrito, nunca o que já lá está.
+   */
+  casa?: string;
+  numeroCasa?: string;
+  /** Só para bovinos. Ver `Finalidade`. */
+  finalidade?: Finalidade;
   numeroIdentificacao?: string; // brinco SIA
   dataIdentificacao?: string; // ISO
   tipoIdentificacao?: string;
@@ -239,6 +293,16 @@ export interface Alerta {
   animalId?: string;
   /** Dias restantes até ao prazo (negativo = vencido). */
   diasRestantes?: number;
+  /**
+   * O dia a que o alerta pertence (ISO) — a data prevista do parto, o fim do
+   * prazo legal, o dia de revacinar. É o que põe o alerta no calendário.
+   *
+   * Nem todos têm: "sem registo de vacinação" não é um prazo, é uma lacuna, e
+   * inventar-lhe um dia era pô-lo no calendário como se fosse tarefa marcada.
+   */
+  data?: string;
+  /** A exploração do animal, para se poderem ver os alertas de uma só. */
+  exploracaoId?: string;
   categoria: 'snira' | 'identificacao' | 'parto' | 'medicamento' | 'vacinacao';
 }
 

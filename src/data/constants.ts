@@ -1,7 +1,7 @@
 import { colors } from '@/theme';
 import type { IconName } from '@/components/ui';
 
-import type { Especie, Sexo, TipoTerreno } from './types';
+import type { Especie, Finalidade, Sexo, TipoTerreno } from './types';
 
 /** Prazos legais (dias) — DGAV/IFAP, ver README secção 3.3. */
 export const PrazosLegais = {
@@ -59,9 +59,61 @@ export const especieMeta: Record<Especie, EspecieMeta> = {
   Suíno: { icon: 'pig-variant', cor: colors.suino, plural: 'Suínos' },
 };
 
+/**
+ * Finalidades por sexo. A régua é biológica, não de gosto: um macho não pare
+ * e uma fêmea não cobre. Oferecer as seis a toda a gente obrigava o criador a
+ * ler opções impossíveis de cada vez que registasse um animal.
+ *
+ * "Recria" é o animal jovem que ainda não tem destino fechado — serve os dois,
+ * e é o que se escolhe enquanto não se decide entre engordar ou guardar para
+ * reprodução.
+ */
+const FINALIDADES: Record<Sexo, readonly Finalidade[]> = {
+  Fêmea: ['Leite', 'Criação', 'Carne', 'Recria'],
+  Macho: ['Semental', 'Carne', 'Recria', 'Trabalho'],
+};
+
+export function finalidadesPara(sexo: Sexo): Finalidade[] {
+  return [...FINALIDADES[sexo]];
+}
+
+/** Todas as finalidades — para os filtros, que não estão dentro de um sexo. */
+export const finalidades: Finalidade[] = [
+  'Leite',
+  'Criação',
+  'Semental',
+  'Carne',
+  'Recria',
+  'Trabalho',
+];
+
+export const finalidadeMeta: Record<Finalidade, { icon: IconName; descricao: string }> = {
+  Leite: { icon: 'bottle-soda-outline', descricao: 'Em ordenha ou destinada a ordenha' },
+  Criação: { icon: 'baby-bottle-outline', descricao: 'Fêmea para parir e criar' },
+  Semental: { icon: 'gender-male', descricao: 'Macho reprodutor' },
+  Carne: { icon: 'food-steak', descricao: 'Engorda para abate' },
+  Recria: { icon: 'sprout', descricao: 'Jovem, ainda a crescer' },
+  Trabalho: { icon: 'tractor', descricao: 'Boi de trabalho' },
+};
+
+/**
+ * `Misto` e `Outro` seguem a paleta escolhida, por isso são GETTERS: esta
+ * tabela nasce no arranque do módulo, antes de a paleta guardada estar
+ * aplicada, e um valor direto ficava com a cor de origem para sempre.
+ */
 export const tipoTerrenoMeta: Record<TipoTerreno, { icon: IconName; cor: string }> = {
   Pastagem: { icon: 'grass', cor: colors.success },
   Cultivo: { icon: 'sprout', cor: colors.caprino },
-  Misto: { icon: 'leaf', cor: colors.primary },
-  Outro: { icon: 'map-marker-outline', cor: colors.textSecondary },
+  Misto: {
+    icon: 'leaf',
+    get cor() {
+      return colors.primary;
+    },
+  },
+  Outro: {
+    icon: 'map-marker-outline',
+    get cor() {
+      return colors.textSecondary;
+    },
+  },
 };

@@ -13,7 +13,10 @@ import { useEffect, type ReactNode } from 'react';
 import { Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AnfitriaoToasts } from '@/components/AnfitriaoToasts';
+import { EcraACarregar } from '@/components/EcraACarregar';
 import { EcraLogin } from '@/components/EcraLogin';
+import { FaixaAmbiente } from '@/components/FaixaAmbiente';
 import { LimiteDeErro } from '@/components/LimiteDeErro';
 import { EcraNovaPalavra } from '@/components/EcraNovaPalavra';
 import { EcraPendente } from '@/components/EcraPendente';
@@ -21,11 +24,18 @@ import { AuthProvider, useAuth } from '@/data/auth';
 import { MembrosProvider, useMembros } from '@/data/membros';
 import { NotificacoesProvider } from '@/data/notificacoes';
 import { GadoProvider } from '@/data/store';
+import { ToastsProvider } from '@/data/toasts';
 import { supabaseConfigurado } from '@/data/supabase';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout } from '@/theme';
+import { arrancarTema } from '@/theme/preferencia';
 
 SplashScreen.preventAutoHideAsync();
+
+// Antes de qualquer ecrã se desenhar. O armazenamento é síncrono de propósito
+// (ver `armazenamento.ts`), o que permite a app abrir já na paleta escolhida em
+// vez de piscar do verde para a cor certa à frente do criador.
+arrancarTema();
 
 /**
  * Em janelas largas (Electron/browser) a app usa o desenho de desktop — barra
@@ -35,9 +45,13 @@ SplashScreen.preventAutoHideAsync();
  */
 function ColunaApp({ children }: { children: ReactNode }) {
   const desktop = useDesktop();
-  if (Platform.OS !== 'web') return <>{children}</>;
+  if (Platform.OS !== 'web') return <ComToasts>{children}</ComToasts>;
   if (desktop) {
-    return <View style={{ flex: 1, backgroundColor: colors.background }}>{children}</View>;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <ComToasts>{children}</ComToasts>
+      </View>
+    );
   }
   return (
     <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceSunken }}>
@@ -48,8 +62,24 @@ function ColunaApp({ children }: { children: ReactNode }) {
           maxWidth: layout.colunaMobile,
           backgroundColor: colors.background,
         }}>
-        {children}
+        <ComToasts>{children}</ComToasts>
       </View>
+    </View>
+  );
+}
+
+/**
+ * A camada onde os avisos curtos aparecem, por cima de qualquer ecrã.
+ *
+ * Fica DENTRO da coluna da app (e não no topo da árvore) para o aviso nascer
+ * alinhado com o conteúdo: numa janela larga de browser, a app vive numa coluna
+ * estreita ao meio e um cartão ancorado à janela aparecia-lhe ao lado.
+ */
+function ComToasts({ children }: { children: ReactNode }) {
+  return (
+    <View style={{ flex: 1 }}>
+      {children}
+      <AnfitriaoToasts />
     </View>
   );
 }
@@ -82,7 +112,14 @@ function ColunaEstreita({ children }: { children: ReactNode }) {
  */
 function PortaoAuth({ children }: { children: ReactNode }) {
   const { aCarregar, sessao, emRecuperacao } = useAuth();
-  if (aCarregar) return null; // mantém o splash até saber se há sessão
+  // O `EcraACarregar` só aparece passado quase um segundo, por isso um arranque
+  // normal continua a ser o splash a dar lugar à app, sem nada pelo meio.
+  if (aCarregar)
+    return (
+      <ColunaEstreita>
+        <EcraACarregar />
+      </ColunaEstreita>
+    );
   // O link de recuperação abre uma sessão especial — pede a nova palavra-passe
   // antes de deixar entrar na app.
   if (supabaseConfigurado && emRecuperacao)
@@ -109,7 +146,15 @@ function AppRouter({ children }: { children: ReactNode }) {
   const { sessao } = useAuth();
   const { aCarregar, membros, isSuperadmin } = useMembros();
   if (!supabaseConfigurado || !sessao) return <>{children}</>;
-  if (aCarregar) return null;
+  // Sem a cache do último acesso — primeira vez, ou depois de a app mudar de
+  // pasta de dados — isto espera pelo servidor. Era o segundo sítio onde a app
+  // ficava em branco à espera de uma resposta que podia nunca chegar.
+  if (aCarregar)
+    return (
+      <ColunaEstreita>
+        <EcraACarregar mensagem="A carregar as suas explorações…" />
+      </ColunaEstreita>
+    );
   if (isSuperadmin) return <>{children}</>;
   if (membros.length === 0)
     return (
@@ -141,6 +186,13 @@ export default function RootLayout() {
     <LimiteDeErro>
     <SafeAreaProvider>
       <StatusBar style="dark" />
+      {/* Por fora do portão de autenticação: a faixa de testes tem de aparecer
+          logo no ecrã de entrada, que é onde se percebe que se está a escrever
+          na base errada — antes de lá escrever seja o que for. */}
+      <FaixaAmbiente>
+      {/* Por fora de tudo o que grava: um aviso de "gravado" tem de sobreviver
+          ao ecrã que o mandou, que quase sempre se fecha logo a seguir. */}
+      <ToastsProvider>
       <AuthProvider>
         <ColunaApp>
         <PortaoAuth>
@@ -156,10 +208,13 @@ export default function RootLayout() {
                   }}>
                   <Stack.Screen name="(tabs)" />
                   <Stack.Screen name="(superadmin)" />
-                  <Stack.Screen name="alertas" />
-                  <Stack.Screen name="financas" />
+                  {/* `alertas` e `financas` mudaram-se para dentro de `(tabs)`
+                      (passaram a separadores). O grupo não entra no caminho, por
+                      isso os URLs `/alertas` e `/financas` continuam os mesmos —
+                      as ligações antigas e a app instalada não partem. */}
                   <Stack.Screen name="animal/[id]" />
                   <Stack.Screen name="animal/novo" options={{ animation: 'slide_from_bottom' }} />
+                  <Stack.Screen name="animal/importar" options={{ animation: 'slide_from_bottom' }} />
                   <Stack.Screen name="animal/editar/[id]" />
                   <Stack.Screen name="animal/genealogia/[id]" />
                   <Stack.Screen name="evento/novo" options={{ animation: 'slide_from_bottom' }} />
@@ -177,6 +232,8 @@ export default function RootLayout() {
                   <Stack.Screen name="conta/sincronizacao" />
                   <Stack.Screen name="conta/notificacoes" />
                   <Stack.Screen name="conta/financas" />
+                  <Stack.Screen name="conta/casa" />
+                  <Stack.Screen name="conta/aparencia" />
                   <Stack.Screen name="conta/ajuda" />
                   <Stack.Screen name="inspecionar/exploracao/[id]" />
                   <Stack.Screen name="inspecionar/animal/[id]" />
@@ -188,6 +245,8 @@ export default function RootLayout() {
         </PortaoAuth>
         </ColunaApp>
       </AuthProvider>
+      </ToastsProvider>
+      </FaixaAmbiente>
     </SafeAreaProvider>
     </LimiteDeErro>
   );

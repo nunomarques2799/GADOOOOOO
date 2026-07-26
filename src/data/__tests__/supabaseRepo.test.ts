@@ -19,32 +19,52 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
  * devolve; o prefixo `mock` é o que autoriza o jest a referenciá-la dentro da
  * fábrica, que é içada acima dos imports.
  */
+type Erro = { message: string; code?: string } | null;
+
 const mockRespostas: {
-  update: { data: unknown[] | null; error: { message: string } | null };
-  select: { data: unknown; error: { message: string } | null };
-  upsert: { error: { message: string } | null };
+  update: { data: unknown[] | null; error: Erro };
+  select: { data: unknown; error: Erro };
+  insert: { error: Erro };
+  /** Resposta do UPDATE sem `.select()` — o recurso quando o insert duplica. */
+  updateDireto: { error: Erro };
 } = {
   update: { data: [], error: null },
   select: { data: null, error: null },
-  upsert: { error: null },
+  insert: { error: null },
+  updateDireto: { error: null },
 };
 
-const mockChamadas: { tabela: string; op: string; filtros: Record<string, unknown> }[] = [];
+const mockChamadas: {
+  tabela: string;
+  op: string;
+  filtros: Record<string, unknown>;
+  /** O payload que a app mandou gravar — é onde se vê o mapeamento das colunas. */
+  dados?: Record<string, unknown>;
+}[] = [];
 
 jest.mock('../supabase', () => {
   const construir = (tabela: string) => {
     let op = '';
+    let dados: Record<string, unknown> | undefined;
     const filtros: Record<string, unknown> = {};
     const cadeia: Record<string, unknown> = {
-      update() { op = 'update'; return cadeia; },
-      upsert() {
-        op = 'upsert';
-        mockChamadas.push({ tabela, op, filtros });
-        return Promise.resolve(mockRespostas.upsert);
+      update(payload: Record<string, unknown>) { op = 'update'; dados = payload; return cadeia; },
+      insert(payload: Record<string, unknown>) {
+        op = 'insert';
+        dados = payload;
+        mockChamadas.push({ tabela, op, filtros, dados });
+        return Promise.resolve(mockRespostas.insert);
+      },
+      // Um UPDATE sem `.select()` no fim resolve-se ao ser esperado. É o
+      // recurso do insert duplicado, e sem isto o `await` devolvia a própria
+      // cadeia e o teste passava sem chamada nenhuma ter acontecido.
+      then(resolve: (v: unknown) => void) {
+        mockChamadas.push({ tabela, op, filtros, dados });
+        resolve(mockRespostas.updateDireto);
       },
       select() {
         if (op === 'update') {
-          mockChamadas.push({ tabela, op, filtros });
+          mockChamadas.push({ tabela, op, filtros, dados });
           return Promise.resolve(mockRespostas.update);
         }
         op = 'select';
@@ -62,8 +82,13 @@ jest.mock('../supabase', () => {
   return { supabase: { from: (tabela: string) => construir(tabela) }, supabaseConfigurado: true };
 });
 
-import { eConflito, mensagemLegivel, upsertAnimalSupabase } from '../supabaseRepo';
-import type { Animal } from '../types';
+import {
+  eConflito,
+  mensagemLegivel,
+  upsertAnimalSupabase,
+  upsertMovimentoSupabase,
+} from '../supabaseRepo';
+import type { Animal, Movimento } from '../types';
 
 function animal(patch: Partial<Animal> = {}): Animal {
   return {
@@ -80,22 +105,43 @@ beforeEach(() => {
   mockChamadas.length = 0;
   mockRespostas.update = { data: [], error: null };
   mockRespostas.select = { data: null, error: null };
-  mockRespostas.upsert = { error: null };
+  mockRespostas.insert = { error: null };
+  mockRespostas.updateDireto = { error: null };
 });
 
 describe('gravação sem versão conhecida — registo criado neste aparelho', () => {
-  it('usa upsert, porque não há outro autor com quem colidir', async () => {
+  it('usa INSERT, não upsert — o upsert arrastava as políticas de UPDATE', async () => {
+    // O upsert gera INSERT … ON CONFLICT DO UPDATE, e a política de UPDATE da
+    // exploração exige um papel (`admin`) que só o trigger cria DEPOIS do
+    // insert. Criar a primeira exploração dava 403 com o upsert e passa com o
+    // insert — este teste trava a regressão de voltar a pôr upsert.
     const erro = await upsertAnimalSupabase(animal());
 
     expect(erro).toBeNull();
     expect(mockChamadas).toEqual([
-      expect.objectContaining({ tabela: 'animal', op: 'upsert' }),
+      expect.objectContaining({ tabela: 'animal', op: 'insert' }),
     ]);
   });
 
   it('propaga o erro do servidor tal como veio', async () => {
-    mockRespostas.upsert = { error: { message: 'permission denied for table animal' } };
+    mockRespostas.insert = { error: { message: 'permission denied for table animal' } };
     expect(await upsertAnimalSupabase(animal())).toBe('permission denied for table animal');
+  });
+
+  it('chave duplicada não é erro: a linha já existe, faz UPDATE em vez de gritar', async () => {
+    // Acontece quando a resposta do insert se perdeu (o registo entrou na
+    // mesma) ou a fila offline repetiu a operação. Era o que o upsert absorvia
+    // sozinho — o utilizador via a exploração criada e um aviso vermelho a
+    // dizer que falhou, que é precisamente o que isto corrige.
+    mockRespostas.insert = { error: { message: 'duplicate key value', code: '23505' } };
+
+    const erro = await upsertAnimalSupabase(animal());
+
+    expect(erro).toBeNull();
+    expect(mockChamadas).toEqual([
+      expect.objectContaining({ tabela: 'animal', op: 'insert' }),
+      expect.objectContaining({ tabela: 'animal', op: 'update', filtros: { id: 'a1' } }),
+    ]);
   });
 });
 
@@ -161,6 +207,56 @@ describe('gravação com versão conhecida', () => {
     await upsertAnimalSupabase(animal({ atualizadoEm: versao }));
 
     expect(mockChamadas.filter((c) => c.op === 'select')).toHaveLength(0);
+  });
+});
+
+/**
+ * A coluna `movimento.data` é um `date` do Postgres e o domínio guarda um ISO
+ * completo, por isso há uma conversão à saída. Ela tem de ler o dia LOCAL: o
+ * atalho de cortar os dez primeiros caracteres do ISO lê o dia em UTC, e em
+ * Portugal (UTC+1 de março a outubro) isso grava a despesa da meia-noite no dia
+ * anterior — com o formulário a confirmar a data certa por cima.
+ *
+ * Os dois primeiros casos são simétricos de propósito: qual deles apanhava o
+ * `slice(0, 10)` depende do sinal do fuso da máquina que corre os testes, e um
+ * só deles deixava a CI a passar em metade do mundo.
+ */
+describe('movimento — o dia que vai para a coluna `date`', () => {
+  function movimento(data: string): Movimento {
+    return {
+      id: 'm1',
+      exploracaoId: 'exp-1',
+      direcao: 'despesa',
+      categoria: 'Alimentação',
+      valor: 860,
+      data,
+      descricao: 'Ração',
+    };
+  }
+
+  /** O que o servidor recebeu na coluna `data`. */
+  async function diaGravado(data: string): Promise<unknown> {
+    mockChamadas.length = 0;
+    await upsertMovimentoSupabase(movimento(data));
+    return mockChamadas[0]?.dados?.data;
+  }
+
+  it('grava o dia local de um instante que em UTC já é o dia anterior', async () => {
+    // 25/07 às 00:30 em Lisboa = 24/07T23:30Z. É o caso que estava errado.
+    const meiaNoiteEMeia = new Date(2026, 6, 25, 0, 30).toISOString();
+    expect(await diaGravado(meiaNoiteEMeia)).toBe('2026-07-25');
+  });
+
+  it('grava o dia local de um instante que em UTC ainda é o dia seguinte', async () => {
+    // O simétrico, para o fuso não ser assumido: com TZ a oeste de Greenwich as
+    // 23:30 locais são já o dia seguinte em UTC, e o dia a gravar continua a ser
+    // o que o criador vê no ecrã.
+    const quaseMeiaNoite = new Date(2026, 6, 25, 23, 30).toISOString();
+    expect(await diaGravado(quaseMeiaNoite)).toBe('2026-07-25');
+  });
+
+  it('deixa intacta uma data que já vem só com o dia (vinda do servidor)', async () => {
+    expect(await diaGravado('2026-07-25')).toBe('2026-07-25');
   });
 });
 

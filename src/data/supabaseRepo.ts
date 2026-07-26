@@ -9,6 +9,8 @@
  * fica centralizado aqui para os componentes ficarem só com os tipos.
  */
 
+import { traduzErroServidor } from './errosServidor';
+import { diaIso } from './helpers';
 import { supabase } from './supabase';
 import type {
   Animal,
@@ -18,6 +20,7 @@ import type {
   EstadoAnimal,
   Evento,
   EventoTipo,
+  Finalidade,
   Exploracao,
   Movimento,
   Sexo,
@@ -57,6 +60,7 @@ type ExploracaoRow = ComUpdatedAt & {
   localizacao?: string | null;
   fotografia?: string | null;
   financas_ativas?: boolean | null;
+  casa_ativa?: boolean | null;
 };
 
 type TerrenoRow = ComUpdatedAt & {
@@ -82,6 +86,9 @@ type AnimalRow = ComUpdatedAt & {
   data_nascimento: string;
   raca?: string | null;
   cor_pelagem?: string | null;
+  casa?: string | null;
+  numero_casa?: string | null;
+  finalidade?: string | null;
   numero_identificacao?: string | null;
   data_identificacao?: string | null;
   tipo_identificacao?: string | null;
@@ -130,6 +137,7 @@ const toExploracao = (r: ExploracaoRow): Exploracao => ({
   localizacao: r.localizacao ?? undefined,
   fotografia: r.fotografia ?? undefined,
   financasAtivas: r.financas_ativas ?? false,
+  casaAtiva: r.casa_ativa ?? false,
 });
 
 const toTerreno = (r: TerrenoRow): Terreno => ({
@@ -157,6 +165,9 @@ const toAnimal = (r: AnimalRow): Animal => ({
   dataNascimento: r.data_nascimento,
   raca: r.raca ?? undefined,
   corPelagem: r.cor_pelagem ?? undefined,
+  casa: r.casa ?? undefined,
+  numeroCasa: r.numero_casa ?? undefined,
+  finalidade: (r.finalidade as Finalidade | null) ?? undefined,
   numeroIdentificacao: r.numero_identificacao ?? undefined,
   dataIdentificacao: r.data_identificacao ?? undefined,
   tipoIdentificacao: r.tipo_identificacao ?? undefined,
@@ -204,17 +215,24 @@ const exploracaoPayload = (e: Exploracao) => ({
   nif_detentor: e.nifDetentor,
   localizacao: e.localizacao ?? null,
   fotografia: e.fotografia ?? null,
-  // `financas_ativas` não vai no payload de propósito: é do servidor, escrita
-  // só pelo RPC `definir_financas_ativas`. Incluí-la aqui fazia com que
+  // `financas_ativas` e `casa_ativa` não vão no payload de propósito: são do
+  // servidor, escritas só pelos RPC respetivos. Incluí-las aqui fazia com que
   // renomear a exploração num aparelho com a cache antiga voltasse a desligar
-  // (ou a ligar) as finanças sem ninguém ter pedido nada.
+  // (ou a ligar) a opção sem ninguém ter pedido nada.
 });
 
 /** Liga ou desliga a gestão económica em toda a conta. Devolve erro ou null. */
 export async function definirFinancasAtivas(ativas: boolean): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.rpc('definir_financas_ativas', { ativas });
-  return error?.message ?? null;
+  return error ? traduzErroServidor(error.message) : null;
+}
+
+/** Liga ou desliga o registo por casa/número em toda a conta. Erro ou null. */
+export async function definirCasaAtiva(ativa: boolean): Promise<string | null> {
+  if (!supabase) return null;
+  const { error } = await supabase.rpc('definir_casa_ativa', { ativa });
+  return error ? traduzErroServidor(error.message) : null;
 }
 
 const terrenoPayload = (t: Terreno) => ({
@@ -240,6 +258,9 @@ const animalPayload = (a: Animal) => ({
   data_nascimento: a.dataNascimento,
   raca: a.raca ?? null,
   cor_pelagem: a.corPelagem ?? null,
+  casa: a.casa ?? null,
+  numero_casa: a.numeroCasa ?? null,
+  finalidade: a.finalidade ?? null,
   numero_identificacao: a.numeroIdentificacao ?? null,
   data_identificacao: a.dataIdentificacao ?? null,
   tipo_identificacao: a.tipoIdentificacao ?? null,
@@ -268,7 +289,14 @@ const movimentoPayload = (m: Movimento) => ({
   direcao: m.direcao,
   categoria: m.categoria,
   valor: m.valor,
-  data: m.data.slice(0, 10), // a coluna é `date`; o domínio guarda ISO completo
+  // A coluna é `date` e o domínio guarda um ISO completo, por isso há aqui uma
+  // conversão obrigatória — e é o dia LOCAL que se grava, não os dez primeiros
+  // caracteres do ISO. O atalho do `slice(0, 10)` lia o dia em UTC: em Portugal,
+  // de março a outubro (UTC+1), uma despesa lançada entre a meia-noite e a uma
+  // da manhã ia para a base no dia ANTERIOR, com o formulário a confirmar a data
+  // certa por cima. Depois de sincronizar, a lista passava a mostrar o dia de
+  // trás, e o lançamento do dia 1 caía no mês passado nas contas do mês.
+  data: diaIso(m.data),
   descricao: m.descricao,
   contraparte: m.contraparte ?? null,
   animal_id: m.animalId ?? null,
@@ -314,7 +342,7 @@ export async function carregarTudoSupabase(): Promise<Snapshot> {
   // (estar offline) devolveria tudo vazio e apagaria a cache local. Quem chama
   // trata o erro mantendo os dados que já tem em cache.
   const erro = expRes.error ?? terRes.error ?? aniRes.error ?? evtRes.error;
-  if (erro) throw new Error(erro.message);
+  if (erro) throw new Error(traduzErroServidor(erro.message));
 
   // A tabela `movimento` nasceu depois da app estar publicada, e a migração
   // (`supabase/schema_financas.sql`) é corrida à mão. Entre a nova versão
@@ -354,6 +382,25 @@ export async function carregarTudoSupabase(): Promise<Snapshot> {
  * permissão), por isso, quando nada é gravado, vamos ler a linha para
  * perceber qual dos dois casos é.
  */
+/**
+ * Uma recusa da RLS pode ser falta de permissão — ou falta de sessão.
+ *
+ * As duas chegam com a mesma frase: as políticas comparam `auth.uid()` com o
+ * dono da linha, e sem sessão válida `auth.uid()` é NULL, o que faz a condição
+ * dar falso exatamente como daria a um intruso. A diferença importa muito para
+ * quem está do outro lado: uma resolve-se voltando a entrar, a outra só com
+ * outra pessoa a aprovar. Como o servidor não a diz, pergunta-se-lhe quem
+ * somos — só quando já houve recusa, para não custar um pedido a cada gravação.
+ */
+export async function explicarRecusa(msg: string): Promise<string> {
+  if (!supabase || !/row.level security/i.test(msg)) return traduzErroServidor(msg);
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    return 'A sua sessão terminou. Volte a entrar na conta e tente de novo — a alteração não se perdeu.';
+  }
+  return traduzErroServidor(msg);
+}
+
 async function gravarComVersao(
   tabela: 'exploracao' | 'terreno' | 'animal' | 'evento' | 'movimento',
   id: string,
@@ -365,8 +412,23 @@ async function gravarComVersao(
   // Sem versão conhecida, a linha nunca veio do servidor: foi criada neste
   // aparelho e ainda não sincronizou. Não há outro autor com quem colidir.
   if (!versaoConhecida) {
-    const { error } = await supabase.from(tabela).upsert(payload);
-    return error?.message ?? null;
+    // `insert` e não `upsert`, ao contrário do que aqui esteve. O `upsert` do
+    // PostgREST gera `INSERT … ON CONFLICT DO UPDATE`, e isso arrasta as
+    // políticas de UPDATE para uma linha que ainda não existe. Na `exploracao`
+    // isso é fatal: a política de UPDATE exige `role_em(id) = 'admin'`, e esse
+    // papel só nasce no trigger `handle_new_exploracao`, que corre DEPOIS do
+    // insert. Resultado: criar a primeira exploração levava 403 da RLS, apesar
+    // de a política de INSERT (perfil ativo) estar satisfeita — o mesmo pedido
+    // feito com `insert` passa.
+    const { error } = await supabase.from(tabela).insert(payload);
+    if (!error) return null;
+    // 23505 = chave duplicada. A linha já lá está: ou o pedido anterior chegou
+    // e a resposta é que se perdeu, ou a fila offline repetiu a operação. É o
+    // caso que o `upsert` tratava sozinho, e que se trata aqui à mão para não
+    // ter de o trazer de volta.
+    if (error.code !== '23505') return await explicarRecusa(error.message);
+    const { error: erroUpdate } = await supabase.from(tabela).update(payload).eq('id', id);
+    return erroUpdate ? await explicarRecusa(erroUpdate.message) : null;
   }
 
   const { data, error } = await supabase
@@ -375,7 +437,7 @@ async function gravarComVersao(
     .eq('id', id)
     .lte('updated_at', versaoConhecida)
     .select('id');
-  if (error) return error.message;
+  if (error) return await explicarRecusa(error.message);
   if (data && data.length > 0) return null;
 
   // Nada foi gravado — descobrir porquê.
@@ -384,7 +446,7 @@ async function gravarComVersao(
     .select('updated_at')
     .eq('id', id)
     .maybeSingle();
-  if (erroLeitura) return erroLeitura.message;
+  if (erroLeitura) return traduzErroServidor(erroLeitura.message);
 
   if (!atual) {
     // Ou foi eliminada por outra pessoa, ou a RLS nem sequer no-la deixa ver.
@@ -413,7 +475,7 @@ export async function upsertExploracaoSupabase(e: Exploracao): Promise<string | 
 export async function eliminarExploracaoSupabase(id: string): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.from('exploracao').delete().eq('id', id);
-  return error?.message ?? null;
+  return error ? traduzErroServidor(error.message) : null;
 }
 
 export async function upsertTerrenoSupabase(t: Terreno): Promise<string | null> {
@@ -423,7 +485,7 @@ export async function upsertTerrenoSupabase(t: Terreno): Promise<string | null> 
 export async function eliminarTerrenoSupabase(id: string): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.from('terreno').delete().eq('id', id);
-  return error?.message ?? null;
+  return error ? traduzErroServidor(error.message) : null;
 }
 
 export async function upsertAnimalSupabase(a: Animal): Promise<string | null> {
@@ -439,7 +501,7 @@ export async function upsertAnimalSupabase(a: Animal): Promise<string | null> {
 export async function eliminarAnimalSupabase(id: string): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.rpc('eliminar_animal', { animal_id: id });
-  return error?.message ?? null;
+  return error ? traduzErroServidor(error.message) : null;
 }
 
 export async function upsertEventoSupabase(e: Evento): Promise<string | null> {
@@ -453,5 +515,5 @@ export async function upsertMovimentoSupabase(m: Movimento): Promise<string | nu
 export async function eliminarMovimentoSupabase(id: string): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.from('movimento').delete().eq('id', id);
-  return error?.message ?? null;
+  return error ? traduzErroServidor(error.message) : null;
 }

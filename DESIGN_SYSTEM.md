@@ -1,4 +1,4 @@
-# Design System — Gestão de Gado
+# Design System — Terrabovina
 
 Fonte de verdade do design da app. Derivado da **imagem de inspiração** (app
 agrícola verde, cartões muito arredondados, sombras suaves) e dos **princípios
@@ -35,6 +35,37 @@ Ancorada num **verde folha profundo** (agricultura, vida, confiança).
 
 Cada uma tem um par `*Tint` para fundos suaves. Cores por espécie
 (`bovino`, `ovino`, `caprino`, `suino`, `equideo`) para chips e avatares.
+
+### Paletas à escolha do criador
+
+O verde é a paleta **de origem**, não a única. Em *Definições → Cores da app* o
+criador escolhe entre `campo` (verde), `terra`, `ceu`, `ardosia` e `contraste`
+(alto contraste, para visão reduzida). Definição em
+[`src/theme/paletas.ts`](src/theme/paletas.ts).
+
+**O que muda:** marca (`primary*`, `headerFrom/To`, `onPrimary`), superfícies
+(`background`, `surface*`), texto (`text*`, exceto `textOnDark*`), linhas
+(`border*`) e o `overlay`.
+
+**O que não muda:** a cor funcional da tabela acima, as cores por espécie, as do
+sexo e a faixa do ambiente de testes. São linguagem, não decoração — um
+vermelho de prazo vencido que num telemóvel fosse castanho deixava de se
+reconhecer de relance.
+
+Cada paleta é verificada por teste (`src/theme/__tests__/paletas.test.ts`)
+contra os mínimos WCAG AA — AAA no texto corrido. Uma paleta nova que não passe
+não entra.
+
+> **Regra:** ler `colors` **só dentro do render**. As cores vivem num objeto que
+> é reescrito no arranque; uma constante no topo de um módulo copia o valor
+> antes disso e fica com a cor de origem para sempre (foi o que deixou o botão
+> "Entrar" verde numa app azul). Para tabelas em módulo, usa getters:
+> `get cor() { return colors.primary; }`. O
+> `node scripts/cores-no-arranque.js` procura este erro no projeto todo e corre
+> na CI.
+
+Mudar de paleta **recarrega a app** — os ecrãs já desenhados guardaram as cores
+antigas nos seus estilos e o React Compiler memoiza-os.
 
 ---
 
@@ -107,7 +138,22 @@ Um só set garante consistência de traço e estilo.
 Badge · Chip · IconBadge · SectionHeader · FAB · Avatar · EmptyState · Header`.
 
 `src/components/` (domínio): `WeatherCard · AlertItem · AnimalRow ·
-ExploracaoRow · StatCard · QuickAction`.
+ExploracaoRow · StatCard · QuickAction · AnfitriaoToasts · FolhaPermissoes`.
+
+### Dizer que correu bem (ou mal)
+
+Três registos, e a escolha entre eles não é de gosto:
+
+| O quê | Quando | Como |
+| --- | --- | --- |
+| **Toast** (`useToasts()`) | Confirmar o que o criador acabou de fazer, e as falhas de que ele se pode simplesmente esquecer. | Aparece em baixo, some sozinho, não pede nada. |
+| **`avisar()`** (`data/avisos.ts`) | O que ele **tem** de ler antes de continuar: uma lista de animais que ficaram por gravar, um texto que se perde sem ligação. | Interrompe e exige "OK". |
+| **Linha no formulário** | A razão de uma gravação recusada, enquanto ele corrige os campos. | Fica no ecrã até mudar algo. |
+
+Um erro de gravação num formulário leva os dois últimos: o toast chama a atenção
+de quem já ia a sair, a linha fica para se ler com calma. Confirmações que
+interrompem ensinam a tocar em "OK" sem ler — e isso estraga também os avisos a
+sério.
 
 ---
 

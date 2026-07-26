@@ -47,8 +47,10 @@ type AuthContext = {
   definirNovaPalavra: (palavra: string) => Promise<string | null>;
   /** Muda nome/email da conta. Se mudou o email, o Supabase pede confirmação. */
   atualizarPerfil: (nome: string, email: string) => Promise<ResultadoPerfil>;
-  /** RGPD: apaga a conta e todos os dados do utilizador. Erro ou null. */
-  apagarConta: () => Promise<string | null>;
+  // Apagar a conta não se faz por aqui: a app não expõe o
+  // `apagar_a_minha_conta()` do `schema_rgpd.sql`. O botão existiu no Perfil,
+  // colado ao "Terminar sessão", e um toque a mais apagava a exploração inteira
+  // sem volta. O pedido de apagamento passa pelo administrador.
   sair: () => Promise<void>;
 };
 
@@ -139,17 +141,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [sessao],
   );
 
-  const apagarConta = useCallback(async (): Promise<string | null> => {
-    if (!supabase) return 'Supabase não configurado.';
-    const { error } = await supabase.rpc('apagar_a_minha_conta');
-    if (error) return traduzErro(error.message);
-    // A conta já não existe no servidor — limpa a sessão e os dados locais
-    // (RGPD: apagar a conta não pode deixar o efetivo em cache no aparelho).
-    await supabase.auth.signOut();
-    limparCache();
-    return null;
-  }, []);
-
   const sair = useCallback(async () => {
     await supabase?.auth.signOut();
     // A cache local pertence à conta que saiu. Sem a apagar, o criador seguinte
@@ -170,12 +161,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       recuperarPalavra,
       definirNovaPalavra,
       atualizarPerfil,
-      apagarConta,
       sair,
     }),
     [
       sessao, aCarregar, emRecuperacao, entrar, registar,
-      recuperarPalavra, definirNovaPalavra, atualizarPerfil, apagarConta, sair,
+      recuperarPalavra, definirNovaPalavra, atualizarPerfil, sair,
     ],
   );
 

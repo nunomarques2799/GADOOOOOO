@@ -22,6 +22,7 @@ export default function SincronizacaoScreen() {
   const desktop = useDesktop();
   const {
     online,
+    erroSincronizacao,
     pendentesSinc,
     falhadas,
     limparFalhadas,
@@ -151,6 +152,43 @@ export default function SincronizacaoScreen() {
               style={{ marginTop: spacing.md }}
             />
           </Card>
+
+          {/* Porque é que a leitura falhou, tal como o servidor a explicou.
+              A mensagem é técnica e em inglês, e fica assim de propósito: não
+              é para o criador a perceber, é para a poder ler ao telefone a
+              quem o ajuda. Traduzi-la perdia exatamente a parte que serve
+              para encontrar o problema. */}
+          {erroSincronizacao ? (
+            <View>
+              <Text
+                variant="label"
+                color={colors.textSecondary}
+                style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
+                O SERVIDOR RECUSOU A LEITURA
+              </Text>
+              <Card>
+                <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' }}>
+                  <Icon name="cloud-alert" size="lg" color={colors.warning} />
+                  <View style={{ flex: 1, gap: spacing.xs }}>
+                    <Text variant="secondary" color={colors.textSecondary}>
+                      O que está no ecrã é a última cópia guardada neste aparelho, e pode
+                      estar desatualizada. O servidor respondeu:
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: colors.surfaceSunken,
+                        borderRadius: radii.md,
+                        padding: spacing.sm,
+                      }}>
+                      <Text variant="secondary" color={colors.text}>
+                        {erroSincronizacao}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </Card>
+            </View>
+          ) : null}
 
           {/* Alterações que o servidor recusou. Só aparece se houver alguma —
               é o sítio onde deixam de se perder em silêncio. */}

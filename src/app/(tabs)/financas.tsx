@@ -14,10 +14,12 @@ import {
   Screen,
   Text,
 } from '@/components/ui';
-import { csvFinancas, guardarFicheiro, hojeISO } from '@/data/exportar';
+import { descarregarTabelaExcel, excelDisponivel } from '@/data/excelFicheiro';
+import { hojeISO, tabelaFinancas } from '@/data/exportar';
 import {
   compararComAnterior,
   lancamentos,
+  nomeMes,
   noPeriodo,
   porAnimal,
   PERIODOS,
@@ -25,14 +27,17 @@ import {
   rotuloMovimento,
   serieMensal,
   vendasSemPreco,
+  type BarraMes,
   type Lancamento,
   type LinhaCategoria,
   type Periodo,
 } from '@/data/financas';
 import { formatDataCurta, formatEuro } from '@/data/helpers';
+import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
 import type { CategoriaMovimento } from '@/data/types';
+import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, spacing } from '@/theme';
 
 /** Ícone por categoria. Sem entrada = cai no ícone genérico de dinheiro. */
@@ -57,34 +62,104 @@ function iconeDe(c: CategoriaMovimento): IconName {
   return ICONE_CATEGORIA[c] ?? 'cash';
 }
 
+/** Quantos movimentos a lista mostra de cada vez. */
+const PAGINA_MOVIMENTOS = 30;
+
 export default function FinancasScreen() {
   const router = useRouter();
-  const { eventos, movimentos, animais, animalById } = useGado();
+  const { eventos, movimentos, animais, animalById, exploracoes } = useGado();
+  const { podeVer } = useMembros();
+
+  /** A exploração escolhida nos chips; `undefined` = todas as que se podem ver. */
+  const [exploracaoId, setExploracaoId] = useState<string | undefined>(undefined);
+  const [periodo, setPeriodo] = useState<Periodo>('ano');
+  const [limite, setLimite] = useState(PAGINA_MOVIMENTOS);
+
+  // A pergunta que decide se o ecrã ABRE continua a ser de conta ("em alguma
+  // das minhas?"), e não da exploração escolhida. Se dependesse da escolha, uma
+  // exploração sem contas para mostrar trocava o ecrã por um aviso — levando os
+  // chips com ela, e deixando o criador sem forma de voltar atrás.
   const { ativas, podeVerFinancas, podeRegistarDespesa } = useFinancas();
 
-  const [periodo, setPeriodo] = useState<Periodo>('ano');
+  /**
+   * As explorações cujas contas esta pessoa pode consultar. São as únicas que a
+   * linha de chips oferece: um destino que abre fechado é pior do que nenhum.
+   */
+  const consultaveis = useMemo(
+    () => exploracoes.filter((e) => podeVer(e.id, 'verFinancas')),
+    [exploracoes, podeVer],
+  );
+  // Só vale a pena escolher com mais do que uma — com uma, a linha de chips não
+  // decidia nada. Mesma regra do separador Animais.
+  const podeEscolher = consultaveis.length > 1;
 
-  const todos = useMemo(() => lancamentos(eventos, movimentos), [eventos, movimentos]);
+  /**
+   * As explorações que entram nas contas.
+   *
+   * Escolhida uma, é essa. Sem escolha, são as que esta pessoa PODE consultar,
+   * e não todas as que a app carregou: os movimentos já vêm filtrados por papel
+   * (a RLS), mas os eventos com custo não vêm — quem é dono de uma exploração e
+   * trabalhador de outra somava as duas no mesmo saldo, e um número que junta
+   * dois negócios não são as contas de nenhum deles.
+   */
+  const filtro = useMemo(() => {
+    // Um id que já não existe (a exploração foi eliminada noutro aparelho) volta
+    // ao conjunto todo, em vez de deixar o ecrã vazio sem chip nenhum aceso.
+    const escolhida = exploracaoId && consultaveis.some((e) => e.id === exploracaoId);
+    return {
+      exploracaoIds: escolhida ? [exploracaoId as string] : consultaveis.map((e) => e.id),
+      animais,
+    };
+  }, [exploracaoId, consultaveis, animais]);
+
+  /**
+   * Tudo o que esta pessoa pode consultar, sem olhar aos chips. É o que decide
+   * se o ecrã tem ou não conteúdo: se o "ainda sem movimentos" seguisse a
+   * exploração escolhida, escolher uma quinta ainda sem lançamentos trocava o
+   * ecrã pelo estado vazio — e levava os chips atrás, sem volta possível.
+   */
+  const daConta = useMemo(() => {
+    const ids = consultaveis.map((e) => e.id);
+    return lancamentos(eventos, movimentos, { exploracaoIds: ids, animais });
+  }, [eventos, movimentos, consultaveis, animais]);
+
+  const todos = useMemo(
+    () => lancamentos(eventos, movimentos, filtro),
+    [eventos, movimentos, filtro],
+  );
   const doPeriodo = useMemo(() => noPeriodo(todos, periodo), [todos, periodo]);
   const r = useMemo(() => resumo(doPeriodo), [doPeriodo]);
   const meses = useMemo(() => serieMensal(todos, 6), [todos]);
   const comparacao = useMemo(() => compararComAnterior(todos, periodo), [todos, periodo]);
   const ranking = useMemo(() => porAnimal(doPeriodo).slice(0, 5), [doPeriodo]);
-  const porFechar = useMemo(() => vendasSemPreco(eventos, movimentos), [eventos, movimentos]);
+  const porFechar = useMemo(
+    () => vendasSemPreco(eventos, movimentos, filtro),
+    [eventos, movimentos, filtro],
+  );
 
   const positivo = r.saldo >= 0;
-  const semDados = todos.length === 0;
+  const semDados = daConta.length === 0;
+  const nomeExploracao = consultaveis.find((e) => e.id === exploracaoId)?.nome;
+  const visiveis = r.movimentos.slice(0, limite);
+  const porMostrar = r.movimentos.length - visiveis.length;
+
+  /** Muda de exploração e volta a lista de movimentos ao início. */
+  function escolherExploracao(id: string | undefined) {
+    setExploracaoId(id);
+    setLimite(PAGINA_MOVIMENTOS);
+  }
 
   const nomeAnimal = (id: string) => {
     const a = animalById(id);
     return a?.nome ?? a?.numeroIdentificacao ?? 'Animal removido';
   };
 
-  async function exportar() {
+  function exportar() {
     try {
-      await guardarFicheiro(
-        `financas-${hojeISO()}.csv`,
-        csvFinancas(doPeriodo, animais),
+      descarregarTabelaExcel(
+        `financas-${hojeISO()}.xlsx`,
+        'Movimentos',
+        tabelaFinancas(doPeriodo, animais),
       );
     } catch (e) {
       avisar('Não foi possível exportar', e instanceof Error ? e.message : String(e));
@@ -151,6 +226,36 @@ export default function FinancasScreen() {
           </>
         ) : (
           <>
+            {/* Exploração — com duas quintas, um saldo que soma as duas não são
+                as contas de nenhuma delas. Fica à vista, como em Animais e
+                Alertas, e não escondido atrás de um botão de filtros. */}
+            {podeEscolher ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: spacing.xs,
+                  marginBottom: spacing.sm,
+                }}>
+                <Chip
+                  label="Todas"
+                  icon="barn"
+                  selected={exploracaoId === undefined}
+                  onPress={() => escolherExploracao(undefined)}
+                />
+                {consultaveis.map((e) => (
+                  <Chip
+                    key={e.id}
+                    label={e.nome}
+                    selected={exploracaoId === e.id}
+                    onPress={() =>
+                      escolherExploracao(exploracaoId === e.id ? undefined : e.id)
+                    }
+                  />
+                ))}
+              </View>
+            ) : null}
+
             {/* Período — muda tudo o que está abaixo */}
             <View
               style={{
@@ -164,7 +269,10 @@ export default function FinancasScreen() {
                   key={p.valor}
                   label={p.label}
                   selected={periodo === p.valor}
-                  onPress={() => setPeriodo(p.valor)}
+                  onPress={() => {
+                    setPeriodo(p.valor);
+                    setLimite(PAGINA_MOVIMENTOS);
+                  }}
                 />
               ))}
             </View>
@@ -177,8 +285,9 @@ export default function FinancasScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <Icon name="calendar-blank" size="lg" color={colors.textMuted} />
                   <Text variant="body" style={{ flex: 1 }}>
-                    Sem movimentos {periodo === 'mes' ? 'neste mês' : 'neste ano'}. Escolha
-                    outro período para ver o histórico.
+                    Sem movimentos {periodo === 'mes' ? 'neste mês' : 'neste ano'}
+                    {nomeExploracao ? ` em ${nomeExploracao}` : ''}. Escolha outro período
+                    {podeEscolher ? ' ou outra exploração' : ''} para ver o histórico.
                   </Text>
                 </View>
               </Card>
@@ -364,20 +473,35 @@ export default function FinancasScreen() {
 
             {/* Movimentos */}
             <Text variant="h3" style={{ marginBottom: spacing.sm }}>
-              Movimentos
+              Movimentos ({r.movimentos.length})
             </Text>
             <Card padded={false} style={{ marginBottom: spacing.md }}>
               <View style={{ paddingHorizontal: spacing.md }}>
-                {r.movimentos.slice(0, 30).map((l, i) => (
+                {visiveis.map((l, i) => (
                   <MovimentoRow
                     key={l.id}
                     lancamento={l}
                     nome={l.animalId ? nomeAnimal(l.animalId) : l.categoria}
-                    divider={i < Math.min(r.movimentos.length, 30) - 1}
+                    divider={i < visiveis.length - 1}
                   />
                 ))}
               </View>
             </Card>
+            {/* A lista parava nos 30 sem o dizer: quem tinha mais histórico não
+                tinha como chegar ao resto a não ser exportando para Excel. */}
+            {porMostrar > 0 ? (
+              <Button
+                label={
+                  porMostrar <= PAGINA_MOVIMENTOS
+                    ? `Ver os últimos ${porMostrar}`
+                    : `Ver mais ${PAGINA_MOVIMENTOS} (faltam ${porMostrar})`
+                }
+                icon="chevron-down"
+                variant="secondary"
+                onPress={() => setLimite((n) => n + PAGINA_MOVIMENTOS)}
+                style={{ marginBottom: spacing.md }}
+              />
+            ) : null}
 
             <Button
               label="Registar movimento"
@@ -385,18 +509,30 @@ export default function FinancasScreen() {
               onPress={() => router.push('/movimento/novo')}
               style={{ marginBottom: spacing.sm }}
             />
-            <Button
-              label="Exportar para Excel (CSV)"
-              icon="file-download-outline"
-              variant="secondary"
-              onPress={exportar}
-            />
-            <Text
-              variant="caption"
-              color={colors.textMuted}
-              style={{ marginTop: spacing.sm, textAlign: 'center' }}>
-              Exporta os movimentos do período escolhido.
-            </Text>
+            {/* Sem disco onde escrever o .xlsx (telemóvel) não se mostra o botão. */}
+            {excelDisponivel ? (
+              <>
+                <Button
+                  label="Exportar para Excel"
+                  icon="microsoft-excel"
+                  variant="secondary"
+                  onPress={exportar}
+                />
+                <Text
+                  variant="caption"
+                  color={colors.textMuted}
+                  style={{ marginTop: spacing.sm, textAlign: 'center' }}>
+                  Exporta o que está a ver: o período{nomeExploracao ? ` e ${nomeExploracao}` : ''}.
+                </Text>
+              </>
+            ) : (
+              <Text
+                variant="caption"
+                color={colors.textMuted}
+                style={{ marginTop: spacing.sm, textAlign: 'center' }}>
+                Exportar as contas para Excel faz-se na app de computador.
+              </Text>
+            )}
           </>
         )}
       </Screen>
@@ -426,7 +562,17 @@ function TotalCard({
   // Uma despesa a subir é má notícia, uma receita a subir é boa: a cor da seta
   // segue o que aquilo significa para o criador, não o sinal do número.
   const subiu = (variacao ?? 0) > 0;
-  const corVariacao = subiu === subirEBom ? colors.success : colors.danger;
+  // Zero é "igual ao período anterior", e não merece cor nenhuma. Sem esta
+  // exceção, uma receita que se manteve saía com uma seta para baixo VERMELHA a
+  // dizer 0% — a leitura era de queda, exatamente onde não houve queda nenhuma.
+  // O teste é sobre a percentagem ARREDONDADA, que é a que aparece: meio por
+  // cento de subida também sai "0%", e uma seta ao lado de um zero não diz nada.
+  const igual = variacao !== undefined && Math.round(variacao) === 0;
+  const corVariacao = igual
+    ? colors.textMuted
+    : subiu === subirEBom
+      ? colors.success
+      : colors.danger;
 
   return (
     <Card style={{ flex: 1 }} padded={false}>
@@ -441,12 +587,12 @@ function TotalCard({
         {variacao !== undefined ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Icon
-              name={subiu ? 'arrow-up' : 'arrow-down'}
+              name={igual ? 'equal' : subiu ? 'arrow-up' : 'arrow-down'}
               size="xs"
               color={corVariacao}
             />
             <Text variant="caption" color={corVariacao}>
-              {Math.abs(Math.round(variacao))}%
+              {igual ? 'igual' : `${Math.abs(Math.round(variacao))}%`}
             </Text>
           </View>
         ) : null}
@@ -461,74 +607,120 @@ function TotalCard({
  * Desenhado com Views em vez de uma biblioteca de gráficos: são duas barras
  * por mês, e uma dependência nova custaria mais ao arranque da app do que isto
  * custa a manter. As alturas são relativas ao maior valor da série.
+ *
+ * OS NÚMEROS TÊM DE APARECER. Só com as barras, o gráfico dizia a forma (subiu,
+ * desceu) e não dizia dinheiro nenhum: duas barras de alturas parecidas podiam
+ * ser 200 € ou 2 000 €, e a única maneira de saber era somar os lançamentos à
+ * mão. Agora aparecem em dois sítios, e não por indecisão:
+ *
+ *   - a linha de cima mostra os valores EXATOS de um mês (o atual, ou aquele em
+ *     que se tocar). É a que funciona sempre — em ecrã estreito e com a letra
+ *     do sistema ampliada ao máximo;
+ *   - por cima de cada barra, em janelas largas, onde há espaço para os doze
+ *     números. No telemóvel não há: "5 725 €" ao lado de outro igual, em 50 px,
+ *     saía por cima do vizinho ou cortado a meio.
  */
-function GraficoMeses({
-  meses,
-}: {
-  meses: { chave: string; rotulo: string; receitas: number; despesas: number }[];
-}) {
+function GraficoMeses({ meses }: { meses: BarraMes[] }) {
+  const desktop = useDesktop();
+  const [escolhido, setEscolhido] = useState<string | undefined>(undefined);
+
   const maximo = Math.max(...meses.map((m) => Math.max(m.receitas, m.despesas)), 1);
   const ALTURA = 96;
+  /** Espaço para o número por cima da barra mais alta. */
+  const TOPO = desktop ? 20 : 0;
+
+  // Por omissão, o mês em curso: é o que o criador está a viver, e é o que ele
+  // vem cá ver. Tocar num mês passa o foco para esse.
+  const foco = meses.find((m) => m.chave === escolhido) ?? meses[meses.length - 1];
+  if (!foco) return null;
 
   return (
     <View>
+      {/* Os valores exatos do mês em foco */}
+      <View style={{ marginBottom: spacing.sm }}>
+        <Text variant="bodyStrong">{nomeMes(foco.chave)}</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: 2 }}>
+          {foco.receitas === 0 && foco.despesas === 0 ? (
+            <Text variant="secondary" color={colors.textSecondary}>
+              Sem registos neste mês.
+            </Text>
+          ) : (
+            <>
+              <ValorMes label="Receitas" valor={foco.receitas} cor={colors.success} />
+              <ValorMes label="Despesas" valor={foco.despesas} cor={colors.danger} />
+              <ValorMes
+                label="Saldo"
+                valor={foco.saldo}
+                cor={foco.saldo < 0 ? colors.danger : colors.success}
+                comSinal
+              />
+            </>
+          )}
+        </View>
+      </View>
+
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'flex-end',
           justifyContent: 'space-between',
-          height: ALTURA,
           gap: spacing.xs,
         }}>
-        {meses.map((m) => (
-          <View key={m.chave} style={{ flex: 1, alignItems: 'center' }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'flex-end',
-                gap: 3,
-                height: ALTURA,
-              }}>
-              {/* `minHeight` de 3: um mês com pouco dinheiro tem de continuar a
-                  ver-se. Sem isso, a barra desaparecia e lia-se como zero. */}
+        {meses.map((m) => {
+          const emFoco = m.chave === foco.chave;
+          return (
+            <Pressable
+              key={m.chave}
+              onPress={() => setEscolhido(m.chave)}
+              accessibilityRole="button"
+              // Lido em voz alta com os números: um gráfico é invisível para
+              // quem usa leitor de ecrã, e este é o único sítio onde eles estão.
+              accessibilityLabel={`${nomeMes(m.chave)}: receitas ${formatEuro(
+                m.receitas,
+                0,
+              )}, despesas ${formatEuro(m.despesas, 0)}`}
+              accessibilityState={{ selected: emFoco }}
+              style={({ pressed }) => [
+                {
+                  flex: 1,
+                  alignItems: 'center',
+                  paddingTop: spacing.xxs,
+                  borderRadius: radii.sm,
+                  backgroundColor: emFoco ? colors.surfaceSunken : 'transparent',
+                },
+                pressed && { opacity: 0.6 },
+              ]}>
               <View
                 style={{
-                  width: 12,
-                  height: Math.max((m.receitas / maximo) * ALTURA, m.receitas > 0 ? 3 : 0),
-                  borderRadius: radii.sm,
-                  backgroundColor: colors.success,
-                }}
-              />
-              <View
-                style={{
-                  width: 12,
-                  height: Math.max((m.despesas / maximo) * ALTURA, m.despesas > 0 ? 3 : 0),
-                  borderRadius: radii.sm,
-                  backgroundColor: colors.danger,
-                }}
-              />
-            </View>
-          </View>
-        ))}
-      </View>
-
-      {/* Eixo */}
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          gap: spacing.xs,
-          marginTop: spacing.xs,
-        }}>
-        {meses.map((m) => (
-          <Text
-            key={m.chave}
-            variant="caption"
-            color={colors.textMuted}
-            style={{ flex: 1, textAlign: 'center' }}>
-            {m.rotulo}
-          </Text>
-        ))}
+                  flexDirection: 'row',
+                  alignItems: 'flex-end',
+                  gap: 3,
+                  height: ALTURA + TOPO,
+                }}>
+                {/* `minHeight` de 3: um mês com pouco dinheiro tem de continuar a
+                    ver-se. Sem isso, a barra desaparecia e lia-se como zero. */}
+                <Barra
+                  valor={m.receitas}
+                  altura={Math.max((m.receitas / maximo) * ALTURA, m.receitas > 0 ? 3 : 0)}
+                  cor={colors.success}
+                  comNumero={desktop}
+                />
+                <Barra
+                  valor={m.despesas}
+                  altura={Math.max((m.despesas / maximo) * ALTURA, m.despesas > 0 ? 3 : 0)}
+                  cor={colors.danger}
+                  comNumero={desktop}
+                />
+              </View>
+              <Text
+                variant="caption"
+                color={emFoco ? colors.text : colors.textMuted}
+                style={{ marginTop: spacing.xxs }}>
+                {m.rotulo}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {/* Legenda — a cor sozinha não chega (daltonismo, ecrã ao sol) */}
@@ -542,6 +734,67 @@ function GraficoMeses({
         <Legenda cor={colors.success} label="Receitas" />
         <Legenda cor={colors.danger} label="Despesas" />
       </View>
+
+      {meses.length > 1 ? (
+        <Text
+          variant="caption"
+          color={colors.textMuted}
+          style={{ textAlign: 'center', marginTop: spacing.xs }}>
+          Toque num mês para ver os valores desse mês.
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+/** Uma barra, com o valor por cima quando há largura para ele. */
+function Barra({
+  valor,
+  altura,
+  cor,
+  comNumero,
+}: {
+  valor: number;
+  altura: number;
+  cor: string;
+  comNumero: boolean;
+}) {
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'flex-end' }}>
+      {comNumero && valor > 0 ? (
+        // Sem cêntimos: o gráfico é para comparar meses, e "5 725,40 €" só rouba
+        // largura ao vizinho. Os cêntimos estão na lista de lançamentos.
+        <Text variant="caption" color={cor} numberOfLines={1} style={{ marginBottom: 2 }}>
+          {formatEuro(valor, 0)}
+        </Text>
+      ) : null}
+      <View style={{ width: 12, height: altura, borderRadius: radii.sm, backgroundColor: cor }} />
+    </View>
+  );
+}
+
+/** "Receitas / 1 250 €" — um dos três números do mês em foco. */
+function ValorMes({
+  label,
+  valor,
+  cor,
+  comSinal,
+}: {
+  label: string;
+  valor: number;
+  cor: string;
+  /** O saldo mostra-se com sinal; receitas e despesas não precisam dele. */
+  comSinal?: boolean;
+}) {
+  return (
+    <View>
+      <Text variant="caption" color={colors.textMuted}>
+        {label.toUpperCase()}
+      </Text>
+      <Text variant="bodyStrong" color={cor}>
+        {comSinal && valor > 0 ? '+' : ''}
+        {formatEuro(valor, 0)}
+      </Text>
     </View>
   );
 }

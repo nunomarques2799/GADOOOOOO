@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Gestão de Gado",
+    "name": "Terrabovina",
     "slug": "gestao-gado",
     "version": "1.0.0",
     "orientation": "default",
@@ -32,8 +32,8 @@
       "output": "single",
       "favicon": "./assets/images/favicon-gado.png",
       "lang": "pt-PT",
-      "name": "Gestão de Gado",
-      "shortName": "Gado",
+      "name": "Terrabovina",
+      "shortName": "Terrabovina",
       "description": "Gestão pecuária offline-first para criadores em Portugal.",
       "themeColor": "#0f7d33",
       "backgroundColor": "#f4f1e8",

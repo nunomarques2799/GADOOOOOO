@@ -37,6 +37,7 @@ export default function ExploracaoDetalheScreen() {
   const podeGerirEquipa = pode(id, 'gerirEquipa');
   const podeEditar = pode(id, 'editarExploracao');
   const podeGerirTerrenos = pode(id, 'gerirTerrenos');
+  const podeRegistarAnimais = pode(id, 'editarAnimais');
   const meuRole = id ? roleEm(id) : undefined;
 
   const exploracao = exploracaoById(id);
@@ -162,6 +163,18 @@ export default function ExploracaoDetalheScreen() {
           <InfoField icon="card-account-details-outline" label="NIF do detentor" value={exploracao.nifDetentor} last />
         </Card>
 
+        {/* Editar — além do lápis no cabeçalho, que passa despercebido a quem
+            não anda em apps todos os dias. */}
+        {podeEditar ? (
+          <Button
+            label="Editar dados da exploração"
+            icon="pencil-outline"
+            variant="secondary"
+            onPress={() => router.push(`/exploracao/editar/${exploracao.id}`)}
+            style={{ marginTop: spacing.md }}
+          />
+        ) : null}
+
         {/* Equipa (só admin desta exploração) */}
         {podeGerirEquipa ? (
           <Button
@@ -169,33 +182,18 @@ export default function ExploracaoDetalheScreen() {
             icon="account-multiple-plus"
             variant="secondary"
             onPress={() => router.push(`/exploracao/equipa/${exploracao.id}`)}
-            style={{ marginTop: spacing.md }}
+            style={{ marginTop: spacing.sm }}
           />
         ) : null}
 
         {/* Terrenos */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginTop: spacing.xl,
-            marginBottom: spacing.xs,
-          }}>
-          <Text variant="h3">Terrenos ({terrenos.length})</Text>
-          {podeGerirTerrenos ? (
-            <Pressable
-              onPress={() => router.push({ pathname: '/terreno/novo', params: { exploracaoId: exploracao.id } })}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Adicionar terreno">
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Icon name="plus-circle" size="md" color={colors.primary} />
-                <Text variant="bodyStrong" color={colors.primary}>Adicionar</Text>
-              </View>
-            </Pressable>
-          ) : null}
-        </View>
+        <TituloSeccao
+          titulo={`Terrenos (${terrenos.length})`}
+          rotuloAdicionar={podeGerirTerrenos ? 'Adicionar terreno' : undefined}
+          onAdicionar={() =>
+            router.push({ pathname: '/terreno/novo', params: { exploracaoId: exploracao.id } })
+          }
+        />
 
         {terrenos.length === 0 ? (
           <Card>
@@ -242,12 +240,22 @@ export default function ExploracaoDetalheScreen() {
         )}
 
         {/* Animais */}
-        <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-          Animais ({animais.length})
-        </Text>
-        {animais.slice(0, 4).map((a) => (
-          <AnimalRow key={a.id} animal={a} />
-        ))}
+        <TituloSeccao
+          titulo={`Animais (${animais.length})`}
+          rotuloAdicionar={podeRegistarAnimais ? 'Registar animal' : undefined}
+          onAdicionar={() =>
+            router.push({ pathname: '/animal/novo', params: { exploracaoId: exploracao.id } })
+          }
+        />
+        {animais.length === 0 ? (
+          <Card>
+            <Text variant="body" color={colors.textSecondary}>
+              Ainda não há animais nesta exploração.
+            </Text>
+          </Card>
+        ) : (
+          animais.slice(0, 4).map((a) => <AnimalRow key={a.id} animal={a} />)
+        )}
         {animais.length > 4 ? (
           <Button
             label={`Ver todos os ${animais.length} animais`}
@@ -267,6 +275,55 @@ function mapEstado(e: EstadoMeteo): 'a-carregar' | 'atual' | 'offline' {
   if (e === 'atual') return 'atual';
   if (e === 'a-carregar') return 'a-carregar';
   return 'offline';
+}
+
+/**
+ * Título de secção com o atalho para acrescentar à direita.
+ *
+ * Terrenos e animais acrescentam-se DAQUI, de dentro da exploração: chegar ao
+ * mesmo sítio pela lista geral obrigava a escolher outra vez a exploração num
+ * ecrã que já sabia qual era. Sem `rotuloAdicionar` (papel sem permissão) fica
+ * só o título — um botão que o servidor iria recusar é pior do que nenhum.
+ */
+function TituloSeccao({
+  titulo,
+  rotuloAdicionar,
+  onAdicionar,
+}: {
+  titulo: string;
+  rotuloAdicionar?: string;
+  onAdicionar: () => void;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: spacing.sm,
+        marginTop: spacing.xl,
+        marginBottom: spacing.xs,
+      }}>
+      <Text variant="h3" style={{ flex: 1 }}>
+        {titulo}
+      </Text>
+      {rotuloAdicionar ? (
+        <Pressable
+          onPress={onAdicionar}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={rotuloAdicionar}
+          style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Icon name="plus-circle" size="md" color={colors.primary} />
+            <Text variant="bodyStrong" color={colors.primary}>
+              Adicionar
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
+    </View>
+  );
 }
 
 function HeroStat({ value, label }: { value: string | number; label: string }) {

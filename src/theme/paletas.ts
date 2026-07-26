@@ -1,0 +1,478 @@
+/**
+ * PALETAS — o aspeto da app, à escolha do criador.
+ * ------------------------------------------------------------------
+ * A app nasceu toda verde. O verde continua a ser o que vem de origem, mas
+ * quem passa o dia com ela ao sol, ou tem pouca visão, pode preferir outra
+ * coisa — daí o ecrã "Aspeto da app" nas Definições.
+ *
+ * O QUE MUDA E O QUE NÃO MUDA
+ *
+ * Uma paleta mexe na cor da MARCA e nas superfícies: o verde dos botões, os
+ * fundos, o texto, as linhas. Não mexe nas cores com SIGNIFICADO — vermelho de
+ * prazo vencido, âmbar de "esta semana", azul de informação, verde de "em dia"
+ * — nem nas cores por espécie. Essas são linguagem, não decoração: se o
+ * vermelho de "identificação em atraso" mudasse com o gosto de cada um,
+ * deixava de querer dizer o que quer dizer. Ficam em `tokens.ts`.
+ *
+ * REGRA PARA QUEM ACRESCENTAR CÓDIGO
+ *
+ * Os tokens daqui só podem ser lidos DENTRO do render de um componente. Uma
+ * constante no topo de um módulo (`const META = { cor: colors.primary }`)
+ * congela a cor no arranque e fica com a paleta errada para sempre. Para cores
+ * fixas — as semânticas e as das espécies — não há esse problema.
+ *
+ * CONTRASTE
+ *
+ * O utilizador de referência tem 82 anos e lê a app à luz do dia. Cada paleta
+ * é verificada por teste (`__tests__/paletas.test.ts`) contra os mínimos das
+ * WCAG AA nos pares que aparecem mesmo no ecrã. Uma paleta nova que não passe
+ * não entra — por muito bonita que seja.
+ */
+
+import { derivar } from './derivarPaleta';
+
+/** Os tokens que uma paleta pode mudar. */
+export type TokensPaleta = {
+  primary: string;
+  primaryDark: string;
+  primaryDarker: string;
+  primaryTint: string;
+  primaryTintStrong: string;
+  onPrimary: string;
+  headerFrom: string;
+  headerTo: string;
+  background: string;
+  surface: string;
+  surfaceAlt: string;
+  surfaceSunken: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  border: string;
+  borderStrong: string;
+  overlay: string;
+};
+
+export type PaletaId =
+  // Verdes
+  | 'campo'
+  | 'oliveira'
+  | 'hortela'
+  | 'mar'
+  // Azuis
+  | 'ceu'
+  | 'indigo'
+  // Roxos e rosas
+  | 'alfazema'
+  | 'amora'
+  | 'cravo'
+  // Quentes
+  | 'papoila'
+  | 'poente'
+  | 'trigo'
+  | 'terra'
+  | 'cafe'
+  | 'vinha'
+  // Neutros
+  | 'ardosia'
+  | 'pedra'
+  | 'tinta'
+  | 'contraste';
+
+/**
+ * Famílias, para a lista se poder percorrer.
+ *
+ * Vinte cartões seguidos não são vinte opções — são uma parede. Agrupados por
+ * cor, quem quer "um azul" salta direto ao sítio em vez de percorrer tudo.
+ */
+export type Familia = 'Verdes' | 'Azuis' | 'Roxos e rosas' | 'Quentes' | 'Neutros';
+
+export const FAMILIAS: Familia[] = ['Verdes', 'Azuis', 'Roxos e rosas', 'Quentes', 'Neutros'];
+
+export type Paleta = {
+  id: PaletaId;
+  /** Nome como aparece na lista. Curto — cabe num cartão. */
+  nome: string;
+  /** Uma linha a dizer a quem serve. */
+  descricao: string;
+  familia: Familia;
+  tokens: TokensPaleta;
+};
+
+/**
+ * As primeiras, desenhadas token a token.
+ *
+ * Ficam à mão porque são as mais usadas e porque a `campo` é a de origem: se
+ * passasse a ser gerada, a app inteira mudava de tom no dia em que alguém
+ * afinasse o gerador. As outras vêm de `derivar()`.
+ */
+const DESENHADAS: Paleta[] = [
+  {
+    id: 'campo',
+    nome: 'Campo',
+    descricao: 'O verde de sempre.',
+    familia: 'Verdes',
+    tokens: {
+      primary: '#1B7A48',
+      primaryDark: '#166B3D',
+      primaryDarker: '#124D2E',
+      primaryTint: '#EEF8F1',
+      primaryTintStrong: '#DCF2E4',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#124D2E',
+      headerTo: '#1B7A48',
+      background: '#F3F6F2',
+      surface: '#FFFFFF',
+      surfaceAlt: '#F0F4EE',
+      surfaceSunken: '#E9EFE7',
+      text: '#15251C',
+      textSecondary: '#54655B',
+      // Um tom mais escuro do que o histórico #647268: aquele cumpria AA sobre
+      // o fundo e sobre branco, mas ficava-se pelos 4,33:1 sobre o
+      // `surfaceSunken`, que é onde assentam os cartões afundados.
+      textMuted: '#616E64',
+      border: '#E3EAE0',
+      borderStrong: '#D2DCCD',
+      overlay: 'rgba(15, 40, 26, 0.55)',
+    },
+  },
+  {
+    id: 'terra',
+    nome: 'Terra',
+    descricao: 'Castanhos quentes, como a courela no verão.',
+    familia: 'Quentes',
+    tokens: {
+      primary: '#7D5227',
+      primaryDark: '#6B4522',
+      primaryDarker: '#4E3219',
+      primaryTint: '#FAF4EC',
+      primaryTintStrong: '#F0E3D2',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#4E3219',
+      headerTo: '#7D5227',
+      background: '#F7F3EC',
+      surface: '#FFFFFF',
+      surfaceAlt: '#F3EDE3',
+      surfaceSunken: '#EBE3D6',
+      text: '#2A1F14',
+      textSecondary: '#655544',
+      textMuted: '#736251',
+      border: '#E8DFD2',
+      borderStrong: '#D9CCBA',
+      overlay: 'rgba(40, 26, 15, 0.55)',
+    },
+  },
+  {
+    id: 'oliveira',
+    nome: 'Oliveira',
+    descricao: 'Verde-oliva acinzentado, mais apagado do que o verde folha.',
+    familia: 'Verdes',
+    tokens: {
+      primary: '#5F6B2F',
+      primaryDark: '#4E5827',
+      primaryDarker: '#3A421C',
+      primaryTint: '#F4F6EA',
+      primaryTintStrong: '#E5EACF',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#3A421C',
+      headerTo: '#5F6B2F',
+      background: '#F5F6EE',
+      surface: '#FFFFFF',
+      surfaceAlt: '#EFF1E5',
+      surfaceSunken: '#E6E9D9',
+      text: '#23281A',
+      textSecondary: '#575E45',
+      textMuted: '#616852',
+      border: '#E5E8D8',
+      borderStrong: '#D3D8C1',
+      overlay: 'rgba(30, 34, 20, 0.55)',
+    },
+  },
+  {
+    id: 'ceu',
+    nome: 'Céu',
+    descricao: 'Azul calmo, descansado para os olhos.',
+    familia: 'Azuis',
+    tokens: {
+      primary: '#1D5D96',
+      primaryDark: '#174E7E',
+      primaryDarker: '#103A5F',
+      primaryTint: '#EDF4FA',
+      primaryTintStrong: '#D6E7F5',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#103A5F',
+      headerTo: '#1D5D96',
+      background: '#F1F5F8',
+      surface: '#FFFFFF',
+      surfaceAlt: '#ECF1F6',
+      surfaceSunken: '#E3EBF2',
+      text: '#12212C',
+      textSecondary: '#4E5F6B',
+      textMuted: '#5B6B77',
+      border: '#DDE6EC',
+      borderStrong: '#C9D6E0',
+      overlay: 'rgba(12, 30, 45, 0.55)',
+    },
+  },
+  {
+    id: 'mar',
+    nome: 'Mar',
+    descricao: 'Verde-azulado fundo, fresco sem ser frio.',
+    familia: 'Verdes',
+    tokens: {
+      primary: '#106A6E',
+      primaryDark: '#0D5A5D',
+      primaryDarker: '#094245',
+      primaryTint: '#EBF6F6',
+      primaryTintStrong: '#D0EAEA',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#094245',
+      headerTo: '#106A6E',
+      background: '#F0F6F6',
+      surface: '#FFFFFF',
+      surfaceAlt: '#EAF2F2',
+      surfaceSunken: '#DFEBEB',
+      text: '#122627',
+      textSecondary: '#4C6162',
+      textMuted: '#566B6C',
+      border: '#DCE9E9',
+      borderStrong: '#C6D9D9',
+      overlay: 'rgba(10, 32, 33, 0.55)',
+    },
+  },
+  {
+    id: 'indigo',
+    nome: 'Índigo',
+    descricao: 'Azul-escuro sério, para quem quer a app discreta.',
+    familia: 'Azuis',
+    tokens: {
+      primary: '#37458F',
+      primaryDark: '#2D3876',
+      primaryDarker: '#212A59',
+      primaryTint: '#F0F1FA',
+      primaryTintStrong: '#DCDFF3',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#212A59',
+      headerTo: '#37458F',
+      background: '#F3F4F9',
+      surface: '#FFFFFF',
+      surfaceAlt: '#EDEFF6',
+      surfaceSunken: '#E3E6F0',
+      text: '#1A1E33',
+      textSecondary: '#545A75',
+      textMuted: '#5D6480',
+      border: '#E1E4EF',
+      borderStrong: '#CBD0E2',
+      overlay: 'rgba(20, 24, 45, 0.55)',
+    },
+  },
+  {
+    id: 'vinha',
+    nome: 'Vinha',
+    descricao: 'Bordô de adega, quente e escuro.',
+    familia: 'Quentes',
+    tokens: {
+      primary: '#8A2740',
+      primaryDark: '#741F35',
+      primaryDarker: '#551725',
+      primaryTint: '#FBEFF2',
+      primaryTintStrong: '#F4DAE1',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#551725',
+      headerTo: '#8A2740',
+      background: '#F8F3F4',
+      surface: '#FFFFFF',
+      surfaceAlt: '#F3ECEE',
+      surfaceSunken: '#EBE1E4',
+      text: '#2A1A1E',
+      textSecondary: '#615054',
+      textMuted: '#6B595D',
+      border: '#EBE0E3',
+      borderStrong: '#DACBCF',
+      overlay: 'rgba(40, 20, 26, 0.55)',
+    },
+  },
+  {
+    id: 'ardosia',
+    nome: 'Ardósia',
+    descricao: 'Cinzentos sóbrios, sem cor a puxar pela vista.',
+    familia: 'Neutros',
+    tokens: {
+      primary: '#3F5261',
+      primaryDark: '#33434F',
+      primaryDarker: '#26333C',
+      primaryTint: '#F0F3F5',
+      primaryTintStrong: '#DDE4E9',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#26333C',
+      headerTo: '#3F5261',
+      background: '#F4F6F7',
+      surface: '#FFFFFF',
+      surfaceAlt: '#EEF1F3',
+      surfaceSunken: '#E5EAED',
+      text: '#1A2229',
+      textSecondary: '#52606A',
+      textMuted: '#5E6A73',
+      border: '#E1E6EA',
+      borderStrong: '#CDD5DB',
+      overlay: 'rgba(20, 28, 34, 0.55)',
+    },
+  },
+  {
+    id: 'contraste',
+    nome: 'Alto contraste',
+    descricao: 'Letra escura, fundos claros e linhas bem marcadas.',
+    familia: 'Neutros',
+    tokens: {
+      primary: '#0B4F9E',
+      primaryDark: '#083B78',
+      primaryDarker: '#062B57',
+      primaryTint: '#EAF1FA',
+      primaryTintStrong: '#CFE0F5',
+      onPrimary: '#FFFFFF',
+      headerFrom: '#062B57',
+      headerTo: '#0B4F9E',
+      // O fundo é cinzento e as superfícies brancas: com os dois a branco, um
+      // cartão deixava de se ver como cartão. As linhas são bem mais escuras
+      // do que nas outras paletas, que é o ponto desta.
+      background: '#EFEFEF',
+      surface: '#FFFFFF',
+      surfaceAlt: '#E4E4E4',
+      surfaceSunken: '#DADADA',
+      text: '#000000',
+      textSecondary: '#2B2B2B',
+      textMuted: '#454545',
+      border: '#A9A9A9',
+      borderStrong: '#767676',
+      overlay: 'rgba(0, 0, 0, 0.65)',
+    },
+  },
+];
+
+/**
+ * As restantes, a partir da cor da marca e da sua versão escura.
+ *
+ * Duas cores por paleta em vez de dezoito: é a diferença entre acrescentar uma
+ * cor nova em duas linhas e acrescentá-la com um erro de contraste algures no
+ * meio. Os níveis de legibilidade são forçados por `derivar()` — ver
+ * `derivarPaleta.ts`.
+ *
+ * Sobre o amarelo e o laranja: a cor da marca leva SEMPRE texto branco por
+ * cima (é o botão principal), e um amarelo-limão ou um laranja vivo não
+ * aguentam isso — dão 2:1, letra branca sobre fundo claro. Por isso o amarelo
+ * aqui é dourado de trigo e o laranja é de telha: o brilho da cor vive nos
+ * tintes e nos fundos, onde nada tem de se ler por cima.
+ */
+const DERIVADAS: Paleta[] = [
+  /* ---- Verdes ---- */
+  derivar({
+    id: 'hortela',
+    nome: 'Hortelã',
+    descricao: 'Verde-esmeralda vivo, mais fresco do que o verde folha.',
+    familia: 'Verdes',
+    marca: '#0F8A5F',
+    escura: '#064434',
+  }),
+
+  /* ---- Roxos e rosas ---- */
+  derivar({
+    id: 'alfazema',
+    nome: 'Alfazema',
+    descricao: 'Roxo de flor, sereno.',
+    familia: 'Roxos e rosas',
+    marca: '#6E3AA8',
+    escura: '#3D1E63',
+  }),
+  derivar({
+    id: 'amora',
+    nome: 'Amora',
+    descricao: 'Púrpura carregado, entre o roxo e o vinho.',
+    familia: 'Roxos e rosas',
+    marca: '#8B2A7A',
+    escura: '#4C1543',
+  }),
+  derivar({
+    id: 'cravo',
+    nome: 'Cravo',
+    descricao: 'Rosa forte, o mais alegre de todos.',
+    familia: 'Roxos e rosas',
+    marca: '#B02455',
+    escura: '#63122F',
+  }),
+
+  /* ---- Quentes ---- */
+  derivar({
+    id: 'papoila',
+    nome: 'Papoila',
+    descricao: 'Vermelho vivo de flor de trigal.',
+    familia: 'Quentes',
+    marca: '#C0282C',
+    escura: '#6C1416',
+  }),
+  derivar({
+    id: 'poente',
+    nome: 'Poente',
+    descricao: 'Laranja de telha ao fim da tarde.',
+    familia: 'Quentes',
+    marca: '#C05314',
+    escura: '#6B2B08',
+  }),
+  derivar({
+    id: 'trigo',
+    nome: 'Trigo',
+    descricao: 'Amarelo dourado de seara madura.',
+    familia: 'Quentes',
+    marca: '#A67C08',
+    escura: '#5A4204',
+  }),
+  derivar({
+    id: 'cafe',
+    nome: 'Café',
+    descricao: 'Castanho escuro torrado, sem brilho nenhum.',
+    familia: 'Quentes',
+    marca: '#6B4430',
+    escura: '#38221A',
+  }),
+
+  /* ---- Neutros ---- */
+  derivar({
+    id: 'pedra',
+    nome: 'Pedra',
+    descricao: 'Cinzento quente de granito.',
+    familia: 'Neutros',
+    marca: '#6B6357',
+    escura: '#39342C',
+  }),
+  derivar({
+    id: 'tinta',
+    nome: 'Tinta',
+    descricao: 'Preto e branco, sem cor nenhuma pelo meio.',
+    familia: 'Neutros',
+    marca: '#3A3A3A',
+    escura: '#141414',
+  }),
+];
+
+/** Pela ordem das famílias — é assim que a lista se apresenta. */
+export const PALETAS: Paleta[] = FAMILIAS.flatMap((f) =>
+  [...DESENHADAS, ...DERIVADAS].filter((p) => p.familia === f),
+);
+
+export const PALETA_OMISSAO: PaletaId = 'campo';
+
+/** A paleta com este id, ou a de origem se o id não existir (dados antigos). */
+export function paletaPorId(id: string | null | undefined): Paleta {
+  return PALETAS.find((p) => p.id === id) ?? paletaOmissao();
+}
+
+/** A paleta de origem, sempre presente. */
+export function paletaOmissao(): Paleta {
+  const p = PALETAS.find((x) => x.id === PALETA_OMISSAO);
+  if (!p) throw new Error('A paleta de origem desapareceu da lista');
+  return p;
+}
+
+/** As paletas de uma família, para a lista as mostrar agrupadas. */
+export function paletasDe(familia: Familia): Paleta[] {
+  return PALETAS.filter((p) => p.familia === familia);
+}
