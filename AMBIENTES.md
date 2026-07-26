@@ -144,6 +144,19 @@ A ordem, sem exceções:
 **O passo 3 não é opcional.** É literalmente a única coisa entre um erro de
 sintaxe e perder os dados de uma pessoa.
 
+Precisa do `pg_dump` e do `psql` na máquina — `winget install -e --id
+PostgreSQL.PostgreSQL.17`. Sem eles o script cai no `npx supabase db dump`, que
+corre o pg_dump dentro de um contentor e exige o Docker Desktop; e o Docker
+sozinho dava a cópia mas não dava com que a **restaurar**. E a ligação à base
+vive no `.env.backup` (fora do git), que tem de se criar à mão a partir do
+*Dashboard → Project Settings → Database → Connection string*.
+
+Antes de saber se a cópia serve, ela é uma promessa: **ensaia o restauro** num
+projeto Supabase novo e descartável. Isso prova as duas coisas de uma vez — que
+os ficheiros voltam a montar a base, e que a migração corre por cima do estado
+real de produção (e não do de dev, que já tem tudo aplicado). Para saber que
+ficheiros de schema faltam a uma base: [`supabase/estado.sql`](supabase/estado.sql).
+
 ## Onde vivem as chaves de cada ambiente
 
 Não há um sítio só — cada canal de distribuição traz as suas:
