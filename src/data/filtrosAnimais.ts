@@ -31,6 +31,11 @@ const MESES_DIA = 30.44;
 
 export function faixaDe(animal: Animal): FaixaIdade {
   const meses = idadeDias(animal.dataNascimento) / MESES_DIA;
+  // Idade negativa (relógio do aparelho desacertado, data vinda de fora) é a
+  // única forma de não cair em faixa nenhuma. O recurso é a primeira faixa, não
+  // a última: um animal recém-nascido classificado como "mais de 8 anos"
+  // desaparecia do filtro onde o criador o ia procurar.
+  if (meses < 0) return 'cria';
   // O limite superior é exclusivo; um animal de 24 meses certos é "adulto".
   const f = FAIXAS.find(({ meses: [de, ate] }) => meses >= de && meses < ate);
   return f?.valor ?? 'velho';

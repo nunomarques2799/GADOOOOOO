@@ -9,7 +9,7 @@ import {
   SEM_TERRENO,
   type Filtros,
 } from '../filtrosAnimais';
-import { isoDaysAgo } from '../helpers';
+import { isoDaysAgo, isoInDays } from '../helpers';
 import type { Alerta, Animal } from '../types';
 
 function animal(id: string, over: Partial<Animal> = {}): Animal {
@@ -43,6 +43,13 @@ describe('faixaDe', () => {
     // cabia em faixa nenhuma e o animal sumia de todos os filtros de idade.
     const doisAnos = animal('a', { dataNascimento: isoDaysAgo(Math.round(24 * 30.44)) });
     expect(faixaDe(doisAnos)).toBe('adulto');
+  });
+
+  it('uma idade negativa cai na primeira faixa, não na última', () => {
+    // Só acontece com o relógio do aparelho desacertado, mas o recurso importa:
+    // um recém-nascido classificado como "mais de 8 anos" desaparecia do filtro
+    // onde o criador o ia procurar.
+    expect(faixaDe(animal('a', { dataNascimento: isoInDays(3) }))).toBe('cria');
   });
 });
 

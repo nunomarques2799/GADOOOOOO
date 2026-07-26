@@ -59,13 +59,18 @@ const DESTINOS: Destino[] = [
 ];
 
 /**
- * O que fica na barra de baixo do TELEMÓVEL. São cinco lugares e nove
- * destinos: a barra reparte a largura por todos, e com nove cada um ficaria
- * espremido num ecrã de 375px — bem menos ainda com a letra do sistema no
- * máximo, que é o cenário que esta app tem de aguentar. Ficam os quatro do
- * dia-a-dia e um botão "Mais" para os outros cinco.
+ * O que fica na barra de baixo do TELEMÓVEL.
  *
- * No computador não há este problema: a lateral é vertical e leva os oito.
+ * São cinco lugares para os dez destinos do `DESTINOS`: a barra reparte a
+ * largura por todos, e com dez cada um ficaria espremido num ecrã de 375px —
+ * bem menos ainda com a letra do sistema no máximo, que é o cenário que esta
+ * app tem de aguentar. Ficam os quatro do dia-a-dia e um botão "Mais" para os
+ * restantes, que a folha de baixo mostra em lista.
+ *
+ * No computador não há este problema: a barra lateral é vertical e leva-os
+ * todos. (Contas: quatro aqui + "Mais" = cinco lugares. Ao acrescentar um
+ * destino ao `DESTINOS`, ele aparece no "Mais" sozinho — só se mexe nesta lista
+ * para o promover, e aí tem de sair outro.)
  */
 const NO_TELEMOVEL = ['index', 'animais', 'exploracoes', 'alertas'];
 

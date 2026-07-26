@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { ScrollView, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +24,7 @@ export default function InicioScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
-  const { isSuperadmin } = useMembros();
+  const { isSuperadmin, podeVer } = useMembros();
   const {
     utilizador, exploracoes, terrenos, animais, eventos, movimentos, alertas, online,
     pendentesSinc,
@@ -41,10 +42,21 @@ export default function InicioScreen() {
   // app com "Rendered fewer hooks than expected".
   const { podeVerFinancas, podeRegistarDespesa } = useFinancas();
 
+  // O saldo conta só as explorações cujas contas esta pessoa pode consultar —
+  // o mesmo conjunto que o ecrã Finanças usa no "Todas". Somar tudo o que a app
+  // carregou dava um número que junta dois negócios: os movimentos vêm já
+  // filtrados por papel (a RLS), mas os eventos com custo não vêm, e quem é dono
+  // de uma quinta e trabalhador de outra via as duas no mesmo saldo.
+  const fin = useMemo(() => {
+    const ids = exploracoes.filter((e) => podeVer(e.id, 'verFinancas')).map((e) => e.id);
+    return resumoFinanceiro(eventos, movimentos, {
+      filtro: { exploracaoIds: ids, animais },
+    });
+  }, [eventos, movimentos, exploracoes, animais, podeVer]);
+
   // Superadmin não gere gado — vai direto para o painel de clientes.
   if (isSuperadmin) return <Redirect href="/(superadmin)/clientes" />;
 
-  const fin = resumoFinanceiro(eventos, movimentos);
   const temFinancas = podeVerFinancas && fin.movimentos.length > 0;
   const saldoPositivo = fin.saldo >= 0;
 

@@ -134,6 +134,40 @@ describe('lancamentos — as duas origens numa conta só', () => {
     expect(lista).toEqual([]);
   });
 
+  it('filtrar por um CONJUNTO de explorações soma só as que lá estão', () => {
+    // É o "Todas" do ecrã Finanças, que não quer dizer "tudo o que está na app":
+    // quer dizer as explorações cujas contas esta pessoa pode consultar. Quem é
+    // dono de uma e trabalhador de outra somava as duas no mesmo saldo — os
+    // movimentos vêm filtrados por papel (a RLS), os eventos com custo não.
+    const lista = lancamentos(
+      [
+        evento({ tipo: 'Compra', valor: 1000, animalId: 'a1' }),
+        evento({ tipo: 'Compra', valor: 5000, animalId: 'a3' }),
+      ],
+      [
+        movimento({ direcao: 'despesa', categoria: 'Alimentação', valor: 100 }),
+        movimento({ direcao: 'despesa', categoria: 'Alimentação', valor: 200, exploracaoId: 'exp-2' }),
+        movimento({ direcao: 'despesa', categoria: 'Alimentação', valor: 900, exploracaoId: 'exp-3' }),
+      ],
+      {
+        exploracaoIds: ['exp-1', 'exp-2'],
+        animais: [animal('a1'), animal('a3', 'exp-3')],
+      },
+    );
+    expect(resumo(lista).despesas).toBe(1300); // 1000 + 100 + 200
+  });
+
+  it('um conjunto VAZIO não conta nada', () => {
+    // É a resposta certa a quem não pode consultar contas nenhumas. Tratar a
+    // lista vazia como "sem filtro" abria-lhe as contas de toda a app.
+    const lista = lancamentos(
+      [evento({ tipo: 'Compra', valor: 1000, animalId: 'a1' })],
+      [movimento({ direcao: 'despesa', categoria: 'Alimentação', valor: 100 })],
+      { exploracaoIds: [], animais: [animal('a1')] },
+    );
+    expect(lista).toEqual([]);
+  });
+
   it('ordena do mais recente para o mais antigo', () => {
     const lista = lancamentos(
       [evento({ tipo: 'Compra', valor: 10, data: '2026-01-01T12:00:00.000Z' })],
@@ -356,5 +390,25 @@ describe('vendasSemPreco', () => {
       [movimento({ direcao: 'despesa', categoria: 'Sanidade', valor: 40, animalId: 'a1' })],
     );
     expect(porFechar).toHaveLength(1);
+  });
+
+  it('nem uma RECEITA que não é a venda do animal', () => {
+    // O leite entregue por aquela vaca é receita e está imputado a ela, mas não
+    // é o preço por que foi vendida. Dava a venda por fechada e o valor ficava a
+    // faltar sem aparecer em lado nenhum — que é o oposto do que esta lista faz.
+    const porFechar = vendasSemPreco(
+      [evento({ tipo: 'Venda', animalId: 'a1' })],
+      [movimento({ direcao: 'receita', categoria: 'Leite e produtos', valor: 310, animalId: 'a1' })],
+    );
+    expect(porFechar).toHaveLength(1);
+  });
+
+  it('não fala das vendas de uma exploração que não se está a ver', () => {
+    const porFechar = vendasSemPreco(
+      [evento({ tipo: 'Venda', animalId: 'a1' }), evento({ tipo: 'Venda', animalId: 'a9' })],
+      [],
+      { exploracaoId: 'exp-1', animais: [animal('a1'), animal('a9', 'exp-2')] },
+    );
+    expect(porFechar.map((e) => e.animalId)).toEqual(['a1']);
   });
 });

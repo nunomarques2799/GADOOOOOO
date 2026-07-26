@@ -37,9 +37,22 @@ export default function AnimaisScreen() {
 
   const porAnimal = useMemo(() => mapaAlertas(alertas), [alertas]);
 
+  /**
+   * O efetivo com que a lista se compara — "3 de 28".
+   *
+   * Segue a exploração escolhida, e não a conta toda: com duas quintas, os 8
+   * animais de uma apareciam como "8 de 28" e a conta lia-se como filtro mal
+   * feito. A exploração não é um filtro como os outros — é o contexto em que se
+   * está a olhar, e o total tem de ser o desse contexto.
+   */
   const ativos = useMemo(
-    () => animais.filter((a) => !a.estado || a.estado === 'ativo'),
-    [animais],
+    () =>
+      animais.filter(
+        (a) =>
+          (!a.estado || a.estado === 'ativo')
+          && (!filtros.exploracaoId || a.exploracaoId === filtros.exploracaoId),
+      ),
+    [animais, filtros.exploracaoId],
   );
 
   // As opções encolhem com o que já está filtrado: com "Bovinos" escolhido, o
@@ -63,8 +76,14 @@ export default function AnimaisScreen() {
 
   const nAtivos = contarAtivos(filtros);
   const temPesquisa = !!filtros.texto?.trim();
-  /** A lista está a mostrar menos do que o efetivo todo? */
-  const estreitada = nAtivos > 0 || temPesquisa || !!filtros.exploracaoId;
+  /**
+   * A lista está a mostrar menos do que o efetivo à vista?
+   *
+   * A exploração NÃO conta para isto — ela já mudou o `ativos` acima. Contá-la
+   * punha "8 de 8" no topo de uma quinta com oito animais, e o estado vazio de
+   * uma quinta ainda sem gado oferecia "limpar filtros" em vez de "registar".
+   */
+  const estreitada = nAtivos > 0 || temPesquisa;
 
   // Com uma exploração só, a linha de chips não decidia nada — ocupava espaço
   // no topo da lista e dizia sempre a mesma coisa.

@@ -194,7 +194,13 @@ export function FormularioAnimal({
      por isso é essa que se pede; a previsão do parto sai da gestação da espécie.
      Quem souber a data pelo veterinário pode escrevê-la diretamente. */
   const idadeReprodutiva = idadeDias(dataNascimento) >= PrazosLegais.idadeMinMaeMeses * 30.44;
-  const mostrarPrenhez = sexo === 'Fêmea' && idadeReprodutiva;
+  // Uma fêmea que JÁ tem parto previsto mostra sempre a secção, mesmo sem idade
+  // para o critério (uma data lançada por Excel, ou uma correção da data de
+  // nascimento que a puxou para baixo do limite). Sem isto, o campo desaparecia
+  // do formulário e o `partoPrevisto` saía `undefined`: guardar qualquer outra
+  // alteração apagava a data em silêncio, e o aviso do parto ia com ela.
+  // Trocar o sexo para Macho continua a limpá-la — aí é a resposta certa.
+  const mostrarPrenhez = sexo === 'Fêmea' && (idadeReprodutiva || !!animal?.dataPrevistaParto);
 
   const cobricaoIso = dataCobricao.trim() ? parseDataPt(dataCobricao) : null;
   const cobricaoInvalida = dataCobricao.trim().length > 0 && !cobricaoIso;

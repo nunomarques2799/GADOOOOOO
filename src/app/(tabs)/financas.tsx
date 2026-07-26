@@ -33,6 +33,7 @@ import {
   type Periodo,
 } from '@/data/financas';
 import { formatDataCurta, formatEuro } from '@/data/helpers';
+import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
 import type { CategoriaMovimento } from '@/data/types';
@@ -61,23 +62,92 @@ function iconeDe(c: CategoriaMovimento): IconName {
   return ICONE_CATEGORIA[c] ?? 'cash';
 }
 
+/** Quantos movimentos a lista mostra de cada vez. */
+const PAGINA_MOVIMENTOS = 30;
+
 export default function FinancasScreen() {
   const router = useRouter();
-  const { eventos, movimentos, animais, animalById } = useGado();
+  const { eventos, movimentos, animais, animalById, exploracoes } = useGado();
+  const { podeVer } = useMembros();
+
+  /** A exploração escolhida nos chips; `undefined` = todas as que se podem ver. */
+  const [exploracaoId, setExploracaoId] = useState<string | undefined>(undefined);
+  const [periodo, setPeriodo] = useState<Periodo>('ano');
+  const [limite, setLimite] = useState(PAGINA_MOVIMENTOS);
+
+  // A pergunta que decide se o ecrã ABRE continua a ser de conta ("em alguma
+  // das minhas?"), e não da exploração escolhida. Se dependesse da escolha, uma
+  // exploração sem contas para mostrar trocava o ecrã por um aviso — levando os
+  // chips com ela, e deixando o criador sem forma de voltar atrás.
   const { ativas, podeVerFinancas, podeRegistarDespesa } = useFinancas();
 
-  const [periodo, setPeriodo] = useState<Periodo>('ano');
+  /**
+   * As explorações cujas contas esta pessoa pode consultar. São as únicas que a
+   * linha de chips oferece: um destino que abre fechado é pior do que nenhum.
+   */
+  const consultaveis = useMemo(
+    () => exploracoes.filter((e) => podeVer(e.id, 'verFinancas')),
+    [exploracoes, podeVer],
+  );
+  // Só vale a pena escolher com mais do que uma — com uma, a linha de chips não
+  // decidia nada. Mesma regra do separador Animais.
+  const podeEscolher = consultaveis.length > 1;
 
-  const todos = useMemo(() => lancamentos(eventos, movimentos), [eventos, movimentos]);
+  /**
+   * As explorações que entram nas contas.
+   *
+   * Escolhida uma, é essa. Sem escolha, são as que esta pessoa PODE consultar,
+   * e não todas as que a app carregou: os movimentos já vêm filtrados por papel
+   * (a RLS), mas os eventos com custo não vêm — quem é dono de uma exploração e
+   * trabalhador de outra somava as duas no mesmo saldo, e um número que junta
+   * dois negócios não são as contas de nenhum deles.
+   */
+  const filtro = useMemo(() => {
+    // Um id que já não existe (a exploração foi eliminada noutro aparelho) volta
+    // ao conjunto todo, em vez de deixar o ecrã vazio sem chip nenhum aceso.
+    const escolhida = exploracaoId && consultaveis.some((e) => e.id === exploracaoId);
+    return {
+      exploracaoIds: escolhida ? [exploracaoId as string] : consultaveis.map((e) => e.id),
+      animais,
+    };
+  }, [exploracaoId, consultaveis, animais]);
+
+  /**
+   * Tudo o que esta pessoa pode consultar, sem olhar aos chips. É o que decide
+   * se o ecrã tem ou não conteúdo: se o "ainda sem movimentos" seguisse a
+   * exploração escolhida, escolher uma quinta ainda sem lançamentos trocava o
+   * ecrã pelo estado vazio — e levava os chips atrás, sem volta possível.
+   */
+  const daConta = useMemo(() => {
+    const ids = consultaveis.map((e) => e.id);
+    return lancamentos(eventos, movimentos, { exploracaoIds: ids, animais });
+  }, [eventos, movimentos, consultaveis, animais]);
+
+  const todos = useMemo(
+    () => lancamentos(eventos, movimentos, filtro),
+    [eventos, movimentos, filtro],
+  );
   const doPeriodo = useMemo(() => noPeriodo(todos, periodo), [todos, periodo]);
   const r = useMemo(() => resumo(doPeriodo), [doPeriodo]);
   const meses = useMemo(() => serieMensal(todos, 6), [todos]);
   const comparacao = useMemo(() => compararComAnterior(todos, periodo), [todos, periodo]);
   const ranking = useMemo(() => porAnimal(doPeriodo).slice(0, 5), [doPeriodo]);
-  const porFechar = useMemo(() => vendasSemPreco(eventos, movimentos), [eventos, movimentos]);
+  const porFechar = useMemo(
+    () => vendasSemPreco(eventos, movimentos, filtro),
+    [eventos, movimentos, filtro],
+  );
 
   const positivo = r.saldo >= 0;
-  const semDados = todos.length === 0;
+  const semDados = daConta.length === 0;
+  const nomeExploracao = consultaveis.find((e) => e.id === exploracaoId)?.nome;
+  const visiveis = r.movimentos.slice(0, limite);
+  const porMostrar = r.movimentos.length - visiveis.length;
+
+  /** Muda de exploração e volta a lista de movimentos ao início. */
+  function escolherExploracao(id: string | undefined) {
+    setExploracaoId(id);
+    setLimite(PAGINA_MOVIMENTOS);
+  }
 
   const nomeAnimal = (id: string) => {
     const a = animalById(id);
@@ -156,6 +226,36 @@ export default function FinancasScreen() {
           </>
         ) : (
           <>
+            {/* Exploração — com duas quintas, um saldo que soma as duas não são
+                as contas de nenhuma delas. Fica à vista, como em Animais e
+                Alertas, e não escondido atrás de um botão de filtros. */}
+            {podeEscolher ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: spacing.xs,
+                  marginBottom: spacing.sm,
+                }}>
+                <Chip
+                  label="Todas"
+                  icon="barn"
+                  selected={exploracaoId === undefined}
+                  onPress={() => escolherExploracao(undefined)}
+                />
+                {consultaveis.map((e) => (
+                  <Chip
+                    key={e.id}
+                    label={e.nome}
+                    selected={exploracaoId === e.id}
+                    onPress={() =>
+                      escolherExploracao(exploracaoId === e.id ? undefined : e.id)
+                    }
+                  />
+                ))}
+              </View>
+            ) : null}
+
             {/* Período — muda tudo o que está abaixo */}
             <View
               style={{
@@ -169,7 +269,10 @@ export default function FinancasScreen() {
                   key={p.valor}
                   label={p.label}
                   selected={periodo === p.valor}
-                  onPress={() => setPeriodo(p.valor)}
+                  onPress={() => {
+                    setPeriodo(p.valor);
+                    setLimite(PAGINA_MOVIMENTOS);
+                  }}
                 />
               ))}
             </View>
@@ -182,8 +285,9 @@ export default function FinancasScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <Icon name="calendar-blank" size="lg" color={colors.textMuted} />
                   <Text variant="body" style={{ flex: 1 }}>
-                    Sem movimentos {periodo === 'mes' ? 'neste mês' : 'neste ano'}. Escolha
-                    outro período para ver o histórico.
+                    Sem movimentos {periodo === 'mes' ? 'neste mês' : 'neste ano'}
+                    {nomeExploracao ? ` em ${nomeExploracao}` : ''}. Escolha outro período
+                    {podeEscolher ? ' ou outra exploração' : ''} para ver o histórico.
                   </Text>
                 </View>
               </Card>
@@ -369,20 +473,35 @@ export default function FinancasScreen() {
 
             {/* Movimentos */}
             <Text variant="h3" style={{ marginBottom: spacing.sm }}>
-              Movimentos
+              Movimentos ({r.movimentos.length})
             </Text>
             <Card padded={false} style={{ marginBottom: spacing.md }}>
               <View style={{ paddingHorizontal: spacing.md }}>
-                {r.movimentos.slice(0, 30).map((l, i) => (
+                {visiveis.map((l, i) => (
                   <MovimentoRow
                     key={l.id}
                     lancamento={l}
                     nome={l.animalId ? nomeAnimal(l.animalId) : l.categoria}
-                    divider={i < Math.min(r.movimentos.length, 30) - 1}
+                    divider={i < visiveis.length - 1}
                   />
                 ))}
               </View>
             </Card>
+            {/* A lista parava nos 30 sem o dizer: quem tinha mais histórico não
+                tinha como chegar ao resto a não ser exportando para Excel. */}
+            {porMostrar > 0 ? (
+              <Button
+                label={
+                  porMostrar <= PAGINA_MOVIMENTOS
+                    ? `Ver os últimos ${porMostrar}`
+                    : `Ver mais ${PAGINA_MOVIMENTOS} (faltam ${porMostrar})`
+                }
+                icon="chevron-down"
+                variant="secondary"
+                onPress={() => setLimite((n) => n + PAGINA_MOVIMENTOS)}
+                style={{ marginBottom: spacing.md }}
+              />
+            ) : null}
 
             <Button
               label="Registar movimento"
@@ -403,7 +522,7 @@ export default function FinancasScreen() {
                   variant="caption"
                   color={colors.textMuted}
                   style={{ marginTop: spacing.sm, textAlign: 'center' }}>
-                  Exporta os movimentos do período escolhido.
+                  Exporta o que está a ver: o período{nomeExploracao ? ` e ${nomeExploracao}` : ''}.
                 </Text>
               </>
             ) : (
