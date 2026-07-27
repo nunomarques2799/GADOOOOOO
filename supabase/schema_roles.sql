@@ -394,9 +394,18 @@ grant execute on function public.resgatar_convite(text) to authenticated;
 -- ficheiro faz `drop view` dela.
 
 -- ==================================================================
--- BOOTSTRAP: marcar o superadmin (executar UMA vez com o teu email)
+-- BOOTSTRAP: marcar o superadmin
 -- ==================================================================
--- Descomenta e ajusta o email antes de correr esta secção UMA vez:
+-- Esta linha corre sempre que o ficheiro é aplicado, e é por isso que o email
+-- aqui tem de ser o do superadmin ATUAL: aqui esteve o do criador, e reaplicar
+-- o schema depois de o ter despromovido devolvia-lhe o superadmin em silêncio.
+--
+-- Para TROCAR de superadmin numa base que já existe, não é aqui — é o
+-- `mudar_superadmin.sql`, que promove antes de despromover e recusa deixar a
+-- plataforma sem nenhum. Aqui só se acerta o email para o próximo ambiente que
+-- nascer do zero.
+--
+-- Sem conta com este email, o `where` não encontra nada e a linha não faz nada.
 update public.perfil
    set is_superadmin = true, estado = 'ativo'
- where id = (select id from auth.users where email = 'nunomarques271999@gmail.com');
+ where id = (select id from auth.users where lower(email) = 'terrabovinasuperadmin@gmail.com');

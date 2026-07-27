@@ -5,7 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FolhaPermissoes } from '@/components/FolhaPermissoes';
 import { Avatar, Badge, Button, Card, Chip, EmptyState, Icon, Text } from '@/components/ui';
+import { acessoTerminou, rotuloPrazo } from '@/data/acessoTemporario';
 import { useAuth } from '@/data/auth';
+import { formatDataHora } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
@@ -471,6 +473,25 @@ function LinhaPessoa({
     (v) => v.permissoes && Object.keys(v.permissoes).length > 0,
   );
 
+  /**
+   * O prazo mais próximo do fim, entre os vínculos que o têm.
+   *
+   * Com várias explorações, é esse que interessa: é o primeiro a fechar-se, e
+   * mostrar o mais distante dava a entender que a pessoa continua a ter acesso
+   * a tudo até lá. Quem tem vínculos sem prazo nenhum não mostra linha.
+   */
+  const prazo = (() => {
+    const comPrazo = pessoa.vinculos.filter((v) => v.expiraEm);
+    if (comPrazo.length === 0) return null;
+    const proximo = comPrazo.sort((a, b) => (a.expiraEm ?? '').localeCompare(b.expiraEm ?? ''))[0];
+    const terminou = acessoTerminou(proximo.expiraEm);
+    const texto = rotuloPrazo(proximo.expiraEm, formatDataHora);
+    return {
+      terminou,
+      texto: pessoa.vinculos.length > 1 ? `${proximo.nomeExploracao}: ${texto}` : texto,
+    };
+  })();
+
   return (
     <Pressable
       onPress={onPress}
@@ -507,6 +528,25 @@ function LinhaPessoa({
             <Icon name="tune-variant" size="xs" color={colors.warning} />
             <Text variant="caption" color={colors.warning}>
               Permissões ajustadas
+            </Text>
+          </View>
+        ) : null}
+        {/* O prazo de acesso, quando existe. É a informação que decide se ainda
+            vale a pena telefonar-lhe: um veterinário cujo acesso caiu ontem não
+            consegue registar o que quer que seja. */}
+        {prazo ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+            <Icon
+              name={prazo.terminou ? 'clock-alert-outline' : 'clock-outline'}
+              size="xs"
+              color={prazo.terminou ? colors.danger : colors.warning}
+            />
+            <Text
+              variant="caption"
+              color={prazo.terminou ? colors.danger : colors.warning}
+              style={{ flex: 1 }}
+              numberOfLines={2}>
+              {prazo.texto}
             </Text>
           </View>
         ) : null}

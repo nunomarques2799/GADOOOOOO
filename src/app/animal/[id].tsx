@@ -22,7 +22,7 @@ import {
 } from '@/components/ui';
 import { especieMeta, finalidadeMeta } from '@/data/constants';
 import { confirmar } from '@/data/avisos';
-import { filhosDe, rotuloAnimal } from '@/data/genealogia';
+import { filhosDe, progenitorDe, rotuloAnimal } from '@/data/genealogia';
 import { balancoAnimal } from '@/data/financas';
 import { diasAte, formatDataCurta, formatDataHora, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
@@ -103,8 +103,11 @@ export default function AnimalDetalheScreen() {
   const meta = especieMeta[animal.especie];
   const terreno = animal.terrenoId ? terrenoById(animal.terrenoId) : undefined;
   const exploracao = exploracaoById(animal.exploracaoId);
-  const mae = animal.maeId ? animalById(animal.maeId) : undefined;
-  const pai = animal.paiId ? animalById(animal.paiId) : undefined;
+  // `progenitorDe` e não `animalById`: um `maeId` que aponta para um registo
+  // eliminado lê-se como "sem mãe registada", que é o que passa a ser verdade
+  // depois de alguém dizer que aquele registo foi um engano.
+  const mae = progenitorDe(animais, animal.maeId);
+  const pai = progenitorDe(animais, animal.paiId);
   const crias = filhosDe(animais, animal.id);
   const eventos = eventosByAnimal(animal.id);
   const balanco = balancoAnimal(eventos, movimentosByAnimal(animal.id));

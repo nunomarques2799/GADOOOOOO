@@ -37,6 +37,8 @@ export type Vinculo = {
    * do papel). Ausente = segue o papel. Ver `permissoes.ts`.
    */
   permissoes?: PermissoesMembro;
+  /** Até quando este vínculo vale. Ausente = sem prazo. Ver `acessoTemporario.ts`. */
+  expiraEm?: string;
 };
 
 export type Trabalhador = {
@@ -92,6 +94,7 @@ export function agruparTrabalhadores(
         role: m.role,
         criadoEm: m.criadoEm,
         permissoes: m.permissoes,
+        expiraEm: m.expiraEm,
       };
       const ja = porPessoa.get(m.userId);
       if (ja) {

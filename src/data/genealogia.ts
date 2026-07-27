@@ -15,42 +15,84 @@ export function rotuloAnimal(a: Animal): string {
   return a.nome ?? a.numeroIdentificacao ?? 'Sem nome';
 }
 
+/**
+ * Um animal que não pertence à genealogia de ninguém.
+ *
+ * Eliminar quer dizer "isto foi registado por engano" — o animal não existiu, e
+ * um animal que não existiu não é mãe nem filho de coisa nenhuma. Falecer e
+ * vender é outra história: esses existiram, e a árvore tem de os manter, senão
+ * uma vaca morta levava atrás a ascendência de todas as crias que deixou.
+ *
+ * É a única regra deste módulo, e está numa função só para não haver duas
+ * versões dela: cada sítio que se esquecesse de a aplicar era um sítio onde o
+ * engano voltava a aparecer.
+ */
+function foraDaGenealogia(a: Animal): boolean {
+  return a.estado === 'eliminado';
+}
+
 /** Crias diretas de um animal, das mais novas para as mais velhas. */
 export function filhosDe(animais: Animal[], id: string): Animal[] {
   return animais
-    .filter((a) => a.maeId === id || a.paiId === id)
+    .filter((a) => !foraDaGenealogia(a) && (a.maeId === id || a.paiId === id))
     .sort((x, y) => new Date(y.dataNascimento).getTime() - new Date(x.dataNascimento).getTime());
 }
 
 /**
- * O que fica guardado quando este animal for eliminado, em texto, ou `null` se
- * não houver nada a dizer. Entra na confirmação, antes de a pessoa decidir.
+ * O progenitor de um animal, ou `undefined` se não houver um que conte.
  *
- * Isto já foi o contrário: `impedimentoParaEliminar`, que dizia porque é que o
- * botão NÃO funcionava. Enquanto eliminar fazia `delete`, a cascata levava os
- * eventos atrás — incluindo os que outra pessoa registou — e recusar era a
- * única defesa possível. Desde `supabase/schema_auditoria.sql` eliminar marca
- * em vez de apagar: não há o que defender, e o que era um impedimento passou a
- * ser uma informação. A contagem é a mesma; muda o que se faz com ela.
+ * Existe para o ecrã do animal não ter de repetir a regra: um `maeId` que
+ * aponta para um registo eliminado lê-se como "sem mãe registada", que é o que
+ * de facto se passa depois de alguém dizer que aquele registo foi um engano.
  */
-export function historicoQueFicaGuardado(
+export function progenitorDe(
+  animais: Animal[],
+  id: string | undefined,
+): Animal | undefined {
+  if (!id) return undefined;
+  const p = animais.find((a) => a.id === id);
+  return p && !foraDaGenealogia(p) ? p : undefined;
+}
+
+/**
+ * O que acontece ao resto quando este animal for eliminado, em frases, para a
+ * confirmação as poder mostrar antes de a pessoa decidir.
+ *
+ * São duas coisas opostas, e é por isso que não cabem numa frase só:
+ *   - o HISTÓRICO fica (eliminar deixou de apagar — ver `schema_auditoria.sql`);
+ *   - a GENEALOGIA perde-se, porque um animal eliminado sai da árvore. Quem
+ *     tinha este animal como mãe ou pai fica sem esse progenitor registado.
+ *
+ * A segunda é a que tem de ser lida antes, não depois: é a única consequência
+ * desta ação que toca em registos de OUTROS animais.
+ */
+export function avisosDeEliminacao(
   animal: Animal,
   eventos: Evento[],
   animais: Animal[],
-): string | null {
+): string[] {
+  const avisos: string[] = [];
+
   const nEventos = eventos.filter((e) => e.animalId === animal.id).length;
-  const nCrias = filhosDe(animais, animal.id).length;
-
-  const partes: string[] = [];
   if (nEventos > 0) {
-    partes.push(nEventos === 1 ? 'um registo no histórico' : `${nEventos} registos no histórico`);
+    avisos.push(
+      nEventos === 1
+        ? 'Fica guardado um registo no histórico.'
+        : `Ficam guardados ${nEventos} registos no histórico.`,
+    );
   }
-  if (nCrias > 0) {
-    partes.push(nCrias === 1 ? 'uma cria na genealogia' : `${nCrias} crias na genealogia`);
-  }
-  if (partes.length === 0) return null;
 
-  return `Ficam guardados ${partes.join(' e ')}.`;
+  const nCrias = filhosDe(animais, animal.id).length;
+  if (nCrias > 0) {
+    const ehMae = animal.sexo === 'Fêmea';
+    avisos.push(
+      nCrias === 1
+        ? `Uma cria deixa de ter ${ehMae ? 'esta mãe' : 'este pai'} na árvore genealógica.`
+        : `${nCrias} crias deixam de ter ${ehMae ? 'esta mãe' : 'este pai'} na árvore genealógica.`,
+    );
+  }
+
+  return avisos;
 }
 
 /**
@@ -72,7 +114,10 @@ export function ascendentesDe(
     [animal.paiId, 'Pai'],
   ] as const) {
     if (!id) continue;
-    const progenitor = animais.find((a) => a.id === id);
+    // `progenitorDe` deixa cair os eliminados, e com eles cai o ramo inteiro
+    // que vinha por cima: uma ascendência que só existe através de um registo
+    // feito por engano é ascendência inventada.
+    const progenitor = progenitorDe(animais, id);
     if (!progenitor || seguintes.has(progenitor.id)) continue;
     out.push({
       animal: progenitor,

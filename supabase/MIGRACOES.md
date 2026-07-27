@@ -31,6 +31,7 @@ Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
 | 12 | `schema_notas.sql` | Notas pessoais (tabela `nota`, por utilizador). | 1 |
 | 13 | `schema_permissoes.sql` | Permissões por pessoa (coluna `permissoes`) e as políticas de escrita a passarem por `pode_cap()`. | 1, 2, **6**, **9**, **10** |
 | 14 | `schema_auditoria.sql` | Eliminar marca em vez de apagar; `saida_por`/`saida_em` por trigger; `nomes_da_equipa()`. | 1, 2, **9**, **13** |
+| 15 | `schema_acesso_temporario.sql` | `membro_exploracao.expira_em`; o veterinário entra por um prazo e sai sozinho. | 2, 6, **13** |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 
@@ -51,6 +52,12 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
   9) e usa o `pode_cap()` do 13 para decidir quem pode eliminar. Aplicado antes
   do 9, é o 9 que fica por cima e o eliminar volta a apagar a linha de vez, sem
   auditoria nenhuma e sem nada no SQL a indicá-lo.
+- **15 depende de 13.** O 15 reescreve `pode_cap()` (do 13) para o prazo de
+  acesso também travar a ESCRITA. Aplicado antes do 13, é o 13 que fica por
+  cima: a leitura fecha na hora certa e a escrita continua aberta — um
+  veterinário fora do prazo deixa de ver a exploração e continua a poder gravar
+  nela às cegas. Reescreve também `membro_de()`, `role_em()`,
+  `criar_convite()` e `resgatar_convite()`, todos do 2.
 - **11 depende de 10.** Ambos substituem o trigger `handle_new_exploracao`. O
   11 reescreve-o a herdar as DUAS opções (finanças e casa); aplicá-lo antes do
   10 fazia o 10 sobrepor-se-lhe e as explorações novas nasciam sem a casa

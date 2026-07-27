@@ -37,7 +37,7 @@ import {
   isoMaisDias,
   parseDataPt,
 } from '@/data/helpers';
-import { historicoQueFicaGuardado, rotuloAnimal } from '@/data/genealogia';
+import { avisosDeEliminacao, rotuloAnimal } from '@/data/genealogia';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
@@ -92,8 +92,8 @@ export function FormularioAnimal({
   const editar = !!animal;
   // Eliminar já não apaga nada (ver `supabase/schema_auditoria.sql`), por isso
   // deixou de haver animais que não se podem eliminar. O que continua a fazer
-  // falta é dizer o que fica guardado, antes de a pessoa confirmar.
-  const ficaGuardado = animal ? historicoQueFicaGuardado(animal, eventos, animais) : null;
+  // falta é dizer o que muda no resto, antes de a pessoa confirmar.
+  const avisosEliminar = animal ? avisosDeEliminacao(animal, eventos, animais) : [];
 
   const [especie, setEspecie] = useState<Especie>(animal?.especie ?? 'Bovino');
   const [foto, setFoto] = useState<string | undefined>(animal?.fotografia);
@@ -181,6 +181,10 @@ export function FormularioAnimal({
     return (sexoProgenitor: Sexo, mesesMin: number) =>
       animais.filter((a) => {
         if (a.id === animal?.id || excluidos.has(a.id)) return false;
+        // Um registo eliminado foi um engano: oferecê-lo como mãe ou pai era
+        // pôr o engano a nascer outra vez, agora dentro da genealogia de outro
+        // animal. Falecidos e vendidos continuam elegíveis — esses existiram.
+        if (a.estado === 'eliminado') return false;
         if (a.exploracaoId !== exploracaoId) return false;
         if (a.especie !== especie || a.sexo !== sexoProgenitor) return false;
         return nascimento - new Date(a.dataNascimento).getTime() >= mesesMin * MS_MES;
@@ -304,16 +308,18 @@ export function FormularioAnimal({
         avisar('Não foi possível eliminar', mensagemDeErro(e));
       }
     };
-    // A confirmação diz as duas coisas, e nenhuma delas é dispensável: que não
-    // há como voltar atrás (é o que trava o dedo) e que o registo não se perde
-    // (é o que evita que alguém deixe um animal na lista por medo de o apagar).
-    const guardado = historicoQueFicaGuardado(animal, eventos, animais);
+    // A confirmação diz três coisas, e nenhuma é dispensável: que não há como
+    // voltar atrás (é o que trava o dedo), que o registo não se perde (é o que
+    // evita que alguém deixe um animal na lista por medo de o apagar) e o que
+    // acontece aos OUTROS animais que dependem deste.
+    const avisos = avisosDeEliminacao(animal, eventos, animais);
     confirmar(
       'Eliminar animal',
       `Eliminar "${rotulo}"? Esta ação não pode ser anulada.\n\n`
-        + 'O animal sai da lista de vez. O registo fica guardado no histórico do efetivo, '
-        + 'com o dia e o nome de quem o eliminou.'
-        + (guardado ? `\n${guardado}` : ''),
+        + 'O animal sai da lista e da árvore genealógica: eliminar quer dizer que foi '
+        + 'registado por engano. O registo fica guardado no histórico do efetivo, com o '
+        + 'dia e o nome de quem o eliminou.'
+        + (avisos.length > 0 ? `\n\n${avisos.join('\n')}` : ''),
       () => void executar(),
       { rotuloConfirmar: 'Eliminar', destrutivo: true },
     );
@@ -682,9 +688,10 @@ export function FormularioAnimal({
               onPress={confirmarEliminar}
             />
             <Text variant="caption" color={colors.textMuted}>
-              Tira o animal da lista para sempre. O registo fica no histórico do efetivo,
-              com o dia e o nome de quem o eliminou.
-              {ficaGuardado ? ` ${ficaGuardado}` : ''}
+              Para registos feitos por engano. Tira o animal da lista e da árvore
+              genealógica, para sempre. Se o animal existiu mesmo, marque a saída
+              (falecido ou vendido) em vez de eliminar.
+              {avisosEliminar.length > 0 ? ` ${avisosEliminar.join(' ')}` : ''}
             </Text>
           </View>
         ) : null}

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertItem } from '@/components/AlertItem';
 import { BannerAtualizacao } from '@/components/BannerAtualizacao';
 import { BannerNaoGravado } from '@/components/BannerNaoGravado';
+import { BannerAcessoExpirado } from '@/components/BannerAcessoExpirado';
 import { BannerSuspensao } from '@/components/BannerSuspensao';
 import { PainelPrimeirosPassos } from '@/components/PainelPrimeirosPassos';
 import { ExploracaoRow } from '@/components/ExploracaoRow';
@@ -28,7 +29,7 @@ export default function InicioScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
-  const { isSuperadmin, podeVer, estadoPerfil } = useMembros();
+  const { isSuperadmin, podeVer, estadoPerfil, acessoExpirado } = useMembros();
   const { controlo: controloAtualizar } = useAtualizarPuxando();
   const {
     utilizador, exploracoes, terrenos, animais, eventos, movimentos, alertas, online,
@@ -290,6 +291,11 @@ export default function InicioScreen() {
           {/* Conta suspensa — fica em primeiro, é o que explica tudo o resto */}
           <BannerSuspensao />
 
+          {/* Acesso com prazo que acabou (o veterinário depois da visita).
+              Logo a seguir à suspensão e pela mesma razão: sem isto, a app
+              vazia não se explica. */}
+          <BannerAcessoExpirado />
+
           {/* Aviso de nova versão — só na app desktop quando há atualização */}
           <BannerAtualizacao />
 
@@ -321,7 +327,10 @@ export default function InicioScreen() {
           {/* Guia de primeiros passos — só para quem gere a própria conta (um
               trabalhador convidado entra numa operação já montada e não cria
               explorações). Some sozinho quando está tudo feito. */}
-          {estadoPerfil === 'ativo' ? <PainelPrimeirosPassos /> : null}
+          {/* Não a quem o acesso expirou: o guia manda criar uma exploração, e
+              quem veio cá como veterinário não veio para isso. O banner acima
+              é que lhe diz o que fazer. */}
+          {estadoPerfil === 'ativo' && !acessoExpirado ? <PainelPrimeirosPassos /> : null}
 
           {/* Em desktop há largura para duas colunas: o que exige ação à
               esquerda, os números e atalhos à direita. No telemóvel segue

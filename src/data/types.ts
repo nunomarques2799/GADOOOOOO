@@ -60,6 +60,18 @@ export interface MembroExploracao {
    * Vazio (ou ausente) = segue o papel. Ver `permissoes.ts`.
    */
   permissoes?: PermissoesMembro;
+  /**
+   * Até quando este vínculo vale (ISO com hora). Ausente = sem prazo, que é o
+   * caso dos donos e dos trabalhadores.
+   *
+   * Existe por causa do veterinário, que é convidado para uma vinda e não para
+   * sempre. Passada a hora, a linha CONTINUA na base — é o que deixa o dono ver
+   * que o acesso existiu e renová-lo — mas deixa de valer: quem a ignora é o
+   * servidor, nos helpers por onde toda a RLS passa (ver
+   * `supabase/schema_acesso_temporario.sql`). A app usa isto só para não
+   * mostrar controlos que o servidor já não aceita.
+   */
+  expiraEm?: string;
 }
 
 export interface Convite {
@@ -68,7 +80,17 @@ export interface Convite {
   role: RoleMembro;
   criadoPor: string;
   criadoEm?: string;
+  /**
+   * Até quando o CÓDIGO pode ser usado. Não confundir com `acessoHoras`: um
+   * código válido uma semana pode dar quatro horas de acesso.
+   */
   expiraEm?: string;
+  /**
+   * Quantas horas o acesso dura DEPOIS de o código ser usado. Ausente = sem
+   * prazo (trabalhadores). O relógio começa no resgate, não na criação: quem
+   * só entra três dias depois tem as horas todas.
+   */
+  acessoHoras?: number;
   usadoPor?: string;
   usadoEm?: string;
   descricao?: string;
