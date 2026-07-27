@@ -6,6 +6,8 @@ import {
   faixaDe,
   filtrarAnimais,
   mapaAlertas,
+  mapaGravidade,
+  ordenarAnimais,
   SEM_TERRENO,
   type Filtros,
 } from '../filtrosAnimais';
@@ -50,6 +52,66 @@ describe('faixaDe', () => {
     // um recém-nascido classificado como "mais de 8 anos" desaparecia do filtro
     // onde o criador o ia procurar.
     expect(faixaDe(animal('a', { dataNascimento: isoInDays(3) }))).toBe('cria');
+  });
+});
+
+describe('ordenarAnimais', () => {
+  const semGravidade = new Map<string, number>();
+
+  it('por nome, com o brinco a substituir quem não tem nome', () => {
+    const efetivo = [
+      animal('c', { nome: 'Zita' }),
+      animal('a', { nome: 'Bela' }),
+      animal('b', { nome: undefined, numeroIdentificacao: 'AA1' }),
+    ];
+    expect(ordenarAnimais(efetivo, 'nome', semGravidade).map((a) => a.id)).toEqual([
+      'b', // "AA1"
+      'a', // "Bela"
+      'c', // "Zita"
+    ]);
+  });
+
+  it('"mais novos" põe o nascido há menos tempo em primeiro', () => {
+    const efetivo = [
+      animal('velho', { dataNascimento: isoDaysAgo(3000) }),
+      animal('novo', { dataNascimento: isoDaysAgo(30) }),
+      animal('meio', { dataNascimento: isoDaysAgo(600) }),
+    ];
+    expect(ordenarAnimais(efetivo, 'novos', semGravidade).map((a) => a.id)).toEqual([
+      'novo',
+      'meio',
+      'velho',
+    ]);
+    expect(ordenarAnimais(efetivo, 'velhos', semGravidade).map((a) => a.id)).toEqual([
+      'velho',
+      'meio',
+      'novo',
+    ]);
+  });
+
+  it('"com alertas primeiro" ordena pelo pior alerta, depois pelo nome', () => {
+    const efetivo = [
+      animal('semNada', { nome: 'Ana' }),
+      animal('urgente', { nome: 'Zeca' }),
+      animal('aviso', { nome: 'Bento' }),
+    ];
+    const grav = mapaGravidade([
+      { id: '1', animalId: 'urgente', categoria: 'snira', gravidade: 'urgente', titulo: '', descricao: '' },
+      { id: '2', animalId: 'aviso', categoria: 'vacinacao', gravidade: 'aviso', titulo: '', descricao: '' },
+    ]);
+    // Urgente > aviso > sem alerta; sem alerta cai para o fim mesmo começando por 'A'.
+    expect(ordenarAnimais(efetivo, 'alertas', grav).map((a) => a.id)).toEqual([
+      'urgente',
+      'aviso',
+      'semNada',
+    ]);
+  });
+
+  it('não altera o array que recebe', () => {
+    const efetivo = [animal('b', { nome: 'B' }), animal('a', { nome: 'A' })];
+    const antes = efetivo.map((a) => a.id);
+    ordenarAnimais(efetivo, 'nome', semGravidade);
+    expect(efetivo.map((a) => a.id)).toEqual(antes);
   });
 });
 

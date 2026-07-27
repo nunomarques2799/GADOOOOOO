@@ -37,6 +37,8 @@ export type Vinculo = {
    * do papel). Ausente = segue o papel. Ver `permissoes.ts`.
    */
   permissoes?: PermissoesMembro;
+  /** Até quando este vínculo vale. Ausente = sem prazo. Ver `acessoTemporario.ts`. */
+  expiraEm?: string;
 };
 
 export type Trabalhador = {
@@ -50,6 +52,13 @@ export type Trabalhador = {
   papelPrincipal: RoleMembro;
   vinculos: Vinculo[];
 };
+
+/**
+ * O que fica no lugar do nome quando o perfil de alguém ainda não tem um
+ * escrito. É um valor, não um enfeite: `agruparTrabalhadores` compara-o para
+ * saber que ainda vale a pena aproveitar o nome de outra linha da mesma pessoa.
+ */
+export const SEM_NOME = 'Sem nome';
 
 /**
  * Ordem por que os papéis aparecem. Trabalhadores primeiro — o ecrã chama-se
@@ -85,6 +94,7 @@ export function agruparTrabalhadores(
         role: m.role,
         criadoEm: m.criadoEm,
         permissoes: m.permissoes,
+        expiraEm: m.expiraEm,
       };
       const ja = porPessoa.get(m.userId);
       if (ja) {
@@ -94,7 +104,7 @@ export function agruparTrabalhadores(
         if (!ja.vinculos.some((v) => v.membroId === vinculo.membroId)) ja.vinculos.push(vinculo);
         // O nome pode faltar numa das linhas (perfil sem nome ainda): fica o
         // primeiro nome a sério que aparecer.
-        if (ja.nome === '—' && m.nome !== '—') ja.nome = m.nome;
+        if (ja.nome === SEM_NOME && m.nome !== SEM_NOME) ja.nome = m.nome;
         if (ORDEM_PAPEL[m.role] < ORDEM_PAPEL[ja.papelPrincipal]) ja.papelPrincipal = m.role;
       } else {
         porPessoa.set(m.userId, {
@@ -143,6 +153,9 @@ export function resumoVinculos(t: Trabalhador): string {
 
 /** Iniciais para o avatar: "Joaquim Marques" → "JM". */
 export function iniciais(nome: string): string {
+  // O texto de recurso não são iniciais de ninguém: um avatar com "SN" lia-se
+  // como as iniciais de uma pessoa chamada assim.
+  if (nome === SEM_NOME) return '?';
   const partes = nome
     .trim()
     .split(/\s+/)

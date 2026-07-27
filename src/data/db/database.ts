@@ -114,6 +114,17 @@ export function inicializarBd(): SQLiteDatabase {
     db.runSync('UPDATE exploracao SET casaAtiva = 0 WHERE casaAtiva IS NULL');
   }
 
+  // v6 → v7: auditoria da saída do efetivo. Quem tirou o animal da lista e
+  // quando, e o instante em que um movimento foi lançado. Ficam vazios no que
+  // já existe — não se inventa um autor para uma saída registada antes de haver
+  // sítio onde o guardar, que é exatamente a mentira que uma auditoria não pode
+  // contar. O ecrã de histórico mostra "Sem registo de autor" nesses casos.
+  if (versao < 7) {
+    garantirColuna(db, 'animal', 'saidaPor', 'TEXT');
+    garantirColuna(db, 'animal', 'saidaEm', 'TEXT');
+    garantirColuna(db, 'movimento', 'criadoEm', 'TEXT');
+  }
+
   if (versao < SCHEMA_VERSION) {
     db.execSync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   }

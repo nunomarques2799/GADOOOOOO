@@ -3,9 +3,20 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Chip, EmptyState, Header, Icon, type IconName, Screen, Text } from '@/components/ui';
+import {
+  Button,
+  CampoData,
+  Chip,
+  EcraComTeclado,
+  EmptyState,
+  Header,
+  Icon,
+  type IconName,
+  Screen,
+  Text,
+} from '@/components/ui';
 import { especieMeta } from '@/data/constants';
-import { formatDataPt, formatEuro, isoDaysAgo, paraEuro } from '@/data/helpers';
+import { formatDataPt, formatEuro, isoDaysAgo, paraEuro, parseDataPt } from '@/data/helpers';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
@@ -67,6 +78,9 @@ export default function NovoMovimentoScreen() {
   const [descricao, setDescricao] = useState('');
   const [contraparte, setContraparte] = useState('');
   const [diasAtras, setDiasAtras] = useState(0);
+  // Data escrita à mão / escolhida no calendário. Uma fatura de ração ou uma
+  // venda podem ser de qualquer dia, não só dos atalhos recentes.
+  const [dataManual, setDataManual] = useState('');
   const [animalId, setAnimalId] = useState<string | undefined>(params.animalId);
   const [terrenoId, setTerrenoId] = useState<string | undefined>(undefined);
   const [aGravar, setAGravar] = useState(false);
@@ -87,7 +101,11 @@ export default function NovoMovimentoScreen() {
     ? categoria
     : categorias[0].valor;
 
-  const data = isoDaysAgo(diasAtras);
+  // A data escrita à mão manda sobre os atalhos; `parseDataPt` recusa o futuro,
+  // que é o certo — um movimento regista o que já aconteceu.
+  const dataManualIso = dataManual.trim() ? parseDataPt(dataManual) : null;
+  const dataManualInvalida = dataManual.trim().length > 0 && !dataManualIso;
+  const data = dataManualIso ?? isoDaysAgo(diasAtras);
   const valorNum = paraEuro(valor);
 
   const animaisDaExploracao = useMemo(
@@ -108,6 +126,7 @@ export default function NovoMovimentoScreen() {
 
   const valido =
     !!exploracaoId &&
+    !dataManualInvalida &&
     Number.isFinite(valorNum) &&
     valorNum > 0 &&
     descricao.trim().length > 0 &&
@@ -169,7 +188,7 @@ export default function NovoMovimentoScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <EcraComTeclado>
       <Header title={direcaoEfetiva === 'receita' ? 'Registar receita' : 'Registar despesa'} />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -249,7 +268,7 @@ export default function NovoMovimentoScreen() {
           <TextField
             value={descricao}
             onChangeText={setDescricao}
-            placeholder="Ex: Ração — 40 sacos"
+            placeholder="Ex: Ração, 40 sacos"
             icon="note-text-outline"
           />
         </Field>
@@ -260,17 +279,37 @@ export default function NovoMovimentoScreen() {
               <Chip
                 key={o.dias}
                 label={o.label}
-                selected={diasAtras === o.dias}
-                onPress={() => setDiasAtras(o.dias)}
+                // Com uma data escolhida à mão, nenhum atalho fica aceso.
+                selected={!dataManualIso && diasAtras === o.dias}
+                onPress={() => {
+                  setDiasAtras(o.dias);
+                  setDataManual('');
+                }}
               />
             ))}
           </View>
+
+          <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm, marginBottom: 4 }}>
+            Ou outra data (dd/mm/aaaa)
+          </Text>
+          <CampoData
+            value={dataManual}
+            onChangeText={setDataManual}
+            placeholder="Ex: 15/03/2026"
+            rotuloCalendario="Escolher a data do movimento no calendário"
+          />
+          {dataManualInvalida ? (
+            <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
+              Data inválida. Use o formato dd/mm/aaaa e uma data não futura.
+            </Text>
+          ) : null}
+
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               gap: 6,
-              marginTop: spacing.xs,
+              marginTop: spacing.sm,
             }}>
             <Icon name="calendar-check" size="sm" color={colors.primary} />
             <Text variant="secondary" color={colors.textSecondary}>
@@ -327,7 +366,7 @@ export default function NovoMovimentoScreen() {
         ) : null}
 
         {!podeReceita ? (
-          <Aviso texto="Pode registar despesas. As receitas — vendas, subsídios — são lançadas por quem gere a exploração." />
+          <Aviso texto="Pode registar despesas. As receitas (vendas, subsídios) são lançadas por quem gere a exploração." />
         ) : null}
       </ScrollView>
 
@@ -362,7 +401,7 @@ export default function NovoMovimentoScreen() {
           </Text>
         ) : null}
       </View>
-    </View>
+    </EcraComTeclado>
   );
 }
 

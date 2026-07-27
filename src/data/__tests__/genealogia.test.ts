@@ -1,20 +1,22 @@
 /**
- * Testes da regra de eliminação.
+ * Testes da genealogia e do aviso que antecede uma eliminação.
  *
- * Porquê estes: "eliminar" servia dois casos opostos com a mesma operação —
- * apagar um registo criado por engano (o animal nunca existiu) e apagar um
- * animal com meses de histórico (a cascata leva os eventos atrás, incluindo
- * os que outra pessoa registou hoje). A condição "sem histórico" é o que os
- * separa, e enganar-se nela ou destrói trabalho ou impede o criador de
- * corrigir um engano.
+ * Duas regras que se cruzam, e é o cruzamento que estes testes seguram:
  *
- * Espelha o RPC `eliminar_animal` de `supabase/schema_eliminar.sql`. Ao mudar
- * um, mudar o outro.
+ *   1. Eliminar deixou de apagar (`supabase/schema_auditoria.sql`), por isso o
+ *      histórico do animal fica.
+ *   2. Mas eliminar QUER DIZER "registado por engano", e um animal que não
+ *      existiu não é mãe nem filho de ninguém: sai da árvore. Falecidos e
+ *      vendidos ficam — esses existiram, e tirá-los partia a ascendência de
+ *      todas as crias que deixaram.
+ *
+ * Errar na 2 é o que dói mais: uma genealogia com um animal a mais é uma
+ * genealogia falsa, e ninguém repara enquanto não for tarde.
  */
 
 import { describe, expect, it } from '@jest/globals';
 
-import { filhosDe, impedimentoParaEliminar, rotuloAnimal } from '../genealogia';
+import { avisosDeEliminacao, filhosDe, progenitorDe, rotuloAnimal, ascendentesDe, descendentesDe } from '../genealogia';
 import type { Animal, Evento } from '../types';
 
 function animal(id: string, patch: Partial<Animal> = {}): Animal {
@@ -39,66 +41,103 @@ function evento(animalId: string, patch: Partial<Evento> = {}): Evento {
   };
 }
 
-describe('impedimentoParaEliminar', () => {
-  it('deixa eliminar um registo acabado de criar por engano', () => {
-    // É o caso legítimo: enganou-se a registar, o animal nunca existiu.
+describe('avisosDeEliminacao', () => {
+  it('não diz nada sobre um registo acabado de criar por engano', () => {
+    // Nada a guardar e ninguém a perder um progenitor: uma frase seria ruído em
+    // cima do único caso em que eliminar não custa nada a ninguém.
     const a = animal('a1');
-    expect(impedimentoParaEliminar(a, [], [a])).toBeNull();
+    expect(avisosDeEliminacao(a, [], [a])).toEqual([]);
   });
 
-  it('impede quando o animal tem histórico', () => {
+  it('conta um registo do histórico', () => {
     const a = animal('a1');
-    const motivo = impedimentoParaEliminar(a, [evento('a1')], [a]);
-    expect(motivo).toContain('um registo no histórico');
+    expect(avisosDeEliminacao(a, [evento('a1')], [a])).toEqual([
+      'Fica guardado um registo no histórico.',
+    ]);
   });
 
-  it('conta os registos do histórico, para a mensagem ser concreta', () => {
+  it('conta os registos do histórico, para a frase ser concreta', () => {
     const a = animal('a1');
-    const motivo = impedimentoParaEliminar(a, [evento('a1'), evento('a1'), evento('a1')], [a]);
-    expect(motivo).toContain('3 registos');
+    const [aviso] = avisosDeEliminacao(a, [evento('a1'), evento('a1'), evento('a1')], [a]);
+    expect(aviso).toContain('3 registos');
   });
 
   it('ignora eventos de outros animais', () => {
-    // Um erro aqui bloquearia eliminações legítimas sem explicação nenhuma.
     const a = animal('a1');
     const outro = animal('a2');
-    expect(impedimentoParaEliminar(a, [evento('a2')], [a, outro])).toBeNull();
+    expect(avisosDeEliminacao(a, [evento('a2')], [a, outro])).toEqual([]);
   });
 
-  it('impede quando é mãe de outro animal', () => {
-    // Apagar partiria a árvore genealógica da cria.
+  it('avisa que a cria perde a MÃE', () => {
+    // O aviso mudou de sentido quando a eliminação passou a tirar o animal da
+    // árvore: já não é "fica guardada uma cria", é "uma cria perde a mãe". A
+    // diferença é toda: uma é uma garantia, a outra é uma consequência.
     const mae = animal('m1');
     const cria = animal('c1', { maeId: 'm1' });
-    const motivo = impedimentoParaEliminar(mae, [], [mae, cria]);
-    expect(motivo).toContain('mãe ou pai');
+    expect(avisosDeEliminacao(mae, [], [mae, cria])).toEqual([
+      'Uma cria deixa de ter esta mãe na árvore genealógica.',
+    ]);
   });
 
-  it('impede quando é pai de outro animal', () => {
+  it('avisa que as crias perdem o PAI, no plural', () => {
     const pai = animal('p1', { sexo: 'Macho' });
-    const cria = animal('c1', { paiId: 'p1' });
-    expect(impedimentoParaEliminar(pai, [], [pai, cria])).not.toBeNull();
+    const crias = [animal('c1', { paiId: 'p1' }), animal('c2', { paiId: 'p1' })];
+    const [aviso] = avisosDeEliminacao(pai, [], [pai, ...crias]);
+    expect(aviso).toBe('2 crias deixam de ter este pai na árvore genealógica.');
   });
 
-  it('conta as crias', () => {
-    const mae = animal('m1');
-    const crias = [animal('c1', { maeId: 'm1' }), animal('c2', { maeId: 'm1' })];
-    expect(impedimentoParaEliminar(mae, [], [mae, ...crias])).toContain('2 animais');
-  });
-
-  it('o histórico fala primeiro — é a razão mais concreta para o criador', () => {
+  it('dá as duas frases quando há as duas coisas a dizer', () => {
     const mae = animal('m1');
     const cria = animal('c1', { maeId: 'm1' });
-    const motivo = impedimentoParaEliminar(mae, [evento('m1')], [mae, cria]);
-    expect(motivo).toContain('histórico');
+    expect(avisosDeEliminacao(mae, [evento('m1')], [mae, cria])).toEqual([
+      'Fica guardado um registo no histórico.',
+      'Uma cria deixa de ter esta mãe na árvore genealógica.',
+    ]);
+  });
+});
+
+describe('o eliminado sai da árvore, o falecido fica', () => {
+  it('uma cria eliminada deixa de aparecer como filha', () => {
+    const mae = animal('m1');
+    const engano = animal('c1', { maeId: 'm1', estado: 'eliminado' });
+    const real = animal('c2', { maeId: 'm1' });
+    expect(filhosDe([mae, engano, real], 'm1').map((a) => a.id)).toEqual(['c2']);
   });
 
-  it('um animal marcado como falecido continua a não se poder eliminar', () => {
-    // Marcar a saída é precisamente a alternativa a eliminar; se depois disso
-    // se pudesse eliminar na mesma, a regra não valia nada — a saída cria um
-    // evento (Morte/Venda), e é esse evento que a protege.
-    const a = animal('a1', { estado: 'falecido', dataSaida: '2026-06-01' });
-    const morte = evento('a1', { tipo: 'Morte' });
-    expect(impedimentoParaEliminar(a, [morte], [a])).not.toBeNull();
+  it('uma cria falecida CONTINUA a aparecer como filha', () => {
+    // Morreu, mas nasceu: apagá-la da árvore era apagar um parto que houve.
+    const mae = animal('m1');
+    const morta = animal('c1', { maeId: 'm1', estado: 'falecido' });
+    const vendida = animal('c2', { maeId: 'm1', estado: 'vendido' });
+    expect(filhosDe([mae, morta, vendida], 'm1').map((a) => a.id).sort()).toEqual(['c1', 'c2']);
+  });
+
+  it('uma mãe eliminada deixa de ser mãe de quem lhe apontava', () => {
+    const mae = animal('m1', { estado: 'eliminado' });
+    const cria = animal('c1', { maeId: 'm1' });
+    expect(progenitorDe([mae, cria], 'm1')).toBeUndefined();
+  });
+
+  it('uma mãe falecida continua a ser mãe', () => {
+    const mae = animal('m1', { estado: 'falecido' });
+    const cria = animal('c1', { maeId: 'm1' });
+    expect(progenitorDe([mae, cria], 'm1')?.id).toBe('m1');
+  });
+
+  it('a ascendência não passa por um progenitor eliminado', () => {
+    // E leva o ramo inteiro atrás: a avó só chegava à árvore através da mãe
+    // que afinal nunca existiu, e mostrá-la era inventar uma linhagem.
+    const avo = animal('av1');
+    const mae = animal('m1', { maeId: 'av1', estado: 'eliminado' });
+    const cria = animal('c1', { maeId: 'm1' });
+    expect(ascendentesDe([avo, mae, cria], cria, 3)).toEqual([]);
+  });
+
+  it('a descendência salta os netos que vêm por um filho eliminado', () => {
+    const mae = animal('m1');
+    const filhoEngano = animal('f1', { maeId: 'm1', estado: 'eliminado' });
+    const neto = animal('n1', { maeId: 'f1' });
+    expect(descendentesDe([mae, filhoEngano, neto], mae, 3)).toEqual([]);
   });
 });
 

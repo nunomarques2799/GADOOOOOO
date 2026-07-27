@@ -9,14 +9,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
+import { Button, CampoData, Chip, EcraComTeclado, Header, Icon, type IconName, Text } from '@/components/ui';
 import { avisar } from '@/data/avisos';
 import { especieMeta } from '@/data/constants';
 import {
   formatDataPt,
   isoDaysAgo,
   isoMaisDias,
-  mascaraDataPt,
   paraEuro,
   parseDataPt,
 } from '@/data/helpers';
@@ -229,16 +228,16 @@ export default function NovoEventoScreen() {
     if (tipo === 'Parto') {
       const rotulo =
         tipoParto === 'Normal' ? 'normal' : tipoParto === 'Distócico' ? 'distócico' : 'por cesariana';
-      descricao = `Parto ${rotulo} — ${nCrias} ${nCrias === 1 ? 'cria' : 'crias'}`;
+      descricao = `Parto ${rotulo}: ${nCrias} ${nCrias === 1 ? 'cria' : 'crias'}`;
       if (nCrias === 1 && sexoCria) partes.push(`cria ${sexoCria === 'Fêmea' ? 'fêmea' : 'macho'}`);
       partes.push(criaViva ? 'nado-vivo' : 'nado-morto');
     } else if (tipo === 'Vacinação') {
-      descricao = `Vacina — ${vacina.trim()}`;
+      descricao = `Vacina: ${vacina.trim()}`;
       if (lote.trim()) partes.push(`Lote ${lote.trim()}`);
       if (proximaDose) partes.push(`próxima em ${proximaDose}`);
       if (vetVacina.trim()) partes.push(`Vet. ${vetVacina.trim()}`);
     } else if (tipo === 'Medicamento') {
-      descricao = `Medicamento — ${medicamento.trim()}`;
+      descricao = `Medicamento: ${medicamento.trim()}`;
       if (dose.trim()) partes.push(`Dose ${dose.trim()}`);
       if (via) partes.push(via);
       if (motivo.trim()) partes.push(motivo.trim());
@@ -340,7 +339,7 @@ export default function NovoEventoScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <EcraComTeclado>
       <Header title={META[tipo].titulo} />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -486,14 +485,13 @@ export default function NovoEventoScreen() {
             variant="caption"
             color={colors.textMuted}
             style={{ marginTop: spacing.sm, marginBottom: 4 }}>
-            Ou data exata (dd/mm/aaaa) — para registar o que já aconteceu
+            Ou data exata (dd/mm/aaaa), para registar o que já aconteceu
           </Text>
-          <TextField
+          <CampoData
             value={dataManual}
-            onChangeText={(t) => setDataManual(mascaraDataPt(t))}
+            onChangeText={setDataManual}
             placeholder="Ex: 15/03/2026"
-            icon="calendar-edit"
-            keyboardType="number-pad"
+            rotuloCalendario="Escolher a data do registo no calendário"
           />
           {dataManualInvalida ? (
             <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
@@ -685,7 +683,7 @@ export default function NovoEventoScreen() {
           disabled={!valido || aGuardar}
         />
       </View>
-    </View>
+    </EcraComTeclado>
   );
 }
 

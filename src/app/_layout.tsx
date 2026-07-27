@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AberturaPorAviso } from '@/components/AberturaPorAviso';
 import { AnfitriaoToasts } from '@/components/AnfitriaoToasts';
 import { EcraACarregar } from '@/components/EcraACarregar';
 import { EcraLogin } from '@/components/EcraLogin';
@@ -28,7 +29,7 @@ import { ToastsProvider } from '@/data/toasts';
 import { supabaseConfigurado } from '@/data/supabase';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout } from '@/theme';
-import { arrancarTema } from '@/theme/preferencia';
+import { arrancarTema, temaEscuro } from '@/theme/preferencia';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -185,7 +186,8 @@ export default function RootLayout() {
     // providers de dados ou qualquer ecrã rebentarem, ainda há quem apanhe.
     <LimiteDeErro>
     <SafeAreaProvider>
-      <StatusBar style="dark" />
+      {/* Fundo claro → ícones escuros; paleta Noite → ícones claros. */}
+      <StatusBar style={temaEscuro() ? 'light' : 'dark'} />
       {/* Por fora do portão de autenticação: a faixa de testes tem de aparecer
           logo no ecrã de entrada, que é onde se percebe que se está a escrever
           na base errada — antes de lá escrever seja o que for. */}
@@ -200,6 +202,10 @@ export default function RootLayout() {
             <AppRouter>
               <NotificacoesProvider>
                 <GadoProvider>
+                {/* Dentro do GadoProvider (precisa de saber se o animal do
+                    aviso ainda existe) e ao lado da navegação (é ela que ele
+                    manda para a ficha). Não desenha nada. */}
+                <AberturaPorAviso />
                 <Stack
                   screenOptions={{
                     headerShown: false,

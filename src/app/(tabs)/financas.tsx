@@ -8,7 +8,6 @@ import {
   Card,
   Chip,
   EmptyState,
-  Header,
   Icon,
   type IconName,
   Screen,
@@ -37,6 +36,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
 import type { CategoriaMovimento } from '@/data/types';
+import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, spacing } from '@/theme';
 
@@ -68,6 +68,7 @@ const PAGINA_MOVIMENTOS = 30;
 export default function FinancasScreen() {
   const router = useRouter();
   const { eventos, movimentos, animais, animalById, exploracoes } = useGado();
+  const { controlo: controloAtualizar } = useAtualizarPuxando();
   const { podeVer } = useMembros();
 
   /** A exploração escolhida nos chips; `undefined` = todas as que se podem ver. */
@@ -173,8 +174,8 @@ export default function FinancasScreen() {
   if (!ativas) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Finanças" />
-        <Screen>
+        <Screen topInset>
+          <TituloFinancas legenda="Despesas, receitas e o saldo da exploração" />
           <EmptyState
             icon="cash-off"
             title="Gestão financeira desligada"
@@ -188,8 +189,8 @@ export default function FinancasScreen() {
   if (!podeVerFinancas) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Finanças" />
-        <Screen>
+        <Screen topInset>
+          <TituloFinancas legenda="Despesas, receitas e o saldo da exploração" />
           <EmptyState
             icon="lock-outline"
             title="Contas reservadas ao dono"
@@ -209,8 +210,8 @@ export default function FinancasScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Finanças" />
-      <Screen>
+      <Screen topInset refreshControl={controloAtualizar}>
+        <TituloFinancas legenda="Despesas, receitas e o saldo da exploração" />
         {semDados ? (
           <>
             <EmptyState
@@ -509,6 +510,16 @@ export default function FinancasScreen() {
               onPress={() => router.push('/movimento/novo')}
               style={{ marginBottom: spacing.sm }}
             />
+            {/* Quem lançou o quê, e quando. A lista acima ordena-se pela data
+                da fatura; esta pela hora a que a linha entrou na app, que é a
+                pergunta que se faz quando há mais do que uma pessoa a lançar. */}
+            <Button
+              label="Histórico de registos"
+              icon="history"
+              variant="secondary"
+              onPress={() => router.push('/movimento/historico')}
+              style={{ marginBottom: spacing.sm }}
+            />
             {/* Sem disco onde escrever o .xlsx (telemóvel) não se mostra o botão. */}
             {excelDisponivel ? (
               <>
@@ -543,6 +554,25 @@ export default function FinancasScreen() {
 /* ------------------------------------------------------------------ *
  *  Peças do ecrã
  * ------------------------------------------------------------------ */
+
+/**
+ * O título do separador, igual ao dos outros.
+ *
+ * Estava um `<Header>` aqui — o cabeçalho dos ecrãs de detalhe, com botão de
+ * voltar e título pequeno ao centro. Num separador não há para onde voltar, e
+ * ao lado de "Animais" ou "Terrenos", que são títulos grandes encostados à
+ * esquerda, as Finanças liam-se como um ecrã de outra app.
+ */
+function TituloFinancas({ legenda }: { legenda: string }) {
+  return (
+    <View style={{ marginTop: spacing.md, marginBottom: spacing.md }}>
+      <Text variant="display">Finanças</Text>
+      <Text variant="body" color={colors.textSecondary}>
+        {legenda}
+      </Text>
+    </View>
+  );
+}
 
 function TotalCard({
   icon,

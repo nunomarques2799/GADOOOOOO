@@ -272,6 +272,11 @@ type GadoContext = {
     novos: DadosAnimalImportado[],
   ) => Promise<{ criados: number; falhas: { rotulo: string; erro: string }[] }>;
   updateAnimal: (id: string, patch: Partial<Animal>) => Promise<void>;
+  /**
+   * Elimina um animal: tira-o das listas marcando-o como `eliminado`, sem
+   * apagar o registo nem o histórico. Fica guardado quem o fez e quando, para
+   * o ecrã "Histórico do efetivo" o poder mostrar.
+   */
   deleteAnimal: (id: string) => Promise<void>;
   /**
    * Marca um animal como falecido/vendido: guarda o estado no próprio registo
@@ -309,7 +314,14 @@ type GadoContext = {
   addMovimento: (m: Omit<Movimento, 'id'>) => Promise<Movimento>;
   updateMovimento: (id: string, patch: Partial<Movimento>) => Promise<void>;
   deleteMovimento: (id: string) => Promise<void>;
-  recarregar: () => Promise<void>;
+  /**
+   * Envia o que está na fila e volta a ler do servidor.
+   *
+   * Devolve se conseguiu LER do servidor: é o que permite a quem puxou a lista
+   * para atualizar saber que continua a ver os dados do aparelho, em vez de
+   * ficar a olhar para uma lista que não mudou sem saber porquê.
+   */
+  recarregar: () => Promise<boolean>;
 };
 
 const Ctx = createContext<GadoContext | null>(null);
@@ -491,9 +503,17 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     throw new Error(mensagemLegivel(erro));
   }, []);
 
-  /** Esvazia a fila por ordem e, se conseguir, puxa a verdade do servidor. */
+  /**
+   * Esvazia a fila por ordem e, se conseguir, puxa a verdade do servidor.
+   *
+   * Devolve se ficou com os dados do servidor. `false` cobre três coisas
+   * diferentes que dão o mesmo resultado para quem está a olhar: sem rede, o
+   * servidor recusou a leitura, ou a fila não esvaziou. Sem sessão Supabase
+   * devolve `true` — não há servidor nenhum de quem estar à espera, e chamar a
+   * isso "sem ligação" seria mentir a quem trabalha em modo offline.
+   */
   const sincronizar = useCallback(async () => {
-    if (!usaSupabase || !cacheDisponivel) return;
+    if (!usaSupabase || !cacheDisponivel) return true;
     let ops = lerOutbox();
     while (ops.length > 0) {
       const [proxima, ...resto] = ops;
@@ -509,7 +529,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       // porque a versão do servidor nunca mais recuaria.
       if (erro && !eConflito(erro) && pareceErroDeRede(erro)) {
         setOnline(false);
-        break; // continua offline — tenta na próxima vez
+        return false; // continua offline — tenta na próxima vez
       }
       if (erro) {
         // Erro lógico (RLS, validação) ou conflito de versão: repetir daria o
@@ -524,23 +544,20 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       guardarOutbox(ops);
       setPendentesSinc(ops.length);
     }
-    if (ops.length === 0) {
-      // O estado de ligação segue o RESULTADO da leitura, não o facto de a
-      // fila ter esvaziado. Marcar `online` antes de puxar escondia a única
-      // falha que interessa: com o servidor a recusar a leitura, a app ficava
-      // a mostrar a cache — dados antigos, ou nenhuns — a dizer que estava
-      // tudo bem. Sem aviso, sem erro, e sem nada que distinga isso de uma
-      // conta mesmo vazia. Agora aparece o cartão de "sem ligação" do ecrã
-      // Início, que é o que dá ao criador alguma coisa em que reparar.
-      const leu = await puxarDoServidor();
-      setOnline(leu);
-    }
+    // O estado de ligação segue o RESULTADO da leitura, não o facto de a fila
+    // ter esvaziado. Marcar `online` antes de puxar escondia a única falha que
+    // interessa: com o servidor a recusar a leitura, a app ficava a mostrar a
+    // cache — dados antigos, ou nenhuns — a dizer que estava tudo bem. Sem
+    // aviso, sem erro, e sem nada que distinga isso de uma conta mesmo vazia.
+    // Agora aparece o cartão de "sem ligação" do ecrã Início, que é o que dá ao
+    // criador alguma coisa em que reparar.
+    const leu = await puxarDoServidor();
+    setOnline(leu);
+    return leu;
   }, [usaSupabase, puxarDoServidor]);
 
   /** Recarrega tudo do Supabase (envia pendentes + puxa o servidor). */
-  const recarregar = useCallback(async () => {
-    await sincronizar();
-  }, [sincronizar]);
+  const recarregar = useCallback(async () => sincronizar(), [sincronizar]);
 
   // Ao arrancar com sessão iniciada: sincroniza (envia pendentes + puxa servidor).
   useEffect(() => {
@@ -685,45 +702,43 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
   const deleteAnimal = useCallback(
     async (id: string): Promise<void> => {
-      // Guarda o que se vai remover, para poder repor se o servidor recusar.
-      // Ao contrário das outras escritas otimistas, aqui a recusa é provável:
-      // o servidor não elimina animais com histórico (ver `schema_eliminar.sql`),
-      // e sem reposição o animal desaparecia do ecrã à mesma, para só voltar na
-      // sincronização seguinte — o criador via-o sumir e depois ressuscitar.
-      const animalRemovido = animaisRef.current.find((a) => a.id === id);
-      const eventosRemovidos = eventosRef.current.filter((e) => e.animalId === id);
-      // Também os movimentos imputados: a recusa tem de repor TUDO o que a
-      // cascata local mexeu. Sem isto, o animal voltava ao ecrã mas o dinheiro
-      // que lhe estava imputado ficava órfão até à sincronização seguinte — e
-      // no meio disso a ficha dele mostrava um balanço a menos.
-      const movimentosDesligados = movimentosRef.current.filter((m) => m.animalId === id);
+      // Eliminar MARCA, não apaga: o registo fica na base com o histórico e a
+      // genealogia intactos, e sai das listas do dia a dia (ver
+      // `supabase/schema_auditoria.sql`). O que aqui se faz é a mesma marcação,
+      // já no ecrã, para o animal desaparecer da lista sem esperar pela rede.
+      const antes = animaisRef.current.find((a) => a.id === id);
+      if (!antes) return;
 
-      setAnimais((prev) => prev.filter((a) => a.id !== id));
-      setEventos((prev) => prev.filter((e) => e.animalId !== id));
-      // O dinheiro fica, o animal é que sai: espelha o `on delete set null` da
-      // coluna no servidor. Apagar os movimentos junto com o animal tirava
-      // despesas já pagas da conta e mudava o saldo por causa de uma limpeza.
-      setMovimentos((prev) =>
-        prev.map((m) => (m.animalId === id ? { ...m, animalId: undefined } : m)),
-      );
+      const agora = new Date().toISOString();
+      const marcado: Animal = {
+        ...antes,
+        estado: 'eliminado',
+        terrenoId: undefined, // deixa de ocupar um terreno
+        dataSaida: antes.dataSaida ?? agora.slice(0, 10),
+        // Previsão otimista: quem manda nestes dois campos é o trigger do
+        // servidor, e a sincronização seguinte traz os valores dele por cima.
+        // Escrevê-los aqui serve só para o histórico ter autor enquanto se
+        // está offline, em vez de uma linha anónima que aparece e muda depois.
+        saidaPor: utilizador.id,
+        saidaEm: agora,
+      };
+      setAnimais((prev) => prev.map((a) => (a.id === id ? marcado : a)));
 
       if (!usaSupabase) {
-        gravarSqlite((db) => bdEliminarAnimal(db, id));
+        gravarSqlite((db) => bdEliminarAnimal(db, id, utilizador.id));
         return;
       }
       try {
         await empurrar({ op: 'delete', entidade: 'animal', id });
       } catch (e) {
-        if (animalRemovido) setAnimais((prev) => [animalRemovido, ...prev]);
-        if (eventosRemovidos.length > 0) setEventos((prev) => [...eventosRemovidos, ...prev]);
-        if (movimentosDesligados.length > 0) {
-          const repor = new Map(movimentosDesligados.map((m) => [m.id, m]));
-          setMovimentos((prev) => prev.map((m) => repor.get(m.id) ?? m));
-        }
+        // A recusa é possível (falta de permissão, conta suspensa) e sem
+        // reposição o animal ficava marcado no ecrã até à sincronização
+        // seguinte, que o devolvia ao efetivo sem uma palavra.
+        setAnimais((prev) => prev.map((a) => (a.id === id ? antes : a)));
         throw e; // quem chamou mostra a razão da recusa
       }
     },
-    [usaSupabase, gravarSqlite, empurrar],
+    [usaSupabase, gravarSqlite, empurrar, utilizador.id],
   );
 
   const marcarSaida = useCallback(
@@ -742,6 +757,10 @@ export function GadoProvider({ children }: { children: ReactNode }) {
         dataSaida: data,
         motivoSaida: motivo,
         terrenoId: undefined, // deixa de ocupar um terreno
+        // Previsão otimista de quem registou (o trigger do servidor corrige-a
+        // na sincronização) — ver `deleteAnimal` e `schema_auditoria.sql`.
+        saidaPor: utilizador.id,
+        saidaEm: new Date().toISOString(),
       };
       const tipo = estado === 'falecido' ? 'Morte' : 'Venda';
       const descricao =
@@ -771,7 +790,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
               categoria: 'Venda de animais',
               valor,
               data,
-              descricao: motivo?.trim() ? `Venda — ${motivo.trim()}` : 'Venda de animal',
+              descricao: motivo?.trim() ? `Venda: ${motivo.trim()}` : 'Venda de animal',
               animalId: id,
               criadoPor: utilizador.id,
             }
@@ -817,6 +836,10 @@ export function GadoProvider({ children }: { children: ReactNode }) {
         estado: 'ativo',
         dataSaida: undefined,
         motivoSaida: undefined,
+        // A auditoria da saída vai com ela: deixar cá o autor de uma saída que
+        // já não existe seria um registo a descrever o que não aconteceu.
+        saidaPor: undefined,
+        saidaEm: undefined,
       };
       setAnimais((prev) => prev.map((a) => (a.id === id ? atualizado : a)));
       if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'animal', dados: atualizado });

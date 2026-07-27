@@ -92,7 +92,7 @@ export default function EditarDadosPessoaisScreen() {
           <Field
             label="Email"
             obrigatorio
-            ajuda="Ao mudar de email vamos enviar um link de confirmação para o endereço novo — só nessa altura é que a troca fica ativa.">
+            ajuda="Ao mudar de email vamos enviar um link de confirmação para o endereço novo: só nessa altura é que a troca fica ativa.">
             <TextField
               value={email}
               onChangeText={setEmail}

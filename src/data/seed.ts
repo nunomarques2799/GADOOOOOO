@@ -147,12 +147,12 @@ export const animaisSeed: Animal[] = [
 ];
 
 export const eventosSeed: Evento[] = [
-  { id: 'ev-1', animalId: 'an-1', tipo: 'Parto', data: isoDaysAgo(15), descricao: 'Parto normal — vitelo macho (Trovão)', detalhe: 'Sem complicações' },
+  { id: 'ev-1', animalId: 'an-1', tipo: 'Parto', data: isoDaysAgo(15), descricao: 'Parto normal: vitelo macho (Trovão)', detalhe: 'Sem complicações' },
   { id: 'ev-2', animalId: 'an-1', tipo: 'Vacinação', data: isoDaysAgo(120), descricao: 'Vacina da língua azul', detalhe: 'Lote 4471 · próxima dose em 6 meses', valor: 18 },
-  { id: 'ev-3', animalId: 'an-7', tipo: 'Medicamento', data: isoDaysAgo(2), descricao: 'Antibiótico — mastite', detalhe: 'Dose 20ml · Vet. Dr. Sousa · segurança 10 dias', valor: 45 },
-  { id: 'ev-4', animalId: 'an-6', tipo: 'Parto', data: isoDaysAgo(25), descricao: 'Parto normal — vitela fêmea (Aurora)', detalhe: 'Sem complicações' },
+  { id: 'ev-3', animalId: 'an-7', tipo: 'Medicamento', data: isoDaysAgo(2), descricao: 'Antibiótico para mastite', detalhe: 'Dose 20ml · Vet. Dr. Sousa · segurança 10 dias', valor: 45 },
+  { id: 'ev-4', animalId: 'an-6', tipo: 'Parto', data: isoDaysAgo(25), descricao: 'Parto normal: vitela fêmea (Aurora)', detalhe: 'Sem complicações' },
   { id: 'ev-5', animalId: 'an-3', tipo: 'Pesagem', data: isoDaysAgo(30), descricao: 'Pesagem: 520 kg', detalhe: 'GMD 0,9 kg/dia' },
-  { id: 'ev-6', animalId: 'an-13', tipo: 'Compra', data: isoDaysAgo(365), descricao: 'Compra — Feira de Nisa', detalhe: 'origem PT 44 552 1100', valor: 1350 },
+  { id: 'ev-6', animalId: 'an-13', tipo: 'Compra', data: isoDaysAgo(365), descricao: 'Compra na Feira de Nisa', detalhe: 'origem PT 44 552 1100', valor: 1350 },
   // O preço desta venda vive em `movimentosSeed` (é receita — ver financas.ts).
   { id: 'ev-7', animalId: 'an-3', tipo: 'Venda', data: isoDaysAgo(10), descricao: 'Animal saiu por venda.', detalhe: 'Vendido no matadouro de Elvas' },
 ];
@@ -165,15 +165,15 @@ export const eventosSeed: Evento[] = [
  */
 export const movimentosSeed: Movimento[] = [
   // Receitas
-  { id: 'mov-1', exploracaoId: 'exp-1', direcao: 'receita', categoria: 'Venda de animais', valor: 1580, data: isoDaysAgo(10), descricao: 'Venda — matadouro de Elvas', contraparte: 'Matadouro de Elvas', animalId: 'an-3' },
-  { id: 'mov-2', exploracaoId: 'exp-1', direcao: 'receita', categoria: 'Apoios e subsídios', valor: 2400, data: isoDaysAgo(75), descricao: 'Apoio IFAP — prémio por vaca aleitante' },
+  { id: 'mov-1', exploracaoId: 'exp-1', direcao: 'receita', categoria: 'Venda de animais', valor: 1580, data: isoDaysAgo(10), descricao: 'Venda ao matadouro de Elvas', contraparte: 'Matadouro de Elvas', animalId: 'an-3' },
+  { id: 'mov-2', exploracaoId: 'exp-1', direcao: 'receita', categoria: 'Apoios e subsídios', valor: 2400, data: isoDaysAgo(75), descricao: 'Apoio IFAP: prémio por vaca aleitante' },
   { id: 'mov-3', exploracaoId: 'exp-1', direcao: 'receita', categoria: 'Leite e produtos', valor: 310, data: isoDaysAgo(40), descricao: 'Entrega de leite' },
 
   // Despesas — a alimentação é o grosso, como numa exploração a sério
-  { id: 'mov-4', exploracaoId: 'exp-1', direcao: 'despesa', categoria: 'Alimentação', valor: 860, data: isoDaysAgo(20), descricao: 'Ração — 40 sacos', contraparte: 'Agro-Nisa' },
+  { id: 'mov-4', exploracaoId: 'exp-1', direcao: 'despesa', categoria: 'Alimentação', valor: 860, data: isoDaysAgo(20), descricao: 'Ração, 40 sacos', contraparte: 'Agro-Nisa' },
   { id: 'mov-5', exploracaoId: 'exp-1', direcao: 'despesa', categoria: 'Alimentação', valor: 640, data: isoDaysAgo(55), descricao: 'Fardos de feno', contraparte: 'Agro-Nisa' },
   { id: 'mov-6', exploracaoId: 'exp-1', direcao: 'despesa', categoria: 'Alimentação', valor: 720, data: isoDaysAgo(95), descricao: 'Ração e suplementos', contraparte: 'Agro-Nisa' },
-  { id: 'mov-7', exploracaoId: 'exp-1', direcao: 'despesa', categoria: 'Energia e combustível', valor: 145, data: isoDaysAgo(18), descricao: 'Eletricidade — furo e bebedouros', contraparte: 'EDP' },
+  { id: 'mov-7', exploracaoId: 'exp-1', direcao: 'despesa', categoria: 'Energia e combustível', valor: 145, data: isoDaysAgo(18), descricao: 'Eletricidade do furo e dos bebedouros', contraparte: 'EDP' },
   { id: 'mov-8', exploracaoId: 'exp-1', direcao: 'despesa', categoria: 'Energia e combustível', valor: 180, data: isoDaysAgo(48), descricao: 'Gasóleo do trator' },
   { id: 'mov-9', exploracaoId: 'exp-1', direcao: 'despesa', categoria: 'Rendas e terrenos', valor: 400, data: isoDaysAgo(60), descricao: 'Renda do Souto Velho', terrenoId: 'ter-3' },
   { id: 'mov-10', exploracaoId: 'exp-1', direcao: 'despesa', categoria: 'Máquinas e reparações', valor: 230, data: isoDaysAgo(33), descricao: 'Reparação da cerca elétrica' },

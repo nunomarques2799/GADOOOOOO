@@ -95,6 +95,11 @@ function Cartao({
         // Lido em voz alta como o que é: a mensagem, e que se toca para fechar.
         accessibilityLabel={`${toast.mensagem}${toast.detalhe ? `. ${toast.detalhe}` : ''}`}
         accessibilityHint="Toque para fechar este aviso"
+        // Região viva: o Android lê o cartão só por ele ter aparecido, sem
+        // esperar que o dedo lhe caia em cima. O erro interrompe o que estiver a
+        // ser lido ("assertive"), o resto espera a vez — a mesma diferença de
+        // urgência que já existe no tempo que cada um fica no ecrã.
+        accessibilityLiveRegion={toast.tipo === 'erro' ? 'assertive' : 'polite'}
         style={({ pressed }) => [
           {
             flexDirection: 'row',

@@ -39,6 +39,24 @@ export function quandoTocar(diasAFrente: number, agora = new Date()): Date {
 }
 
 /**
+ * Para onde vai a app quando se toca num aviso do telemóvel.
+ *
+ * A ficha do animal quando ele existe — é lá que está o alerta, o histórico e o
+ * botão de registar o que o aviso está a pedir. A lista de alertas nos outros
+ * casos: prazos que não são de um animal, e animais que já não existem (vendido
+ * e eliminado noutro aparelho, ou um aviso que ficou agendado de outra conta).
+ * Mandar para uma ficha inexistente dava um "Animal não encontrado" a quem só
+ * queria saber o que tinha de fazer hoje.
+ */
+export function destinoDoAviso(
+  aviso: { animalId?: string },
+  existeAnimal: (id: string) => boolean,
+): string {
+  if (aviso.animalId && existeAnimal(aviso.animalId)) return `/animal/${aviso.animalId}`;
+  return '/alertas';
+}
+
+/**
  * Escolhe o que agendar e quando.
  *
  * Regras:

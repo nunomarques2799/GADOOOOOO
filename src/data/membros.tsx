@@ -18,8 +18,10 @@ import {
   type ReactNode,
 } from 'react';
 
+import { acessoTerminou } from './acessoTemporario';
 import { useAuth } from './auth';
 import { cacheDisponivel, guardarAcesso, lerAcesso } from './cacheLocal';
+import { carregarNomesEquipa, esquecerNomesEquipa } from './nomesEquipa';
 import {
   CAPACIDADES_GERIVEIS,
   podeConsultar,
@@ -29,6 +31,7 @@ import {
   type PermissoesMembro,
 } from './permissoes';
 import { supabase, supabaseConfigurado } from './supabase';
+import { SEM_NOME } from './trabalhadores';
 import type {
   Convite,
   EstadoPerfil,
@@ -39,7 +42,19 @@ import type {
 
 type MembrosContext = {
   aCarregar: boolean;
+  /** Os vínculos que valem AGORA. Os que já passaram do prazo não entram. */
   membros: MembroExploracao[];
+  /**
+   * Os vínculos cujo prazo já passou. Não dão acesso nenhum — servem para a app
+   * poder dizer "o seu acesso a esta exploração terminou" a quem, de outra
+   * forma, encontrava a app vazia e sem explicação nenhuma.
+   */
+  membrosExpirados: MembroExploracao[];
+  /**
+   * A pessoa TINHA acesso e já não tem: só lhe restam vínculos expirados. É o
+   * caso do veterinário depois da visita — conta criada, exploração nenhuma.
+   */
+  acessoExpirado: boolean;
   isSuperadmin: boolean;
   estadoPerfil: EstadoPerfil | null;
   /** Devolve o role do utilizador nesta exploração (ou undefined). */
@@ -90,8 +105,16 @@ type MembrosContext = {
     exploracaoId: string,
     role: RoleMembro,
     descricao?: string,
+    /** Quanto tempo o CÓDIGO pode ser usado. */
     validadeHoras?: number,
+    /** Quanto tempo o ACESSO dura depois de o código ser usado. */
+    acessoHoras?: number,
   ) => Promise<{ codigo?: string; erro?: string }>;
+  /**
+   * Muda o prazo de acesso de alguém da equipa. `horas` a `null` tira o prazo
+   * (acesso permanente); `0` termina-o já. Devolve a razão da recusa ou `null`.
+   */
+  definirPrazoDeAcesso: (membroId: string, horas: number | null) => Promise<string | null>;
   removerConvite: (codigo: string) => Promise<string | null>;
   listarMembrosDe: (exploracaoId: string) => Promise<
     (MembroExploracao & { nome: string })[]
@@ -120,6 +143,7 @@ type RowMembro = {
   role: RoleMembro;
   criado_em?: string | null;
   permissoes?: Record<string, unknown> | null;
+  expira_em?: string | null;
 };
 
 function toMembro(r: RowMembro): MembroExploracao {
@@ -130,8 +154,12 @@ function toMembro(r: RowMembro): MembroExploracao {
     role: r.role,
     criadoEm: r.criado_em ?? undefined,
     permissoes: limparPermissoes(r.permissoes),
+    expiraEm: r.expira_em ?? undefined,
   };
 }
+
+/** As colunas de `membro_exploracao` que a app lê. */
+const COLUNAS_MEMBRO = 'id, user_id, exploracao_id, role, criado_em, permissoes, expira_em';
 
 /**
  * A coluna `permissoes` como a app a quer: só capacidades ajustáveis, só
@@ -159,6 +187,7 @@ type RowConvite = {
   criado_por: string;
   criado_em?: string | null;
   expira_em?: string | null;
+  acesso_horas?: number | null;
   usado_por?: string | null;
   usado_em?: string | null;
   descricao?: string | null;
@@ -172,6 +201,7 @@ function toConvite(r: RowConvite): Convite {
     criadoPor: r.criado_por,
     criadoEm: r.criado_em ?? undefined,
     expiraEm: r.expira_em ?? undefined,
+    acessoHoras: r.acesso_horas ?? undefined,
     usadoPor: r.usado_por ?? undefined,
     usadoEm: r.usado_em ?? undefined,
     descricao: r.descricao ?? undefined,
@@ -223,9 +253,21 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
   // portão, antes sequer de chegar à cache.
   const acessoInicial = cacheDisponivel ? lerAcesso() : null;
 
-  const [membros, setMembros] = useState<MembroExploracao[]>(
+  /**
+   * TODOS os vínculos, incluindo os que já expiraram. O que a app usa para
+   * decidir o que mostrar é o `membros` derivado logo abaixo — os expirados
+   * ficam à parte, para se poder explicar a quem os tem porque é que deixou de
+   * ver a exploração, em vez de o deixar num ecrã vazio sem uma palavra.
+   */
+  const [todosMembros, setMembros] = useState<MembroExploracao[]>(
     (acessoInicial?.membros as MembroExploracao[] | undefined) ?? [],
   );
+  /**
+   * O instante por que se mede o prazo. Só muda quando um acesso cai (ver o
+   * efeito mais abaixo) — não é um relógio a correr, que poria a app a
+   * redesenhar-se a cada segundo sem nada mudar.
+   */
+  const [agora, setAgora] = useState(() => Date.now());
   const [isSuperadmin, setIsSuperadmin] = useState(acessoInicial?.isSuperadmin ?? false);
   const [estadoPerfil, setEstadoPerfil] = useState<EstadoPerfil | null>(
     acessoInicial?.estadoPerfil ?? null,
@@ -269,7 +311,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     const { data: rows, error: erroMembros } = await comPrazo(
       supabase
         .from('membro_exploracao')
-        .select('id, user_id, exploracao_id, role, criado_em, permissoes')
+        .select(COLUNAS_MEMBRO)
         .eq('user_id', userId),
     );
     if (erroMembros) {
@@ -293,6 +335,42 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void recarregar();
   }, [recarregar]);
+
+  /* ---------------- Prazo de acesso ---------------- */
+
+  const membros = useMemo(
+    () => todosMembros.filter((m) => !acessoTerminou(m.expiraEm, new Date(agora))),
+    [todosMembros, agora],
+  );
+
+  const membrosExpirados = useMemo(
+    () => todosMembros.filter((m) => acessoTerminou(m.expiraEm, new Date(agora))),
+    [todosMembros, agora],
+  );
+
+  /**
+   * Acorda no instante em que o acesso mais próximo cai.
+   *
+   * Sem isto, o veterinário com a app aberta continuava a ver a exploração
+   * (e os botões dela) até fechar e reabrir — o servidor recusava-lhe tudo,
+   * mas só depois de ele tentar. A promessa é que o acesso termina à hora
+   * marcada, e quem a tem de cumprir no ecrã é isto.
+   */
+  useEffect(() => {
+    const seguintes = todosMembros
+      .map((m) => (m.expiraEm ? new Date(m.expiraEm).getTime() : Number.NaN))
+      .filter((t) => Number.isFinite(t) && t > Date.now());
+    if (seguintes.length === 0) return;
+    // Um segundo depois, para não acordar no exato milissegundo e o relógio do
+    // aparelho ainda dar o acesso por vivo.
+    const espera = Math.min(...seguintes) - Date.now() + 1000;
+    // O `setTimeout` guarda o atraso num inteiro de 32 bits: acima de ~24 dias
+    // dá a volta e dispara logo, em ciclo. Prazos assim tão longos esperam pela
+    // sincronização seguinte, que é a toda a hora.
+    if (espera > 2_147_483_647) return;
+    const t = setTimeout(() => setAgora(Date.now()), espera);
+    return () => clearTimeout(t);
+  }, [todosMembros, agora]);
 
   const roleEm = useCallback(
     (exploracaoId: string): RoleMembro | undefined =>
@@ -356,6 +434,11 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
 
   const isAdminEmAlguma = useMemo(() => membros.some((m) => m.role === 'admin'), [membros]);
 
+  // "Tinha e já não tem", que é diferente de "nunca teve": a quem nunca teve, a
+  // app oferece criar uma exploração ou pedir um código; a quem expirou, o que
+  // faz falta é dizer o que aconteceu.
+  const acessoExpirado = membros.length === 0 && membrosExpirados.length > 0;
+
   /* ---------------- Superadmin ---------------- */
 
   const listarPendentes = useCallback(async (): Promise<UtilizadorPendente[]> => {
@@ -386,7 +469,9 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     if (!supabase) return [];
     const { data } = await supabase
       .from('convite')
-      .select('codigo, exploracao_id, role, criado_por, criado_em, expira_em, usado_por, usado_em, descricao')
+      .select(
+        'codigo, exploracao_id, role, criado_por, criado_em, expira_em, acesso_horas, usado_por, usado_em, descricao',
+      )
       .eq('exploracao_id', exploracaoId)
       .order('criado_em', { ascending: false });
     return ((data ?? []) as RowConvite[]).map(toConvite);
@@ -398,6 +483,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       role: RoleMembro,
       descricao?: string,
       validadeHoras = 168,
+      acessoHoras?: number,
     ): Promise<{ codigo?: string; erro?: string }> => {
       if (!supabase) return { erro: 'Supabase não configurado.' };
       const { data, error } = await supabase.rpc('criar_convite', {
@@ -405,11 +491,31 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
         novo_role: role,
         descricao_txt: descricao ?? null,
         validade_horas: validadeHoras,
+        // `null` e não `undefined`: o PostgREST omite as chaves indefinidas e
+        // a função ficava a receber o valor por omissão — que é o mesmo `null`,
+        // mas por acidente. Escrito assim, "sem prazo" é uma decisão.
+        acesso_horas: acessoHoras ?? null,
       });
       if (error) return { erro: error.message };
       return { codigo: typeof data === 'string' ? data : undefined };
     },
     [],
+  );
+
+  const definirPrazoDeAcesso = useCallback(
+    async (membroId: string, horas: number | null): Promise<string | null> => {
+      if (!supabase) return 'Isto exige ligação à conta: a app está em modo local.';
+      const { error } = await supabase.rpc('definir_prazo_de_acesso', {
+        membro_id: membroId,
+        horas,
+      });
+      if (error) return error.message;
+      // O prazo pode ser o do próprio (um superadmin a assistir), e nesse caso
+      // o que a app mostra tem de mudar já.
+      await recarregar();
+      return null;
+    },
+    [recarregar],
   );
 
   const removerConvite = useCallback(async (codigo: string): Promise<string | null> => {
@@ -422,24 +528,30 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     if (!supabase) return [];
     const { data } = await supabase
       .from('membro_exploracao')
-      .select('id, user_id, exploracao_id, role, criado_em, permissoes, perfil:user_id ( nome )')
+      .select(COLUNAS_MEMBRO)
       .eq('exploracao_id', exploracaoId);
-    type Row = RowMembro & { perfil?: { nome?: string } | null };
-    return ((data ?? []) as Row[]).map((r) => ({
+    // Os nomes vêm por RPC e não por `perfil:user_id ( nome )` embutido: a
+    // política `perfil_self_select` só deixa cada um ver o SEU perfil, por isso
+    // o embutido devolvia vazio para toda a gente menos para o próprio — a lista
+    // de Trabalhadores aparecia com um travessão em vez de cada nome.
+    const nomes = await carregarNomesEquipa();
+    return ((data ?? []) as RowMembro[]).map((r) => ({
       ...toMembro(r),
-      nome: r.perfil?.nome ?? '—',
+      nome: nomes[r.user_id] ?? SEM_NOME,
     }));
   }, []);
 
   const removerMembro = useCallback(async (membroId: string): Promise<string | null> => {
     if (!supabase) return 'Supabase não configurado.';
     const { error } = await supabase.from('membro_exploracao').delete().eq('id', membroId);
+    // A equipa mudou: o mapa de nomes guardado deixa de estar certo.
+    if (!error) esquecerNomesEquipa();
     return error?.message ?? null;
   }, []);
 
   const definirPermissoes = useCallback(
     async (membroId: string, permissoes: PermissoesMembro): Promise<string | null> => {
-      if (!supabase) return 'Isto exige ligação à conta — a app está em modo local.';
+      if (!supabase) return 'Isto exige ligação à conta: a app está em modo local.';
       // Escreve-se o conjunto todo, não uma capacidade de cada vez: um pedido
       // por interruptor, numa rede de campo, deixava a pessoa com metade das
       // permissões gravadas e a outra metade não.
@@ -472,6 +584,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     if (!supabase) return 'Supabase não configurado.';
     const { error } = await supabase.rpc('resgatar_convite', { codigo_txt: codigo.trim() });
     if (error) return error.message;
+    esquecerNomesEquipa(); // entrou gente nova na equipa
     await recarregar();
     return null;
   }, [recarregar]);
@@ -480,6 +593,8 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     () => ({
       aCarregar,
       membros,
+      membrosExpirados,
+      acessoExpirado,
       isSuperadmin,
       estadoPerfil,
       roleEm,
@@ -499,15 +614,17 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       listarMembrosDe,
       removerMembro,
       definirPermissoes,
+      definirPrazoDeAcesso,
       resgatarConvite,
     }),
     [
-      aCarregar, membros, isSuperadmin, estadoPerfil, roleEm, permissoesEm,
+      aCarregar, membros, membrosExpirados, acessoExpirado,
+      isSuperadmin, estadoPerfil, roleEm, permissoesEm,
       pode, podeVer, podeEmAlguma,
       contaSuspensa, isAdminEmAlguma,
       recarregar, listarPendentes, aprovarCliente, bloquearCliente,
       listarConvites, criarConvite, removerConvite, listarMembrosDe,
-      removerMembro, definirPermissoes, resgatarConvite,
+      removerMembro, definirPermissoes, definirPrazoDeAcesso, resgatarConvite,
     ],
   );
 

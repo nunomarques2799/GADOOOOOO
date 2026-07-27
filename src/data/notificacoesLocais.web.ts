@@ -27,3 +27,14 @@ export async function agendar(_alertas: Alerta[], _p: Preferencias): Promise<num
 export async function cancelarTudo(): Promise<void> {
   /* nada a cancelar */
 }
+
+export type DestinoAviso = {
+  toque: string;
+  alertaId?: string;
+  animalId?: string;
+};
+
+/** Sem avisos agendados, nunca há toque nenhum para seguir. */
+export function useToqueEmAviso(): DestinoAviso | null {
+  return null;
+}

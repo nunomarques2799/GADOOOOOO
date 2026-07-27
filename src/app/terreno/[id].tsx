@@ -76,7 +76,7 @@ export default function TerrenoDetalheScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Icon name="barn" size={14} color={colors.textOnDarkMuted} />
                 <Text variant="secondary" color={colors.textOnDarkMuted} numberOfLines={1}>
-                  {exploracao?.nome ?? '—'}
+                  {exploracao?.nome ?? 'Sem exploração'}
                 </Text>
               </View>
             </View>
@@ -91,7 +91,7 @@ export default function TerrenoDetalheScreen() {
               borderTopColor: 'rgba(255,255,255,0.18)',
             }}>
             <HeroStat value={terreno.tipo ?? 'Outro'} label="Tipo" />
-            <HeroStat value={terreno.area != null ? `${terreno.area} ha` : '—'} label="Área" />
+            <HeroStat value={terreno.area != null ? `${terreno.area} ha` : 'Sem área'} label="Área" />
             <HeroStat value={animaisNoTerreno.length} label="Animais" />
           </View>
         </LinearGradient>
@@ -152,6 +152,8 @@ export default function TerrenoDetalheScreen() {
             </Text>
           </Card>
         ) : (
+          // Sem `nomeTerreno`: são todos deste terreno, repetir o nome em cada
+          // linha era ruído.
           animaisNoTerreno.map((a) => <AnimalRow key={a.id} animal={a} />)
         )}
 

@@ -36,7 +36,7 @@ export function traduzErroServidor(msg: string): string {
     if (m.includes('"exploracao"')) {
       return (
         'O servidor recusou criar a exploração. ' +
-        'Ou a sessão expirou — feche e volte a entrar — ou a conta ainda não ' +
+        'Ou a sessão expirou (feche e volte a entrar), ou a conta ainda não ' +
         'está aprovada para criar explorações.'
       );
     }

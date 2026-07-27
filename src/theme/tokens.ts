@@ -29,10 +29,6 @@ import { paletaPorId, PALETA_OMISSAO, type PaletaId, type TokensPaleta } from '.
  * reconhecer num relance, que é a única forma como estas cores funcionam.
  */
 const fixas = {
-  /* Texto sobre superfícies escuras (cabeçalhos, cartão da meteo) */
-  textOnDark: '#FFFFFF',
-  textOnDarkMuted: 'rgba(255,255,255,0.82)',
-
   /* Semântica (funcional — nunca só cor, sempre com ícone/texto) */
   success: '#2E9E5B',
   successTint: '#E4F5EA',

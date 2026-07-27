@@ -23,7 +23,7 @@ export function BannerSuspensao() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
         <Icon name="lock-clock" size="lg" color={colors.warning} />
         <View style={{ flex: 1 }}>
-          <Text variant="bodyStrong">Conta suspensa — só consulta</Text>
+          <Text variant="bodyStrong">Conta suspensa (só consulta)</Text>
           <Text variant="secondary" color={colors.textSecondary}>
             {isAdminEmAlguma
               ? 'Pode ver e exportar tudo o que já registou, mas de momento não é possível gravar alterações. Fale connosco para reativar a conta.'

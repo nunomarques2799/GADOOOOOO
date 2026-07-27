@@ -3,7 +3,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Card, Chip, Header, Icon, type IconName, SeletorOpcao, Text } from '@/components/ui';
+import { FotoAnimal } from '@/components/FotoAnimal';
+import {
+  Button,
+  CampoData,
+  Card,
+  Chip,
+  EcraComTeclado,
+  Header,
+  Icon,
+  type IconName,
+  SeletorOpcao,
+  Text,
+} from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
 import {
   GestacaoDias,
@@ -23,10 +35,9 @@ import {
   idadeExtenso,
   isoDaysAgo,
   isoMaisDias,
-  mascaraDataPt,
   parseDataPt,
 } from '@/data/helpers';
-import { impedimentoParaEliminar, rotuloAnimal } from '@/data/genealogia';
+import { avisosDeEliminacao, rotuloAnimal } from '@/data/genealogia';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
@@ -79,11 +90,13 @@ export function FormularioAnimal({
   const toast = useToasts();
 
   const editar = !!animal;
-  // Um animal com histórico não se elimina — marca-se a saída. O servidor
-  // recusa na mesma (RPC `eliminar_animal`); isto evita oferecer o botão.
-  const impedimento = animal ? impedimentoParaEliminar(animal, eventos, animais) : null;
+  // Eliminar já não apaga nada (ver `supabase/schema_auditoria.sql`), por isso
+  // deixou de haver animais que não se podem eliminar. O que continua a fazer
+  // falta é dizer o que muda no resto, antes de a pessoa confirmar.
+  const avisosEliminar = animal ? avisosDeEliminacao(animal, eventos, animais) : [];
 
   const [especie, setEspecie] = useState<Especie>(animal?.especie ?? 'Bovino');
+  const [foto, setFoto] = useState<string | undefined>(animal?.fotografia);
   const [sexo, setSexo] = useState<Sexo>(animal?.sexo ?? 'Fêmea');
   const [diasNasc, setDiasNasc] = useState<number | null>(animal ? null : 0);
   const [dataManual, setDataManual] = useState(animal ? formatDataCurta(animal.dataNascimento) : '');
@@ -168,6 +181,10 @@ export function FormularioAnimal({
     return (sexoProgenitor: Sexo, mesesMin: number) =>
       animais.filter((a) => {
         if (a.id === animal?.id || excluidos.has(a.id)) return false;
+        // Um registo eliminado foi um engano: oferecê-lo como mãe ou pai era
+        // pôr o engano a nascer outra vez, agora dentro da genealogia de outro
+        // animal. Falecidos e vendidos continuam elegíveis — esses existiram.
+        if (a.estado === 'eliminado') return false;
         if (a.exploracaoId !== exploracaoId) return false;
         if (a.especie !== especie || a.sexo !== sexoProgenitor) return false;
         return nascimento - new Date(a.dataNascimento).getTime() >= mesesMin * MS_MES;
@@ -241,6 +258,7 @@ export function FormularioAnimal({
         especie,
         sexo,
         dataNascimento,
+        fotografia: foto,
         nome: nome.trim() || undefined,
         numeroIdentificacao: brinco.trim() || undefined,
         raca: raca?.trim() || undefined,
@@ -290,16 +308,25 @@ export function FormularioAnimal({
         avisar('Não foi possível eliminar', mensagemDeErro(e));
       }
     };
+    // A confirmação diz três coisas, e nenhuma é dispensável: que não há como
+    // voltar atrás (é o que trava o dedo), que o registo não se perde (é o que
+    // evita que alguém deixe um animal na lista por medo de o apagar) e o que
+    // acontece aos OUTROS animais que dependem deste.
+    const avisos = avisosDeEliminacao(animal, eventos, animais);
     confirmar(
       'Eliminar animal',
-      `Eliminar "${rotulo}"? Esta ação não pode ser anulada.`,
+      `Eliminar "${rotulo}"? Esta ação não pode ser anulada.\n\n`
+        + 'O animal sai da lista e da árvore genealógica: eliminar quer dizer que foi '
+        + 'registado por engano. O registo fica guardado no histórico do efetivo, com o '
+        + 'dia e o nome de quem o eliminou.'
+        + (avisos.length > 0 ? `\n\n${avisos.join('\n')}` : ''),
       () => void executar(),
       { rotuloConfirmar: 'Eliminar', destrutivo: true },
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <EcraComTeclado>
       <Header title={editar ? 'Editar animal' : 'Novo animal'} />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -310,6 +337,10 @@ export function FormularioAnimal({
             ? 'Altere o que precisar e guarde no fim.'
             : 'Preencha o essencial. Pode completar os restantes dados mais tarde.'}
         </Text>
+
+        {/* Fotografia — o rosto do animal, para se reconhecer de relance na
+            lista. A silhueta segue a espécie escolhida. */}
+        <FotoAnimal foto={foto} onMudar={setFoto} icone={especieMeta[especie].icon} />
 
         {/* Espécie */}
         <Field label="Espécie" obrigatorio>
@@ -352,19 +383,19 @@ export function FormularioAnimal({
           </View>
 
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm, marginBottom: 4 }}>
-            Ou data exata (dd/mm/aaaa) — útil para animais já crescidos
+            Ou data exata (dd/mm/aaaa), útil para animais já crescidos
           </Text>
-          <TextField
+          <CampoData
             value={dataManual}
-            onChangeText={(t) => {
-              const m = mascaraDataPt(t);
+            onChangeText={(m) => {
               setDataManual(m);
+              // Escolher uma data exata (à mão ou no calendário) desliga os
+              // atalhos "Hoje/Ontem"; apagá-la volta a "Hoje".
               if (m.trim()) setDiasNasc(null);
               else setDiasNasc(0);
             }}
             placeholder="Ex: 15/03/2021"
-            icon="calendar-edit"
-            keyboardType="number-pad"
+            rotuloCalendario="Escolher a data de nascimento no calendário"
           />
           {dataManualInvalida ? (
             <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
@@ -440,14 +471,14 @@ export function FormularioAnimal({
             {prenhe ? (
               <View style={{ marginTop: spacing.md }}>
                 <Text variant="caption" color={colors.textMuted} style={{ marginBottom: 4 }}>
-                  Data da cobrição (dd/mm/aaaa) — calculamos o parto por si
+                  Data da cobrição (dd/mm/aaaa): calculamos o parto por si
                 </Text>
-                <TextField
+                <CampoData
                   value={dataCobricao}
-                  onChangeText={(t) => setDataCobricao(mascaraDataPt(t))}
+                  onChangeText={setDataCobricao}
                   placeholder="Ex: 10/02/2026"
                   icon="calendar-heart"
-                  keyboardType="number-pad"
+                  rotuloCalendario="Escolher a data da cobrição no calendário"
                 />
                 {cobricaoInvalida ? (
                   <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
@@ -461,12 +492,12 @@ export function FormularioAnimal({
                   style={{ marginTop: spacing.sm, marginBottom: 4 }}>
                   Ou, se já souber a data do parto, escreva-a aqui
                 </Text>
-                <TextField
+                <CampoData
                   value={dataPartoManual}
-                  onChangeText={(t) => setDataPartoManual(mascaraDataPt(t))}
+                  onChangeText={setDataPartoManual}
                   placeholder="Ex: 20/11/2026"
-                  icon="calendar-edit"
-                  keyboardType="number-pad"
+                  permitirFuturo
+                  rotuloCalendario="Escolher a data prevista do parto no calendário"
                 />
                 {partoManualInvalido ? (
                   <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
@@ -580,13 +611,18 @@ export function FormularioAnimal({
           </Field>
         ) : null}
 
-        {/* Exploração */}
-        <Field label="Exploração" obrigatorio>
-          {exploracoes.length === 0 ? (
+        {/* Exploração. Com uma só, o campo era um chip aceso que não se podia
+            apagar nem trocar: um passo a mais num formulário já comprido, a
+            perguntar uma coisa sem alternativa. O `exploracaoId` continua
+            preenchido pelo efeito lá acima. */}
+        {exploracoes.length === 0 ? (
+          <Field label="Exploração" obrigatorio>
             <Text variant="secondary" color={colors.danger}>
               Ainda não tem explorações. Crie uma exploração antes de registar animais.
             </Text>
-          ) : (
+          </Field>
+        ) : exploracoes.length > 1 ? (
+          <Field label="Exploração" obrigatorio>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               {exploracoes.map((e) => (
                 <Chip
@@ -598,8 +634,8 @@ export function FormularioAnimal({
                 />
               ))}
             </View>
-          )}
-        </Field>
+          </Field>
+        ) : null}
 
         {/* Terreno */}
         {terrenos.length > 0 ? (
@@ -644,39 +680,20 @@ export function FormularioAnimal({
         />
 
         {editar && podeEliminar ? (
-          impedimento ? (
-            // Com histórico, eliminar destruiria os eventos por cascata —
-            // incluindo os que outra pessoa registou. O caminho certo é a
-            // saída, que preserva a árvore genealógica dos descendentes.
-            <Card style={{ marginTop: spacing.xl }}>
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <Icon name="information-outline" size="lg" color={colors.info} />
-                <View style={{ flex: 1 }}>
-                  <Text variant="bodyStrong">Não é possível eliminar</Text>
-                  <Text variant="secondary" color={colors.textSecondary}>
-                    {impedimento} Eliminar apagaria também esse histórico. Se o animal saiu
-                    do efetivo, marque-o como falecido ou vendido — o registo mantém-se e a
-                    árvore genealógica continua completa.
-                  </Text>
-                </View>
-              </View>
-              <Button
-                label="Marcar saída do efetivo"
-                icon="archive-outline"
-                variant="secondary"
-                onPress={() => router.replace(`/animal/${animal.id}`)}
-                style={{ marginTop: spacing.sm }}
-              />
-            </Card>
-          ) : (
+          <View style={{ marginTop: spacing.xl, gap: spacing.sm }}>
             <Button
               label="Eliminar animal"
               icon="trash-can-outline"
               variant="danger"
               onPress={confirmarEliminar}
-              style={{ marginTop: spacing.xl }}
             />
-          )
+            <Text variant="caption" color={colors.textMuted}>
+              Para registos feitos por engano. Tira o animal da lista e da árvore
+              genealógica, para sempre. Se o animal existiu mesmo, marque a saída
+              (falecido ou vendido) em vez de eliminar.
+              {avisosEliminar.length > 0 ? ` ${avisosEliminar.join(' ')}` : ''}
+            </Text>
+          </View>
         ) : null}
       </ScrollView>
 
@@ -718,7 +735,7 @@ export function FormularioAnimal({
           }
         />
       </View>
-    </View>
+    </EcraComTeclado>
   );
 }
 
@@ -801,7 +818,7 @@ function SeletorProgenitor({
           </View>
           {filtrados.length > visiveis.length ? (
             <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-              Mais {filtrados.length - visiveis.length} — use a procura para encontrar.
+              Mais {filtrados.length - visiveis.length}. Use a procura para encontrar.
             </Text>
           ) : null}
           {filtrados.length === 0 ? (

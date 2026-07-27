@@ -19,6 +19,7 @@ import {
   lancamentos,
   noPeriodo,
   porAnimal,
+  porOrdemDeRegisto,
   resumo,
   resumoFinanceiro,
   nomeMes,
@@ -410,5 +411,76 @@ describe('vendasSemPreco', () => {
       { exploracaoId: 'exp-1', animais: [animal('a1'), animal('a9', 'exp-2')] },
     );
     expect(porFechar.map((e) => e.animalId)).toEqual(['a1']);
+  });
+});
+
+describe('porOrdemDeRegisto (auditoria)', () => {
+  it('ordena pelo instante do REGISTO, não pela data do lançamento', () => {
+    // É a diferença que justifica haver duas listas: a fatura de janeiro
+    // lançada hoje está no fundo da lista de Movimentos e no topo desta.
+    const antiga = movimento({
+      direcao: 'despesa',
+      categoria: 'Alimentação',
+      valor: 100,
+      data: '2026-01-05T12:00:00.000Z',
+      criadoEm: '2026-07-27T18:00:00.000Z',
+    });
+    const recente = movimento({
+      direcao: 'despesa',
+      categoria: 'Água',
+      valor: 20,
+      data: '2026-07-20T12:00:00.000Z',
+      criadoEm: '2026-07-27T09:00:00.000Z',
+    });
+    expect(porOrdemDeRegisto([recente, antiga]).map((m) => m.categoria)).toEqual([
+      'Alimentação',
+      'Água',
+    ]);
+  });
+
+  it('sem instante de registo, vale a data do lançamento', () => {
+    // Os movimentos anteriores à coluna `criado_em` não podem cair todos para
+    // o fim por ordem indefinida.
+    const velho = movimento({ direcao: 'despesa', categoria: 'Água', valor: 10, data: '2026-01-01T00:00:00.000Z' });
+    const novo = movimento({ direcao: 'despesa', categoria: 'Sanidade', valor: 10, data: '2026-06-01T00:00:00.000Z' });
+    expect(porOrdemDeRegisto([velho, novo]).map((m) => m.categoria)).toEqual(['Sanidade', 'Água']);
+  });
+
+  it('mistura os dois casos pela mesma régua', () => {
+    // Um lançamento com `criadoEm` de hoje fica acima de outro sem `criadoEm`
+    // mas com data antiga: comparam-se sempre os dois melhores valores que há.
+    const semRegisto = movimento({ direcao: 'despesa', categoria: 'Água', valor: 10, data: '2026-02-01T00:00:00.000Z' });
+    const comRegisto = movimento({
+      direcao: 'receita',
+      categoria: 'Leite e produtos',
+      valor: 10,
+      data: '2026-01-01T00:00:00.000Z',
+      criadoEm: '2026-07-27T10:00:00.000Z',
+    });
+    expect(porOrdemDeRegisto([semRegisto, comRegisto]).map((m) => m.categoria)).toEqual([
+      'Leite e produtos',
+      'Água',
+    ]);
+  });
+
+  it('só mostra as explorações pedidas', () => {
+    const cá = movimento({ direcao: 'despesa', categoria: 'Água', valor: 10 });
+    const lá = movimento({ direcao: 'despesa', categoria: 'Sanidade', valor: 10, exploracaoId: 'exp-2' });
+    expect(porOrdemDeRegisto([cá, lá], ['exp-2']).map((m) => m.categoria)).toEqual(['Sanidade']);
+  });
+
+  it('uma lista de explorações vazia não devolve nada', () => {
+    // É a resposta certa a quem não pode consultar contas nenhumas: devolver
+    // tudo seria abrir a auditoria da exploração a quem não a pode ver.
+    const m = movimento({ direcao: 'despesa', categoria: 'Água', valor: 10 });
+    expect(porOrdemDeRegisto([m], [])).toEqual([]);
+  });
+
+  it('não mexe na lista que recebe', () => {
+    const a = movimento({ direcao: 'despesa', categoria: 'Água', valor: 10, criadoEm: '2026-01-01T00:00:00.000Z' });
+    const b = movimento({ direcao: 'despesa', categoria: 'Sanidade', valor: 10, criadoEm: '2026-06-01T00:00:00.000Z' });
+    const original = [a, b];
+    porOrdemDeRegisto(original);
+    expect(original).toEqual([a, b]);
   });
 });

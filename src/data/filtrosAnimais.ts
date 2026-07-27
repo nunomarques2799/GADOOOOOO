@@ -15,7 +15,7 @@
 
 import { idadeDias } from './helpers';
 import { normalizar } from './racas';
-import type { Alerta, Animal, Especie, Finalidade, Sexo } from './types';
+import type { Alerta, AlertaGravidade, Animal, Especie, Finalidade, Sexo } from './types';
 
 /** Faixas etárias. Em meses, que é como o criador fala das idades. */
 export type FaixaIdade = 'cria' | 'jovem' | 'adulto' | 'velho';
@@ -108,7 +108,14 @@ export function filtrarAnimais(
   const q = f.texto ? normalizar(f.texto) : '';
 
   return animais.filter((a) => {
-    // O arquivo primeiro: sem esta guarda, um animal vendido passava por
+    // Um animal ELIMINADO nunca aparece nesta lista, nem com o arquivo ligado.
+    // O registo continua na base (histórico, genealogia, auditoria) mas quem
+    // carregou em "Eliminar" pediu para não o voltar a ver aqui — devolvê-lo
+    // com um chip de filtro fazia do gesto uma sugestão. Vê-se no ecrã
+    // "Histórico do efetivo", que é onde ele passa a viver.
+    if (a.estado === 'eliminado') return false;
+
+    // O arquivo depois: sem esta guarda, um animal vendido passava por
     // qualquer outro filtro e voltava a aparecer no meio do efetivo.
     const saiu = !!a.estado && a.estado !== 'ativo';
     if (saiu && !f.incluirSaidos) return false;
@@ -165,6 +172,87 @@ export function mapaAlertas(alertas: Alerta[]): Map<string, Set<Alerta['categori
     m.set(al.animalId, s);
   }
   return m;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Ordenação
+ * ------------------------------------------------------------------ */
+
+/**
+ * Por que ordem a lista mostra os animais.
+ *
+ * Não há "registados há pouco": o `id` é um UUID aleatório (não conta o tempo)
+ * e o animal só guarda `atualizadoEm`, que muda a cada edição — ordenar por ele
+ * dava "mexidos há pouco", não "registados há pouco", e punha no topo o animal
+ * que se acabou de corrigir em vez do que se acabou de criar. A idade é o eixo
+ * de que o criador fala ("a bezerra nova", "a vaca velha"), e por isso é o que
+ * fica.
+ */
+export type Ordenacao = 'nome' | 'alertas' | 'novos' | 'velhos';
+
+export const ORDENACOES: { valor: Ordenacao; label: string }[] = [
+  { valor: 'nome', label: 'Nome (A→Z)' },
+  { valor: 'alertas', label: 'Com alertas primeiro' },
+  { valor: 'novos', label: 'Mais novos' },
+  { valor: 'velhos', label: 'Mais velhos' },
+];
+
+export const ORDENACAO_OMISSAO: Ordenacao = 'nome';
+
+/** O texto por que se compara na ordem alfabética — nome, ou o brinco se não tiver. */
+function chaveNome(a: Animal): string {
+  return a.nome ?? a.numeroIdentificacao ?? '';
+}
+
+/**
+ * O pior alerta de cada animal, como número (3 = urgente … 0 = nenhum). É isto
+ * que põe o vencido acima do "esta semana" quando se ordena por alertas — a
+ * mesma escala de gravidade do resto da app.
+ */
+export function mapaGravidade(alertas: Alerta[]): Map<string, number> {
+  const rank: Record<AlertaGravidade, number> = { urgente: 3, aviso: 2, info: 1 };
+  const m = new Map<string, number>();
+  for (const al of alertas) {
+    if (!al.animalId) continue;
+    const r = rank[al.gravidade];
+    if (r > (m.get(al.animalId) ?? 0)) m.set(al.animalId, r);
+  }
+  return m;
+}
+
+/**
+ * Ordena SEM alterar o array recebido (`filtrarAnimais` já devolve um novo, mas
+ * um `.sort()` por cima dele mutava-o na mesma, e o React Compiler não gosta).
+ *
+ * O nome é o critério de desempate de todas as ordens: dois animais com a mesma
+ * idade, ou os dois sem alertas, saem por ordem alfabética — nunca numa ordem
+ * que muda de render para render, que dá a sensação de a lista "saltar".
+ */
+export function ordenarAnimais(
+  animais: Animal[],
+  ordenacao: Ordenacao,
+  gravidadePorAnimal: Map<string, number>,
+): Animal[] {
+  const porNome = (a: Animal, b: Animal) => chaveNome(a).localeCompare(chaveNome(b), 'pt');
+  // Nascido antes = mais velho. Datas ISO comparam-se como texto, mas passar
+  // por número trata as inválidas (NaN) sem as pôr no topo.
+  const nasc = (a: Animal) => new Date(a.dataNascimento).getTime() || 0;
+
+  const copia = [...animais];
+  switch (ordenacao) {
+    case 'alertas':
+      return copia.sort((a, b) => {
+        const ga = gravidadePorAnimal.get(a.id) ?? 0;
+        const gb = gravidadePorAnimal.get(b.id) ?? 0;
+        return gb - ga || porNome(a, b);
+      });
+    case 'novos':
+      return copia.sort((a, b) => nasc(b) - nasc(a) || porNome(a, b));
+    case 'velhos':
+      return copia.sort((a, b) => nasc(a) - nasc(b) || porNome(a, b));
+    default:
+      return copia.sort(porNome);
+  }
 }
 
 /** Valores distintos de um campo, sem repetir e por ordem alfabética. */

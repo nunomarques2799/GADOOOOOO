@@ -537,6 +537,42 @@ export function vendasSemPreco(
 }
 
 /* ------------------------------------------------------------------ *
+ *  Histórico de registos (auditoria)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Os movimentos por ordem de REGISTO, do mais recente para o mais antigo.
+ *
+ * É uma lista diferente da dos Movimentos, e de propósito. Aquela responde a
+ * "o que se passou nas contas" e ordena-se pela data do lançamento — a data da
+ * fatura, escrita à mão. Esta responde a "quem esteve a mexer nisto, e
+ * quando", e por isso ordena-se pelo instante em que a linha entrou na app
+ * (`criadoEm`, do servidor). Uma despesa de janeiro lançada hoje aparece no
+ * fundo de uma e no topo da outra.
+ *
+ * Só movimentos: os eventos com custo não guardam autor nem instante de
+ * registo, e inventar-lhes um punha metade da auditoria a mentir. Ficam de
+ * fora, e o ecrã di-lo.
+ */
+export function porOrdemDeRegisto(
+  movimentos: Movimento[],
+  exploracaoIds?: string[],
+): Movimento[] {
+  const ids = exploracaoIds ? new Set(exploracaoIds) : undefined;
+  return movimentos
+    .filter((m) => !ids || ids.has(m.exploracaoId))
+    .slice()
+    .sort((a, b) => {
+      // Sem `criadoEm` (registos anteriores à coluna, ou ainda por sincronizar)
+      // vale a data do lançamento: é a melhor aproximação que existe, e deixá-los
+      // cair para o fim por ordem aleatória parecia lista corrompida.
+      const ax = a.criadoEm ?? a.data;
+      const bx = b.criadoEm ?? b.data;
+      return bx.localeCompare(ax) || a.descricao.localeCompare(b.descricao, 'pt');
+    });
+}
+
+/* ------------------------------------------------------------------ *
  *  Rótulos
  * ------------------------------------------------------------------ */
 

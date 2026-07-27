@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import {
+  Platform,
   ScrollView,
   View,
   type ScrollViewProps,
@@ -23,7 +24,7 @@ type Props = {
   topInset?: boolean;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
-} & Pick<ScrollViewProps, 'stickyHeaderIndices' | 'onScroll'>;
+} & Pick<ScrollViewProps, 'stickyHeaderIndices' | 'onScroll' | 'refreshControl'>;
 
 /**
  * Contentor de ecrã. Garante fundo consistente e reserva safe-area
@@ -72,6 +73,12 @@ export function Screen({
       ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      // No iPhone o teclado sobrepõe-se ao ecrã em vez de o encolher, e um
+      // campo perto do fundo — o preço numa venda, a nota de uma saída — ficava
+      // debaixo dele. Isto faz o iOS encolher o conteúdo pela altura do teclado.
+      // Os formulários com barra de gravar fixa não usam este componente: esses
+      // vão pelo `EcraComTeclado`, e somar as duas coisas dava o dobro do espaço.
+      automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
       {...scrollProps}>
       <View style={coluna}>{children}</View>
     </ScrollView>

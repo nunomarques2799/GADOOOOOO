@@ -92,7 +92,8 @@ describe('derivar', () => {
     // é lido como #RGBA e sai quase transparente. Já aconteceu nesta app.
     const t = derivar(semente({ marca: '#0F8A5F', escura: '#064434' })).tokens;
     for (const [nome, valor] of Object.entries(t)) {
-      if (nome === 'overlay') continue;
+      // O `overlay` e o `textOnDarkMuted` são translúcidos de propósito (rgba).
+      if (nome === 'overlay' || nome === 'textOnDarkMuted') continue;
       expect(valor).toMatch(/^#[0-9A-F]{6}$/);
     }
   });

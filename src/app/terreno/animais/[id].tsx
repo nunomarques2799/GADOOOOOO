@@ -61,7 +61,7 @@ export default function AssociarAnimaisScreen() {
       <Header title="Associar animais" />
       <Screen>
         <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
-          {exploracao?.nome ?? '—'} · toque num animal para o colocar ou tirar de{' '}
+          {exploracao?.nome ?? 'Sem exploração'} · toque num animal para o colocar ou tirar de{' '}
           <Text variant="bodyStrong">{terreno.nome}</Text>.
         </Text>
 

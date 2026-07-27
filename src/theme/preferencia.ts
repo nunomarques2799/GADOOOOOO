@@ -40,6 +40,18 @@ export function paletaGuardada(): PaletaId {
 }
 
 /**
+ * A paleta escolhida é de fundo escuro?
+ *
+ * Serve para o que não é cor de token: a barra de estado do sistema (ícones
+ * claros num fundo escuro) e o sentido de leitura da barra no ecrã Início, onde
+ * o cabeçalho colorido troca de tom com o tema. Ler dentro do render — a app
+ * recarrega ao mudar de paleta, por isso o valor está sempre certo.
+ */
+export function temaEscuro(): boolean {
+  return paletaPorId(paletaGuardada()).escura ?? false;
+}
+
+/**
  * Aplica a paleta guardada. Chamada uma vez, no arranque, antes do primeiro
  * render — ver `src/app/_layout.tsx`.
  */

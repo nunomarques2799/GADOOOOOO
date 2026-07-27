@@ -5,7 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FolhaPermissoes } from '@/components/FolhaPermissoes';
 import { Avatar, Badge, Button, Card, Chip, EmptyState, Icon, Text } from '@/components/ui';
+import { acessoTerminou, rotuloPrazo } from '@/data/acessoTemporario';
 import { useAuth } from '@/data/auth';
+import { formatDataHora } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
@@ -163,9 +165,15 @@ export default function TrabalhadoresScreen() {
     return null;
   }
 
+  // A mesma coluna dos outros separadores de lista (Animais, Terrenos,
+  // Explorações). Este ecrã usava a coluna ESTREITA, que é a dos ecrãs de
+  // leitura: no computador dava um bloco mais apertado do que os vizinhos, com
+  // o título encostado à esquerda e o botão de atualizar a setecentos píxeis
+  // dele, e o estado vazio centrado no meio dos dois. Nada estava desalinhado
+  // por si; era o conjunto que não pertencia ao mesmo ecrã.
   const coluna = {
     width: '100%',
-    maxWidth: desktop ? layout.conteudoEstreito : undefined,
+    maxWidth: desktop ? layout.conteudoDesktop : undefined,
     alignSelf: 'center',
     paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
   } as const;
@@ -181,7 +189,10 @@ export default function TrabalhadoresScreen() {
           alignItems: 'center',
           paddingBottom: insets.bottom + spacing.huge,
         }}>
-        <View style={{ ...coluna, paddingTop: insets.top + spacing.md }}>
+        {/* Cabeçalho igual ao dos outros separadores: título em grande, uma
+            linha a dizer o que ali está, e a ação à direita na mesma linha do
+            título (é onde os Animais põem a contagem). */}
+        <View style={{ ...coluna, paddingTop: insets.top + spacing.md, marginBottom: spacing.md }}>
           <View
             style={{
               flexDirection: 'row',
@@ -189,7 +200,7 @@ export default function TrabalhadoresScreen() {
               justifyContent: 'space-between',
               gap: spacing.sm,
             }}>
-            <Text variant="display" style={{ flex: 1 }}>
+            <Text variant="display" style={{ flexShrink: 1 }}>
               Trabalhadores
             </Text>
             <Pressable
@@ -197,8 +208,19 @@ export default function TrabalhadoresScreen() {
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="Atualizar lista"
-              style={({ pressed }) => [{ marginBottom: 8 }, pressed && { opacity: 0.6 }]}>
-              <Icon name="refresh" size="lg" color={colors.primary} />
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  marginBottom: 6,
+                },
+                pressed && { opacity: 0.6 },
+              ]}>
+              <Icon name="refresh" size="md" color={colors.primary} />
+              <Text variant="bodyStrong" color={colors.primary}>
+                Atualizar
+              </Text>
             </Pressable>
           </View>
           <Text variant="body" color={colors.textSecondary}>
@@ -206,8 +228,8 @@ export default function TrabalhadoresScreen() {
           </Text>
         </View>
 
-        <View style={{ ...coluna, gap: spacing.md, marginTop: spacing.md }}>
-          {/* Por exploração — como nos Animais, à vista e não escondido */}
+        <View style={{ ...coluna, gap: spacing.md }}>
+          {/* Por exploração, à vista e não escondido, como nos Animais */}
           {minhas.length > 1 ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               <Chip
@@ -451,6 +473,25 @@ function LinhaPessoa({
     (v) => v.permissoes && Object.keys(v.permissoes).length > 0,
   );
 
+  /**
+   * O prazo mais próximo do fim, entre os vínculos que o têm.
+   *
+   * Com várias explorações, é esse que interessa: é o primeiro a fechar-se, e
+   * mostrar o mais distante dava a entender que a pessoa continua a ter acesso
+   * a tudo até lá. Quem tem vínculos sem prazo nenhum não mostra linha.
+   */
+  const prazo = (() => {
+    const comPrazo = pessoa.vinculos.filter((v) => v.expiraEm);
+    if (comPrazo.length === 0) return null;
+    const proximo = comPrazo.sort((a, b) => (a.expiraEm ?? '').localeCompare(b.expiraEm ?? ''))[0];
+    const terminou = acessoTerminou(proximo.expiraEm);
+    const texto = rotuloPrazo(proximo.expiraEm, formatDataHora);
+    return {
+      terminou,
+      texto: pessoa.vinculos.length > 1 ? `${proximo.nomeExploracao}: ${texto}` : texto,
+    };
+  })();
+
   return (
     <Pressable
       onPress={onPress}
@@ -487,6 +528,25 @@ function LinhaPessoa({
             <Icon name="tune-variant" size="xs" color={colors.warning} />
             <Text variant="caption" color={colors.warning}>
               Permissões ajustadas
+            </Text>
+          </View>
+        ) : null}
+        {/* O prazo de acesso, quando existe. É a informação que decide se ainda
+            vale a pena telefonar-lhe: um veterinário cujo acesso caiu ontem não
+            consegue registar o que quer que seja. */}
+        {prazo ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+            <Icon
+              name={prazo.terminou ? 'clock-alert-outline' : 'clock-outline'}
+              size="xs"
+              color={prazo.terminou ? colors.danger : colors.warning}
+            />
+            <Text
+              variant="caption"
+              color={prazo.terminou ? colors.danger : colors.warning}
+              style={{ flex: 1 }}
+              numberOfLines={2}>
+              {prazo.texto}
             </Text>
           </View>
         ) : null}

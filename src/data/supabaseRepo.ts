@@ -99,6 +99,8 @@ type AnimalRow = ComUpdatedAt & {
   estado?: string | null;
   data_saida?: string | null;
   motivo_saida?: string | null;
+  saida_por?: string | null;
+  saida_em?: string | null;
 };
 
 type EventoRow = ComUpdatedAt & {
@@ -123,6 +125,7 @@ type MovimentoRow = ComUpdatedAt & {
   animal_id?: string | null;
   terreno_id?: string | null;
   criado_por?: string | null;
+  criado_em?: string | null;
 };
 
 /* ---- Mapeadores linha ↔ domínio ---- */
@@ -178,6 +181,8 @@ const toAnimal = (r: AnimalRow): Animal => ({
   estado: (r.estado as EstadoAnimal | null) ?? undefined,
   dataSaida: r.data_saida ?? undefined,
   motivoSaida: r.motivo_saida ?? undefined,
+  saidaPor: r.saida_por ?? undefined,
+  saidaEm: r.saida_em ?? undefined,
 });
 
 const toEvento = (r: EventoRow): Evento => ({
@@ -204,6 +209,7 @@ const toMovimento = (r: MovimentoRow): Movimento => ({
   animalId: r.animal_id ?? undefined,
   terrenoId: r.terreno_id ?? undefined,
   criadoPor: r.criado_por ?? undefined,
+  criadoEm: r.criado_em ?? undefined,
 });
 
 /* ---- Payloads para INSERT/UPSERT (omitem `id` gerado no client) ---- */
@@ -396,7 +402,7 @@ export async function explicarRecusa(msg: string): Promise<string> {
   if (!supabase || !/row.level security/i.test(msg)) return traduzErroServidor(msg);
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
-    return 'A sua sessão terminou. Volte a entrar na conta e tente de novo — a alteração não se perdeu.';
+    return 'A sua sessão terminou. Volte a entrar na conta e tente de novo: a alteração não se perdeu.';
   }
   return traduzErroServidor(msg);
 }
@@ -451,7 +457,7 @@ async function gravarComVersao(
   if (!atual) {
     // Ou foi eliminada por outra pessoa, ou a RLS nem sequer no-la deixa ver.
     // Recriá-la seria ressuscitar um registo que alguém apagou de propósito.
-    return `${ERRO_CONFLITO}: o registo já não existe no servidor — foi eliminado por outra pessoa.`;
+    return `${ERRO_CONFLITO}: o registo já não existe no servidor, foi eliminado por outra pessoa.`;
   }
 
   const versaoServidor = (atual as ComUpdatedAt).updated_at;
@@ -495,13 +501,35 @@ export async function upsertAnimalSupabase(a: Animal): Promise<string | null> {
 /**
  * Elimina pelo RPC, não por `delete` direto: o privilégio de DELETE na tabela
  * `animal` foi retirado ao papel `authenticated` (ver
- * `supabase/schema_eliminar.sql`), e o RPC é o único caminho. É ele que recusa
- * eliminar um animal com eventos ou com crias, devolvendo a razão em PT-PT.
+ * `supabase/schema_eliminar.sql`), e o RPC é o único caminho.
+ *
+ * O nome enganou durante algum tempo: desde `schema_auditoria.sql` o RPC já não
+ * apaga a linha, marca-a como `eliminado` e regista quem o fez. Continua a
+ * chamar-se assim porque é isso que a pessoa está a pedir — o que mudou foi a
+ * app deixar de destruir o registo para o conseguir dar.
  */
 export async function eliminarAnimalSupabase(id: string): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.rpc('eliminar_animal', { animal_id: id });
   return error ? traduzErroServidor(error.message) : null;
+}
+
+/**
+ * Id → nome das pessoas que partilham comigo pelo menos uma exploração.
+ *
+ * Passa por RPC porque a RLS de `perfil` só deixa cada um ver o seu: um
+ * `select` embutido devolvia nomes vazios para toda a gente menos para o
+ * próprio. Ver `nomes_da_equipa()` em `supabase/schema_auditoria.sql`.
+ */
+export async function nomesDaEquipaSupabase(): Promise<Record<string, string>> {
+  if (!supabase) return {};
+  const { data, error } = await supabase.rpc('nomes_da_equipa');
+  if (error || !data) return {};
+  const out: Record<string, string> = {};
+  for (const linha of data as { u_id: string; u_nome: string }[]) {
+    if (linha?.u_id) out[linha.u_id] = linha.u_nome;
+  }
+  return out;
 }
 
 export async function upsertEventoSupabase(e: Evento): Promise<string | null> {

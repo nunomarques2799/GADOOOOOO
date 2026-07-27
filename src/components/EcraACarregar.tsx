@@ -73,7 +73,7 @@ export function EcraACarregar({ mensagem }: { mensagem?: string }) {
       {demora ? (
         <View style={{ alignItems: 'center', gap: spacing.sm, maxWidth: 420 }}>
           <Text variant="secondary" color={colors.textMuted} center>
-            Está a demorar mais do que o costume. Pode ser falta de rede — ou a sessão
+            Está a demorar mais do que o costume. Pode ser falta de rede, ou a sessão
             ter caducado e ser preciso entrar outra vez.
           </Text>
           <Button label="Terminar sessão e entrar de novo" icon="logout" onPress={sair} />

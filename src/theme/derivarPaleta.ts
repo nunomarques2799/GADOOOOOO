@@ -134,6 +134,11 @@ export function derivar(s: Semente): Paleta {
     primaryTint: misturar(primary, BRANCO, 0.945),
     primaryTintStrong: misturar(primary, BRANCO, 0.855),
     onPrimary: BRANCO,
+    // Todas as paletas derivadas têm cabeçalho escuro (headerFrom/To são a
+    // marca e a sua versão escura), por isso o texto por cima é branco. Uma
+    // paleta de fundo escuro, onde o cabeçalho é claro, é desenhada à mão.
+    textOnDark: BRANCO,
+    textOnDarkMuted: 'rgba(255,255,255,0.82)',
     headerFrom: primaryDarker,
     headerTo: primary,
     background,

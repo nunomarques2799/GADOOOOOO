@@ -68,6 +68,20 @@ function Sonda() {
   return <Text>{aCarregar ? 'a-carregar' : `pronto:${membros.length}`}</Text>;
 }
 
+/** Mostra como ficaram os vínculos depois de o prazo ser aplicado. */
+function SondaPrazo() {
+  const { aCarregar, membros, membrosExpirados, acessoExpirado, roleEm } = useMembros();
+  if (aCarregar) return <Text>a-carregar</Text>;
+  return (
+    <Text>
+      {`vivos:${membros.length} expirados:${membrosExpirados.length}`}
+      {` semAcesso:${acessoExpirado}`}
+      {` roleEmVelha:${roleEm('exp-velha') ?? 'nenhum'}`}
+      {` roleEmNova:${roleEm('exp-nova') ?? 'nenhum'}`}
+    </Text>
+  );
+}
+
 function texto(r: ReactTestRenderer): string {
   const juntar = (no: unknown): string => {
     if (typeof no === 'string') return no;
@@ -78,6 +92,20 @@ function texto(r: ReactTestRenderer): string {
     return '';
   };
   return juntar(r.toJSON());
+}
+
+/**
+ * Desmonta a árvore no fim de cada teste com prazos.
+ *
+ * Não é arrumação: um vínculo com prazo agenda um `setTimeout` para a hora em
+ * que cai, e um prazo de amanhã deixa um temporizador de 24 horas pendurado. O
+ * Jest espera pelo que está pendente antes de sair, e sem isto a suite passava
+ * e ficava a correr para sempre — na CI, um build que nunca termina.
+ */
+async function desmontar(r: ReactTestRenderer): Promise<void> {
+  await act(async () => {
+    r.unmount();
+  });
 }
 
 describe('MembrosProvider', () => {
@@ -131,5 +159,99 @@ describe('MembrosProvider', () => {
 
     // Sem adiantar relógio nenhum: a resposta chegou e o carregamento acabou.
     expect(texto(r)).toBe('pronto:0');
+  });
+});
+
+/**
+ * O prazo de acesso, do lado da app.
+ *
+ * Quem decide de verdade é a RLS (`supabase/schema_acesso_temporario.sql`), mas
+ * se a app continuar a achar que o vínculo vale, mostra ao veterinário botões
+ * que o servidor vai recusar — e uma recusa feita offline só aparece na
+ * sincronização, quando ele já julga que gravou o que fez na visita.
+ */
+describe('vínculos com prazo', () => {
+  beforeEach(() => {
+    mockServidor.responderCom = null;
+    jest.useRealTimers();
+  });
+
+  it('deixa cair os que já passaram do prazo e guarda-os à parte', async () => {
+    const ontem = new Date(Date.now() - 86_400_000).toISOString();
+    const amanha = new Date(Date.now() + 86_400_000).toISOString();
+    mockServidor.responderCom = {
+      data: [
+        { id: 'm1', user_id: 'u-1', exploracao_id: 'exp-velha', role: 'veterinario', expira_em: ontem },
+        { id: 'm2', user_id: 'u-1', exploracao_id: 'exp-nova', role: 'veterinario', expira_em: amanha },
+      ],
+      error: null,
+    };
+
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = create(
+        <MembrosProvider>
+          <SondaPrazo />
+        </MembrosProvider>,
+      );
+    });
+
+    expect(texto(r)).toContain('vivos:1 expirados:1');
+    // E o papel some com o vínculo: é o `roleEm` que decide o que a app mostra.
+    expect(texto(r)).toContain('roleEmVelha:nenhum');
+    expect(texto(r)).toContain('roleEmNova:veterinario');
+    // Ainda tem uma exploração viva, portanto não é o caso de "ficou sem nada".
+    expect(texto(r)).toContain('semAcesso:false');
+
+    await desmontar(r);
+  });
+
+  it('só com vínculos expirados, a app sabe que a pessoa ficou sem acesso', async () => {
+    // É o veterinário depois da visita: conta criada, exploração nenhuma. Sem
+    // este sinal, o que ele encontrava era uma app vazia sem explicação.
+    const ontem = new Date(Date.now() - 86_400_000).toISOString();
+    mockServidor.responderCom = {
+      data: [
+        { id: 'm1', user_id: 'u-1', exploracao_id: 'exp-velha', role: 'veterinario', expira_em: ontem },
+      ],
+      error: null,
+    };
+
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = create(
+        <MembrosProvider>
+          <SondaPrazo />
+        </MembrosProvider>,
+      );
+    });
+
+    expect(texto(r)).toContain('vivos:0 expirados:1');
+    expect(texto(r)).toContain('semAcesso:true');
+
+    await desmontar(r);
+  });
+
+  it('sem prazo nenhum, o vínculo vale (é o caso do dono e do trabalhador)', async () => {
+    mockServidor.responderCom = {
+      data: [
+        { id: 'm1', user_id: 'u-1', exploracao_id: 'exp-nova', role: 'trabalhador', expira_em: null },
+      ],
+      error: null,
+    };
+
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = create(
+        <MembrosProvider>
+          <SondaPrazo />
+        </MembrosProvider>,
+      );
+    });
+
+    expect(texto(r)).toContain('vivos:1 expirados:0');
+    expect(texto(r)).toContain('roleEmNova:trabalhador');
+
+    await desmontar(r);
   });
 });

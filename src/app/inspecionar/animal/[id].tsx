@@ -119,12 +119,12 @@ export default function InspecionarAnimalScreen() {
             <Linha label="Espécie" valor={animal.especie} />
             <Linha label="Sexo" valor={animal.sexo} />
             <Linha label="Nascimento" valor={formatDataPt(animal.dataNascimento)} />
-            <Linha label="Raça" valor={animal.raca ?? '—'} />
-            <Linha label="Cor" valor={animal.corPelagem ?? '—'} />
+            <Linha label="Raça" valor={animal.raca ?? 'Não indicada'} />
+            <Linha label="Cor" valor={animal.corPelagem ?? 'Não indicada'} />
             <Linha label="Brinco (SIA)" valor={animal.numeroIdentificacao ?? 'Sem brinco'} />
-            <Linha label="Identificado em" valor={animal.dataIdentificacao ? formatDataPt(animal.dataIdentificacao) : '—'} />
+            <Linha label="Identificado em" valor={animal.dataIdentificacao ? formatDataPt(animal.dataIdentificacao) : 'Não indicada'} />
             <Linha label="SNIRA comunicado" valor={animal.comunicadoSnira ? 'Sim' : 'Não'} />
-            <Linha label="Prox. parto" valor={animal.dataPrevistaParto ? formatDataPt(animal.dataPrevistaParto) : '—'} last />
+            <Linha label="Prox. parto" valor={animal.dataPrevistaParto ? formatDataPt(animal.dataPrevistaParto) : 'Sem parto previsto'} last />
           </View>
         </Card>
 

@@ -87,9 +87,14 @@ export default function ImportarAnimaisScreen() {
     if (aLer) return;
     setALer(true);
     try {
-      // O efetivo todo vai para a leitura — é o que deixa saltar os animais que
+      // O efetivo todo vai para a leitura: é o que deixa saltar os animais que
       // já existem em vez de os duplicar (por ID, brinco, ou nome + nascimento).
-      const r = await escolherELerExcel(animais);
+      //
+      // Menos os eliminados. Um registo eliminado continua na base para o
+      // histórico, mas não aparece em lado nenhum onde se possa ver: travar a
+      // importação por causa dele dava um "já existe um animal com este brinco"
+      // a apontar para um animal que a app não mostra em parte nenhuma.
+      const r = await escolherELerExcel(animais.filter((a) => a.estado !== 'eliminado'));
       if (r) {
         setResultado(r);
         setErro(null);
@@ -183,7 +188,7 @@ export default function ImportarAnimaisScreen() {
           {contaSuspensa ? (
             <Card>
               <Text variant="secondary" color={colors.danger}>
-                A conta está suspensa ou por aprovar — não é possível gravar animais.
+                A conta está suspensa ou por aprovar: não é possível gravar animais.
               </Text>
             </Card>
           ) : editaveis.length === 0 ? (
@@ -324,15 +329,15 @@ function motivoDuplicado(l: LinhaImportacao): string {
   switch (l.duplicadoPor) {
     case 'id':
       return naConta
-        ? 'Este animal já está na app — veio deste mesmo ficheiro exportado. Não foi importado outra vez.'
+        ? 'Este animal já está na app: veio deste mesmo ficheiro exportado. Não foi importado outra vez.'
         : 'Esta linha repete outra do ficheiro (mesmo ID).';
     case 'nome-data':
       return naConta
-        ? 'Já existe um animal com este nome e data de nascimento — não foi importado. Se for outro animal, mude-lhe o nome ou dê-lhe brinco.'
+        ? 'Já existe um animal com este nome e data de nascimento: não foi importado. Se for outro animal, mude-lhe o nome ou dê-lhe brinco.'
         : 'Outra linha do ficheiro tem o mesmo nome e data de nascimento.';
     default:
       return naConta
-        ? 'Já existe um animal com este brinco — não foi importado.'
+        ? 'Já existe um animal com este brinco: não foi importado.'
         : 'Este brinco aparece mais do que uma vez no ficheiro.';
   }
 }
@@ -473,7 +478,7 @@ function Previsualizacao({
             variant="label"
             color={colors.textSecondary}
             style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-            JÁ EXISTEM — NÃO IMPORTADOS
+            JÁ EXISTEM (NÃO IMPORTADOS)
           </Text>
           <Card>
             <View style={{ gap: spacing.sm }}>

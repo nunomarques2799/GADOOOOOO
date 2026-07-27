@@ -283,7 +283,7 @@ export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alert
           data: a.fimIntervaloSeguranca,
           gravidade: 'info',
           titulo: 'Período de segurança',
-          descricao: `${rotulo}: em intervalo de segurança — não vender para abate (faltam ${dias} dia(s)).`,
+          descricao: `${rotulo}: em intervalo de segurança, não vender para abate (faltam ${dias} dia(s)).`,
           diasRestantes: dias,
         });
       }

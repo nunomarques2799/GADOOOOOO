@@ -356,7 +356,7 @@ export default function ClienteDetalheScreen() {
                   <View style={{ flex: 1 }}>
                     <Text variant="bodyStrong">{legendaEvento(h.tipo)}</Text>
                     <Text variant="secondary" color={colors.textSecondary}>
-                      {h.plano ?? '—'}
+                      {h.plano ?? 'Sem plano'}
                       {h.precoMensal != null ? ` · ${h.precoMensal.toFixed(0)}€/mês` : ''}
                       {h.estado ? ` · ${h.estado}` : ''}
                     </Text>

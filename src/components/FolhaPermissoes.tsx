@@ -214,7 +214,7 @@ export function FolhaPermissoes({
               <Card>
                 <Text variant="bodyStrong">Dono da exploração</Text>
                 <Text variant="secondary" color={colors.textSecondary}>
-                  Quem é dono pode tudo, e isso não se ajusta — sem isto, uma exploração podia
+                  Quem é dono pode tudo, e isso não se ajusta: sem isto, uma exploração podia
                   ficar sem ninguém que lhe consiga mexer.
                 </Text>
               </Card>

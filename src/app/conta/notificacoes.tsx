@@ -13,6 +13,7 @@ import {
 } from '@/data/notificacoes';
 import { pedirPermissao, suportaNotificacoes, temPermissao } from '@/data/notificacoesLocais';
 import { useGado } from '@/data/store';
+import { definirVibracao, vibracaoLigada, vibrarSucesso } from '@/data/vibrar';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
 
@@ -65,6 +66,8 @@ export default function NotificacoesScreen() {
           </Card>
 
           <AvisoNoTelemovel />
+
+          <VibracaoAoGravar />
 
           {CATEGORIAS.map((c) => (
             <LinhaCategoria
@@ -162,6 +165,64 @@ function AvisoNoTelemovel() {
         {ligado
           ? 'O telemóvel avisa-o de manhã quando um prazo se aproxima, mesmo com a app fechada e sem internet.'
           : 'Os avisos só aparecem quando abrir a app.'}
+      </Text>
+    </Card>
+  );
+}
+
+/**
+ * Vibrar ao gravar.
+ *
+ * Fica nesta página porque é a mesma pergunta das outras — "como é que a app me
+ * avisa" — e não uma questão de aspeto. A preferência é do APARELHO (como a
+ * paleta), não da conta: quem trabalha com luvas quer isto ligado no telemóvel
+ * dele e não tem nada a dizer sobre o computador da secretária.
+ *
+ * Ligar dispara uma vibração de propósito: é a única forma de perceber o que se
+ * acabou de ligar sem ir gravar alguma coisa para experimentar.
+ */
+function VibracaoAoGravar() {
+  const [ligada, setLigada] = useState(() => vibracaoLigada());
+
+  function alternar(v: boolean) {
+    definirVibracao(v);
+    setLigada(v);
+    if (v) vibrarSucesso();
+  }
+
+  return (
+    <Card>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: radii.pill,
+            backgroundColor: ligada ? colors.primaryTint : colors.surfaceSunken,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Icon
+            name={ligada ? 'vibrate' : 'vibrate-off'}
+            size="md"
+            color={ligada ? colors.primary : colors.textMuted}
+          />
+        </View>
+        <Text variant="bodyStrong" style={{ flex: 1 }}>
+          Vibrar ao gravar
+        </Text>
+        <Switch
+          value={ligada}
+          onValueChange={alternar}
+          trackColor={{ true: colors.primary, false: colors.borderStrong }}
+          thumbColor={colors.white}
+          accessibilityLabel="Vibrar ao gravar"
+        />
+      </View>
+      <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
+        {ligada
+          ? 'O aparelho dá um toque curto quando um registo fica gravado, e um toque diferente quando alguma coisa falha. Dá para confirmar sem ler o ecrã.'
+          : 'Os registos só se confirmam pelo aviso no ecrã.'}
       </Text>
     </Card>
   );

@@ -9,6 +9,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { agruparTerrenosPorExploracao, emLinhas } from '@/data/terrenos';
 import type { Terreno } from '@/data/types';
+import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, spacing } from '@/theme';
 
@@ -32,6 +33,7 @@ export default function TerrenosScreen() {
   const desktop = useDesktop();
   const { terrenos, exploracoes, animais } = useGado();
   const { pode } = useMembros();
+  const { controlo: controloAtualizar } = useAtualizarPuxando();
 
   // Quantos animais em cada terreno — é a informação que dá sentido à lista.
   // Só o efetivo ativo: contar falecidos e vendidos dava um número que não
@@ -67,6 +69,11 @@ export default function TerrenosScreen() {
   const semTerrenos = terrenos.length === 0;
   const primeiraEditavel = exploracoes.find((e) => pode(e.id, 'gerirTerrenos'));
 
+  // Com uma exploração só, o cabeçalho de grupo repetia o óbvio: não há outra
+  // de onde separar estes terrenos, e o nome dela já está no topo do separador
+  // Explorações. Fica só a lista, e o botão flutuante trata de criar.
+  const agruparPorExploracao = exploracoes.length > 1;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SectionList
@@ -90,19 +97,21 @@ export default function TerrenosScreen() {
             {linha.length < colunas ? <View style={{ flex: linha.length }} /> : null}
           </View>
         )}
-        renderSectionHeader={({ section }) => (
-          <CabecalhoExploracao
-            nome={section.nome}
-            quantos={section.terrenos.length}
-            onNovo={
-              section.exploracaoId && pode(section.exploracaoId, 'gerirTerrenos')
-                ? () => criarEm(section.exploracaoId!)
-                : undefined
-            }
-          />
-        )}
+        renderSectionHeader={({ section }) =>
+          agruparPorExploracao ? (
+            <CabecalhoExploracao
+              nome={section.nome}
+              quantos={section.terrenos.length}
+              onNovo={
+                section.exploracaoId && pode(section.exploracaoId, 'gerirTerrenos')
+                  ? () => criarEm(section.exploracaoId!)
+                  : undefined
+              }
+            />
+          ) : null
+        }
         renderSectionFooter={({ section }) =>
-          section.terrenos.length === 0 ? (
+          agruparPorExploracao && section.terrenos.length === 0 ? (
             <Card style={{ marginBottom: spacing.md }}>
               <Text variant="secondary" color={colors.textSecondary}>
                 Esta exploração ainda não tem terrenos registados.
@@ -114,6 +123,7 @@ export default function TerrenosScreen() {
         }
         stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
+        refreshControl={controloAtualizar}
         contentContainerStyle={{
           width: '100%',
           maxWidth: desktop ? layout.conteudoDesktop : undefined,
@@ -137,7 +147,7 @@ export default function TerrenosScreen() {
             title="Sem terrenos"
             message={
               exploracoes.length === 0
-                ? 'Crie primeiro uma exploração — os terrenos pertencem a uma.'
+                ? 'Crie primeiro uma exploração: os terrenos pertencem a uma.'
                 : 'Registe os terrenos onde o gado anda para saber onde está cada animal.'
             }
             actionLabel={primeiraEditavel ? 'Novo terreno' : undefined}

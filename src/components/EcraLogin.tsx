@@ -178,7 +178,7 @@ export function EcraLogin() {
                 <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
                   {recuperado
                     ? 'Se existir uma conta com este email, enviámos um link para redefinir a palavra-passe. Verifique a caixa de entrada.'
-                    : 'Conta criada. Enviámos um email de confirmação — confirme e depois entre.'}
+                    : 'Conta criada. Enviámos um email de confirmação: confirme e depois entre.'}
                 </Text>
               </View>
             ) : null}
