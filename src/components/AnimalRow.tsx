@@ -28,7 +28,7 @@ export const AnimalRow = memo(function AnimalRow({
   const router = useRouter();
   const meta = especieMeta[animal.especie];
   const semBrinco = animal.especie === 'Bovino' && !animal.numeroIdentificacao;
-  const saiu = animal.estado === 'falecido' || animal.estado === 'vendido';
+  const saiu = !!animal.estado && animal.estado !== 'ativo';
 
   const femea = animal.sexo === 'Fêmea';
   const sexoCor = femea ? colors.femea : colors.macho;
@@ -37,7 +37,12 @@ export const AnimalRow = memo(function AnimalRow({
   return (
     <Card
       onPress={() => router.push(`/animal/${animal.id}`)}
-      accessibilityLabel={`${animal.nome ?? 'Animal'}, ${animal.especie}, ${idadeExtenso(animal.dataNascimento)}`}
+      // O ponto vermelho no canto do retrato quer dizer "bovino por identificar"
+      // (ver abaixo). Uma cor não se lê num leitor de ecrã, e a falta de brinco é
+      // um problema legal — por isso vai também na etiqueta falada.
+      accessibilityLabel={`${animal.nome ?? 'Animal'}, ${animal.especie}, ${idadeExtenso(
+        animal.dataNascimento,
+      )}${semBrinco ? ', por identificar: sem brinco' : ''}`}
       style={{ marginBottom: spacing.sm, opacity: saiu ? 0.7 : 1 }}
       padded={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.sm }}>
@@ -69,6 +74,10 @@ export const AnimalRow = memo(function AnimalRow({
               iconSize={30}
             />
           )}
+          {/* Bovino sem brinco: o ponto vermelho. A lei obriga a identificar
+              um bovino em poucos dias, e é o único aviso que se vê sem abrir a
+              ficha. A linha "Sem brinco" logo abaixo é que o explica por
+              palavras — sozinho, o ponto seria um enfeite por decifrar. */}
           {semBrinco ? (
             <View
               style={{
@@ -97,6 +106,9 @@ export const AnimalRow = memo(function AnimalRow({
             ) : null}
             {animal.estado === 'vendido' ? (
               <Badge tone="info" icon="cash" label="Vendido" />
+            ) : null}
+            {animal.estado === 'eliminado' ? (
+              <Badge tone="danger" icon="trash-can-outline" label="Eliminado" />
             ) : null}
           </View>
           <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>

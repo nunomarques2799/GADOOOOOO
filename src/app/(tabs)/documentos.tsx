@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -37,6 +37,15 @@ export default function DocumentosScreen() {
   const [relatorioAberto, setRelatorioAberto] = useState(false);
 
   const comFicheiros = Platform.OS === 'web' && excelDisponivel;
+
+  // Os eliminados ficam de fora da exportação. O registo existe (é o que o
+  // histórico do efetivo mostra), mas exportar animais que o criador tirou da
+  // lista dava uma folha com mais linhas do que a app mostra em lado nenhum, e
+  // uma contagem no botão que não batia certo com nada.
+  const exportaveis = useMemo(
+    () => animais.filter((a) => a.estado !== 'eliminado'),
+    [animais],
+  );
 
   /**
    * Escreve um ficheiro e diz o que aconteceu.
@@ -94,12 +103,12 @@ export default function DocumentosScreen() {
                 <Linha
                   icon="microsoft-excel"
                   label="Exportar animais (Excel)"
-                  trailing={String(animais.length)}
+                  trailing={String(exportaveis.length)}
                   onPress={() =>
                     descarregar(
                       `animais-${hojeISO()}.xlsx`,
-                      `${animais.length} ${animais.length === 1 ? 'animal' : 'animais'}`,
-                      () => exportarAnimaisExcel(animais, exploracoes, terrenos),
+                      `${exportaveis.length} ${exportaveis.length === 1 ? 'animal' : 'animais'}`,
+                      () => exportarAnimaisExcel(exportaveis, exploracoes, terrenos),
                     )
                   }
                 />
@@ -147,7 +156,7 @@ export default function DocumentosScreen() {
                   <Text variant="bodyStrong">Ficheiros são do computador</Text>
                   <Text variant="secondary" color={colors.textSecondary}>
                     Exportar para Excel, imprimir e guardar relatórios em PDF faz-se na app
-                    de computador ou no site da app — é lá que há onde guardar os ficheiros.
+                    de computador ou no site da app: é lá que há onde guardar os ficheiros.
                   </Text>
                 </View>
               </View>
@@ -249,7 +258,7 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
           <View style={{ alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm }}>
             <Icon name="note-text-outline" size="lg" color={colors.textMuted} />
             <Text variant="secondary" color={colors.textSecondary} center>
-              Ainda não tem notas. Guarde aqui o que precisar de ter à mão — contactos,
+              Ainda não tem notas. Guarde aqui o que precisar de ter à mão: contactos,
               lembretes, o que quiser.
             </Text>
           </View>

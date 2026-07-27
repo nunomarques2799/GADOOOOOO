@@ -49,7 +49,7 @@ export function BannerNaoGravado() {
           <Text variant="secondary" color={colors.textSecondary}>
             {conflitos === falhadas.length
               ? 'Outra pessoa mexeu nos mesmos registos primeiro. Veja o que está em falta e volte a registar o que ainda fizer sentido.'
-              : 'O servidor não as aceitou. Veja quais foram — o que se registou nelas não está guardado.'}
+              : 'O servidor não as aceitou. Veja quais foram: o que se registou nelas não está guardado.'}
           </Text>
         </View>
       </View>

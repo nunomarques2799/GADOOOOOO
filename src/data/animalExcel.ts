@@ -154,7 +154,7 @@ export const COLUNAS: ColunaTemplate[] = [
     rotulo: 'Nº de brinco (SIA)',
     obrigatorio: false,
     exemplo: 'PT 6120 0011 2201',
-    ajuda: 'Número do brinco oficial. Deixe vazio se ainda não tem — a app cria o alerta de identificação.',
+    ajuda: 'Número do brinco oficial. Deixe vazio se ainda não tem: a app cria o alerta de identificação.',
     aliases: ['brinco', 'sia', 'numero de identificacao', 'n brinco'],
   },
   {
@@ -211,7 +211,7 @@ export const COLUNAS: ColunaTemplate[] = [
     obrigatorio: false,
     exemplo: '',
     ajuda:
-      'Preenchido pela app quando exporta — deixe como está. É por aqui que a app '
+      'Preenchido pela app quando exporta: deixe como está. É por aqui que a app '
       + 'reconhece os animais que já tem e não os importa outra vez. Nas linhas que '
       + 'acrescentar, deixe em branco.',
     aliases: ['id', 'id da app', 'identificador'],
@@ -453,13 +453,13 @@ export function linhaParaAnimal(
   const txtFin = texto(valores.finalidade);
   if (txtFin) {
     const f = parseFinalidade(valores.finalidade);
-    if (!f) avisos.push(`Finalidade "${txtFin}" não reconhecida — ignorada.`);
+    if (!f) avisos.push(`Finalidade "${txtFin}" não reconhecida, por isso ignorada.`);
     else if (especie && especie !== 'Bovino')
-      avisos.push('Finalidade só se aplica a bovinos — ignorada.');
+      avisos.push('Finalidade só se aplica a bovinos, por isso ignorada.');
     else {
       finalidade = f;
       if (sexo && !finalidadesPara(sexo).includes(f))
-        avisos.push(`Finalidade "${f}" não é típica de ${sexo.toLowerCase()} — foi guardada na mesma.`);
+        avisos.push(`Finalidade "${f}" não é típica de ${sexo.toLowerCase()}, mas foi guardada na mesma.`);
     }
   }
 
@@ -468,7 +468,7 @@ export function linhaParaAnimal(
   const txtIdent = textoData(valores.dataIdentificacao);
   if (txtIdent) {
     const di = parseDataPt(txtIdent);
-    if (!di) avisos.push(`Data de identificação "${txtIdent}" inválida — ignorada.`);
+    if (!di) avisos.push(`Data de identificação "${txtIdent}" inválida, por isso ignorada.`);
     else dataIdentificacao = di;
   }
 
@@ -477,7 +477,7 @@ export function linhaParaAnimal(
   const txtSnira = texto(valores.comunicadoSnira);
   if (txtSnira) {
     sniraValor = parseBooleano(valores.comunicadoSnira);
-    if (sniraValor === null) avisos.push(`"${txtSnira}" não é Sim nem Não — assumido Sim.`);
+    if (sniraValor === null) avisos.push(`"${txtSnira}" não é Sim nem Não, por isso ficou Sim.`);
   }
 
   // ---- Data prevista de parto (opcional, pode ser futura) ----
@@ -485,8 +485,8 @@ export function linhaParaAnimal(
   const txtParto = textoData(valores.dataPrevistaParto);
   if (txtParto) {
     const dp = parseDataPt(txtParto, { permitirFuturo: true });
-    if (!dp) avisos.push(`Data prevista de parto "${txtParto}" inválida — ignorada.`);
-    else if (sexo === 'Macho') avisos.push('Data de parto indicada num macho — ignorada.');
+    if (!dp) avisos.push(`Data prevista de parto "${txtParto}" inválida, por isso ignorada.`);
+    else if (sexo === 'Macho') avisos.push('Data de parto indicada num macho, por isso ignorada.');
     else dataPrevistaParto = dp;
   }
 
@@ -583,7 +583,7 @@ function marcarDuplicados(
       if (nomeData) nomesVistos.add(nomeData);
       if (!id && !brinco && !nomeData)
         l.avisos.push(
-          'Sem brinco nem nome — não conseguimos confirmar se este animal já existe na app. '
+          'Sem brinco nem nome, não conseguimos confirmar se este animal já existe na app. '
             + 'Confira que não o está a registar duas vezes.',
         );
     }

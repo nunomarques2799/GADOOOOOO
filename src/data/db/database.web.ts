@@ -10,7 +10,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 const indisponivel = (): never => {
-  throw new Error('SQLite não está disponível na web — o store usa dados em memória.');
+  throw new Error('SQLite não está disponível na web: o store usa dados em memória.');
 };
 
 export function abrirBd(): SQLiteDatabase {

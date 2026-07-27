@@ -1,20 +1,16 @@
 /**
- * Testes da regra de eliminação.
+ * Testes do aviso que antecede uma eliminação.
  *
- * Porquê estes: "eliminar" servia dois casos opostos com a mesma operação —
- * apagar um registo criado por engano (o animal nunca existiu) e apagar um
- * animal com meses de histórico (a cascata leva os eventos atrás, incluindo
- * os que outra pessoa registou hoje). A condição "sem histórico" é o que os
- * separa, e enganar-se nela ou destrói trabalho ou impede o criador de
- * corrigir um engano.
- *
- * Espelha o RPC `eliminar_animal` de `supabase/schema_eliminar.sql`. Ao mudar
- * um, mudar o outro.
+ * Porquê estes: eliminar deixou de apagar (ver `supabase/schema_auditoria.sql`)
+ * e o que resta é dizer à pessoa, ANTES de ela decidir, o que fica guardado.
+ * Contar a menos faria a app prometer que se perde trabalho que não se perde;
+ * contar a mais faria uma eliminação simples parecer perigosa. As duas versões
+ * levam a mesma coisa: alguém que não carrega no botão de que precisa.
  */
 
 import { describe, expect, it } from '@jest/globals';
 
-import { filhosDe, impedimentoParaEliminar, rotuloAnimal } from '../genealogia';
+import { filhosDe, historicoQueFicaGuardado, rotuloAnimal } from '../genealogia';
 import type { Animal, Evento } from '../types';
 
 function animal(id: string, patch: Partial<Animal> = {}): Animal {
@@ -39,66 +35,50 @@ function evento(animalId: string, patch: Partial<Evento> = {}): Evento {
   };
 }
 
-describe('impedimentoParaEliminar', () => {
-  it('deixa eliminar um registo acabado de criar por engano', () => {
-    // É o caso legítimo: enganou-se a registar, o animal nunca existiu.
+describe('historicoQueFicaGuardado', () => {
+  it('não diz nada sobre um registo acabado de criar por engano', () => {
+    // Não há histórico nenhum a guardar: uma frase a dizê-lo seria ruído em
+    // cima do único caso em que eliminar não custa nada a ninguém.
     const a = animal('a1');
-    expect(impedimentoParaEliminar(a, [], [a])).toBeNull();
+    expect(historicoQueFicaGuardado(a, [], [a])).toBeNull();
   });
 
-  it('impede quando o animal tem histórico', () => {
+  it('conta um registo do histórico', () => {
     const a = animal('a1');
-    const motivo = impedimentoParaEliminar(a, [evento('a1')], [a]);
-    expect(motivo).toContain('um registo no histórico');
+    expect(historicoQueFicaGuardado(a, [evento('a1')], [a])).toContain('um registo no histórico');
   });
 
-  it('conta os registos do histórico, para a mensagem ser concreta', () => {
+  it('conta os registos do histórico, para a frase ser concreta', () => {
     const a = animal('a1');
-    const motivo = impedimentoParaEliminar(a, [evento('a1'), evento('a1'), evento('a1')], [a]);
-    expect(motivo).toContain('3 registos');
+    const texto = historicoQueFicaGuardado(a, [evento('a1'), evento('a1'), evento('a1')], [a]);
+    expect(texto).toContain('3 registos');
   });
 
   it('ignora eventos de outros animais', () => {
-    // Um erro aqui bloquearia eliminações legítimas sem explicação nenhuma.
     const a = animal('a1');
     const outro = animal('a2');
-    expect(impedimentoParaEliminar(a, [evento('a2')], [a, outro])).toBeNull();
+    expect(historicoQueFicaGuardado(a, [evento('a2')], [a, outro])).toBeNull();
   });
 
-  it('impede quando é mãe de outro animal', () => {
-    // Apagar partiria a árvore genealógica da cria.
+  it('conta as crias de que é mãe', () => {
     const mae = animal('m1');
     const cria = animal('c1', { maeId: 'm1' });
-    const motivo = impedimentoParaEliminar(mae, [], [mae, cria]);
-    expect(motivo).toContain('mãe ou pai');
+    expect(historicoQueFicaGuardado(mae, [], [mae, cria])).toContain('uma cria');
   });
 
-  it('impede quando é pai de outro animal', () => {
+  it('conta as crias de que é pai', () => {
     const pai = animal('p1', { sexo: 'Macho' });
-    const cria = animal('c1', { paiId: 'p1' });
-    expect(impedimentoParaEliminar(pai, [], [pai, cria])).not.toBeNull();
+    const crias = [animal('c1', { paiId: 'p1' }), animal('c2', { paiId: 'p1' })];
+    expect(historicoQueFicaGuardado(pai, [], [pai, ...crias])).toContain('2 crias');
   });
 
-  it('conta as crias', () => {
-    const mae = animal('m1');
-    const crias = [animal('c1', { maeId: 'm1' }), animal('c2', { maeId: 'm1' })];
-    expect(impedimentoParaEliminar(mae, [], [mae, ...crias])).toContain('2 animais');
-  });
-
-  it('o histórico fala primeiro — é a razão mais concreta para o criador', () => {
+  it('junta as duas coisas numa frase só', () => {
+    // Duas frases seguidas, cada uma com o seu "ficam guardados", liam-se como
+    // um erro da app.
     const mae = animal('m1');
     const cria = animal('c1', { maeId: 'm1' });
-    const motivo = impedimentoParaEliminar(mae, [evento('m1')], [mae, cria]);
-    expect(motivo).toContain('histórico');
-  });
-
-  it('um animal marcado como falecido continua a não se poder eliminar', () => {
-    // Marcar a saída é precisamente a alternativa a eliminar; se depois disso
-    // se pudesse eliminar na mesma, a regra não valia nada — a saída cria um
-    // evento (Morte/Venda), e é esse evento que a protege.
-    const a = animal('a1', { estado: 'falecido', dataSaida: '2026-06-01' });
-    const morte = evento('a1', { tipo: 'Morte' });
-    expect(impedimentoParaEliminar(a, [morte], [a])).not.toBeNull();
+    const texto = historicoQueFicaGuardado(mae, [evento('m1')], [mae, cria]);
+    expect(texto).toBe('Ficam guardados um registo no histórico e uma cria na genealogia.');
   });
 });
 

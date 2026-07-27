@@ -311,7 +311,7 @@ export default function InicioScreen() {
                   {online
                     ? `A sincronizar ${pendentesSinc} alteração${pendentesSinc > 1 ? 'ões' : ''}…`
                     : pendentesSinc > 0
-                      ? `Sem ligação. ${pendentesSinc} alteração${pendentesSinc > 1 ? 'ões' : ''} guardada${pendentesSinc > 1 ? 's' : ''} — envio automático quando houver rede.`
+                      ? `Sem ligação. ${pendentesSinc} alteração${pendentesSinc > 1 ? 'ões' : ''} guardada${pendentesSinc > 1 ? 's' : ''}. Envio automático quando houver rede.`
                       : 'Sem ligação. Está a trabalhar offline; os dados estão guardados no dispositivo.'}
                 </Text>
               </View>

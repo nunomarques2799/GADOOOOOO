@@ -27,7 +27,10 @@ export type Capacidade =
   | 'gerirTerrenos'
   /** Criar e editar animais, e registar eventos. */
   | 'editarAnimais'
-  /** Apagar o registo de um animal e todo o seu histórico. */
+  /**
+   * Tirar um animal da lista. Não apaga nada: marca-o como eliminado e guarda
+   * quem o fez (ver `supabase/schema_auditoria.sql`).
+   */
   | 'eliminarAnimais'
   /** Marcar um animal como falecido ou vendido. */
   | 'registarSaida'
@@ -237,13 +240,13 @@ export function explicacaoCapacidade(c: Capacidade): string {
     case 'editarAnimais':
       return 'Registar animais novos, corrigir fichas e lançar vacinas, medicamentos, partos e pesagens.';
     case 'eliminarAnimais':
-      return 'Apagar o registo de um animal sem histórico. Um animal com eventos ou crias nunca se apaga.';
+      return 'Tirar um animal da lista para sempre. O registo fica guardado no histórico do efetivo, com o nome de quem o eliminou.';
     case 'registarSaida':
       return 'Marcar um animal como falecido ou vendido.';
     case 'registarDespesa':
       return 'Lançar o que se gastou: ração, gasóleo, energia, rendas.';
     case 'registarReceita':
-      return 'Lançar o que entrou: vendas, leite, subsídios — e o preço de uma venda.';
+      return 'Lançar o que entrou: vendas, leite, subsídios, e o preço de uma venda.';
     case 'registarCustoTratamento':
       return 'Escrever o custo (€) de uma vacina ou de um medicamento que está a registar.';
   }

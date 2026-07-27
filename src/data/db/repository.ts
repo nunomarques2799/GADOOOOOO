@@ -119,6 +119,8 @@ function toAnimal(r: Row): Animal {
     estado: asStr(r.estado) as EstadoAnimal | undefined,
     dataSaida: asStr(r.dataSaida),
     motivoSaida: asStr(r.motivoSaida),
+    saidaPor: asStr(r.saidaPor),
+    saidaEm: asStr(r.saidaEm),
   };
 }
 
@@ -147,6 +149,7 @@ function toMovimento(r: Row): Movimento {
     animalId: asStr(r.animalId),
     terrenoId: asStr(r.terrenoId),
     criadoPor: asStr(r.criadoPor),
+    criadoEm: asStr(r.criadoEm),
   };
 }
 
@@ -213,15 +216,16 @@ export function guardarAnimal(db: SQLiteDatabase, a: Animal): void {
      (id, exploracaoId, terrenoId, maeId, paiId, nome, especie, sexo, dataNascimento, raca, corPelagem,
       casa, numeroCasa, finalidade,
       numeroIdentificacao, dataIdentificacao, tipoIdentificacao, fotografia, fimIntervaloSeguranca,
-      dataPrevistaParto, comunicadoSnira, estado, dataSaida, motivoSaida, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      dataPrevistaParto, comunicadoSnira, estado, dataSaida, motivoSaida, saidaPor, saidaEm, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       a.id, a.exploracaoId, txt(a.terrenoId), txt(a.maeId), txt(a.paiId), txt(a.nome), a.especie, a.sexo,
       a.dataNascimento, txt(a.raca), txt(a.corPelagem),
       txt(a.casa), txt(a.numeroCasa), txt(a.finalidade),
       txt(a.numeroIdentificacao), txt(a.dataIdentificacao),
       txt(a.tipoIdentificacao), txt(a.fotografia), txt(a.fimIntervaloSeguranca), txt(a.dataPrevistaParto),
-      bool(a.comunicadoSnira), txt(a.estado), txt(a.dataSaida), txt(a.motivoSaida), agora(),
+      bool(a.comunicadoSnira), txt(a.estado), txt(a.dataSaida), txt(a.motivoSaida),
+      txt(a.saidaPor), txt(a.saidaEm), agora(),
     ],
   );
 }
@@ -238,11 +242,12 @@ export function guardarMovimento(db: SQLiteDatabase, m: Movimento): void {
   db.runSync(
     `INSERT OR REPLACE INTO movimento
      (id, exploracaoId, direcao, categoria, valor, data, descricao, contraparte,
-      animalId, terrenoId, criadoPor, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      animalId, terrenoId, criadoPor, criadoEm, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       m.id, m.exploracaoId, m.direcao, m.categoria, m.valor, m.data, m.descricao,
-      txt(m.contraparte), txt(m.animalId), txt(m.terrenoId), txt(m.criadoPor), agora(),
+      txt(m.contraparte), txt(m.animalId), txt(m.terrenoId), txt(m.criadoPor),
+      txt(m.criadoEm ?? new Date().toISOString()), agora(),
     ],
   );
 }
@@ -252,16 +257,26 @@ export function eliminarMovimento(db: SQLiteDatabase, id: string): void {
 }
 
 /**
- * Elimina um animal e o seu histórico de eventos (sem órfãos na BD).
- * Os movimentos que lhe estavam imputados ficam, sem animal: o dinheiro saiu
- * na mesma e não pode desaparecer da conta só porque o animal foi apagado.
+ * Marca um animal como eliminado. NÃO apaga a linha, nem os eventos, nem
+ * desliga os movimentos que lhe estavam imputados: espelha o que o RPC
+ * `eliminar_animal` faz no servidor desde `supabase/schema_auditoria.sql`.
+ *
+ * O `DELETE` que aqui esteve levava o histórico atrás por cascata. Isso deixava
+ * as duas persistências da app a dizer coisas diferentes sobre o mesmo gesto —
+ * e a versão local era a que destruía trabalho.
  */
-export function eliminarAnimal(db: SQLiteDatabase, id: string): void {
-  db.withTransactionSync(() => {
-    db.runSync('DELETE FROM evento WHERE animalId = ?', [id]);
-    db.runSync('UPDATE movimento SET animalId = NULL WHERE animalId = ?', [id]);
-    db.runSync('DELETE FROM animal WHERE id = ?', [id]);
-  });
+export function eliminarAnimal(db: SQLiteDatabase, id: string, quem?: string): void {
+  db.runSync(
+    `UPDATE animal
+        SET estado = 'eliminado',
+            terrenoId = NULL,
+            dataSaida = COALESCE(dataSaida, ?),
+            saidaPor = ?,
+            saidaEm = ?,
+            updatedAt = ?
+      WHERE id = ?`,
+    [new Date().toISOString().slice(0, 10), txt(quem), new Date().toISOString(), agora(), id],
+  );
 }
 
 /** Elimina um terreno (os animais lá afetos ficam sem terreno atribuído). */

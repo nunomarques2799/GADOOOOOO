@@ -60,7 +60,7 @@ export default function AjudaScreen() {
                 onPress={() =>
                   void Linking.openURL(
                     'mailto:apoio@gestaogado.pt?subject=' +
-                      encodeURIComponent('Ajuda — Terrabovina'),
+                      encodeURIComponent('Ajuda com a Terrabovina'),
                   )
                 }
               />
@@ -179,6 +179,6 @@ const PERGUNTAS = [
   {
     titulo: 'Como termino a sessão ou apago a conta?',
     resposta:
-      'Em Perfil, na secção "Conta". Terminar sessão volta ao ecrã de entrada. Apagar a conta remove os seus dados de forma definitiva — não é possível voltar atrás.',
+      'Em Perfil, na secção "Conta". Terminar sessão volta ao ecrã de entrada. Apagar a conta remove os seus dados de forma definitiva: não é possível voltar atrás.',
   },
 ];

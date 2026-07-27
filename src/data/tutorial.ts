@@ -55,7 +55,7 @@ export function passosTutorial(e: EstadoTutorial): Passo[] {
     {
       chave: 'animal',
       titulo: 'Registar o primeiro animal',
-      descricao: 'Basta a espécie, o sexo e a idade — o resto fica para depois.',
+      descricao: 'Basta a espécie, o sexo e a idade: o resto fica para depois.',
       feito: e.temAnimais,
     },
   ];

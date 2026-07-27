@@ -125,7 +125,7 @@ export function FormularioTerreno({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.huge * 2 }}>
         <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
-          Exploração: {exploracao?.nome ?? '—'}
+          Exploração: {exploracao?.nome ?? 'Sem exploração'}
         </Text>
 
         <Field label="Nome" obrigatorio>
@@ -174,7 +174,7 @@ export function FormularioTerreno({
 
         <Text variant="label" style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
           Localização no mapa{' '}
-          <Text variant="caption" color={colors.textMuted}>opcional — para direções e meteorologia</Text>
+          <Text variant="caption" color={colors.textMuted}>opcional, para direções e meteorologia</Text>
         </Text>
         <MapaLocalizacao
           latitude={latNum}

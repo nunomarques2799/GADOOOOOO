@@ -76,15 +76,15 @@ function conselhoPecuario(o: {
   vento: number;
   precipitacao: number;
 }): string {
-  if (o.grupo === 'trovoada') return 'Trovoada prevista — recolha os animais e evite zonas abertas.';
-  if (o.grupo === 'neve') return 'Neve — proteja os animais e garanta água que não congele.';
-  if (o.minima <= 2) return 'Noite fria — vigie os recém-nascidos e os animais mais fracos.';
-  if (o.grupo === 'chuva' || o.precipitacao >= 1) return 'Chuva prevista — verifique abrigos e zonas de lama.';
-  if (o.maxima >= 32) return 'Calor forte — reforce a água e a sombra a meio do dia.';
-  if (o.vento >= 35) return 'Vento forte — reveja cercas, telheiros e coberturas.';
-  if (o.grupo === 'nevoeiro') return 'Nevoeiro — atenção nas deslocações e no maneio.';
-  if (o.maxima >= 26) return 'Dia quente — garanta água fresca disponível todo o dia.';
-  return 'Tempo calmo — bom dia para trabalhos no campo.';
+  if (o.grupo === 'trovoada') return 'Trovoada prevista: recolha os animais e evite zonas abertas.';
+  if (o.grupo === 'neve') return 'Neve: proteja os animais e garanta água que não congele.';
+  if (o.minima <= 2) return 'Noite fria: vigie os recém-nascidos e os animais mais fracos.';
+  if (o.grupo === 'chuva' || o.precipitacao >= 1) return 'Chuva prevista: verifique abrigos e zonas de lama.';
+  if (o.maxima >= 32) return 'Calor forte: reforce a água e a sombra a meio do dia.';
+  if (o.vento >= 35) return 'Vento forte: reveja cercas, telheiros e coberturas.';
+  if (o.grupo === 'nevoeiro') return 'Nevoeiro: atenção nas deslocações e no maneio.';
+  if (o.maxima >= 26) return 'Dia quente: garanta água fresca disponível todo o dia.';
+  return 'Tempo calmo: bom dia para trabalhos no campo.';
 }
 
 /** Coordenadas + nome do local para a consulta meteorológica. */

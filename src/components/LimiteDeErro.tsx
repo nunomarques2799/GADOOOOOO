@@ -27,7 +27,7 @@ type State = { erro: Error | null };
 /** Texto para o criador enviar a quem dá apoio. */
 function relatorio(erro: Error, pilha?: string): string {
   return [
-    `Terrabovina — versão ${VERSAO_APP}`,
+    `Terrabovina, versão ${VERSAO_APP}`,
     `Data: ${new Date().toISOString()}`,
     '',
     `Erro: ${erro.message}`,
@@ -96,7 +96,7 @@ export class LimiteDeErro extends Component<Props, State> {
 
           {/* A primeira pergunta de quem vê isto é "perdi os meus animais?". */}
           <Text style={{ fontSize: 17, lineHeight: 25, color: '#3C4A34', textAlign: 'center' }}>
-            Os seus dados continuam guardados neste aparelho — não se perdeu nada.
+            Os seus dados continuam guardados neste aparelho: não se perdeu nada.
             Toque em "Tentar de novo" para voltar à app.
           </Text>
 

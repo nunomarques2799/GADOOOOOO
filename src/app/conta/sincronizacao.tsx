@@ -40,7 +40,7 @@ export default function SincronizacaoScreen() {
   function confirmarLimparFalhadas() {
     confirmar(
       'Esquecer alterações recusadas',
-      'A lista deixa de aparecer. As alterações em si já não estão guardadas — se ainda forem precisas, tem de as fazer outra vez.',
+      'A lista deixa de aparecer. As alterações em si já não estão guardadas: se ainda forem precisas, tem de as fazer outra vez.',
       limparFalhadas,
       { rotuloConfirmar: 'Esquecer' },
     );
@@ -212,7 +212,7 @@ export default function SincronizacaoScreen() {
                       <Text variant="secondary" color={colors.textSecondary}>
                         {nConflitos > 0
                           ? 'Foram feitas sem ligação e não chegaram ao servidor. Confira o que está em falta e volte a registar o que ainda fizer sentido.'
-                          : 'Foram feitas sem ligação e o servidor não as aceitou — normalmente por não ter permissão para essa exploração.'}
+                          : 'Foram feitas sem ligação e o servidor não as aceitou, normalmente por não ter permissão para essa exploração.'}
                       </Text>
                     </View>
                   </View>
@@ -282,7 +282,7 @@ export default function SincronizacaoScreen() {
                   <View style={{ flex: 1 }}>
                     <Text variant="bodyStrong">Descarregar cópia dos dados</Text>
                     <Text variant="secondary" color={colors.textSecondary}>
-                      Um único ficheiro com tudo o que está no dispositivo —
+                      Um único ficheiro com tudo o que está no dispositivo:
                       explorações, terrenos, animais e histórico. Útil para
                       guardar noutro sítio, por precaução.
                     </Text>

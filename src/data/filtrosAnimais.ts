@@ -108,7 +108,14 @@ export function filtrarAnimais(
   const q = f.texto ? normalizar(f.texto) : '';
 
   return animais.filter((a) => {
-    // O arquivo primeiro: sem esta guarda, um animal vendido passava por
+    // Um animal ELIMINADO nunca aparece nesta lista, nem com o arquivo ligado.
+    // O registo continua na base (histórico, genealogia, auditoria) mas quem
+    // carregou em "Eliminar" pediu para não o voltar a ver aqui — devolvê-lo
+    // com um chip de filtro fazia do gesto uma sugestão. Vê-se no ecrã
+    // "Histórico do efetivo", que é onde ele passa a viver.
+    if (a.estado === 'eliminado') return false;
+
+    // O arquivo depois: sem esta guarda, um animal vendido passava por
     // qualquer outro filtro e voltava a aparecer no meio do efetivo.
     const saiu = !!a.estado && a.estado !== 'ativo';
     if (saiu && !f.incluirSaidos) return false;

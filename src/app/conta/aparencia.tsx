@@ -62,7 +62,7 @@ export default function AparenciaScreen() {
       <Header title="Aspeto da app" />
       <Screen>
         <Text variant="body" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
-          {PALETAS.length} maneiras de a app se apresentar. Só muda o aspeto — os animais,
+          {PALETAS.length} maneiras de a app se apresentar. Só muda o aspeto: os animais,
           os alertas e os registos ficam exatamente como estão.
         </Text>
 

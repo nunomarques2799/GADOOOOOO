@@ -96,7 +96,7 @@ export default function CasaDefinicaoScreen() {
             <Linha
               icon="home-outline"
               titulo="Como sempre se fez"
-              texto="Muitos animais são conhecidos pela casa e pelo número — “Casa do Monte, 12” — desde antes de haver brincos. Ligado, o formulário do animal passa a pedir os dois campos."
+              texto="Muitos animais são conhecidos pela casa e pelo número (“Casa do Monte, 12”) desde antes de haver brincos. Ligado, o formulário do animal passa a pedir os dois campos."
               divider
             />
             <Linha

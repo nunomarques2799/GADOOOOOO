@@ -24,8 +24,9 @@ import { especieMeta, finalidadeMeta } from '@/data/constants';
 import { confirmar } from '@/data/avisos';
 import { filhosDe, rotuloAnimal } from '@/data/genealogia';
 import { balancoAnimal } from '@/data/financas';
-import { diasAte, formatDataCurta, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
+import { diasAte, formatDataCurta, formatDataHora, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
+import { useNomesEquipa } from '@/data/nomesEquipa';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
@@ -59,6 +60,7 @@ export default function AnimalDetalheScreen() {
   } = useGado();
 
   const { pode } = useMembros();
+  const { nomeDe } = useNomesEquipa();
   const toast = useToasts();
 
   const animal = animalById(id);
@@ -107,12 +109,16 @@ export default function AnimalDetalheScreen() {
   const eventos = eventosByAnimal(animal.id);
   const balanco = balancoAnimal(eventos, movimentosByAnimal(animal.id));
   const meusAlertas = alertas.filter((a) => a.animalId === animal.id);
-  const saiu = animal.estado === 'falecido' || animal.estado === 'vendido';
+  const saiu = !!animal.estado && animal.estado !== 'ativo';
+  // Eliminado não é uma saída como as outras: as duas primeiras contam o que
+  // aconteceu ao ANIMAL, esta conta o que alguém fez ao registo. Por isso não
+  // se oferece "voltar a ativar" — quem eliminou leu que não havia volta.
+  const eliminado = animal.estado === 'eliminado';
 
   async function confirmarSaida() {
     const iso = parseDataPt(saidaData);
     if (!iso) {
-      setSaidaErro('Data inválida — use o formato dd/mm/aaaa.');
+      setSaidaErro('Data inválida: use o formato dd/mm/aaaa.');
       return;
     }
     setSaidaErro(null);
@@ -210,6 +216,7 @@ export default function AnimalDetalheScreen() {
             {animal.estado === 'vendido' ? (
               <HeroChip icon="cash" label="Vendido" />
             ) : null}
+            {eliminado ? <HeroChip icon="trash-can-outline" label="Eliminado" /> : null}
           </View>
         </LinearGradient>
 
@@ -221,24 +228,50 @@ export default function AnimalDetalheScreen() {
             </Text>
             <Card>
               <InfoField
-                icon={animal.estado === 'falecido' ? 'grave-stone' : 'cash'}
+                icon={
+                  animal.estado === 'falecido'
+                    ? 'grave-stone'
+                    : animal.estado === 'vendido'
+                      ? 'cash'
+                      : 'trash-can-outline'
+                }
                 label="Motivo"
-                value={animal.estado === 'falecido' ? 'Falecimento' : 'Venda'}
+                value={
+                  animal.estado === 'falecido'
+                    ? 'Falecimento'
+                    : animal.estado === 'vendido'
+                      ? 'Venda'
+                      : 'Eliminado da lista'
+                }
               />
               <InfoField
                 icon="calendar"
                 label="Data"
-                value={animal.dataSaida ? formatDataPt(animal.dataSaida) : '—'}
+                value={animal.dataSaida ? formatDataPt(animal.dataSaida) : 'Sem data'}
               />
-              <InfoField
-                icon="note-text-outline"
-                label="Nota"
-                value={animal.motivoSaida ?? '—'}
-                last
-              />
+              {/* Quem e quando: é o que faz do histórico uma auditoria. Só
+                  aparece quando existe — um "registado por" em branco valia
+                  tanto como não estar lá, e ocupava uma linha a dizê-lo. */}
+              {animal.saidaPor || animal.saidaEm ? (
+                <InfoField
+                  icon="account-check-outline"
+                  label="Registado por"
+                  value={[
+                    nomeDe(animal.saidaPor) ?? (animal.saidaPor ? 'Alguém da equipa' : undefined),
+                    animal.saidaEm ? formatDataHora(animal.saidaEm) : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                />
+              ) : null}
+              {animal.motivoSaida ? (
+                <InfoField icon="note-text-outline" label="Nota" value={animal.motivoSaida} last />
+              ) : null}
             </Card>
             <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
-              O registo permanece guardado para preservar a árvore genealógica dos descendentes.
+              {eliminado
+                ? 'O registo continua guardado: o histórico deste animal e a árvore genealógica dos descendentes ficam intactos. Só deixou de aparecer na lista de animais.'
+                : 'O registo permanece guardado para preservar a árvore genealógica dos descendentes.'}
             </Text>
           </>
         ) : null}
@@ -264,7 +297,7 @@ export default function AnimalDetalheScreen() {
           Identificação
         </Text>
         <Card>
-          <InfoField icon="tag-outline" label="Nº de identificação (brinco)" value={animal.numeroIdentificacao ?? '—'} />
+          <InfoField icon="tag-outline" label="Nº de identificação (brinco)" value={animal.numeroIdentificacao ?? 'Sem brinco'} />
           {/* Casa e número só aparecem quando o animal os tem: uma linha com
               travessão a quem nunca registou por casa é ruído puro. */}
           {animal.casa || animal.numeroCasa ? (
@@ -281,11 +314,11 @@ export default function AnimalDetalheScreen() {
               value={animal.finalidade}
             />
           ) : null}
-          <InfoField icon="calendar-check" label="Data de identificação" value={animal.dataIdentificacao ? formatDataPt(animal.dataIdentificacao) : '—'} />
+          <InfoField icon="calendar-check" label="Data de identificação" value={animal.dataIdentificacao ? formatDataPt(animal.dataIdentificacao) : 'Não indicada'} />
           <InfoField
             icon="cloud-upload-outline"
             label="SNIRA"
-            value={animal.comunicadoSnira === false ? 'Por comunicar' : animal.comunicadoSnira ? 'Comunicado' : '—'}
+            value={animal.comunicadoSnira === false ? 'Por comunicar' : animal.comunicadoSnira ? 'Comunicado' : 'Não se aplica'}
             valueTone={animal.comunicadoSnira === false ? colors.danger : undefined}
             last
           />
@@ -298,7 +331,7 @@ export default function AnimalDetalheScreen() {
         <Card>
           <InfoField icon="cake-variant" label="Data de nascimento" value={formatDataPt(animal.dataNascimento)} />
           <InfoField icon="clock-outline" label="Idade" value={idadeExtenso(animal.dataNascimento)} />
-          <InfoField icon="palette-outline" label="Raça / pelagem" value={[animal.raca, animal.corPelagem].filter(Boolean).join(' · ') || '—'} />
+          <InfoField icon="palette-outline" label="Raça / pelagem" value={[animal.raca, animal.corPelagem].filter(Boolean).join(' · ') || 'Não indicada'} />
           {/* Só a fêmeas prenhes: sem esta linha, quem registasse a cobrição
               não tinha onde confirmar a data até o alerta tocar, 14 dias antes. */}
           {animal.dataPrevistaParto ? (
@@ -328,7 +361,7 @@ export default function AnimalDetalheScreen() {
           Localização
         </Text>
         <Card>
-          <InfoField icon="barn" label="Exploração" value={exploracao?.nome ?? '—'} />
+          <InfoField icon="barn" label="Exploração" value={exploracao?.nome ?? 'Sem exploração'} />
           <InfoField icon="map-marker" label="Terreno atual" value={terreno?.nome ?? 'Sem terreno'} last />
         </Card>
 
@@ -452,7 +485,7 @@ export default function AnimalDetalheScreen() {
                 />
               )}
             </>
-          ) : podeRegistarSaida ? (
+          ) : podeRegistarSaida && !eliminado ? (
             <Button
               label="Voltar a ativar o animal"
               icon="restore"
@@ -531,7 +564,7 @@ function FormularioSaida({
       {tipo === 'vendido' && podeDefinirPreco ? (
         <>
           <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 4 }}>
-            Preço de venda (€) — opcional
+            Preço de venda (€), opcional
           </Text>
           <View style={{ marginBottom: spacing.md }}>
             <TextField
@@ -563,13 +596,13 @@ function FormularioSaida({
           }}>
           <Icon name="information" size="md" color={colors.info} />
           <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
-            O preço é lançado por quem gere a exploração. Registe a saída — o valor
+            O preço é lançado por quem gere a exploração. Registe a saída: o valor
             entra depois.
           </Text>
         </View>
       ) : null}
       <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 4 }}>
-        Nota (opcional) — comprador, matadouro, causa, etc.
+        Nota (opcional): comprador, matadouro, causa, etc.
       </Text>
       <View style={{ marginBottom: spacing.md }}>
         <TextField
@@ -717,7 +750,7 @@ function GenealogiaRow({
         </View>
       ) : (
         <Text variant="bodyStrong" color={colors.textMuted}>
-          —
+          Sem registo
         </Text>
       )}
     </View>

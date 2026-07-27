@@ -37,7 +37,7 @@ import {
   isoMaisDias,
   parseDataPt,
 } from '@/data/helpers';
-import { impedimentoParaEliminar, rotuloAnimal } from '@/data/genealogia';
+import { historicoQueFicaGuardado, rotuloAnimal } from '@/data/genealogia';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
@@ -90,9 +90,10 @@ export function FormularioAnimal({
   const toast = useToasts();
 
   const editar = !!animal;
-  // Um animal com histórico não se elimina — marca-se a saída. O servidor
-  // recusa na mesma (RPC `eliminar_animal`); isto evita oferecer o botão.
-  const impedimento = animal ? impedimentoParaEliminar(animal, eventos, animais) : null;
+  // Eliminar já não apaga nada (ver `supabase/schema_auditoria.sql`), por isso
+  // deixou de haver animais que não se podem eliminar. O que continua a fazer
+  // falta é dizer o que fica guardado, antes de a pessoa confirmar.
+  const ficaGuardado = animal ? historicoQueFicaGuardado(animal, eventos, animais) : null;
 
   const [especie, setEspecie] = useState<Especie>(animal?.especie ?? 'Bovino');
   const [foto, setFoto] = useState<string | undefined>(animal?.fotografia);
@@ -303,9 +304,16 @@ export function FormularioAnimal({
         avisar('Não foi possível eliminar', mensagemDeErro(e));
       }
     };
+    // A confirmação diz as duas coisas, e nenhuma delas é dispensável: que não
+    // há como voltar atrás (é o que trava o dedo) e que o registo não se perde
+    // (é o que evita que alguém deixe um animal na lista por medo de o apagar).
+    const guardado = historicoQueFicaGuardado(animal, eventos, animais);
     confirmar(
       'Eliminar animal',
-      `Eliminar "${rotulo}"? Esta ação não pode ser anulada.`,
+      `Eliminar "${rotulo}"? Esta ação não pode ser anulada.\n\n`
+        + 'O animal sai da lista de vez. O registo fica guardado no histórico do efetivo, '
+        + 'com o dia e o nome de quem o eliminou.'
+        + (guardado ? `\n${guardado}` : ''),
       () => void executar(),
       { rotuloConfirmar: 'Eliminar', destrutivo: true },
     );
@@ -369,7 +377,7 @@ export function FormularioAnimal({
           </View>
 
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm, marginBottom: 4 }}>
-            Ou data exata (dd/mm/aaaa) — útil para animais já crescidos
+            Ou data exata (dd/mm/aaaa), útil para animais já crescidos
           </Text>
           <CampoData
             value={dataManual}
@@ -457,7 +465,7 @@ export function FormularioAnimal({
             {prenhe ? (
               <View style={{ marginTop: spacing.md }}>
                 <Text variant="caption" color={colors.textMuted} style={{ marginBottom: 4 }}>
-                  Data da cobrição (dd/mm/aaaa) — calculamos o parto por si
+                  Data da cobrição (dd/mm/aaaa): calculamos o parto por si
                 </Text>
                 <CampoData
                   value={dataCobricao}
@@ -597,13 +605,18 @@ export function FormularioAnimal({
           </Field>
         ) : null}
 
-        {/* Exploração */}
-        <Field label="Exploração" obrigatorio>
-          {exploracoes.length === 0 ? (
+        {/* Exploração. Com uma só, o campo era um chip aceso que não se podia
+            apagar nem trocar: um passo a mais num formulário já comprido, a
+            perguntar uma coisa sem alternativa. O `exploracaoId` continua
+            preenchido pelo efeito lá acima. */}
+        {exploracoes.length === 0 ? (
+          <Field label="Exploração" obrigatorio>
             <Text variant="secondary" color={colors.danger}>
               Ainda não tem explorações. Crie uma exploração antes de registar animais.
             </Text>
-          ) : (
+          </Field>
+        ) : exploracoes.length > 1 ? (
+          <Field label="Exploração" obrigatorio>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               {exploracoes.map((e) => (
                 <Chip
@@ -615,8 +628,8 @@ export function FormularioAnimal({
                 />
               ))}
             </View>
-          )}
-        </Field>
+          </Field>
+        ) : null}
 
         {/* Terreno */}
         {terrenos.length > 0 ? (
@@ -661,39 +674,19 @@ export function FormularioAnimal({
         />
 
         {editar && podeEliminar ? (
-          impedimento ? (
-            // Com histórico, eliminar destruiria os eventos por cascata —
-            // incluindo os que outra pessoa registou. O caminho certo é a
-            // saída, que preserva a árvore genealógica dos descendentes.
-            <Card style={{ marginTop: spacing.xl }}>
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <Icon name="information-outline" size="lg" color={colors.info} />
-                <View style={{ flex: 1 }}>
-                  <Text variant="bodyStrong">Não é possível eliminar</Text>
-                  <Text variant="secondary" color={colors.textSecondary}>
-                    {impedimento} Eliminar apagaria também esse histórico. Se o animal saiu
-                    do efetivo, marque-o como falecido ou vendido — o registo mantém-se e a
-                    árvore genealógica continua completa.
-                  </Text>
-                </View>
-              </View>
-              <Button
-                label="Marcar saída do efetivo"
-                icon="archive-outline"
-                variant="secondary"
-                onPress={() => router.replace(`/animal/${animal.id}`)}
-                style={{ marginTop: spacing.sm }}
-              />
-            </Card>
-          ) : (
+          <View style={{ marginTop: spacing.xl, gap: spacing.sm }}>
             <Button
               label="Eliminar animal"
               icon="trash-can-outline"
               variant="danger"
               onPress={confirmarEliminar}
-              style={{ marginTop: spacing.xl }}
             />
-          )
+            <Text variant="caption" color={colors.textMuted}>
+              Tira o animal da lista para sempre. O registo fica no histórico do efetivo,
+              com o dia e o nome de quem o eliminou.
+              {ficaGuardado ? ` ${ficaGuardado}` : ''}
+            </Text>
+          </View>
         ) : null}
       </ScrollView>
 
@@ -818,7 +811,7 @@ function SeletorProgenitor({
           </View>
           {filtrados.length > visiveis.length ? (
             <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-              Mais {filtrados.length - visiveis.length} — use a procura para encontrar.
+              Mais {filtrados.length - visiveis.length}. Use a procura para encontrar.
             </Text>
           ) : null}
           {filtrados.length === 0 ? (

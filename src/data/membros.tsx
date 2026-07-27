@@ -20,6 +20,7 @@ import {
 
 import { useAuth } from './auth';
 import { cacheDisponivel, guardarAcesso, lerAcesso } from './cacheLocal';
+import { carregarNomesEquipa, esquecerNomesEquipa } from './nomesEquipa';
 import {
   CAPACIDADES_GERIVEIS,
   podeConsultar,
@@ -29,6 +30,7 @@ import {
   type PermissoesMembro,
 } from './permissoes';
 import { supabase, supabaseConfigurado } from './supabase';
+import { SEM_NOME } from './trabalhadores';
 import type {
   Convite,
   EstadoPerfil,
@@ -422,24 +424,30 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     if (!supabase) return [];
     const { data } = await supabase
       .from('membro_exploracao')
-      .select('id, user_id, exploracao_id, role, criado_em, permissoes, perfil:user_id ( nome )')
+      .select('id, user_id, exploracao_id, role, criado_em, permissoes')
       .eq('exploracao_id', exploracaoId);
-    type Row = RowMembro & { perfil?: { nome?: string } | null };
-    return ((data ?? []) as Row[]).map((r) => ({
+    // Os nomes vêm por RPC e não por `perfil:user_id ( nome )` embutido: a
+    // política `perfil_self_select` só deixa cada um ver o SEU perfil, por isso
+    // o embutido devolvia vazio para toda a gente menos para o próprio — a lista
+    // de Trabalhadores aparecia com um travessão em vez de cada nome.
+    const nomes = await carregarNomesEquipa();
+    return ((data ?? []) as RowMembro[]).map((r) => ({
       ...toMembro(r),
-      nome: r.perfil?.nome ?? '—',
+      nome: nomes[r.user_id] ?? SEM_NOME,
     }));
   }, []);
 
   const removerMembro = useCallback(async (membroId: string): Promise<string | null> => {
     if (!supabase) return 'Supabase não configurado.';
     const { error } = await supabase.from('membro_exploracao').delete().eq('id', membroId);
+    // A equipa mudou: o mapa de nomes guardado deixa de estar certo.
+    if (!error) esquecerNomesEquipa();
     return error?.message ?? null;
   }, []);
 
   const definirPermissoes = useCallback(
     async (membroId: string, permissoes: PermissoesMembro): Promise<string | null> => {
-      if (!supabase) return 'Isto exige ligação à conta — a app está em modo local.';
+      if (!supabase) return 'Isto exige ligação à conta: a app está em modo local.';
       // Escreve-se o conjunto todo, não uma capacidade de cada vez: um pedido
       // por interruptor, numa rede de campo, deixava a pessoa com metade das
       // permissões gravadas e a outra metade não.
@@ -472,6 +480,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     if (!supabase) return 'Supabase não configurado.';
     const { error } = await supabase.rpc('resgatar_convite', { codigo_txt: codigo.trim() });
     if (error) return error.message;
+    esquecerNomesEquipa(); // entrou gente nova na equipa
     await recarregar();
     return null;
   }, [recarregar]);

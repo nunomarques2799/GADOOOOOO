@@ -30,6 +30,7 @@ Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
 | 11 | `schema_animal_campos.sql` | Casa/número e finalidade do animal; opt-in da casa. | **10** |
 | 12 | `schema_notas.sql` | Notas pessoais (tabela `nota`, por utilizador). | 1 |
 | 13 | `schema_permissoes.sql` | Permissões por pessoa (coluna `permissoes`) e as políticas de escrita a passarem por `pode_cap()`. | 1, 2, **6**, **9**, **10** |
+| 14 | `schema_auditoria.sql` | Eliminar marca em vez de apagar; `saida_por`/`saida_em` por trigger; `nomes_da_equipa()`. | 1, 2, **9**, **13** |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 
@@ -46,6 +47,10 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
   antes de qualquer um deles, é esse que fica por cima — e as permissões por
   pessoa passam a existir na coluna sem nenhuma política as ler. A app esconde os
   botões, o servidor aceita tudo, e nada no SQL indica que falta um passo.
+- **14 depende de 9 e 13.** O 14 reescreve o RPC `eliminar_animal` (que nasce no
+  9) e usa o `pode_cap()` do 13 para decidir quem pode eliminar. Aplicado antes
+  do 9, é o 9 que fica por cima e o eliminar volta a apagar a linha de vez, sem
+  auditoria nenhuma e sem nada no SQL a indicá-lo.
 - **11 depende de 10.** Ambos substituem o trigger `handle_new_exploracao`. O
   11 reescreve-o a herdar as DUAS opções (finanças e casa); aplicá-lo antes do
   10 fazia o 10 sobrepor-se-lhe e as explorações novas nasciam sem a casa

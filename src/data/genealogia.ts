@@ -23,37 +23,34 @@ export function filhosDe(animais: Animal[], id: string): Animal[] {
 }
 
 /**
- * Explica porque é que este animal NÃO pode ser eliminado, ou devolve null se
- * puder. Espelha as condições do RPC `eliminar_animal` em
- * `supabase/schema_eliminar.sql` — o servidor é quem recusa, isto serve para
- * não oferecer um botão que vai falhar.
+ * O que fica guardado quando este animal for eliminado, em texto, ou `null` se
+ * não houver nada a dizer. Entra na confirmação, antes de a pessoa decidir.
  *
- * A regra separa dois casos que estavam a partilhar a mesma operação:
- * apagar um registo criado por engano (legítimo, o animal nunca existiu) e
- * apagar um animal com histórico (destrutivo — a cascata leva os eventos
- * atrás, incluindo os que outra pessoa registou). Para o segundo existe
- * `marcarSaida`, que preserva a genealogia dos descendentes.
+ * Isto já foi o contrário: `impedimentoParaEliminar`, que dizia porque é que o
+ * botão NÃO funcionava. Enquanto eliminar fazia `delete`, a cascata levava os
+ * eventos atrás — incluindo os que outra pessoa registou — e recusar era a
+ * única defesa possível. Desde `supabase/schema_auditoria.sql` eliminar marca
+ * em vez de apagar: não há o que defender, e o que era um impedimento passou a
+ * ser uma informação. A contagem é a mesma; muda o que se faz com ela.
  */
-export function impedimentoParaEliminar(
+export function historicoQueFicaGuardado(
   animal: Animal,
   eventos: Evento[],
   animais: Animal[],
 ): string | null {
   const nEventos = eventos.filter((e) => e.animalId === animal.id).length;
+  const nCrias = filhosDe(animais, animal.id).length;
+
+  const partes: string[] = [];
   if (nEventos > 0) {
-    return nEventos === 1
-      ? 'Este animal já tem um registo no histórico.'
-      : `Este animal já tem ${nEventos} registos no histórico.`;
+    partes.push(nEventos === 1 ? 'um registo no histórico' : `${nEventos} registos no histórico`);
   }
-
-  const crias = filhosDe(animais, animal.id);
-  if (crias.length > 0) {
-    return crias.length === 1
-      ? 'Este animal é mãe ou pai de outro animal registado.'
-      : `Este animal é mãe ou pai de ${crias.length} animais registados.`;
+  if (nCrias > 0) {
+    partes.push(nCrias === 1 ? 'uma cria na genealogia' : `${nCrias} crias na genealogia`);
   }
+  if (partes.length === 0) return null;
 
-  return null;
+  return `Ficam guardados ${partes.join(' e ')}.`;
 }
 
 /**

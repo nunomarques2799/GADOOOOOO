@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useDeferredValue, useMemo, useState } from 'react';
-import { FlatList, Platform, Pressable, TextInput, View } from 'react-native';
+import { FlatList, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimalRow } from '@/components/AnimalRow';
@@ -22,6 +22,7 @@ import {
   type Filtros,
   type Ordenacao,
 } from '@/data/filtrosAnimais';
+import { saiuDoEfetivo } from '@/data/historicoAnimais';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
@@ -82,6 +83,17 @@ export default function AnimaisScreen() {
       animais.filter(
         (a) =>
           (!a.estado || a.estado === 'ativo')
+          && (!filtros.exploracaoId || a.exploracaoId === filtros.exploracaoId),
+      ),
+    [animais, filtros.exploracaoId],
+  );
+
+  /** Os que já saíram do efetivo, para o botão de histórico dizer quantos são. */
+  const saidos = useMemo(
+    () =>
+      animais.filter(
+        (a) =>
+          saiuDoEfetivo(a)
           && (!filtros.exploracaoId || a.exploracaoId === filtros.exploracaoId),
       ),
     [animais, filtros.exploracaoId],
@@ -315,16 +327,20 @@ export default function AnimaisScreen() {
               </View>
             ) : null}
 
-            {/* Importar de Excel — só web/Electron, onde há seletor de ficheiros.
-                No telemóvel a lista continua a registar-se com o "Registar". */}
-            {Platform.OS === 'web' && !contaSuspensa ? (
+            {/* Histórico do efetivo: quem saiu, porquê, quando e por ordem de
+                quem. Só aparece quando há alguém lá dentro — num efetivo onde
+                ainda ninguém saiu, é um botão que abre um ecrã vazio.
+
+                O "Importar de Excel" esteve aqui e mudou-se para Documentos,
+                que é onde vive tudo o que entra e sai da app em ficheiro. */}
+            {saidos.length > 0 ? (
               <View style={{ alignItems: 'flex-start', marginBottom: spacing.sm }}>
                 <Button
-                  label="Importar de Excel"
-                  icon="microsoft-excel"
+                  label={`Histórico do efetivo (${saidos.length})`}
+                  icon="history"
                   variant="secondary"
                   fullWidth={false}
-                  onPress={() => router.push('/animal/importar')}
+                  onPress={() => router.push('/animal/historico')}
                 />
               </View>
             ) : null}

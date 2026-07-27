@@ -3,6 +3,14 @@
 -- ==================================================================
 -- Aplica DEPOIS dos anteriores. Idempotente.
 --
+-- ATENÇÃO: a regra descrita aqui em baixo JÁ NÃO É A QUE VIGORA. O
+-- `schema_auditoria.sql` (nº 14 da ordem) reescreve este RPC: eliminar deixou
+-- de fazer `delete` e passou a marcar `estado = 'eliminado'`, guardando quem o
+-- fez. Sem cascata não há histórico a proteger, e as condições "sem eventos" e
+-- "sem crias" desapareceram. Este ficheiro continua na ordem porque é ele que
+-- retira o privilégio de DELETE ao papel `authenticated` (secção 2) — a base de
+-- tudo o resto.
+--
 -- A REGRA: eliminar um animal só é possível se ele não tiver eventos nem
 -- crias registadas. Um animal com histórico não se elimina — marca-se a
 -- saída (falecido ou vendido), que é o que o domínio já faz e que preserva

@@ -5,6 +5,7 @@ import {
   contarPorPapel,
   iniciais,
   resumoVinculos,
+  SEM_NOME,
   type EquipaExploracao,
   type MembroComNome,
 } from '../trabalhadores';
@@ -87,7 +88,7 @@ describe('agruparTrabalhadores', () => {
 
   it('aproveita o nome de outra linha quando o perfil ainda não o tem', () => {
     const [t] = agruparTrabalhadores([
-      equipa('e1', 'Monte do Avô', [membro('u1', '—', 'trabalhador', 'm1')]),
+      equipa('e1', 'Monte do Avô', [membro('u1', SEM_NOME, 'trabalhador', 'm1')]),
       equipa('e2', 'Corgas', [membro('u1', 'Zé Silva', 'trabalhador', 'm2')]),
     ]);
     expect(t.nome).toBe('Zé Silva');
@@ -151,6 +152,6 @@ describe('iniciais', () => {
 
   it('sem nome não rebenta', () => {
     expect(iniciais('')).toBe('?');
-    expect(iniciais('—')).toBe('?');
+    expect(iniciais(SEM_NOME)).toBe('?');
   });
 });

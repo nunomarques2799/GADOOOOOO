@@ -268,7 +268,7 @@ export default function NovoMovimentoScreen() {
           <TextField
             value={descricao}
             onChangeText={setDescricao}
-            placeholder="Ex: Ração — 40 sacos"
+            placeholder="Ex: Ração, 40 sacos"
             icon="note-text-outline"
           />
         </Field>
@@ -366,7 +366,7 @@ export default function NovoMovimentoScreen() {
         ) : null}
 
         {!podeReceita ? (
-          <Aviso texto="Pode registar despesas. As receitas — vendas, subsídios — são lançadas por quem gere a exploração." />
+          <Aviso texto="Pode registar despesas. As receitas (vendas, subsídios) são lançadas por quem gere a exploração." />
         ) : null}
       </ScrollView>
 

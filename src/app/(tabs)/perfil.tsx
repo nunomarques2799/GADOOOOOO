@@ -127,7 +127,7 @@ export default function PerfilScreen() {
                 <LinhaInfo
                   icon="clock-alert-outline"
                   label="Estado"
-                  valor="Por aprovar — só de leitura"
+                  valor="Por aprovar (só de leitura)"
                   tom={colors.warning}
                 />
               ) : null}

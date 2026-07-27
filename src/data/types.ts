@@ -31,11 +31,17 @@ export type Finalidade =
   | 'Trabalho';
 
 /**
- * Estado do animal no efetivo. `falecido` e `vendido` mantêm o registo em BD
- * (para preservar a árvore genealógica dos descendentes) mas ficam ocultos
- * das listas do dia-a-dia e não geram alertas.
+ * Estado do animal no efetivo. Nenhum dos três estados de saída apaga nada:
+ * o registo mantém-se em BD (para preservar a árvore genealógica dos
+ * descendentes e o histórico de quem o tratou), fica oculto das listas do
+ * dia-a-dia e deixa de gerar alertas.
+ *
+ * `eliminado` é o que fica quando alguém carrega em "Eliminar animal". Não é a
+ * mesma coisa que `falecido` nem que `vendido`: quer dizer que o registo foi
+ * tirado da lista (por ter sido criado por engano, por duplicado, pelo que
+ * for), e não que aconteceu alguma coisa ao animal. Ver `schema_auditoria.sql`.
  */
-export type EstadoAnimal = 'ativo' | 'falecido' | 'vendido';
+export type EstadoAnimal = 'ativo' | 'falecido' | 'vendido' | 'eliminado';
 
 /** Papel de um utilizador dentro de uma exploração (multi-tenant). */
 export type RoleMembro = 'admin' | 'trabalhador' | 'veterinario';
@@ -202,6 +208,19 @@ export interface Animal extends ComVersao {
   dataSaida?: string;
   /** Nota livre: causa da morte, comprador, matadouro, etc. */
   motivoSaida?: string;
+  /**
+   * Quem tirou o animal do efetivo, e o instante exato em que o fez. É o par
+   * que faz do ecrã "Histórico do efetivo" uma auditoria e não uma lista.
+   *
+   * Nunca são escritos pelo cliente: quem os mantém é o trigger
+   * `animal_regista_saida` (ver `supabase/schema_auditoria.sql`). Num modelo
+   * offline-first o aparelho decide o que envia, e uma auditoria em que o
+   * auditado escolhe o autor não vale nada. O que a app escreve localmente é
+   * só uma previsão otimista, corrigida pelo servidor na sincronização.
+   */
+  saidaPor?: string;
+  /** ISO com hora, ao contrário de `dataSaida` que é só o dia. */
+  saidaEm?: string;
 }
 
 export interface Evento extends ComVersao {
@@ -276,9 +295,16 @@ export interface Movimento extends ComVersao {
   terrenoId?: string;
   /**
    * Quem registou. É o que permite ao trabalhador ver e corrigir o que lançou
-   * sem lhe abrir a contabilidade da exploração — a RLS filtra por esta coluna.
+   * sem lhe abrir a contabilidade da exploração: a RLS filtra por esta coluna.
    */
   criadoPor?: string;
+  /**
+   * Quando o lançamento entrou na app (ISO com hora), que não é a mesma coisa
+   * que `data` — essa é o dia a que a despesa diz respeito, e escreve-se à mão.
+   * Quem lança uma fatura de há três semanas põe a data dela; o instante do
+   * registo é este, e é do servidor (`default now()`).
+   */
+  criadoEm?: string;
 }
 
 /* ---- Derivados (não persistidos) ---- */

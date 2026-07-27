@@ -104,7 +104,7 @@ export default function FinancasDefinicaoScreen() {
             <Linha
               icon="needle"
               titulo="Custo das vacinas e medicamentos"
-              texto="O campo do custo deixa de aparecer ao registar um tratamento. O registo sanitário continua igual — só o valor é que não é pedido."
+              texto="O campo do custo deixa de aparecer ao registar um tratamento. O registo sanitário continua igual: só o valor é que não é pedido."
             />
           </View>
         </Card>

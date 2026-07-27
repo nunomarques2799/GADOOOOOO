@@ -104,6 +104,7 @@ const ESTADO_ROTULO: Record<NonNullable<Animal['estado']>, string> = {
   ativo: 'Ativo',
   falecido: 'Falecido',
   vendido: 'Vendido',
+  eliminado: 'Eliminado',
 };
 
 /** Nomes para as colunas que a app escreve mas não importa (`COLUNAS_INFORMATIVAS`). */
@@ -171,7 +172,7 @@ export function construirWorkbookAnimais(
     ['Escreva um animal por linha na folha "Animais". As datas em dd/mm/aaaa.'],
     ['As colunas a verde são obrigatórias.'],
     [
-      'Clique numa célula: as colunas com lista mostram uma seta à direita — escolha o valor em vez de o escrever.',
+      'Clique numa célula: as colunas com lista mostram uma seta à direita, e assim escolhe o valor em vez de o escrever.',
     ],
     ['Todos os valores aceites estão na folha "Listas".'],
     [''],
@@ -390,7 +391,7 @@ export async function lerFicheiroExcel(
     );
   }
   if (file.size === 0) {
-    throw new ErroExcel(`“${file.name}” está vazio (0 bytes) — não tem nada para importar.`);
+    throw new ErroExcel(`“${file.name}” está vazio (0 bytes) e não tem nada para importar.`);
   }
 
   let wb: XLSX.WorkBook;

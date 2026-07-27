@@ -163,9 +163,15 @@ export default function TrabalhadoresScreen() {
     return null;
   }
 
+  // A mesma coluna dos outros separadores de lista (Animais, Terrenos,
+  // Explorações). Este ecrã usava a coluna ESTREITA, que é a dos ecrãs de
+  // leitura: no computador dava um bloco mais apertado do que os vizinhos, com
+  // o título encostado à esquerda e o botão de atualizar a setecentos píxeis
+  // dele, e o estado vazio centrado no meio dos dois. Nada estava desalinhado
+  // por si; era o conjunto que não pertencia ao mesmo ecrã.
   const coluna = {
     width: '100%',
-    maxWidth: desktop ? layout.conteudoEstreito : undefined,
+    maxWidth: desktop ? layout.conteudoDesktop : undefined,
     alignSelf: 'center',
     paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
   } as const;
@@ -181,7 +187,10 @@ export default function TrabalhadoresScreen() {
           alignItems: 'center',
           paddingBottom: insets.bottom + spacing.huge,
         }}>
-        <View style={{ ...coluna, paddingTop: insets.top + spacing.md }}>
+        {/* Cabeçalho igual ao dos outros separadores: título em grande, uma
+            linha a dizer o que ali está, e a ação à direita na mesma linha do
+            título (é onde os Animais põem a contagem). */}
+        <View style={{ ...coluna, paddingTop: insets.top + spacing.md, marginBottom: spacing.md }}>
           <View
             style={{
               flexDirection: 'row',
@@ -189,7 +198,7 @@ export default function TrabalhadoresScreen() {
               justifyContent: 'space-between',
               gap: spacing.sm,
             }}>
-            <Text variant="display" style={{ flex: 1 }}>
+            <Text variant="display" style={{ flexShrink: 1 }}>
               Trabalhadores
             </Text>
             <Pressable
@@ -197,8 +206,19 @@ export default function TrabalhadoresScreen() {
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="Atualizar lista"
-              style={({ pressed }) => [{ marginBottom: 8 }, pressed && { opacity: 0.6 }]}>
-              <Icon name="refresh" size="lg" color={colors.primary} />
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  marginBottom: 6,
+                },
+                pressed && { opacity: 0.6 },
+              ]}>
+              <Icon name="refresh" size="md" color={colors.primary} />
+              <Text variant="bodyStrong" color={colors.primary}>
+                Atualizar
+              </Text>
             </Pressable>
           </View>
           <Text variant="body" color={colors.textSecondary}>
@@ -206,8 +226,8 @@ export default function TrabalhadoresScreen() {
           </Text>
         </View>
 
-        <View style={{ ...coluna, gap: spacing.md, marginTop: spacing.md }}>
-          {/* Por exploração — como nos Animais, à vista e não escondido */}
+        <View style={{ ...coluna, gap: spacing.md }}>
+          {/* Por exploração, à vista e não escondido, como nos Animais */}
           {minhas.length > 1 ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               <Chip

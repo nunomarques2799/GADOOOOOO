@@ -226,7 +226,7 @@ export function htmlRelatorioPrazos(
       const cor = CoresGravidade[a.gravidade];
       const prazo =
         a.diasRestantes == null
-          ? '—'
+          ? 'Sem prazo'
           : a.diasRestantes < 0
             ? `Em atraso (${Math.abs(a.diasRestantes)}d)`
             : a.diasRestantes === 0
@@ -272,7 +272,7 @@ export function htmlRelatorioPrazos(
       <thead><tr><th>Alerta</th><th>Descrição</th><th>Prazo</th></tr></thead>
       <tbody>${alertas.length ? linhas : vazio}</tbody>
     </table>
-    <footer>Gerado pela app Terrabovina · ${dataHoje}. Documento informativo — confirme sempre os prazos oficiais (DGAV/IFAP/SNIRA).</footer>
+    <footer>Gerado pela app Terrabovina · ${dataHoje}. Documento informativo: confirme sempre os prazos oficiais (DGAV/IFAP/SNIRA).</footer>
   `;
 }
 

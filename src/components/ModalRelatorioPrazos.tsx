@@ -24,7 +24,7 @@ import type { Alerta, AlertaGravidade, Exploracao } from '@/data/types';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, spacing } from '@/theme';
 
-const TITULO = 'Relatório de prazos — Terrabovina';
+const TITULO = 'Relatório de prazos · Terrabovina';
 
 const GRAVIDADES: AlertaGravidade[] = ['urgente', 'aviso', 'info'];
 const CATEGORIAS: Alerta['categoria'][] = [

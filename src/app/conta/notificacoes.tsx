@@ -221,7 +221,7 @@ function VibracaoAoGravar() {
       </View>
       <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
         {ligada
-          ? 'O aparelho dá um toque curto quando um registo fica gravado, e um toque diferente quando alguma coisa falha — dá para confirmar sem ler o ecrã.'
+          ? 'O aparelho dá um toque curto quando um registo fica gravado, e um toque diferente quando alguma coisa falha. Dá para confirmar sem ler o ecrã.'
           : 'Os registos só se confirmam pelo aviso no ecrã.'}
       </Text>
     </Card>

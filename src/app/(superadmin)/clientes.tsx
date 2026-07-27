@@ -139,7 +139,7 @@ export default function ClientesScreen() {
           <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg, gap: spacing.md }}>
             <Card>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.sm }}>
-                <Text variant="h3">MRR — últimos 6 meses</Text>
+                <Text variant="h3">MRR nos últimos 6 meses</Text>
                 <Text variant="caption" color={colors.textMuted}>euros / mês</Text>
               </View>
               <GraficoBarras
@@ -168,7 +168,7 @@ export default function ClientesScreen() {
               <Card style={{ flex: 1 }}>
                 <Text variant="label" color={colors.textSecondary}>LTV estimado</Text>
                 <Text variant="display" style={{ marginTop: 2 }}>
-                  {ltv == null ? '—' : `${Math.round(ltv)}€`}
+                  {ltv == null ? 'sem dados' : `${Math.round(ltv)}€`}
                 </Text>
                 <Text variant="caption" color={colors.textMuted}>ARPU ÷ churn</Text>
               </Card>
