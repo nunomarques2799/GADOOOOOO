@@ -67,7 +67,12 @@ select * from (
         (to_regclass('public.nota') is not null)),
     (13, 'schema_permissoes.sql',      'membro_exploracao.permissoes + pode_cap()',
         (exists (select 1 from col where tabela = 'membro_exploracao' and coluna = 'permissoes')
-         and exists (select 1 from func where nome = 'pode_cap')))
+         and exists (select 1 from func where nome = 'pode_cap'))),
+    (14, 'schema_auditoria.sql',       'animal.saida_por + nomes_da_equipa()',
+        (exists (select 1 from col where tabela = 'animal' and coluna = 'saida_por')
+         and exists (select 1 from func where nome = 'nomes_da_equipa'))),
+    (15, 'schema_acesso_temporario.sql','membro_exploracao.expira_em',
+        (exists (select 1 from col where tabela = 'membro_exploracao' and coluna = 'expira_em')))
 ) as t(ordem, ficheiro, marca, aplicado)
 order by ordem;
 -- Ler a coluna `aplicado`: true = já correu, false = FALTA aplicar.
