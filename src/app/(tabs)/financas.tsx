@@ -37,6 +37,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
 import type { CategoriaMovimento } from '@/data/types';
+import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, spacing } from '@/theme';
 
@@ -68,6 +69,7 @@ const PAGINA_MOVIMENTOS = 30;
 export default function FinancasScreen() {
   const router = useRouter();
   const { eventos, movimentos, animais, animalById, exploracoes } = useGado();
+  const { controlo: controloAtualizar } = useAtualizarPuxando();
   const { podeVer } = useMembros();
 
   /** A exploração escolhida nos chips; `undefined` = todas as que se podem ver. */
@@ -210,7 +212,7 @@ export default function FinancasScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Header title="Finanças" />
-      <Screen>
+      <Screen refreshControl={controloAtualizar}>
         {semDados ? (
           <>
             <EmptyState

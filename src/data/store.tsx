@@ -309,7 +309,14 @@ type GadoContext = {
   addMovimento: (m: Omit<Movimento, 'id'>) => Promise<Movimento>;
   updateMovimento: (id: string, patch: Partial<Movimento>) => Promise<void>;
   deleteMovimento: (id: string) => Promise<void>;
-  recarregar: () => Promise<void>;
+  /**
+   * Envia o que está na fila e volta a ler do servidor.
+   *
+   * Devolve se conseguiu LER do servidor: é o que permite a quem puxou a lista
+   * para atualizar saber que continua a ver os dados do aparelho, em vez de
+   * ficar a olhar para uma lista que não mudou sem saber porquê.
+   */
+  recarregar: () => Promise<boolean>;
 };
 
 const Ctx = createContext<GadoContext | null>(null);
@@ -491,9 +498,17 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     throw new Error(mensagemLegivel(erro));
   }, []);
 
-  /** Esvazia a fila por ordem e, se conseguir, puxa a verdade do servidor. */
+  /**
+   * Esvazia a fila por ordem e, se conseguir, puxa a verdade do servidor.
+   *
+   * Devolve se ficou com os dados do servidor. `false` cobre três coisas
+   * diferentes que dão o mesmo resultado para quem está a olhar: sem rede, o
+   * servidor recusou a leitura, ou a fila não esvaziou. Sem sessão Supabase
+   * devolve `true` — não há servidor nenhum de quem estar à espera, e chamar a
+   * isso "sem ligação" seria mentir a quem trabalha em modo offline.
+   */
   const sincronizar = useCallback(async () => {
-    if (!usaSupabase || !cacheDisponivel) return;
+    if (!usaSupabase || !cacheDisponivel) return true;
     let ops = lerOutbox();
     while (ops.length > 0) {
       const [proxima, ...resto] = ops;
@@ -509,7 +524,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       // porque a versão do servidor nunca mais recuaria.
       if (erro && !eConflito(erro) && pareceErroDeRede(erro)) {
         setOnline(false);
-        break; // continua offline — tenta na próxima vez
+        return false; // continua offline — tenta na próxima vez
       }
       if (erro) {
         // Erro lógico (RLS, validação) ou conflito de versão: repetir daria o
@@ -524,23 +539,20 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       guardarOutbox(ops);
       setPendentesSinc(ops.length);
     }
-    if (ops.length === 0) {
-      // O estado de ligação segue o RESULTADO da leitura, não o facto de a
-      // fila ter esvaziado. Marcar `online` antes de puxar escondia a única
-      // falha que interessa: com o servidor a recusar a leitura, a app ficava
-      // a mostrar a cache — dados antigos, ou nenhuns — a dizer que estava
-      // tudo bem. Sem aviso, sem erro, e sem nada que distinga isso de uma
-      // conta mesmo vazia. Agora aparece o cartão de "sem ligação" do ecrã
-      // Início, que é o que dá ao criador alguma coisa em que reparar.
-      const leu = await puxarDoServidor();
-      setOnline(leu);
-    }
+    // O estado de ligação segue o RESULTADO da leitura, não o facto de a fila
+    // ter esvaziado. Marcar `online` antes de puxar escondia a única falha que
+    // interessa: com o servidor a recusar a leitura, a app ficava a mostrar a
+    // cache — dados antigos, ou nenhuns — a dizer que estava tudo bem. Sem
+    // aviso, sem erro, e sem nada que distinga isso de uma conta mesmo vazia.
+    // Agora aparece o cartão de "sem ligação" do ecrã Início, que é o que dá ao
+    // criador alguma coisa em que reparar.
+    const leu = await puxarDoServidor();
+    setOnline(leu);
+    return leu;
   }, [usaSupabase, puxarDoServidor]);
 
   /** Recarrega tudo do Supabase (envia pendentes + puxa o servidor). */
-  const recarregar = useCallback(async () => {
-    await sincronizar();
-  }, [sincronizar]);
+  const recarregar = useCallback(async () => sincronizar(), [sincronizar]);
 
   // Ao arrancar com sessão iniciada: sincroniza (envia pendentes + puxa servidor).
   useEffect(() => {

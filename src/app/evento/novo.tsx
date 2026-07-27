@@ -9,14 +9,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
+import { Button, CampoData, Chip, EcraComTeclado, Header, Icon, type IconName, Text } from '@/components/ui';
 import { avisar } from '@/data/avisos';
 import { especieMeta } from '@/data/constants';
 import {
   formatDataPt,
   isoDaysAgo,
   isoMaisDias,
-  mascaraDataPt,
   paraEuro,
   parseDataPt,
 } from '@/data/helpers';
@@ -340,7 +339,7 @@ export default function NovoEventoScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <EcraComTeclado>
       <Header title={META[tipo].titulo} />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -488,12 +487,11 @@ export default function NovoEventoScreen() {
             style={{ marginTop: spacing.sm, marginBottom: 4 }}>
             Ou data exata (dd/mm/aaaa) — para registar o que já aconteceu
           </Text>
-          <TextField
+          <CampoData
             value={dataManual}
-            onChangeText={(t) => setDataManual(mascaraDataPt(t))}
+            onChangeText={setDataManual}
             placeholder="Ex: 15/03/2026"
-            icon="calendar-edit"
-            keyboardType="number-pad"
+            rotuloCalendario="Escolher a data do registo no calendário"
           />
           {dataManualInvalida ? (
             <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
@@ -685,7 +683,7 @@ export default function NovoEventoScreen() {
           disabled={!valido || aGuardar}
         />
       </View>
-    </View>
+    </EcraComTeclado>
   );
 }
 

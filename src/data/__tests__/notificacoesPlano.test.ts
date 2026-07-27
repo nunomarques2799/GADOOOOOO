@@ -10,7 +10,14 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { PREF_OMISSAO, type Preferencias } from '../notificacoes';
-import { HORA_AVISO, HORIZONTE_DIAS, MAX_AGENDADAS, planear, quandoTocar } from '../notificacoesPlano';
+import {
+  destinoDoAviso,
+  HORA_AVISO,
+  HORIZONTE_DIAS,
+  MAX_AGENDADAS,
+  planear,
+  quandoTocar,
+} from '../notificacoesPlano';
 import type { Alerta } from '../types';
 
 /** Uma quarta-feira às 10:00 — depois da hora de aviso, para expor o caso. */
@@ -108,5 +115,24 @@ describe('planear', () => {
     const datas = plano.map((p) => p.quando.getTime());
     expect([...datas].sort((a, b) => a - b)).toEqual(datas); // por ordem
     expect(plano[0].alerta.id).toBe('a0'); // o mais próximo sobrevive
+  });
+});
+
+describe('destinoDoAviso', () => {
+  const existe = (id: string) => id === 'a1';
+
+  it('abre a ficha do animal do aviso', () => {
+    expect(destinoDoAviso({ animalId: 'a1' }, existe)).toBe('/animal/a1');
+  });
+
+  it('vai para os alertas quando o aviso não é de um animal', () => {
+    expect(destinoDoAviso({}, existe)).toBe('/alertas');
+  });
+
+  it('vai para os alertas quando o animal já não existe', () => {
+    // Vendido e eliminado noutro aparelho, ou um aviso agendado por uma conta
+    // anterior. Sem esta guarda o toque abria uma ficha "Animal não
+    // encontrado" — e quem só queria saber o que fazer hoje ficava sem nada.
+    expect(destinoDoAviso({ animalId: 'desaparecido' }, existe)).toBe('/alertas');
   });
 });

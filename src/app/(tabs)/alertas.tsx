@@ -6,12 +6,14 @@ import { CalendarioAlertas } from '@/components/CalendarioAlertas';
 import { Card, Chip, EmptyState, Header, Icon, type IconName, Screen, Text } from '@/components/ui';
 import { useGado } from '@/data/store';
 import type { Alerta, AlertaGravidade } from '@/data/types';
+import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { colors, radii, spacing } from '@/theme';
 
 type Vista = 'lista' | 'calendario';
 
 export default function AlertasScreen() {
   const { alertas, exploracoes, dispensarAlerta } = useGado();
+  const { controlo: controloAtualizar } = useAtualizarPuxando();
   const [vista, setVista] = useState<Vista>('lista');
   const [exploracaoId, setExploracaoId] = useState<string | undefined>(undefined);
 
@@ -37,7 +39,7 @@ export default function AlertasScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Header title="Alertas e prazos" />
-      <Screen>
+      <Screen refreshControl={controloAtualizar}>
         {/* Lista ou calendário */}
         <View
           style={{

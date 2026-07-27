@@ -4,7 +4,7 @@
     "slug": "gestao-gado",
     "version": "1.0.0",
     "orientation": "default",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icone-app.png",
     "scheme": "gestaogado",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -15,9 +15,8 @@
     "android": {
       "package": "com.gestaogado.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1B7A48",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "permissions": [
@@ -36,7 +35,7 @@
       "shortName": "Terrabovina",
       "description": "Gestão pecuária offline-first para criadores em Portugal.",
       "themeColor": "#0f7d33",
-      "backgroundColor": "#f4f1e8",
+      "backgroundColor": "#1b7a48",
       "display": "standalone",
       "startUrl": "/",
       "orientation": "any"
@@ -46,9 +45,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#1B7A48",
+          "image": "./assets/images/splash-terrabovina.png",
+          "imageWidth": 160
         }
       ],
       "expo-font",
@@ -58,6 +57,14 @@
         {
           "color": "#0f7d33",
           "defaultChannel": "alertas"
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "A Terrabovina precisa de aceder às suas fotografias para ilustrar a ficha do animal.",
+          "cameraPermission": "A Terrabovina precisa da câmara para fotografar o animal."
         }
       ]
     ],

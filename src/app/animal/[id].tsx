@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -7,6 +8,7 @@ import { AlertItem } from '@/components/AlertItem';
 import {
   Badge,
   Button,
+  CampoData,
   Card,
   Chip,
   EmptyState,
@@ -22,7 +24,7 @@ import { especieMeta, finalidadeMeta } from '@/data/constants';
 import { confirmar } from '@/data/avisos';
 import { filhosDe, rotuloAnimal } from '@/data/genealogia';
 import { balancoAnimal } from '@/data/financas';
-import { diasAte, formatDataCurta, formatDataPt, formatEuro, idadeExtenso, mascaraDataPt, paraEuro, parseDataPt } from '@/data/helpers';
+import { diasAte, formatDataCurta, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
@@ -179,8 +181,18 @@ export default function AnimalDetalheScreen() {
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: spacing.sm,
+              overflow: 'hidden',
             }}>
-            <Icon name={meta.icon} size={52} color={colors.textOnDark} />
+            {animal.fotografia ? (
+              <Image
+                source={{ uri: animal.fotografia }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                accessibilityIgnoresInvertColors
+              />
+            ) : (
+              <Icon name={meta.icon} size={52} color={colors.textOnDark} />
+            )}
           </View>
           <Text variant="h1" color={colors.textOnDark}>
             {animal.nome ?? 'Sem nome'}
@@ -508,12 +520,12 @@ function FormularioSaida({
         Data (dd/mm/aaaa)
       </Text>
       <View style={{ marginBottom: spacing.md }}>
-        <TextField
+        <CampoData
           value={data}
-          onChangeText={(t) => onChangeData(mascaraDataPt(t))}
+          onChangeText={onChangeData}
           placeholder="dd/mm/aaaa"
           icon="calendar"
-          keyboardType="number-pad"
+          rotuloCalendario="Escolher a data da saída no calendário"
         />
       </View>
       {tipo === 'vendido' && podeDefinirPreco ? (

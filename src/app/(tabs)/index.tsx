@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlertItem } from '@/components/AlertItem';
 import { BannerAtualizacao } from '@/components/BannerAtualizacao';
+import { BannerNaoGravado } from '@/components/BannerNaoGravado';
 import { BannerSuspensao } from '@/components/BannerSuspensao';
+import { PainelPrimeirosPassos } from '@/components/PainelPrimeirosPassos';
 import { ExploracaoRow } from '@/components/ExploracaoRow';
 import { QuickAction } from '@/components/QuickAction';
 import { StatCard } from '@/components/StatCard';
@@ -17,14 +19,17 @@ import { dataExtensa, formatEuro, saudacao } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
+import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
+import { temaEscuro } from '@/theme/preferencia';
 
 export default function InicioScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
-  const { isSuperadmin, podeVer } = useMembros();
+  const { isSuperadmin, podeVer, estadoPerfil } = useMembros();
+  const { controlo: controloAtualizar } = useAtualizarPuxando();
   const {
     utilizador, exploracoes, terrenos, animais, eventos, movimentos, alertas, online,
     pendentesSinc,
@@ -216,9 +221,12 @@ export default function InicioScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar style="light" />
+      {/* O cabeçalho verde é escuro (ícones claros); na Noite é verde claro
+          (ícones escuros). */}
+      <StatusBar style={temaEscuro() ? 'dark' : 'light'} />
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={controloAtualizar}
         contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxxl }}>
         {/* Cabeçalho verde */}
         <LinearGradient
@@ -285,6 +293,11 @@ export default function InicioScreen() {
           {/* Aviso de nova versão — só na app desktop quando há atualização */}
           <BannerAtualizacao />
 
+          {/* Alterações que o servidor recusou. Vem ANTES do estado da ligação:
+              "sem rede" é uma condição passageira e o cartão abaixo explica-se
+              sozinho; isto é trabalho perdido, e é o que exige uma decisão. */}
+          <BannerNaoGravado />
+
           {/* Estado de sincronização — só aparece offline ou com pendentes */}
           {!online || pendentesSinc > 0 ? (
             <Card style={{ marginBottom: spacing.md }}>
@@ -304,6 +317,11 @@ export default function InicioScreen() {
               </View>
             </Card>
           ) : null}
+
+          {/* Guia de primeiros passos — só para quem gere a própria conta (um
+              trabalhador convidado entra numa operação já montada e não cria
+              explorações). Some sozinho quando está tudo feito. */}
+          {estadoPerfil === 'ativo' ? <PainelPrimeirosPassos /> : null}
 
           {/* Em desktop há largura para duas colunas: o que exige ação à
               esquerda, os números e atalhos à direita. No telemóvel segue

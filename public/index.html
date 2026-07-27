@@ -42,6 +42,10 @@
       html,
       body {
         height: 100%;
+        /* O canvas da app (colors.background). Sem isto, o instante entre a
+           página abrir e o bundle desenhar o primeiro ecrã é branco puro — um
+           relâmpago branco a cada arranque da app instalada. */
+        background-color: #f3f6f2;
       }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {

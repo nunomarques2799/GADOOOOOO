@@ -4,7 +4,7 @@ import { ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CampoLocalidade } from '@/components/CampoLocalidade';
-import { Button, Header, Icon, type IconName, Text } from '@/components/ui';
+import { Button, EcraComTeclado, Header, Icon, type IconName, Text } from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
@@ -90,7 +90,7 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <EcraComTeclado>
       <Header title={editar ? 'Editar exploração' : 'Nova exploração'} />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -192,7 +192,7 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
           loading={aGravar}
         />
       </View>
-    </View>
+    </EcraComTeclado>
   );
 }
 

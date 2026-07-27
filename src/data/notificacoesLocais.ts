@@ -138,3 +138,38 @@ export async function cancelarTudo(): Promise<void> {
     await Notifications.cancelAllScheduledNotificationsAsync();
   }, undefined);
 }
+
+/** O que o `agendar` guarda em cada aviso, para se saber onde ele quer chegar. */
+export type DestinoAviso = {
+  /** Identificador do aviso do sistema — serve para não repetir a navegação. */
+  toque: string;
+  alertaId?: string;
+  animalId?: string;
+};
+
+/**
+ * O aviso em que o criador acabou de tocar.
+ * ------------------------------------------------------------------
+ * O `agendar` já guardava o `alertaId` e o `animalId` em cada notificação, mas
+ * ninguém os lia: tocar em "Mimosa — parto previsto amanhã" abria a app no
+ * Início e deixava-o a percorrer a lista à procura do animal. Um aviso que não
+ * leva a nenhum sítio faz o trabalho a meio.
+ *
+ * O `useLastNotificationResponse` do Expo cobre os dois casos que interessam: a
+ * app estava aberta, e a app estava fechada e foi o toque no aviso que a abriu
+ * (aí a resposta já está à espera no primeiro render).
+ */
+export function useToqueEmAviso(): DestinoAviso | null {
+  const resposta = Notifications.useLastNotificationResponse();
+  if (!resposta) return null;
+  const pedido = resposta.notification.request;
+  const dados = (pedido.content.data ?? {}) as { alertaId?: unknown; animalId?: unknown };
+  const texto = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
+  return {
+    // O identificador do PEDIDO, e não da resposta: é o mesmo enquanto for o
+    // mesmo aviso, o que permite tratá-lo uma vez só.
+    toque: pedido.identifier,
+    alertaId: texto(dados.alertaId),
+    animalId: texto(dados.animalId),
+  };
+}

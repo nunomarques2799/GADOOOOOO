@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { FlatList, Platform, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimalRow } from '@/components/AnimalRow';
 import { FolhaFiltros } from '@/components/FolhaFiltros';
-import { Button, Chip, EmptyState, FAB, Icon, Text } from '@/components/ui';
+import { Button, Chip, EmptyState, FAB, Icon, type IconName, Text } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
 import {
   contarAtivos,
@@ -13,14 +13,28 @@ import {
   FAIXAS,
   filtrarAnimais,
   mapaAlertas,
+  mapaGravidade,
+  ordenarAnimais,
+  ORDENACAO_OMISSAO,
+  ORDENACOES,
   rotuloCategoriaAlerta,
   SEM_TERRENO,
   type Filtros,
+  type Ordenacao,
 } from '@/data/filtrosAnimais';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
+
+/** Ícone de cada ordem, à parte da lista pura (que não conhece ícones). */
+const ICONE_ORDEM: Record<Ordenacao, IconName> = {
+  nome: 'sort-alphabetical-ascending',
+  alertas: 'alert-circle-outline',
+  novos: 'sort-clock-descending-outline',
+  velhos: 'sort-clock-ascending-outline',
+};
 
 export default function AnimaisScreen() {
   const insets = useSafeAreaInsets();
@@ -31,11 +45,29 @@ export default function AnimaisScreen() {
   // fim. O papel não se verifica aqui porque a exploração ainda não está
   // escolhida (é o formulário que a pede); isso fica para o `guardar`.
   const { contaSuspensa } = useMembros();
+  const { controlo: controloAtualizar } = useAtualizarPuxando();
 
   const [filtros, setFiltros] = useState<Filtros>({});
   const [folhaAberta, setFolhaAberta] = useState(false);
+  const [ordenacao, setOrdenacao] = useState<Ordenacao>(ORDENACAO_OMISSAO);
+
+  // Escrever na pesquisa muda `filtros` a cada tecla, e é isso que faz correr o
+  // `filtrarAnimais` + `facetasDisponiveis` + a ordenação. Num efetivo grande e
+  // num telemóvel antigo, essa cascata a cada tecla arrastava a escrita. O
+  // `useDeferredValue` deixa o texto aparecer já na caixa (lê `filtros`, sempre
+  // atual) e adia só o recálculo pesado da lista, que apanha o valor mais
+  // recente quando o dedo pára.
+  const filtrosAdiados = useDeferredValue(filtros);
 
   const porAnimal = useMemo(() => mapaAlertas(alertas), [alertas]);
+  const gravidade = useMemo(() => mapaGravidade(alertas), [alertas]);
+
+  // Nome do terreno resolvido uma vez, num mapa, para cada `AnimalRow` não ir
+  // buscar o seu ao store — trezentas linhas eram trezentas subscrições.
+  const nomeTerrenoPorId = useMemo(
+    () => new Map(terrenos.map((t) => [t.id, t.nome])),
+    [terrenos],
+  );
 
   /**
    * O efetivo com que a lista se compara — "3 de 28".
@@ -59,19 +91,13 @@ export default function AnimaisScreen() {
   // sexo só oferece o que existe entre os bovinos. Depende dos `filtros`, por
   // isso recalcula-se a cada escolha — é o que faz as opções desaparecerem.
   const facetas = useMemo(
-    () => facetasDisponiveis(animais, filtros, porAnimal),
-    [animais, filtros, porAnimal],
+    () => facetasDisponiveis(animais, filtrosAdiados, porAnimal),
+    [animais, filtrosAdiados, porAnimal],
   );
 
   const lista = useMemo(
-    () =>
-      filtrarAnimais(animais, filtros, porAnimal).sort((a, b) =>
-        (a.nome ?? a.numeroIdentificacao ?? '').localeCompare(
-          b.nome ?? b.numeroIdentificacao ?? '',
-          'pt',
-        ),
-      ),
-    [animais, filtros, porAnimal],
+    () => ordenarAnimais(filtrarAnimais(animais, filtrosAdiados, porAnimal), ordenacao, gravidade),
+    [animais, filtrosAdiados, porAnimal, ordenacao, gravidade],
   );
 
   const nAtivos = contarAtivos(filtros);
@@ -128,13 +154,21 @@ export default function AnimaisScreen() {
         renderItem={({ item }) =>
           desktop ? (
             <View style={{ flex: 1 }}>
-              <AnimalRow animal={item} />
+              <AnimalRow animal={item} nomeTerreno={item.terrenoId ? nomeTerrenoPorId.get(item.terrenoId) : undefined} />
             </View>
           ) : (
-            <AnimalRow animal={item} />
+            <AnimalRow animal={item} nomeTerreno={item.terrenoId ? nomeTerrenoPorId.get(item.terrenoId) : undefined} />
           )
         }
         showsVerticalScrollIndicator={false}
+        refreshControl={controloAtualizar}
+        // Com efetivos grandes, desenhar a lista toda de uma vez trava o
+        // primeiro render. Estes números dizem à FlatList para desenhar só o
+        // que se vê e ir enchendo à medida que se desce.
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={11}
+        removeClippedSubviews
         contentContainerStyle={{
           width: '100%',
           maxWidth: desktop ? layout.conteudoDesktop : undefined,
@@ -249,6 +283,37 @@ export default function AnimaisScreen() {
                 ) : null}
               </Pressable>
             </View>
+
+            {/* Ordenar — à vista, e não escondido na folha de filtros: "mostra-me
+                primeiro os que precisam de atenção" é um pedido do dia-a-dia,
+                não uma configuração. Só aparece com animais que cheguem para a
+                ordem fazer diferença. */}
+            {ativos.length > 1 ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  marginBottom: spacing.sm,
+                }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 2 }}>
+                  <Icon name="sort" size="sm" color={colors.textMuted} />
+                  <Text variant="caption" color={colors.textMuted}>
+                    Ordenar:
+                  </Text>
+                </View>
+                {ORDENACOES.map((o) => (
+                  <Chip
+                    key={o.valor}
+                    label={o.label}
+                    icon={ICONE_ORDEM[o.valor]}
+                    selected={ordenacao === o.valor}
+                    onPress={() => setOrdenacao(o.valor)}
+                  />
+                ))}
+              </View>
+            ) : null}
 
             {/* Importar de Excel — só web/Electron, onde há seletor de ficheiros.
                 No telemóvel a lista continua a registar-se com o "Registar". */}

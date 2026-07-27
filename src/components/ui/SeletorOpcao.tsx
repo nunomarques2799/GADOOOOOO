@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
+import { FolhaComTeclado } from './EcraComTeclado';
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
 
@@ -140,7 +141,7 @@ export function SeletorOpcao({
         // Sem isto, no Android o botão físico de voltar fecha a app inteira
         // em vez da folha.
         accessibilityViewIsModal>
-        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
+        <FolhaComTeclado>
           <Pressable style={{ flex: 1 }} onPress={fechar} accessibilityLabel="Fechar" />
           <View
             style={[
@@ -235,7 +236,7 @@ export function SeletorOpcao({
               ) : null}
             </ScrollView>
           </View>
-        </View>
+        </FolhaComTeclado>
       </Modal>
     </>
   );

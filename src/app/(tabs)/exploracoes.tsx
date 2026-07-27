@@ -6,6 +6,7 @@ import { ExploracaoRow } from '@/components/ExploracaoRow';
 import { EmptyState, FAB, Text } from '@/components/ui';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, spacing } from '@/theme';
 
@@ -15,6 +16,7 @@ export default function ExploracoesScreen() {
   const desktop = useDesktop();
   const { exploracoes } = useGado();
   const { estadoPerfil } = useMembros();
+  const { controlo: controloAtualizar } = useAtualizarPuxando();
   // Só clientes aprovados (perfil ativo) podem criar explorações. Membros por
   // convite (trabalhador/veterinário) veem as suas mas não criam novas.
   //
@@ -45,6 +47,7 @@ export default function ExploracoesScreen() {
           )
         }
         showsVerticalScrollIndicator={false}
+        refreshControl={controloAtualizar}
         contentContainerStyle={{
           width: '100%',
           maxWidth: desktop ? layout.conteudoDesktop : undefined,

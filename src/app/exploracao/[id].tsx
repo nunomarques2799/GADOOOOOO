@@ -254,7 +254,15 @@ export default function ExploracaoDetalheScreen() {
             </Text>
           </Card>
         ) : (
-          animais.slice(0, 4).map((a) => <AnimalRow key={a.id} animal={a} />)
+          animais
+            .slice(0, 4)
+            .map((a) => (
+              <AnimalRow
+                key={a.id}
+                animal={a}
+                nomeTerreno={a.terrenoId ? terrenos.find((t) => t.id === a.terrenoId)?.nome : undefined}
+              />
+            ))
         )}
         {animais.length > 4 ? (
           <Button

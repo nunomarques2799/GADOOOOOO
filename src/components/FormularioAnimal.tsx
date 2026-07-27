@@ -3,7 +3,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Card, Chip, Header, Icon, type IconName, SeletorOpcao, Text } from '@/components/ui';
+import { FotoAnimal } from '@/components/FotoAnimal';
+import {
+  Button,
+  CampoData,
+  Card,
+  Chip,
+  EcraComTeclado,
+  Header,
+  Icon,
+  type IconName,
+  SeletorOpcao,
+  Text,
+} from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
 import {
   GestacaoDias,
@@ -23,7 +35,6 @@ import {
   idadeExtenso,
   isoDaysAgo,
   isoMaisDias,
-  mascaraDataPt,
   parseDataPt,
 } from '@/data/helpers';
 import { impedimentoParaEliminar, rotuloAnimal } from '@/data/genealogia';
@@ -84,6 +95,7 @@ export function FormularioAnimal({
   const impedimento = animal ? impedimentoParaEliminar(animal, eventos, animais) : null;
 
   const [especie, setEspecie] = useState<Especie>(animal?.especie ?? 'Bovino');
+  const [foto, setFoto] = useState<string | undefined>(animal?.fotografia);
   const [sexo, setSexo] = useState<Sexo>(animal?.sexo ?? 'Fêmea');
   const [diasNasc, setDiasNasc] = useState<number | null>(animal ? null : 0);
   const [dataManual, setDataManual] = useState(animal ? formatDataCurta(animal.dataNascimento) : '');
@@ -241,6 +253,7 @@ export function FormularioAnimal({
         especie,
         sexo,
         dataNascimento,
+        fotografia: foto,
         nome: nome.trim() || undefined,
         numeroIdentificacao: brinco.trim() || undefined,
         raca: raca?.trim() || undefined,
@@ -299,7 +312,7 @@ export function FormularioAnimal({
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <EcraComTeclado>
       <Header title={editar ? 'Editar animal' : 'Novo animal'} />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -310,6 +323,10 @@ export function FormularioAnimal({
             ? 'Altere o que precisar e guarde no fim.'
             : 'Preencha o essencial. Pode completar os restantes dados mais tarde.'}
         </Text>
+
+        {/* Fotografia — o rosto do animal, para se reconhecer de relance na
+            lista. A silhueta segue a espécie escolhida. */}
+        <FotoAnimal foto={foto} onMudar={setFoto} icone={especieMeta[especie].icon} />
 
         {/* Espécie */}
         <Field label="Espécie" obrigatorio>
@@ -354,17 +371,17 @@ export function FormularioAnimal({
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm, marginBottom: 4 }}>
             Ou data exata (dd/mm/aaaa) — útil para animais já crescidos
           </Text>
-          <TextField
+          <CampoData
             value={dataManual}
-            onChangeText={(t) => {
-              const m = mascaraDataPt(t);
+            onChangeText={(m) => {
               setDataManual(m);
+              // Escolher uma data exata (à mão ou no calendário) desliga os
+              // atalhos "Hoje/Ontem"; apagá-la volta a "Hoje".
               if (m.trim()) setDiasNasc(null);
               else setDiasNasc(0);
             }}
             placeholder="Ex: 15/03/2021"
-            icon="calendar-edit"
-            keyboardType="number-pad"
+            rotuloCalendario="Escolher a data de nascimento no calendário"
           />
           {dataManualInvalida ? (
             <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
@@ -442,12 +459,12 @@ export function FormularioAnimal({
                 <Text variant="caption" color={colors.textMuted} style={{ marginBottom: 4 }}>
                   Data da cobrição (dd/mm/aaaa) — calculamos o parto por si
                 </Text>
-                <TextField
+                <CampoData
                   value={dataCobricao}
-                  onChangeText={(t) => setDataCobricao(mascaraDataPt(t))}
+                  onChangeText={setDataCobricao}
                   placeholder="Ex: 10/02/2026"
                   icon="calendar-heart"
-                  keyboardType="number-pad"
+                  rotuloCalendario="Escolher a data da cobrição no calendário"
                 />
                 {cobricaoInvalida ? (
                   <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
@@ -461,12 +478,12 @@ export function FormularioAnimal({
                   style={{ marginTop: spacing.sm, marginBottom: 4 }}>
                   Ou, se já souber a data do parto, escreva-a aqui
                 </Text>
-                <TextField
+                <CampoData
                   value={dataPartoManual}
-                  onChangeText={(t) => setDataPartoManual(mascaraDataPt(t))}
+                  onChangeText={setDataPartoManual}
                   placeholder="Ex: 20/11/2026"
-                  icon="calendar-edit"
-                  keyboardType="number-pad"
+                  permitirFuturo
+                  rotuloCalendario="Escolher a data prevista do parto no calendário"
                 />
                 {partoManualInvalido ? (
                   <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
@@ -718,7 +735,7 @@ export function FormularioAnimal({
           }
         />
       </View>
-    </View>
+    </EcraComTeclado>
   );
 }
 

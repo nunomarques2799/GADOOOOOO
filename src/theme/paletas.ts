@@ -39,6 +39,14 @@ export type TokensPaleta = {
   primaryTint: string;
   primaryTintStrong: string;
   onPrimary: string;
+  /**
+   * Texto e ícones sobre o cabeçalho colorido (o gradiente `headerFrom/To`) e
+   * sobre o cartão da meteorologia. Era fixo a branco — passou a token de
+   * paleta porque a paleta Noite tem o cabeçalho claro, e aí o texto tem de ser
+   * escuro. Em todas as outras é branco, como antes.
+   */
+  textOnDark: string;
+  textOnDarkMuted: string;
   headerFrom: string;
   headerTo: string;
   background: string;
@@ -77,7 +85,9 @@ export type PaletaId =
   | 'ardosia'
   | 'pedra'
   | 'tinta'
-  | 'contraste';
+  | 'contraste'
+  // Escuros
+  | 'noite';
 
 /**
  * Famílias, para a lista se poder percorrer.
@@ -85,9 +95,16 @@ export type PaletaId =
  * Vinte cartões seguidos não são vinte opções — são uma parede. Agrupados por
  * cor, quem quer "um azul" salta direto ao sítio em vez de percorrer tudo.
  */
-export type Familia = 'Verdes' | 'Azuis' | 'Roxos e rosas' | 'Quentes' | 'Neutros';
+export type Familia = 'Verdes' | 'Azuis' | 'Roxos e rosas' | 'Quentes' | 'Neutros' | 'Escuros';
 
-export const FAMILIAS: Familia[] = ['Verdes', 'Azuis', 'Roxos e rosas', 'Quentes', 'Neutros'];
+export const FAMILIAS: Familia[] = [
+  'Verdes',
+  'Azuis',
+  'Roxos e rosas',
+  'Quentes',
+  'Neutros',
+  'Escuros',
+];
 
 export type Paleta = {
   id: PaletaId;
@@ -96,6 +113,12 @@ export type Paleta = {
   /** Uma linha a dizer a quem serve. */
   descricao: string;
   familia: Familia;
+  /**
+   * Paleta de fundo escuro. Muda o que NÃO é cor: a barra de estado do sistema
+   * passa a clara, e a pré-visualização na lista de paletas sabe que o cartão é
+   * escuro. As cores em si já vêm todas dos `tokens`.
+   */
+  escura?: boolean;
   tokens: TokensPaleta;
 };
 
@@ -119,6 +142,8 @@ const DESENHADAS: Paleta[] = [
       primaryTint: '#EEF8F1',
       primaryTintStrong: '#DCF2E4',
       onPrimary: '#FFFFFF',
+      textOnDark: '#FFFFFF',
+      textOnDarkMuted: 'rgba(255,255,255,0.82)',
       headerFrom: '#124D2E',
       headerTo: '#1B7A48',
       background: '#F3F6F2',
@@ -148,6 +173,8 @@ const DESENHADAS: Paleta[] = [
       primaryTint: '#FAF4EC',
       primaryTintStrong: '#F0E3D2',
       onPrimary: '#FFFFFF',
+      textOnDark: '#FFFFFF',
+      textOnDarkMuted: 'rgba(255,255,255,0.82)',
       headerFrom: '#4E3219',
       headerTo: '#7D5227',
       background: '#F7F3EC',
@@ -174,6 +201,8 @@ const DESENHADAS: Paleta[] = [
       primaryTint: '#F4F6EA',
       primaryTintStrong: '#E5EACF',
       onPrimary: '#FFFFFF',
+      textOnDark: '#FFFFFF',
+      textOnDarkMuted: 'rgba(255,255,255,0.82)',
       headerFrom: '#3A421C',
       headerTo: '#5F6B2F',
       background: '#F5F6EE',
@@ -200,6 +229,8 @@ const DESENHADAS: Paleta[] = [
       primaryTint: '#EDF4FA',
       primaryTintStrong: '#D6E7F5',
       onPrimary: '#FFFFFF',
+      textOnDark: '#FFFFFF',
+      textOnDarkMuted: 'rgba(255,255,255,0.82)',
       headerFrom: '#103A5F',
       headerTo: '#1D5D96',
       background: '#F1F5F8',
@@ -226,6 +257,8 @@ const DESENHADAS: Paleta[] = [
       primaryTint: '#EBF6F6',
       primaryTintStrong: '#D0EAEA',
       onPrimary: '#FFFFFF',
+      textOnDark: '#FFFFFF',
+      textOnDarkMuted: 'rgba(255,255,255,0.82)',
       headerFrom: '#094245',
       headerTo: '#106A6E',
       background: '#F0F6F6',
@@ -252,6 +285,8 @@ const DESENHADAS: Paleta[] = [
       primaryTint: '#F0F1FA',
       primaryTintStrong: '#DCDFF3',
       onPrimary: '#FFFFFF',
+      textOnDark: '#FFFFFF',
+      textOnDarkMuted: 'rgba(255,255,255,0.82)',
       headerFrom: '#212A59',
       headerTo: '#37458F',
       background: '#F3F4F9',
@@ -278,6 +313,8 @@ const DESENHADAS: Paleta[] = [
       primaryTint: '#FBEFF2',
       primaryTintStrong: '#F4DAE1',
       onPrimary: '#FFFFFF',
+      textOnDark: '#FFFFFF',
+      textOnDarkMuted: 'rgba(255,255,255,0.82)',
       headerFrom: '#551725',
       headerTo: '#8A2740',
       background: '#F8F3F4',
@@ -304,6 +341,8 @@ const DESENHADAS: Paleta[] = [
       primaryTint: '#F0F3F5',
       primaryTintStrong: '#DDE4E9',
       onPrimary: '#FFFFFF',
+      textOnDark: '#FFFFFF',
+      textOnDarkMuted: 'rgba(255,255,255,0.82)',
       headerFrom: '#26333C',
       headerTo: '#3F5261',
       background: '#F4F6F7',
@@ -330,6 +369,8 @@ const DESENHADAS: Paleta[] = [
       primaryTint: '#EAF1FA',
       primaryTintStrong: '#CFE0F5',
       onPrimary: '#FFFFFF',
+      textOnDark: '#FFFFFF',
+      textOnDarkMuted: 'rgba(255,255,255,0.82)',
       headerFrom: '#062B57',
       headerTo: '#0B4F9E',
       // O fundo é cinzento e as superfícies brancas: com os dois a branco, um
@@ -345,6 +386,42 @@ const DESENHADAS: Paleta[] = [
       border: '#A9A9A9',
       borderStrong: '#767676',
       overlay: 'rgba(0, 0, 0, 0.65)',
+    },
+  },
+  {
+    id: 'noite',
+    nome: 'Noite',
+    descricao: 'Fundo escuro, para a ronda antes do amanhecer.',
+    familia: 'Escuros',
+    escura: true,
+    // A única paleta de fundo escuro. O modelo de tokens foi feito para fundos
+    // claros, e aqui os papéis invertem-se: o `primary*` é a rampa CLARA (verdes
+    // vivos, para se lerem sobre o escuro e servirem de texto de marca), e o
+    // `onPrimary` é escuro (o texto sobre o botão verde). O cabeçalho também é
+    // claro — daí o `textOnDark` ser escuro, ao contrário de todas as outras.
+    // Cada par foi verificado contra os mínimos WCAG (ver o teste); mexer numa
+    // destas cores exige voltar a corrê-lo.
+    tokens: {
+      primary: '#2FA163',
+      primaryDark: '#63CE90',
+      primaryDarker: '#8BE0B0',
+      primaryTint: '#17271E',
+      primaryTintStrong: '#1E3328',
+      onPrimary: '#06160E',
+      textOnDark: '#06160E',
+      textOnDarkMuted: 'rgba(6, 22, 14, 0.72)',
+      headerFrom: '#2C9257',
+      headerTo: '#43B074',
+      background: '#0E1411',
+      surface: '#1A231E',
+      surfaceAlt: '#212B25',
+      surfaceSunken: '#131A16',
+      text: '#EAF1EC',
+      textSecondary: '#AEBEB4',
+      textMuted: '#9DADA2',
+      border: '#2A362E',
+      borderStrong: '#3A4A40',
+      overlay: 'rgba(0, 0, 0, 0.60)',
     },
   },
 ];

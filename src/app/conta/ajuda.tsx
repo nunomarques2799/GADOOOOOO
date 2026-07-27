@@ -1,8 +1,11 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, Header, Icon, Text } from '@/components/ui';
+import { useToasts } from '@/data/toasts';
+import { reporTutorial } from '@/data/tutorial';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
 
@@ -10,6 +13,14 @@ import { colors, layout, radii, spacing } from '@/theme';
 export default function AjudaScreen() {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
+  const router = useRouter();
+  const toast = useToasts();
+
+  function reverGuia() {
+    reporTutorial();
+    toast.info('Guia reposto', 'Os primeiros passos voltam a aparecer no Início.');
+    router.navigate('/');
+  }
 
   const conteudo = {
     width: '100%',
@@ -66,6 +77,32 @@ export default function AjudaScreen() {
             {PERGUNTAS.map((p, i) => (
               <Pergunta key={i} titulo={p.titulo} resposta={p.resposta} />
             ))}
+          </View>
+
+          {/* Rever o guia — para quem o escondeu, ou quem quer segui-lo outra
+              vez. Volta a mostrar o painel no Início. */}
+          <View>
+            <Text
+              variant="label"
+              color={colors.textSecondary}
+              style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
+              COMEÇAR DE NOVO
+            </Text>
+            <Card>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Icon name="flag-checkered" size="lg" color={colors.primary} />
+                <Text variant="body" style={{ flex: 1 }}>
+                  Voltar a ver o guia de primeiros passos no ecrã inicial.
+                </Text>
+              </View>
+              <Button
+                label="Rever os primeiros passos"
+                icon="flag-checkered"
+                variant="secondary"
+                onPress={reverGuia}
+                style={{ marginTop: spacing.sm }}
+              />
+            </Card>
           </View>
         </View>
       </ScrollView>

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Chip, Header, Icon, type IconName, Text } from '@/components/ui';
+import { Button, Chip, EcraComTeclado, Header, Icon, type IconName, Text } from '@/components/ui';
 import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
 import { avisar, confirmar } from '@/data/avisos';
 import { tiposTerreno, tipoTerrenoMeta } from '@/data/constants';
@@ -118,7 +118,7 @@ export function FormularioTerreno({
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <EcraComTeclado>
       <Header title={editar ? 'Editar terreno' : 'Novo terreno'} />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -290,7 +290,7 @@ export function FormularioTerreno({
           loading={aGravar}
         />
       </View>
-    </View>
+    </EcraComTeclado>
   );
 }
 

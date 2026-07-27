@@ -4,7 +4,7 @@ import { Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ModalRelatorioPrazos } from '@/components/ModalRelatorioPrazos';
-import { Button, Card, Icon, type IconName, Text } from '@/components/ui';
+import { Button, Card, FolhaComTeclado, Icon, type IconName, Text } from '@/components/ui';
 import { exportarAnimaisExcel } from '@/data/animalExcelFicheiro';
 import { avisar, confirmar } from '@/data/avisos';
 import { descarregarTabelaExcel, excelDisponivel } from '@/data/excelFicheiro';
@@ -279,7 +279,7 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
         animationType="slide"
         transparent
         onRequestClose={() => setEditor(null)}>
-        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
+        <FolhaComTeclado>
           <Pressable style={{ flex: 1 }} onPress={() => setEditor(null)} accessibilityLabel="Fechar" />
           <View
             style={{
@@ -349,7 +349,7 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
               <Button label="Eliminar nota" icon="trash-can-outline" variant="danger" onPress={eliminar} />
             ) : null}
           </View>
-        </View>
+        </FolhaComTeclado>
       </Modal>
     </View>
   );

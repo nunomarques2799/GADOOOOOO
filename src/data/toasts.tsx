@@ -28,6 +28,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { AccessibilityInfo } from 'react-native';
+
+import { vibrarErro, vibrarSucesso } from './vibrar';
 
 export type TipoToast = 'sucesso' | 'erro' | 'info';
 
@@ -97,6 +100,27 @@ export function mensagemDeErro(e: unknown): string {
 
 const SEM_RAZAO = 'Ocorreu um erro inesperado.';
 
+/**
+ * Diz a mensagem ao leitor de ecrã (TalkBack/VoiceOver).
+ *
+ * Só quando ele está ligado: no Android, chamar isto com o TalkBack desligado
+ * não faz nada, mas na web o `react-native-web` cria um elemento vivo na página
+ * a cada aviso, e não vale sujar o DOM por nada. A resposta ao
+ * `isScreenReaderEnabled` chega depois do cartão aparecer, o que não tem
+ * importância — o anúncio é uma segunda via, não a primeira.
+ */
+export function anunciar(texto: string): void {
+  try {
+    void AccessibilityInfo.isScreenReaderEnabled()
+      .then((ligado) => {
+        if (ligado) AccessibilityInfo.announceForAccessibility(texto);
+      })
+      .catch(() => undefined);
+  } catch {
+    /* plataforma sem suporte — o cartão em si continua legível */
+  }
+}
+
 type ToastsContext = {
   /** A fila, do mais antigo para o mais recente. */
   toasts: Toast[];
@@ -129,6 +153,17 @@ export function ToastsProvider({ children }: { children: ReactNode }) {
     (tipo: TipoToast, mensagem: string, detalhe?: string) => {
       const id = proximoId.current++;
       setToasts((f) => acrescentar(f, { id, tipo, mensagem, detalhe }));
+
+      // Sentir e ouvir, além de ver. Aqui, e não em cada ecrã: é este o sítio
+      // por onde passa toda a ação que grava, apaga ou escreve um ficheiro.
+      if (tipo === 'sucesso') vibrarSucesso();
+      else if (tipo === 'erro') vibrarErro();
+
+      // O cartão desaparece em segundos e a `accessibilityLiveRegion` só existe
+      // no Android — sem este anúncio, quem usa o leitor de ecrã só ouvia o
+      // aviso se por acaso o dedo lhe caísse em cima antes de ele sumir. É a
+      // única cópia da má notícia (ver DURACAO_MS).
+      anunciar(detalhe ? `${mensagem}. ${detalhe}` : mensagem);
       temporizadores.current.set(
         id,
         setTimeout(() => {

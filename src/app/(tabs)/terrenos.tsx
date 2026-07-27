@@ -9,6 +9,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { agruparTerrenosPorExploracao, emLinhas } from '@/data/terrenos';
 import type { Terreno } from '@/data/types';
+import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, spacing } from '@/theme';
 
@@ -32,6 +33,7 @@ export default function TerrenosScreen() {
   const desktop = useDesktop();
   const { terrenos, exploracoes, animais } = useGado();
   const { pode } = useMembros();
+  const { controlo: controloAtualizar } = useAtualizarPuxando();
 
   // Quantos animais em cada terreno — é a informação que dá sentido à lista.
   // Só o efetivo ativo: contar falecidos e vendidos dava um número que não
@@ -114,6 +116,7 @@ export default function TerrenosScreen() {
         }
         stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
+        refreshControl={controloAtualizar}
         contentContainerStyle={{
           width: '100%',
           maxWidth: desktop ? layout.conteudoDesktop : undefined,

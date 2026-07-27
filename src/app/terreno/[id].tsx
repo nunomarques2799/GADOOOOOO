@@ -152,6 +152,8 @@ export default function TerrenoDetalheScreen() {
             </Text>
           </Card>
         ) : (
+          // Sem `nomeTerreno`: são todos deste terreno, repetir o nome em cada
+          // linha era ruído.
           animaisNoTerreno.map((a) => <AnimalRow key={a.id} animal={a} />)
         )}
 
