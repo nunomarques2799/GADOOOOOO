@@ -48,8 +48,11 @@ alter table public.membro_exploracao
 -- ------------------------------------------------------------------
 -- Espelha `CAPACIDADES_GERIVEIS` em `src/data/permissoes.ts`. Mexer numa das
 -- listas obriga a mexer na outra (e no `permissoes.test.ts`).
+-- O `search_path` vazio nesta e nas três seguintes é o que o linter do Supabase
+-- pede (`function_search_path_mutable`): nenhuma delas lê tabelas, por isso o
+-- caminho mais apertado serve. Ver `schema_lint.sql`.
 create or replace function public.capacidade_gerivel(cap text)
-returns boolean language sql immutable as $$
+returns boolean language sql immutable set search_path = '' as $$
   select cap = any (array[
     'gerirTerrenos',
     'editarAnimais',
@@ -63,7 +66,7 @@ $$;
 
 -- O que cada papel pode de origem. Espelha a tabela `PERMISSOES` da app.
 create or replace function public.role_padrao_pode(r public.role_membro, cap text)
-returns boolean language sql immutable as $$
+returns boolean language sql immutable set search_path = '' as $$
   select case r
     when 'admin' then true
     when 'trabalhador' then cap = any (array[
@@ -84,7 +87,7 @@ $$;
 -- coluna fazia o cast rebentar DENTRO de uma política de RLS, e o erro que a app
 -- recebia era um erro de sintaxe de tipos a falar de uma leitura de animais.
 create or replace function public.ajuste_permissao(p jsonb, cap text)
-returns boolean language sql immutable as $$
+returns boolean language sql immutable set search_path = '' as $$
   select case
     when p is not null and jsonb_typeof(p -> cap) = 'boolean'
       then (p -> cap)::text::boolean
@@ -97,7 +100,7 @@ $$;
 -- sem erro, a não fazer absolutamente nada. O dono via o interruptor desligado
 -- e a pessoa continuava a apagar animais.
 create or replace function public.permissoes_membro_validas(p jsonb)
-returns boolean language sql immutable as $$
+returns boolean language sql immutable set search_path = '' as $$
   select p is null or (
     jsonb_typeof(p) = 'object'
     and not exists (

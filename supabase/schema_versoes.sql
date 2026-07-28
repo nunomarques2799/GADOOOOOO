@@ -22,9 +22,11 @@
 -- 1. Trigger que marca a hora a cada alteração
 -- ------------------------------------------------------------------
 -- SECURITY INVOKER (o default): isto não precisa de privilégios especiais,
--- só de correr no contexto de quem escreve.
+-- só de correr no contexto de quem escreve. O `search_path` vazio é o que o
+-- linter do Supabase pede — só toca no `new` e no `now()`, não precisa de
+-- caminho nenhum (ver `schema_lint.sql`).
 create or replace function public.toca_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = '' as $$
 begin
   -- Ignora o que o cliente tenha mandado nesta coluna: a versão é do
   -- servidor, senão um relógio mal acertado no telemóvel partia a deteção.
