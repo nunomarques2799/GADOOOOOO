@@ -14,9 +14,12 @@
 -- ------------------------------------------------------------------
 -- PREPARAÇÃO (uma só vez por base de dados, ANTES de aplicar este ficheiro)
 -- ------------------------------------------------------------------
--- 1. Ligar a extensão `pg_net`: painel do Supabase → Database → Extensions →
---    procurar "pg_net" → Enable. (O `create extension` da secção 1 também a
---    liga, mas em algumas bases só o painel tem permissão para isso.)
+-- 1. A extensão `pg_net` liga-se sozinha na secção 1, desde que o ficheiro
+--    seja aplicado com o utilizador `postgres.<ref>` da connection string
+--    (é o que o `.env.backup` guarda, e foi assim que correu no dev a
+--    2026-07-30). Se for aplicado pelo SQL Editor do painel e a secção 1
+--    imprimir o aviso de que não conseguiu, ligar à mão em Database →
+--    Extensions → pg_net → Enable, e correr o ficheiro outra vez.
 --
 -- 2. Criar conta em https://resend.com **com o email do superadmin**
 --    (terrabovinasuperadmin@gmail.com). Isto não é um detalhe: sem domínio
