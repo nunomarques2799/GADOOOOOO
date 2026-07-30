@@ -32,7 +32,7 @@ export default function TerrenosScreen() {
   const router = useRouter();
   const desktop = useDesktop();
   const { terrenos, exploracoes, animais } = useGado();
-  const { pode } = useMembros();
+  const { pode, estadoPerfil } = useMembros();
   const { controlo: controloAtualizar } = useAtualizarPuxando();
 
   // Quantos animais em cada terreno — é a informação que dá sentido à lista.
@@ -73,6 +73,48 @@ export default function TerrenosScreen() {
   // de onde separar estes terrenos, e o nome dela já está no topo do separador
   // Explorações. Fica só a lista, e o botão flutuante trata de criar.
   const agruparPorExploracao = exploracoes.length > 1;
+
+  /**
+   * O convite a registar o primeiro terreno — no RODAPÉ, e não no
+   * `ListEmptyComponent`.
+   *
+   * Uma lista por secções conta os cabeçalhos e rodapés de cada secção como
+   * itens: com uma exploração criada e nenhum terreno, a lista já não está
+   * "vazia" aos olhos do React Native e o `ListEmptyComponent` nunca chegava a
+   * aparecer. Como o cabeçalho de grupo (onde vive o "NOVO") também está
+   * escondido quando só há uma exploração, e o botão flutuante exige terrenos,
+   * o separador ficava com o título e mais nada — sem nenhuma forma de
+   * adicionar. Era esse o ecrã de quem acaba de criar conta.
+   *
+   * Com várias explorações não faz falta: aí cada grupo tem o seu cabeçalho com
+   * o "NOVO", que cria o terreno na exploração certa.
+   */
+  const convite =
+    semTerrenos && !agruparPorExploracao ? (
+      exploracoes.length === 0 ? (
+        <EmptyState
+          icon="grass"
+          title="Sem terrenos"
+          message="Os terrenos pertencem a uma exploração. Crie primeiro a sua exploração e depois registe aqui as pastagens e os cercados."
+          actionLabel={estadoPerfil === 'ativo' ? 'Nova exploração' : undefined}
+          onAction={
+            estadoPerfil === 'ativo' ? () => router.push('/exploracao/nova') : undefined
+          }
+        />
+      ) : (
+        <EmptyState
+          icon="grass"
+          title="Sem terrenos"
+          message={
+            primeiraEditavel
+              ? 'Registe as pastagens, os cercados e os currais onde o gado anda. Depois pode dizer em que terreno está cada animal e ver, de uma olhadela, quantos estão em cada sítio.'
+              : 'Ainda não há terrenos registados nesta exploração. Quem a gere é que os pode registar.'
+          }
+          actionLabel={primeiraEditavel ? 'Novo terreno' : undefined}
+          onAction={primeiraEditavel ? () => criarEm(primeiraEditavel.id) : undefined}
+        />
+      )
+    ) : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -141,19 +183,7 @@ export default function TerrenosScreen() {
             </Text>
           </View>
         }
-        ListEmptyComponent={
-          <EmptyState
-            icon="grass"
-            title="Sem terrenos"
-            message={
-              exploracoes.length === 0
-                ? 'Crie primeiro uma exploração: os terrenos pertencem a uma.'
-                : 'Registe os terrenos onde o gado anda para saber onde está cada animal.'
-            }
-            actionLabel={primeiraEditavel ? 'Novo terreno' : undefined}
-            onAction={primeiraEditavel ? () => criarEm(primeiraEditavel.id) : undefined}
-          />
-        }
+        ListFooterComponent={convite}
       />
       {/* O botão flutuante só faz sentido quando há UMA exploração: com várias,
           criar é dentro do grupo certo — o "Novo" do cabeçalho — em vez de

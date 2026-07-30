@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CartaoIntroducao } from '@/components/CartaoIntroducao';
 import { FolhaPermissoes } from '@/components/FolhaPermissoes';
 import { Avatar, Badge, Button, Card, Chip, EmptyState, Icon, Text } from '@/components/ui';
 import { acessoTerminou, rotuloPrazo } from '@/data/acessoTemporario';
@@ -229,6 +230,21 @@ export default function TrabalhadoresScreen() {
         </View>
 
         <View style={{ ...coluna, gap: spacing.md }}>
+          {/* À primeira vez, o que é este separador. Sem isto, quem o abria via
+              uma lista vazia e não ficava a saber que é aqui que se convida
+              gente, nem que é aqui que se decide o que cada um pode mexer. */}
+          <CartaoIntroducao
+            chave="trabalhadores"
+            icon="account-hard-hat"
+            titulo="Para que serve este separador"
+            pontos={[
+              'Aqui estão as pessoas a quem deu acesso à sua exploração: trabalhadores e veterinários. Quem não está nesta lista não vê nada do que registou.',
+              'Convida-se com um código: a pessoa instala a app, escreve o código e fica logo ligada à sua exploração — não precisa de saber a sua palavra-passe.',
+              'Cada um só mexe no que lhe compete: o trabalhador aponta o que faz no dia a dia, o veterinário regista tratamentos.',
+              'Toque numa pessoa para ver e mudar ao certo o que ela pode alterar. Ao veterinário pode dar acesso só por uns dias, findos os quais ele sai sozinho.',
+            ]}
+          />
+
           {/* Por exploração, à vista e não escondido, como nos Animais */}
           {minhas.length > 1 ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>

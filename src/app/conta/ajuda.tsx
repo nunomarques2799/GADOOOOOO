@@ -4,6 +4,7 @@ import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, Header, Icon, Text } from '@/components/ui';
+import { reporIntroducoes } from '@/data/introducoes';
 import { useToasts } from '@/data/toasts';
 import { reporTutorial } from '@/data/tutorial';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -18,7 +19,13 @@ export default function AjudaScreen() {
 
   function reverGuia() {
     reporTutorial();
-    toast.info('Guia reposto', 'Os primeiros passos voltam a aparecer no Início.');
+    // Também as apresentações dos separadores: quem pede para rever o guia está
+    // a pedir que lhe expliquem a app, não só o Início.
+    reporIntroducoes();
+    toast.info(
+      'Guia reposto',
+      'Os primeiros passos voltam ao Início e os separadores voltam a apresentar-se.',
+    );
     router.navigate('/');
   }
 
@@ -92,7 +99,8 @@ export default function AjudaScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <Icon name="flag-checkered" size="lg" color={colors.primary} />
                 <Text variant="body" style={{ flex: 1 }}>
-                  Voltar a ver o guia de primeiros passos no ecrã inicial.
+                  Voltar a ver o guia de primeiros passos no ecrã inicial e as
+                  explicações de cada separador.
                 </Text>
               </View>
               <Button
