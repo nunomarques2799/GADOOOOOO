@@ -25,6 +25,7 @@ import { carregarNomesEquipa, esquecerNomesEquipa } from './nomesEquipa';
 import {
   CAPACIDADES_GERIVEIS,
   podeConsultar,
+  podeCriarExploracao,
   podeEscrever,
   type Capacidade,
   type CapacidadeLeitura,
@@ -91,6 +92,15 @@ type MembrosContext = {
   contaSuspensa: boolean;
   /** true se o utilizador é admin de pelo menos uma exploração. */
   isAdminEmAlguma: boolean;
+  /**
+   * true se esta conta pode criar uma exploração nova.
+   *
+   * Fica à parte do `pode(...)` porque não é uma capacidade DENTRO de uma
+   * exploração: quem entrou por um código de outra pessoa não vem para abrir
+   * quinta. Espelha a política `exploracao_ativo_insert` (ver
+   * `supabase/schema_papel_veterinario.sql`).
+   */
+  podeCriarExploracoes: boolean;
   /** Recarrega perfil + membros a partir do Supabase. */
   recarregar: () => Promise<void>;
 
@@ -447,6 +457,22 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
 
   const isAdminEmAlguma = useMemo(() => membros.some((m) => m.role === 'admin'), [membros]);
 
+  /**
+   * TODOS os vínculos, não só os vivos: um veterinário cujo prazo caiu ontem
+   * continua a ser uma visita. Com os vivos apenas, o acesso a expirar dava-lhe
+   * o direito de criar explorações no instante exato em que o perdia.
+   */
+  const podeCriarExploracoes = useMemo(
+    () =>
+      podeCriarExploracao({
+        ...contexto,
+        // Não se pergunta por uma exploração: a decisão é sobre a conta inteira.
+        role: undefined,
+        papeis: todosMembros.map((m) => m.role),
+      }),
+    [contexto, todosMembros],
+  );
+
   // "Tinha e já não tem", que é diferente de "nunca teve": a quem nunca teve, a
   // app oferece criar uma exploração ou pedir um código; a quem expirou, o que
   // faz falta é dizer o que aconteceu.
@@ -635,6 +661,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       podeEmAlguma,
       contaSuspensa,
       isAdminEmAlguma,
+      podeCriarExploracoes,
       recarregar,
       listarPendentes,
       aprovarCliente,
@@ -653,7 +680,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       aCarregar, membros, membrosExpirados, acessoExpirado,
       isSuperadmin, estadoPerfil, roleEm, permissoesEm,
       pode, podeVer, podeEmAlguma,
-      contaSuspensa, isAdminEmAlguma,
+      contaSuspensa, isAdminEmAlguma, podeCriarExploracoes,
       recarregar, listarPendentes, aprovarCliente, bloquearCliente,
       listarConvites, criarConvite, removerConvite, listarMembrosDe,
       removerMembro, definirPermissoes, definirPrazoDeAcesso, definirFimDeAcesso,

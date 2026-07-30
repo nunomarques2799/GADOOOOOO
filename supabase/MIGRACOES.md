@@ -36,7 +36,8 @@ Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
 | 17 | `schema_acesso_ate.sql` | O convite pode terminar num dia e hora à escolha (`convite.acesso_ate`), e não só ao fim de N horas. | **15** |
 | 18 | `schema_atividade.sql` | `registo_atividade`: quem alterou o quê e quando, por trigger em animal/evento/terreno/movimento. | 1, 2, 13, 14, **15** |
 | 19 | `schema_apoio.sql` | Escrever ao apoio e reportar problemas de dentro da app; o motor de envio muda para o schema `interno`. | **16** |
-| 20 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. | **todos** |
+| 20 | `schema_papel_veterinario.sql` | `registarTratamentos` separada de `editarAnimais`; o veterinário deixa de mexer em fichas, terrenos e saídas; contas convidadas não criam explorações. | 2, **13**, 15 |
+| 21 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. | **todos** |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 
@@ -79,14 +80,21 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
   o `interno.enviar_email` que ele chama existe, mas a `public` que o 19 tinha
   reescrito já não. Precisa da mesma PREPARAÇÃO do 16 (`pg_net` + chave no
   Vault) e de nada mais.
-- **20 depende de todos, e é por isso que é o último.** O que ele faz é decidir
+- **20 depende de 13.** Ele reescreve `capacidade_gerivel()` e
+  `role_padrao_pode()` (do 13) e as três políticas de `evento`. Aplicado antes
+  do 13, é o 13 que fica por cima e o `registarTratamentos` passa a ser uma
+  capacidade que a app pede e que o servidor não conhece: `role_padrao_pode`
+  devolve `false` para ela, e o veterinário — que já perdeu o `editarAnimais` no
+  lado da app — fica sem conseguir registar tratamento nenhum. A app mostra os
+  botões (a tabela dela diz que pode) e cada gravação bate contra a RLS.
+- **21 depende de todos, e é por isso que é o último.** O que ele faz é decidir
   quem pode executar cada função `security definer` da base. Se correr a meio,
   as funções que os ficheiros seguintes criarem nascem com o `EXECUTE` que o
   Postgres dá ao PUBLIC — que inclui o `anon`, ou seja, gente sem sessão
   iniciada. Foi exatamente isso que aconteceu com o 4.º (que fazia esta mesma
   limpeza) e deixou cinco funções dos ficheiros 10, 11 e 14 abertas ao `anon`
   em produção durante meses, sem um único erro à vista. **Um ficheiro novo
-  entra sempre antes deste, e o 20 volta a correr a seguir.**
+  entra sempre antes deste, e o 21 volta a correr a seguir.**
 - **16 não é só SQL.** O envio de email precisa da extensão `pg_net` ligada e
   da chave da API guardada no Vault — os dois passos estão no cabeçalho do
   ficheiro. Sem eles o schema aplica-se na mesma e o trigger cria-se: o que
@@ -94,7 +102,7 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
   `public.notificacao_envio` e email nenhum. Confirmar sempre com
   `select public.testar_notificacao_registo();` depois de aplicar.
   Reparar também que a função de envio **não** se defende por permissões, e sim
-  por uma verificação lá dentro — precisamente porque o 20 lhe devolveria o
+  por uma verificação lá dentro — precisamente porque o 21 lhe devolveria o
   `execute` a `authenticated` a seguir.
 - **11 depende de 10.** Ambos substituem o trigger `handle_new_exploracao`. O
   11 reescreve-o a herdar as DUAS opções (finanças e casa); aplicá-lo antes do
@@ -113,7 +121,7 @@ powershell scripts/gerar-schema-completo.ps1
 ```
 
 Isso gera `supabase/_completo.sql` com os ficheiros do `ordem.txt` pela ordem
-certa (são 20 à data desta linha, mas quem manda é o `ordem.txt`). Colar
+certa (são 21 à data desta linha, mas quem manda é o `ordem.txt`). Colar
 **tudo de uma vez** no *SQL Editor* → *Run*.
 
 Colar tudo junto é mais seguro do que ficheiro a ficheiro, ao contrário do que

@@ -23,6 +23,10 @@ const ICONE_CAPACIDADE: Record<Capacidade, IconName> = {
   gerirEquipa: 'account-multiple',
   gerirTerrenos: 'grass',
   editarAnimais: 'cow',
+  // `medical-bag` e não `needle`: o `needle` já é o do CUSTO do tratamento, e
+  // dois ícones iguais numa lista de interruptores é a melhor forma de o dono
+  // ligar o que não queria.
+  registarTratamentos: 'medical-bag',
   eliminarAnimais: 'delete-outline',
   registarSaida: 'exit-run',
   registarDespesa: 'cash-minus',

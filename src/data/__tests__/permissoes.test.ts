@@ -7,8 +7,10 @@ import {
   explicacaoCapacidade,
   legendaCapacidade,
   legendaRole,
+  eConvidado,
   permissoesEfetivas,
   podeConsultar,
+  podeCriarExploracao,
   podeEscrever,
   rolePode,
   type Capacidade,
@@ -31,21 +33,31 @@ describe('rolePode', () => {
     ['admin', 'gerirEquipa', true],
     ['admin', 'gerirTerrenos', true],
     ['admin', 'editarAnimais', true],
+    ['admin', 'registarTratamentos', true],
     ['admin', 'eliminarAnimais', true],
     ['admin', 'registarSaida', true],
 
     // O trabalhador trata do dia-a-dia, mas o património não é dele.
     ['trabalhador', 'gerirTerrenos', true],
     ['trabalhador', 'editarAnimais', true],
+    ['trabalhador', 'registarTratamentos', true],
     ['trabalhador', 'eliminarAnimais', true],
     ['trabalhador', 'registarSaida', true],
     ['trabalhador', 'editarExploracao', false],
     ['trabalhador', 'eliminarExploracao', false],
     ['trabalhador', 'gerirEquipa', false],
 
-    // O veterinário mexe nos animais e certifica saídas — nada mais.
-    ['veterinario', 'editarAnimais', true],
-    ['veterinario', 'registarSaida', true],
+    // O veterinário é uma VISITA: escreve o que fez ao animal e mais nada.
+    //
+    // As três linhas a `false` que se seguem ao `registarTratamentos` são o
+    // coração desta tabela. Até 2026-07-30 `editarAnimais` queria dizer as duas
+    // coisas ao mesmo tempo — corrigir a ficha e registar um tratamento — e por
+    // isso quem vinha à exploração uma manhã ficava a poder trocar o brinco de
+    // um animal, mudá-lo de courela (que é a mesma coluna da ficha) e dá-lo por
+    // morto ou vendido. Se alguma delas voltar a `true`, é isso que volta.
+    ['veterinario', 'registarTratamentos', true],
+    ['veterinario', 'editarAnimais', false],
+    ['veterinario', 'registarSaida', false],
     ['veterinario', 'eliminarAnimais', false],
     ['veterinario', 'gerirTerrenos', false],
     ['veterinario', 'editarExploracao', false],
@@ -90,9 +102,21 @@ describe('rolePode', () => {
     }
   });
 
-  it('apagar um animal leva o histórico atrás — não é ato veterinário', () => {
-    expect(rolePode('veterinario', 'editarAnimais')).toBe(true);
+  it('o veterinário regista o que fez e não toca na ficha', () => {
+    // A separação que dá sentido ao papel: registar SIM, alterar a ficha NÃO.
+    // Com as duas na mesma capacidade não havia como ter uma sem a outra.
+    expect(rolePode('veterinario', 'registarTratamentos')).toBe(true);
+    expect(rolePode('veterinario', 'editarAnimais')).toBe(false);
     expect(rolePode('veterinario', 'eliminarAnimais')).toBe(false);
+    expect(rolePode('veterinario', 'registarSaida')).toBe(false);
+  });
+
+  it('ao trabalhador não se fechou nada com a separação', () => {
+    // A capacidade nova não pode ter sido uma subtração para quem já podia
+    // tudo o que ela cobre: quem corrigia fichas E registava tratamentos tem de
+    // continuar a fazer as duas coisas.
+    expect(rolePode('trabalhador', 'editarAnimais')).toBe(true);
+    expect(rolePode('trabalhador', 'registarTratamentos')).toBe(true);
   });
 });
 
@@ -146,7 +170,8 @@ describe('podeEscrever — modo da app + estado da conta + papel', () => {
   });
 
   it('conta ativa respeita os limites do papel', () => {
-    expect(podeEscrever({ ...base, role: 'veterinario' }, 'editarAnimais')).toBe(true);
+    expect(podeEscrever({ ...base, role: 'veterinario' }, 'registarTratamentos')).toBe(true);
+    expect(podeEscrever({ ...base, role: 'veterinario' }, 'editarAnimais')).toBe(false);
     expect(podeEscrever({ ...base, role: 'veterinario' }, 'eliminarAnimais')).toBe(false);
   });
 });
@@ -176,6 +201,14 @@ describe('podeConsultar — quem vê as contas', () => {
     ['veterinario', 'verFinancas', false],
     ['veterinario', 'verBalancoAnimal', false],
     [undefined, 'verFinancas', false],
+
+    // Os Documentos importam e exportam o efetivo inteiro. Ficam com quem tem a
+    // exploração a cargo todos os dias; o veterinário não tem que levar o gado
+    // de outra pessoa num Excel a caminho da quinta seguinte.
+    ['admin', 'verDocumentos', true],
+    ['trabalhador', 'verDocumentos', true],
+    ['veterinario', 'verDocumentos', false],
+    [undefined, 'verDocumentos', false],
   ];
 
   it.each(casos)('papel %s + %s → %s', (papel, capacidade, esperado) => {
@@ -307,9 +340,14 @@ describe('permissoesEfetivas — o que a folha mostra', () => {
     expect(terrenos.ajustada).toBe(true);
 
     // Uma capacidade que o papel já dava não conta como alterada.
-    const animais = linhas.find((l) => l.capacidade === 'editarAnimais')!;
-    expect(animais.pode).toBe(true);
-    expect(animais.ajustada).toBe(false);
+    const tratamentos = linhas.find((l) => l.capacidade === 'registarTratamentos')!;
+    expect(tratamentos.pode).toBe(true);
+    expect(tratamentos.ajustada).toBe(false);
+
+    // E uma que ele não dá aparece desligada e não alterada.
+    const fichas = linhas.find((l) => l.capacidade === 'editarAnimais')!;
+    expect(fichas.pode).toBe(false);
+    expect(fichas.ajustada).toBe(false);
   });
 
   it('um ajuste igual ao que o papel dá não aparece como alterado', () => {
@@ -346,5 +384,59 @@ describe('legendaRole', () => {
     expect(legendaRole('admin')).toBe('Dono');
     expect(legendaRole('trabalhador')).toBe('Trabalhador');
     expect(legendaRole('veterinario')).toBe('Veterinário');
+  });
+});
+
+/**
+ * Criar explorações não é uma capacidade DENTRO de uma exploração: a pergunta é
+ * sobre a conta inteira. Errar aqui tem dois lados e os dois são maus — deixar
+ * um convidado abrir quinta na conta de outra pessoa, ou fechar a porta a quem
+ * acaba de se registar e ainda não tem nada. Espelha a política
+ * `exploracao_ativo_insert` de `supabase/schema_papel_veterinario.sql`.
+ */
+describe('eConvidado / podeCriarExploracao', () => {
+  const base: ContextoAcesso = {
+    supabaseConfigurado: true,
+    temSessao: true,
+    isSuperadmin: false,
+    estadoPerfil: 'ativo',
+    role: undefined,
+  };
+
+  it('sem vínculo nenhum não é convidado', () => {
+    // O caso da conta acabada de aprovar. Tratá-la como convidada fechava a
+    // app a toda a gente nova: sem exploração não há nada que se possa fazer.
+    expect(eConvidado([])).toBe(false);
+    expect(podeCriarExploracao({ ...base, papeis: [] })).toBe(true);
+  });
+
+  it('quem só entrou por código é convidado', () => {
+    expect(eConvidado(['veterinario'])).toBe(true);
+    expect(eConvidado(['trabalhador'])).toBe(true);
+    expect(eConvidado(['trabalhador', 'veterinario'])).toBe(true);
+    expect(podeCriarExploracao({ ...base, papeis: ['veterinario'] })).toBe(false);
+  });
+
+  it('quem é dono nalgum lado não é convidado de ninguém', () => {
+    // O veterinário que também tem a sua quinta. Bloqueá-lo seria castigá-lo
+    // por prestar serviço a outros.
+    expect(eConvidado(['veterinario', 'admin'])).toBe(false);
+    expect(podeCriarExploracao({ ...base, papeis: ['veterinario', 'admin'] })).toBe(true);
+  });
+
+  it('conta por aprovar não cria, seja quem for', () => {
+    // A política exige `perfil_ativo()` e não abre exceção: sem isto, o botão
+    // "Nova" aparecia a quem ainda espera aprovação e a gravação rebentava com
+    // um "new row violates row-level security policy" em cru.
+    expect(podeCriarExploracao({ ...base, estadoPerfil: 'pendente', papeis: [] })).toBe(false);
+    expect(podeCriarExploracao({ ...base, estadoPerfil: null, papeis: [] })).toBe(false);
+  });
+
+  it('modo local e superadmin passam', () => {
+    // Sem servidor não há equipa nem papéis: quem está no aparelho é o dono.
+    expect(
+      podeCriarExploracao({ ...base, supabaseConfigurado: false, papeis: ['veterinario'] }),
+    ).toBe(true);
+    expect(podeCriarExploracao({ ...base, isSuperadmin: true, papeis: ['veterinario'] })).toBe(true);
   });
 });

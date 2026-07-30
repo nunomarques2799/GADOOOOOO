@@ -10,6 +10,7 @@ import {
   Card,
   Chip,
   EcraComTeclado,
+  EmptyState,
   Header,
   Icon,
   type IconName,
@@ -322,6 +323,28 @@ export function FormularioAnimal({
         + (avisos.length > 0 ? `\n\n${avisos.join('\n')}` : ''),
       () => void executar(),
       { rotuloConfirmar: 'Eliminar', destrutivo: true },
+    );
+  }
+
+  // A ficha do animal é de quem tem o efetivo a cargo. Ao veterinário, que
+  // regista tratamentos e não corrige fichas, os botões que trazem aqui já não
+  // aparecem — mas a rota existe, e um link guardado ou o botão de voltar do
+  // navegador chegam cá. Sem isto, ele preenchia o formulário todo e só
+  // descobria no Guardar, contra a RLS, com o trabalho já escrito por baixo.
+  if (!pode(animal?.exploracaoId ?? exploracaoId, 'editarAnimais')) {
+    return (
+      <EcraComTeclado>
+        <Header title={editar ? 'Editar animal' : 'Novo animal'} />
+        <EmptyState
+          icon="lock-outline"
+          title="A ficha é de quem gere o efetivo"
+          message={
+            editar
+              ? 'Pode registar o que fizer a este animal — uma vacina, um medicamento, um parto — mas os dados da ficha são alterados por quem tem a exploração a cargo.'
+              : 'Registar animais novos é de quem tem a exploração a cargo. Pode registar tratamentos nos animais que já lá estão.'
+          }
+        />
+      </EcraComTeclado>
     );
   }
 
