@@ -88,8 +88,19 @@ function ComToasts({ children }: { children: ReactNode }) {
 /**
  * Coluna estreita para os ecrãs de entrada/espera: um formulário curto não
  * ganha nada em esticar por uma janela de desktop, ganha em ficar centrado.
+ *
+ * O ecrã de acesso (`EcraPendente`) pede mais largura — tem escolhas lado a
+ * lado e um formulário de quatro campos —, daí o `largura`. Apertado nos 560
+ * de um telemóvel, aquilo era uma tira de botões empilhados no meio de um
+ * monitor vazio.
  */
-function ColunaEstreita({ children }: { children: ReactNode }) {
+function ColunaEstreita({
+  children,
+  largura = layout.colunaMobile,
+}: {
+  children: ReactNode;
+  largura?: number;
+}) {
   const desktop = useDesktop();
   if (!desktop) return <>{children}</>;
   return (
@@ -98,7 +109,7 @@ function ColunaEstreita({ children }: { children: ReactNode }) {
         style={{
           flex: 1,
           width: '100%',
-          maxWidth: layout.colunaMobile,
+          maxWidth: largura,
           backgroundColor: colors.background,
         }}>
         {children}
@@ -159,7 +170,7 @@ function AppRouter({ children }: { children: ReactNode }) {
   if (isSuperadmin) return <>{children}</>;
   if (membros.length === 0)
     return (
-      <ColunaEstreita>
+      <ColunaEstreita largura={layout.conteudoEstreito}>
         <EcraPendente />
       </ColunaEstreita>
     );
