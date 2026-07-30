@@ -30,14 +30,17 @@
         <a href="#para-quem">Para quem é</a>
         <a href="#precos">Preços</a>
         <a href="#faq">Perguntas</a>
+        <!-- Só aparece dentro do menu do telemóvel: quem abre o menu é quem
+             está à procura de onde carregar. -->
+        <a class="nav-menu-cta" href="https://app-gestaogado.netlify.app">Abrir no computador</a>
       </nav>
       <div class="nav-cta">
         <a href="#faq" class="btn btn-ghost">Saber mais</a>
         <a href="#descarregar" class="btn btn-primary">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-          Descarregar
+          <span class="lbl">Descarregar</span>
         </a>
-        <button class="nav-toggle" id="navToggle" aria-label="Abrir menu"><span></span><span></span><span></span></button>
+        <button class="nav-toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
       </div>
     </div>
   </header>

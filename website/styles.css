@@ -302,29 +302,188 @@ h3 { font-size: 1.25rem; font-weight: 800; }
 .reveal.in { opacity: 1; transform: none; }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 960px) {
-  .hero .container { grid-template-columns: 1fr; gap: 44px; }
-  .mock-wrap { order: -1; }
-  .hero-copy { text-align: center; }
-  .hero-copy .lead { margin: 0 auto; }
-  .hero-actions, .hero-trust, .hero-plats { justify-content: center; }
-  .features-grid, .steps, .big-stats { grid-template-columns: 1fr 1fr; }
-  .split { grid-template-columns: 1fr; gap: 36px; }
-  .split.reverse .split-media { order: 0; }
-  .footer .grid { grid-template-columns: 1fr 1fr; }
-  .footer .grid .about { grid-column: 1 / -1; }
-}
-@media (max-width: 640px) {
+/* Só aparece dentro do menu recolhido. */
+.nav-menu-cta { display: none; }
+
+/* A barra recolhe aos 900px e não aos 640: com os cinco links, os dois botões
+   e a marca, a barra media ~1000px e num tablet a 768px transbordava para fora
+   do ecrã — a página inteira ganhava scroll horizontal por causa dela. */
+@media (max-width: 900px) {
   .nav-links, .nav-cta .btn-ghost { display: none; }
   .nav-toggle { display: block; }
   .nav.open .nav-links {
     display: flex; position: absolute; top: var(--nav-h); left: 0; right: 0;
-    flex-direction: column; align-items: stretch; gap: 4px;
+    flex-direction: column; align-items: stretch; gap: 2px;
     background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 14px 20px 22px; box-shadow: var(--shadow-md);
+    padding: 10px 16px 18px; box-shadow: var(--shadow-md);
   }
-  .nav.open .nav-links a { padding: 14px 16px; }
-  .features-grid, .steps, .big-stats, .footer .grid { grid-template-columns: 1fr; }
-  .section-head p { font-size: 1.05rem; }
+  .nav.open .nav-links a { padding: 15px 14px; font-size: 1.02rem; }
+  .nav.open .nav-links .nav-menu-cta {
+    display: block; margin-top: 10px; text-align: center;
+    background: var(--green-600); color: #fff; border-radius: var(--r-pill);
+    font-weight: 800;
+  }
+}
+
+@media (max-width: 960px) {
+  .hero .container { grid-template-columns: 1fr; gap: 36px; }
+  /* O mockup NÃO vai para cima: numa só coluna são 640px de imagem antes da
+     primeira palavra, e quem chega ao site pelo telemóvel desiste antes de
+     saber o que a app faz. Primeiro o texto, depois a prova visual. */
+  .mock-wrap { order: 0; }
+  .hero-copy { text-align: center; }
+  .hero-copy .lead { margin: 0 auto; }
+  .hero-actions, .hero-trust, .hero-plats { justify-content: center; }
+  .features-grid, .steps, .big-stats { grid-template-columns: 1fr 1fr; }
+  /* `minmax(0, …)` e não `1fr`: uma coluna de grelha nunca encolhe abaixo do
+     conteúdo mais largo que tem dentro, e bastava um cartão teimoso para a
+     página inteira ganhar barra de scroll na horizontal. */
+  .split { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  .split.reverse .split-media { order: 0; }
+  .footer .grid { grid-template-columns: 1fr 1fr; }
+  .footer .grid .about { grid-column: 1 / -1; }
+}
+
+/* ==================================================================
+   Telemóvel — a página tem de ser CURTA
+   Uma landing page de desktop empilhada numa coluna dá 8 metros de scroll.
+   Aqui os cartões passam a linhas (ícone à esquerda, texto à direita), o
+   espaçamento entre secções encolhe e o que está repetido desaparece.
+   ================================================================== */
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  h2 { font-size: 1.6rem; }
+  h3 { font-size: 1.06rem; }
+  .container { padding: 0 18px; }
+  .section { padding: 46px 0; }
+  .section-head { margin-bottom: 26px; }
+  .section-head p { font-size: 1rem; margin-top: 12px; }
+  .section-head .eyebrow { margin-bottom: 12px; }
+  .eyebrow { font-size: 0.72rem; padding: 6px 12px; }
+  .btn-lg { padding: 16px 24px; font-size: 1.02rem; }
+
+  /* ---- Barra (o menu recolhido está no bloco dos 900px) ---- */
+  .brand { font-size: 1.06rem; gap: 9px; }
+  .brand img, .brand svg { width: 34px; height: 34px; }
+  .nav-cta { gap: 8px; }
+  .nav-cta .btn-primary { padding: 12px 18px; font-size: 0.95rem; }
+
+  /* ---- Hero ---- */
+  .hero { padding: 34px 0 44px; }
+  .hero .container { gap: 26px; }
+  .hero-copy h1 { font-size: 2.1rem; margin: 16px 0 14px; }
+  .hero-copy .lead { font-size: 1.05rem; max-width: 32ch; }
+  .hero-actions { gap: 10px; margin: 22px 0 14px; }
   .hero-actions .btn { width: 100%; }
+  .hero-plats { margin-bottom: 0; }
+  /* As três garantias repetem-se, palavra por palavra, na barra logo a
+     seguir. Duas vezes o mesmo é o dobro do scroll pela mesma informação. */
+  .hero-trust { display: none; }
+
+  /* Mockup só como amostra: o ecrã fica cortado e esbatido em baixo. */
+  .phone { width: 250px; padding: 9px; border-radius: 34px; }
+  .phone-screen {
+    height: 330px; border-radius: 26px;
+    -webkit-mask-image: linear-gradient(180deg, #000 74%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 74%, transparent 100%);
+  }
+  .app-header { padding: 16px 16px 20px; }
+  .app-header .name { font-size: 1.28rem; }
+  .weather-chip { margin-top: 12px; padding: 10px 12px; }
+  .app-body { padding: 12px; gap: 9px; }
+
+  /* ---- Barra de confiança: 2x2 em vez de 4 linhas ---- */
+  .trustbar .container {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px 14px;
+    padding-top: 20px; padding-bottom: 20px;
+  }
+  .trustbar .t-item { flex-direction: column; align-items: flex-start; gap: 7px; }
+  .trustbar .t-item svg { width: 23px; height: 23px; }
+  .trustbar .t-item b { font-size: 0.96rem; }
+  .trustbar .t-item span { font-size: 0.8rem; line-height: 1.4; }
+
+  /* ---- Funcionalidades e passos: cartão → linha ----
+     O ícone passa para a esquerda e o texto ocupa a coluna restante. Sem
+     div extra no HTML: as áreas de grelha arrumam os filhos que já existem. */
+  .features-grid, .steps { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .feature, .step {
+    display: grid; grid-template-columns: 46px 1fr;
+    grid-template-areas: "ic titulo" "ic texto";
+    column-gap: 14px; row-gap: 3px; align-items: start;
+    padding: 16px; border-radius: var(--r-md);
+  }
+  .feature:hover { transform: none; }
+  .feature .fic, .step .num {
+    grid-area: ic; width: 46px; height: 46px; margin-bottom: 0; border-radius: 12px;
+  }
+  .feature .fic svg { width: 26px; height: 26px; }
+  .step .num { font-size: 1.15rem; }
+  .feature h3, .step h3 { grid-area: titulo; margin-bottom: 0; }
+  .feature p, .step p { grid-area: texto; font-size: 0.92rem; line-height: 1.5; }
+
+  /* ---- Para quem é ---- */
+  .split { gap: 24px; }
+  .split-copy h2 { margin-bottom: 12px; }
+  .split-copy p { font-size: 1rem; margin-bottom: 12px; }
+  .check-list { gap: 10px; }
+  .check-list li { font-size: 0.95rem; }
+  .check-list svg { width: 22px; height: 22px; }
+  .media-card { padding: 22px; border-radius: var(--r-lg); }
+  .quote { font-size: 1.15rem; line-height: 1.35; }
+  .quote-who { margin-top: 16px; gap: 11px; }
+  .quote-who .av { width: 42px; height: 42px; font-size: 1rem; }
+  .quote-who .w-n { font-size: 0.95rem; }
+  .quote-who .w-s { font-size: 0.82rem; }
+  /* Três números lado a lado; empilhados eram três ecrãs de nada. */
+  .big-stats { grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 22px; }
+  .big-stats .bs { padding: 11px 9px; }
+  .big-stats .bs .n { font-size: 1.32rem; }
+  .big-stats .bs .l { font-size: 0.72rem; line-height: 1.3; }
+
+  /* ---- Preços ---- */
+  .price-card { padding: 26px 20px; border-radius: var(--r-lg); }
+  .price-card .ribbon { position: static; display: inline-block; margin-bottom: 12px; }
+  .price-card .amount { font-size: 2.6rem; }
+  .price-card .sub { font-size: 0.95rem; margin-bottom: 18px; }
+  .price-card ul { gap: 10px; margin: 18px 0; }
+  .price-card ul li { font-size: 0.95rem; }
+  .price-card ul svg { width: 21px; height: 21px; }
+
+  /* ---- FAQ ---- */
+  .faq { gap: 10px; }
+  .faq-q { padding: 16px 16px; font-size: 1rem; gap: 12px; }
+  .faq-q .chev { width: 20px; height: 20px; }
+  .faq-a-inner { padding: 0 16px 18px; font-size: 0.95rem; }
+
+  /* ---- CTA final ---- */
+  .cta-band { padding: 28px 20px; border-radius: var(--r-lg); }
+  .cta-band h2 { margin-top: 12px !important; margin-bottom: 10px; }
+  .cta-band p { font-size: 1rem; margin-bottom: 20px; }
+  .cta-band .btn-row { flex-direction: column; gap: 10px; }
+  .cta-band .btn-row .btn { width: 100%; }
+  .cta-meta { font-size: 0.84rem; margin-top: 16px; text-align: left; }
+
+  /* ---- Rodapé ---- */
+  .footer { padding: 34px 0 24px; }
+  .footer .grid { grid-template-columns: 1fr 1fr; gap: 22px 18px; }
+  .footer p { font-size: 0.92rem; }
+  .footer h4 { margin-bottom: 10px; }
+  .footer ul { gap: 8px; }
+  .footer ul a { font-size: 0.92rem; }
+  .footer-bottom { margin-top: 26px; padding-top: 18px; gap: 6px; font-size: 0.8rem; }
+}
+
+/* Ecrãs muito estreitos (ou letra do sistema ampliada): o rótulo do botão da
+   barra sai e fica só a seta, para o nome da marca não partir em duas linhas.
+   O corte é aos 360px de propósito — a 375px (o iPhone mais pequeno ainda em
+   uso) o rótulo ainda cabe com folga e a barra fica mais clara com ele. */
+@media (max-width: 360px) {
+  .nav-cta .btn-primary .lbl { display: none; }
+  .nav-cta .btn-primary { padding: 12px 14px; }
+  .trustbar .container { grid-template-columns: 1fr; gap: 12px; }
+  .trustbar .t-item { flex-direction: row; align-items: center; }
+  /* Três números não cabem: as palavras deles ("pecuárias") deixam de
+     encolher e é o cartão inteiro que passa a ser mais largo do que o ecrã. */
+  .big-stats { grid-template-columns: 1fr 1fr; }
+  .cta-band, .price-card, .media-card { padding-left: 16px; padding-right: 16px; }
 }

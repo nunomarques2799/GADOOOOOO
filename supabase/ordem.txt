@@ -20,4 +20,5 @@ schema_notas.sql
 schema_permissoes.sql
 schema_auditoria.sql
 schema_acesso_temporario.sql
+schema_notificacao_registo.sql
 schema_lint.sql
