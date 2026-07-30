@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { CartaoIntroducao } from '@/components/CartaoIntroducao';
 import { avisar } from '@/data/avisos';
 import {
   Button,
@@ -212,6 +213,25 @@ export default function FinancasScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Screen topInset refreshControl={controloAtualizar}>
         <TituloFinancas legenda="Despesas, receitas e o saldo da exploração" />
+
+        {/* À primeira vez, o que é este separador. Não se mostra nos dois casos
+            acima (finanças desligadas, contas reservadas ao dono): explicar com
+            calma o que é isto a quem não o pode usar é gastar a única vez em
+            que o cartão aparece. */}
+        <View style={{ marginBottom: spacing.md }}>
+          <CartaoIntroducao
+            chave="financas"
+            icon="cash-multiple"
+            titulo="Para que serve este separador"
+            pontos={[
+              'Aqui aponta o que gasta (ração, veterinário, rendas) e o que recebe (vendas, leite, subsídios). A app faz a conta e mostra-lhe o saldo.',
+              'Cada despesa pode ficar ligada a um animal ou a um terreno — é assim que depois se sabe quanto custou cada um.',
+              'Os totais em cima são do período que escolher; com mais do que uma exploração, escolha primeiro qual.',
+              'O dinheiro é opcional e pode desligá-lo em Perfil → Gestão financeira. Desligar esconde, não apaga.',
+            ]}
+          />
+        </View>
+
         {semDados ? (
           <>
             <EmptyState

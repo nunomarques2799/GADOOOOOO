@@ -241,9 +241,22 @@ export default function TrabalhadoresScreen() {
               'Aqui estão as pessoas a quem deu acesso à sua exploração: trabalhadores e veterinários. Quem não está nesta lista não vê nada do que registou.',
               'Convida-se com um código: a pessoa instala a app, escreve o código e fica logo ligada à sua exploração — não precisa de saber a sua palavra-passe.',
               'Cada um só mexe no que lhe compete: o trabalhador aponta o que faz no dia a dia, o veterinário regista tratamentos.',
-              'Toque numa pessoa para ver e mudar ao certo o que ela pode alterar. Ao veterinário pode dar acesso só por uns dias, findos os quais ele sai sozinho.',
+              'Toque numa pessoa para ver e mudar ao certo o que ela pode alterar. Ao veterinário pode dar acesso até ao dia e hora que quiser, findos os quais ele sai sozinho.',
+              'No registo de alterações vê o que cada um mexeu e a que horas — quem registou um animal, quem mudou um terreno, quem lançou uma despesa.',
             ]}
           />
+
+          {/* O registo de alterações. Fica em cima e não escondido no fim: é a
+              pergunta que se faz sobre a equipa logo a seguir a "quem é que cá
+              anda?", e mandar procurá-la no fundo do ecrã era escondê-la. */}
+          {minhas.length > 0 ? (
+            <Button
+              label="Ver o registo de alterações"
+              icon="history"
+              variant="secondary"
+              onPress={() => router.push('/atividade')}
+            />
+          ) : null}
 
           {/* Por exploração, à vista e não escondido, como nos Animais */}
           {minhas.length > 1 ? (
@@ -450,6 +463,10 @@ export default function TrabalhadoresScreen() {
           onAbrirEquipa={(id) => {
             setAAjustar(undefined);
             router.push(`/exploracao/equipa/${id}`);
+          }}
+          onVerAtividade={(userId) => {
+            setAAjustar(undefined);
+            router.push(`/atividade?pessoa=${userId}`);
           }}
         />
       ) : null}

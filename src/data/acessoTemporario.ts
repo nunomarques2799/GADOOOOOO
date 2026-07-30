@@ -101,3 +101,90 @@ export function rotuloDuracao(horas: number): string {
   const dias = Math.round(horas / 24);
   return dias === 1 ? '1 dia' : `${dias} dias`;
 }
+
+/* ==================================================================
+ * Hora marcada — "até quinta às 18h", em vez de "durante 12 horas"
+ * ==================================================================
+ * A duração responde a "quanto tempo" e conta a partir do resgate. Não escreve
+ * a frase que o criador diz de facto: «ele vem quinta de manhã, quero que perca
+ * o acesso quinta às 18h». Para a escrever era preciso adivinhar a que horas é
+ * que o veterinário ia usar o código — e se ele o usasse na véspera à noite, as
+ * 12 horas acabavam às 8 da manhã, a meio da visita.
+ *
+ * Daqui sai um INSTANTE (ISO). Quem manda continua a ser o servidor
+ * (`convite.acesso_ate` → `membro_exploracao.expira_em`, em
+ * `supabase/schema_acesso_ate.sql`); isto é só a conversão do que se escreve no
+ * ecrã — `dd/mm/aaaa` mais `hh:mm` — para o que se envia.
+ */
+
+/** As horas que se oferecem com um toque. O resto escreve-se. */
+export const HORAS_SUGERIDAS: string[] = ['08:00', '12:00', '18:00', '20:00'];
+
+/** A hora oferecida por omissão: o fim de um dia de trabalho. */
+export const HORA_OMISSAO = '18:00';
+
+/**
+ * Põe os dois pontos de uma hora à medida que se escreve: `1830` → `18:30`.
+ *
+ * Irmã da `mascaraDataPt` dos helpers, e pela mesma razão: o teclado numérico
+ * do telemóvel não tem os dois pontos à mão, e obrigar a trocar de teclado a
+ * meio de escrever uma hora é onde ela se engana.
+ */
+export function mascaraHora(texto: string): string {
+  const d = texto.replace(/\D/g, '').slice(0, 4);
+  if (d.length <= 2) return d;
+  return `${d.slice(0, 2)}:${d.slice(2)}`;
+}
+
+/** A hora válida em minutos desde a meia-noite, ou `null` se não se percebe. */
+export function minutosDaHora(hora: string): number | null {
+  const m = hora.trim().match(/^(\d{1,2}):?(\d{2})$/);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
+/**
+ * A data escrita em português mais a hora, num instante.
+ *
+ * Devolve `null` se qualquer uma das duas não se perceber — quem chama mostra a
+ * razão. `permitirFuturo` é sempre verdadeiro na leitura da data: um prazo de
+ * acesso é, por definição, no futuro, e a regra por omissão do `parseDataPt`
+ * (que existe para datas de nascimento) recusaria tudo o que aqui se escreve.
+ */
+export function combinarDataHora(
+  dataIso: string | null,
+  hora: string,
+): string | null {
+  if (!dataIso) return null;
+  const minutos = minutosDaHora(hora);
+  if (minutos === null) return null;
+  const d = new Date(dataIso);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setHours(Math.floor(minutos / 60), minutos % 60, 0, 0);
+  return d.toISOString();
+}
+
+/**
+ * O que está errado no fim marcado, em palavras — ou `null` se está bem.
+ *
+ * Uma frase por engano, e não uma só para os dois: "a data não se percebe" e "a
+ * hora já passou" pedem correções diferentes, e um "valor inválido" para ambos
+ * deixava o criador a mexer no campo certo por sorte.
+ */
+export function problemaComFim(
+  dataIso: string | null,
+  hora: string,
+  agora: Date = new Date(),
+): string | null {
+  if (!dataIso) return 'Escreva o dia em que o acesso termina (dd/mm/aaaa).';
+  if (minutosDaHora(hora) === null) return 'Escreva a hora como 18:00.';
+  const fim = combinarDataHora(dataIso, hora);
+  if (!fim) return 'Não foi possível ler o dia e a hora.';
+  if (new Date(fim).getTime() <= agora.getTime()) {
+    return 'Esse momento já passou. Escolha um dia e uma hora à frente.';
+  }
+  return null;
+}

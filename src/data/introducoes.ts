@@ -7,6 +7,12 @@
  * que ali se convida gente com um código, nem que é ali que se decide o que
  * cada pessoa pode mexer.
  *
+ * Os Alertas, os Documentos e as Finanças são o mesmo caso por outra razão: o
+ * nome diz o assunto e não diz o trabalho. "Alertas" não conta que os prazos
+ * são contados pela app a partir das datas dos animais; "Documentos" parece uma
+ * gaveta de ficheiros e é por onde se importa o efetivo de um Excel; "Finanças"
+ * não diz que o dinheiro é opcional e que cada um só vê o que lhe compete.
+ *
  * Isto é o registo de quem já viu o quê, à parte do ecrã para se poder testar e
  * para a Ajuda o poder repor de uma vez. O cartão é
  * `components/CartaoIntroducao.tsx`.
@@ -18,10 +24,19 @@
 
 import { guardar as guardarKv, ler as lerKv } from './armazenamento';
 
-export type ChaveIntroducao = 'trabalhadores';
+export type ChaveIntroducao =
+  | 'trabalhadores'
+  | 'alertas'
+  | 'documentos'
+  | 'financas';
 
 /** Todas as que existem — é o que a reposição percorre. */
-export const CHAVES_INTRODUCAO: ChaveIntroducao[] = ['trabalhadores'];
+export const CHAVES_INTRODUCAO: ChaveIntroducao[] = [
+  'trabalhadores',
+  'alertas',
+  'documentos',
+  'financas',
+];
 
 const chaveKv = (chave: ChaveIntroducao) => `gado.intro.${chave}.v1`;
 

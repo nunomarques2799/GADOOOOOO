@@ -17,8 +17,12 @@ import { describe, expect, it } from '@jest/globals';
 import {
   acessoQuaseAFim,
   acessoTerminou,
+  combinarDataHora,
   DURACOES_ACESSO,
   faltaParaExpirar,
+  mascaraHora,
+  minutosDaHora,
+  problemaComFim,
   rotuloDuracao,
   rotuloPrazo,
 } from '../acessoTemporario';
@@ -112,5 +116,92 @@ describe('rotuloDuracao', () => {
     // O prazo pode vir do servidor com um valor posto à mão numa correção.
     expect(rotuloDuracao(2)).toBe('2 horas');
     expect(rotuloDuracao(48)).toBe('2 dias');
+  });
+});
+
+/* ==================================================================
+ * Hora marcada — "até quinta às 18h"
+ * ==================================================================
+ * Estas quatro funções são o que separa "o dono escreveu a hora certa" de "o
+ * veterinário ficou com acesso até uma hora que ninguém escolheu". Erram em
+ * silêncio: uma hora mal lida não rebenta nada, só marca outro prazo.
+ */
+
+describe('mascaraHora', () => {
+  it('põe os dois pontos à medida que se escreve', () => {
+    expect(mascaraHora('1')).toBe('1');
+    expect(mascaraHora('18')).toBe('18');
+    expect(mascaraHora('183')).toBe('18:3');
+    expect(mascaraHora('1830')).toBe('18:30');
+  });
+
+  it('endireita o que vem colado e corta o que sobra', () => {
+    expect(mascaraHora('18h30')).toBe('18:30');
+    expect(mascaraHora('183055')).toBe('18:30');
+  });
+
+  it('nunca deixa os dois pontos no fim', () => {
+    // Senão a tecla de apagar parece avariada: tira a pontuação e a máscara
+    // volta a pô-la, e o dígito nunca desaparece.
+    expect(mascaraHora('18:')).toBe('18');
+  });
+});
+
+describe('minutosDaHora', () => {
+  it('lê uma hora escrita', () => {
+    expect(minutosDaHora('00:00')).toBe(0);
+    expect(minutosDaHora('18:30')).toBe(18 * 60 + 30);
+    expect(minutosDaHora('9:05')).toBe(9 * 60 + 5);
+  });
+
+  it('recusa o que não é hora', () => {
+    expect(minutosDaHora('')).toBeNull();
+    expect(minutosDaHora('18')).toBeNull();
+    expect(minutosDaHora('24:00')).toBeNull();
+    expect(minutosDaHora('18:60')).toBeNull();
+  });
+});
+
+describe('combinarDataHora', () => {
+  it('junta o dia à hora, em hora local', () => {
+    // O `parseDataPt` devolve a data ao meio-dia local; a hora escolhida tem de
+    // a substituir, não somar-se-lhe.
+    const dia = new Date(2026, 6, 30, 12, 0, 0).toISOString();
+    const fim = combinarDataHora(dia, '18:30');
+    expect(fim).not.toBeNull();
+    const d = new Date(fim as string);
+    expect(d.getHours()).toBe(18);
+    expect(d.getMinutes()).toBe(30);
+    expect(d.getDate()).toBe(30);
+  });
+
+  it('sem data ou sem hora válida não inventa nada', () => {
+    expect(combinarDataHora(null, '18:00')).toBeNull();
+    expect(combinarDataHora(new Date().toISOString(), 'logo à noite')).toBeNull();
+  });
+});
+
+describe('problemaComFim', () => {
+  const daquiADias = (n: number) => {
+    const d = new Date(AGORA);
+    d.setDate(d.getDate() + n);
+    return d.toISOString();
+  };
+
+  it('aceita um momento à frente', () => {
+    expect(problemaComFim(daquiADias(2), '18:00', AGORA)).toBeNull();
+  });
+
+  it('aponta o campo certo em cada engano', () => {
+    // Duas frases e não uma: "a data não se percebe" e "a hora já passou"
+    // pedem correções em campos diferentes.
+    expect(problemaComFim(null, '18:00', AGORA)).toMatch(/dia/i);
+    expect(problemaComFim(daquiADias(2), 'xx', AGORA)).toMatch(/hora/i);
+  });
+
+  it('recusa um momento que já passou', () => {
+    // Sem isto, o código nascia morto e só se descobria quando o veterinário o
+    // tentasse usar, do outro lado do telefone.
+    expect(problemaComFim(daquiADias(-1), '18:00', AGORA)).toMatch(/já passou/i);
   });
 });

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CartaoIntroducao } from '@/components/CartaoIntroducao';
 import { ModalRelatorioPrazos } from '@/components/ModalRelatorioPrazos';
 import { Button, Card, FolhaComTeclado, Icon, type IconName, Text } from '@/components/ui';
 import { exportarAnimaisExcel } from '@/data/animalExcelFicheiro';
@@ -84,6 +85,22 @@ export default function DocumentosScreen() {
         </View>
 
         <View style={{ ...coluna, gap: spacing.md }}>
+          {/* À primeira vez, o que é este separador. "Documentos" parece uma
+              gaveta de ficheiros, e é por aqui que se traz o efetivo inteiro de
+              um Excel — o atalho que poupa uma tarde de escrita à mão a quem
+              não faz ideia de que ele existe. */}
+          <CartaoIntroducao
+            chave="documentos"
+            icon="file-document-multiple-outline"
+            titulo="Para que serve este separador"
+            pontos={[
+              'Se já tem os animais escritos num ficheiro Excel, pode trazê-los todos de uma vez em vez de os escrever um a um.',
+              'Daqui também leva os seus dados para fora: a lista de animais em Excel, e relatórios de prazos para imprimir ou entregar.',
+              'As notas são suas e só suas: servem para o que não cabe na ficha de um animal — combinações, telefones, o que ficou por fazer.',
+              'Importar e exportar ficheiros só funciona no computador. No telemóvel o resto do separador funciona na mesma.',
+            ]}
+          />
+
           {/* Importar — só web/Electron (o telemóvel não escolhe ficheiros sem build nativo) */}
           {comFicheiros && !contaSuspensa ? (
             <Grupo titulo="IMPORTAR">

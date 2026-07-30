@@ -51,6 +51,7 @@ export function FolhaPermissoes({
   onGuardar,
   financasAtivasEm,
   onAbrirEquipa,
+  onVerAtividade,
 }: {
   pessoa: Trabalhador;
   aberto: boolean;
@@ -61,6 +62,8 @@ export function FolhaPermissoes({
   financasAtivasEm: (exploracaoId: string) => boolean;
   /** Levar ao ecrã da equipa desta exploração (convidar, remover). */
   onAbrirEquipa: (exploracaoId: string) => void;
+  /** Levar ao registo de alterações, já filtrado por esta pessoa. */
+  onVerAtividade: (userId: string) => void;
 }) {
   const insets = useSafeAreaInsets();
   const [indice, setIndice] = useState(0);
@@ -241,6 +244,29 @@ export function FolhaPermissoes({
                     style={{ marginTop: spacing.sm }}
                   />
                 ) : null}
+
+                {/* O que esta pessoa já alterou. Fica ao pé do que ela PODE
+                    alterar de propósito: são as duas metades da mesma decisão —
+                    ver o que fez é o que diz se as permissões estão certas. */}
+                <Pressable
+                  onPress={() => onVerAtividade(pessoa.userId)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Ver o que ${pessoa.nome} alterou`}
+                  style={({ pressed }) => [
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: spacing.xs,
+                      marginTop: spacing.md,
+                    },
+                    pressed && { opacity: 0.6 },
+                  ]}>
+                  <Icon name="history" size="sm" color={colors.primary} />
+                  <Text variant="secondary" color={colors.primary} style={{ flex: 1 }}>
+                    Ver o que {pessoa.nome} alterou
+                  </Text>
+                  <Icon name="chevron-right" size="sm" color={colors.primary} />
+                </Pressable>
 
                 <Pressable
                   onPress={() => onAbrirEquipa(vinculo.exploracaoId)}

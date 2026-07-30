@@ -21,4 +21,7 @@ schema_permissoes.sql
 schema_auditoria.sql
 schema_acesso_temporario.sql
 schema_notificacao_registo.sql
+schema_acesso_ate.sql
+schema_atividade.sql
+schema_apoio.sql
 schema_lint.sql
