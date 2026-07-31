@@ -20,6 +20,16 @@
 -- Cada linha procura um objeto que só existe depois desse ficheiro. Um "FALTA"
 -- num ficheiro com número menor do que outro que diz "sim" é um alarme: quer
 -- dizer que a base foi montada fora de ordem.
+--
+-- AO ACRESCENTAR UM FICHEIRO AO `ordem.txt`, ACRESCENTA UMA LINHA AQUI. Esta
+-- lista ficou parada nos 15 enquanto o `ordem.txt` ia em 20, e como o número
+-- do fim era o do `schema_lint.sql`, a tabela parecia inteira: 16 linhas todas
+-- a `t` numa base a que faltavam CINCO ficheiros. Uma lista curta não se
+-- queixa — responde "tudo aplicado" sobre o que não chegou a perguntar.
+--
+-- E a marca tem de ser um objeto que SÓ aquele ficheiro cria. Se o objeto já
+-- vinha de trás (uma função reescrita, uma limpeza repetida), a marca dá `t`
+-- sem o ficheiro ter corrido — ver o 20 e o 21 aqui abaixo.
 with func as (
   select p.proname as nome
     from pg_proc p
@@ -73,14 +83,44 @@ select * from (
          and exists (select 1 from func where nome = 'nomes_da_equipa'))),
     (15, 'schema_acesso_temporario.sql','membro_exploracao.expira_em',
         (exists (select 1 from col where tabela = 'membro_exploracao' and coluna = 'expira_em'))),
-    -- O 16 não cria nada: só mexe em permissões. A marca é o efeito dele —
-    -- nenhuma função `security definer` alcançável por quem não tem sessão.
-    (16, 'schema_lint.sql',            'nenhum security definer aberto ao anon',
+    (16, 'schema_notificacao_registo.sql','tabela notificacao_envio',
+        (to_regclass('public.notificacao_envio') is not null)),
+    (17, 'schema_acesso_ate.sql',      'convite.acesso_ate',
+        (exists (select 1 from col where tabela = 'convite' and coluna = 'acesso_ate'))),
+    (18, 'schema_atividade.sql',       'tabela registo_atividade',
+        (to_regclass('public.registo_atividade') is not null)),
+    -- O 19 move o motor de envio de `public` para o schema `interno` — daí a
+    -- procura ser fora do `public`, que é o único que a CTE `func` cobre.
+    (19, 'schema_apoio.sql',           'interno.enviar_email()',
+        (exists (
+           select 1 from pg_proc p
+             join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'interno' and p.proname = 'enviar_email'))),
+    -- O 20 não cria objetos: reescreve o `role_padrao_pode()` que já vinha do
+    -- 13.º. A marca tem de olhar para DENTRO da função, senão dava `t` no 13.
+    (20, 'schema_papel_veterinario.sql','role_padrao_pode() já sabe registarTratamentos',
+        (exists (
+           select 1 from pg_proc p
+             join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public' and p.proname = 'role_padrao_pode'
+              and pg_get_functiondef(p.oid) like '%registarTratamentos%'))),
+    -- O 21 não cria nada: só mexe em permissões. A marca é o efeito dele. São
+    -- DUAS condições porque a primeira, sozinha, mente: a limpeza do anon já
+    -- tinha sido feita pelo `schema_seguranca.sql` (4.º), por isso uma base a
+    -- que faltava o 21 inteiro dava `t` na passagem a produção de 2026-07-31.
+    -- A segunda só este ficheiro a produz — o 5.º dá o `execute` de
+    -- `apagar_a_minha_conta()` a `authenticated` e mais nenhum o tira.
+    (21, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
         (not exists (
            select 1 from pg_proc p
              join pg_namespace n on n.oid = p.pronamespace
             where n.nspname = 'public' and p.prosecdef
-              and has_function_privilege('anon', p.oid, 'execute'))))
+              and has_function_privilege('anon', p.oid, 'execute'))
+         and exists (
+           select 1 from pg_proc p
+             join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public' and p.proname = 'apagar_a_minha_conta'
+              and not has_function_privilege('authenticated', p.oid, 'execute'))))
 ) as t(ordem, ficheiro, marca, aplicado)
 order by ordem;
 -- Ler a coluna `aplicado`: true = já correu, false = FALTA aplicar.
