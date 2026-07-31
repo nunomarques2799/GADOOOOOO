@@ -64,10 +64,22 @@ export default function AnimalDetalheScreen() {
   const toast = useToasts();
 
   const animal = animalById(id);
+  /**
+   * Eliminado não é uma saída como as outras: as duas primeiras (falecido,
+   * vendido) contam o que aconteceu ao ANIMAL, esta conta o que alguém fez ao
+   * registo — que foi criado por engano.
+   *
+   * É por isso que a ficha de um animal eliminado é só de leitura, e a de um
+   * falecido ou vendido não: corrigir a data de nascimento de uma vaca que
+   * morreu no mês passado é trabalho normal, e o histórico dela ainda serve
+   * para alguma coisa. Já mexer nos dados de um registo que se disse ser um
+   * engano é dar-lhe vida outra vez, num sítio de onde ele já não devia voltar.
+   */
+  const eliminado = animal?.estado === 'eliminado';
   // Três perguntas e não uma. O veterinário regista o que fez ao animal e não
   // lhe toca na ficha nem o dá por morto ou vendido; o trabalhador e o dono
   // fazem as três coisas. Ver `permissoes.ts`.
-  const podeEditar = pode(animal?.exploracaoId, 'editarAnimais');
+  const podeEditar = pode(animal?.exploracaoId, 'editarAnimais') && !eliminado;
   const podeRegistarEvento = pode(animal?.exploracaoId, 'registarTratamentos');
   const podeRegistarSaida = pode(animal?.exploracaoId, 'registarSaida');
 
@@ -115,10 +127,6 @@ export default function AnimalDetalheScreen() {
   const balanco = balancoAnimal(eventos, movimentosByAnimal(animal.id));
   const meusAlertas = alertas.filter((a) => a.animalId === animal.id);
   const saiu = !!animal.estado && animal.estado !== 'ativo';
-  // Eliminado não é uma saída como as outras: as duas primeiras contam o que
-  // aconteceu ao ANIMAL, esta conta o que alguém fez ao registo. Por isso não
-  // se oferece "voltar a ativar" — quem eliminou leu que não havia volta.
-  const eliminado = animal.estado === 'eliminado';
 
   async function confirmarSaida() {
     const iso = parseDataPt(saidaData);
@@ -303,14 +311,10 @@ export default function AnimalDetalheScreen() {
         </Text>
         <Card>
           <InfoField icon="tag-outline" label="Nº de identificação (brinco)" value={animal.numeroIdentificacao ?? 'Sem brinco'} />
-          {/* Casa e número só aparecem quando o animal os tem: uma linha com
-              travessão a quem nunca registou por casa é ruído puro. */}
-          {animal.casa || animal.numeroCasa ? (
-            <InfoField
-              icon="home-outline"
-              label="Casa e número"
-              value={[animal.casa, animal.numeroCasa].filter(Boolean).join(' · ')}
-            />
+          {/* O número só aparece quando o animal o tem: uma linha com travessão
+              a quem não numera o gado é ruído puro. */}
+          {animal.numeroCasa ? (
+            <InfoField icon="numeric" label="Número" value={animal.numeroCasa} />
           ) : null}
           {animal.finalidade ? (
             <InfoField
@@ -443,6 +447,24 @@ export default function AnimalDetalheScreen() {
 
         {/* Ações */}
         <View style={{ gap: spacing.sm, marginTop: spacing.xl }}>
+          {/* Corrigir a ficha continua a poder fazer-se depois de o animal
+              sair do efetivo — a data de nascimento de uma vaca vendida está
+              errada da mesma maneira. O que já não se corrige é um registo
+              ELIMINADO, e aí este botão nem aparece (ver `podeEditar`). */}
+          {podeEditar ? (
+            <Button
+              label="Editar dados do animal"
+              icon="pencil-outline"
+              variant={saiu ? 'secondary' : 'ghost'}
+              onPress={() => router.push(`/animal/editar/${animal.id}`)}
+            />
+          ) : null}
+          {eliminado ? (
+            <Text variant="secondary" color={colors.textMuted}>
+              Este registo foi eliminado e já não se altera. Fica guardado como
+              está, para o histórico e para a auditoria.
+            </Text>
+          ) : null}
           {!saiu ? (
             <>
               {podeRegistarEvento ? (
@@ -451,14 +473,6 @@ export default function AnimalDetalheScreen() {
                   icon="plus"
                   variant="secondary"
                   onPress={() => router.push({ pathname: '/evento/novo', params: { animalId: animal.id } })}
-                />
-              ) : null}
-              {podeEditar ? (
-                <Button
-                  label="Editar dados do animal"
-                  icon="pencil-outline"
-                  variant="ghost"
-                  onPress={() => router.push(`/animal/editar/${animal.id}`)}
                 />
               ) : null}
               {!podeRegistarSaida ? null : !saidaOpen ? (

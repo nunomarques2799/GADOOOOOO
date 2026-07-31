@@ -234,12 +234,11 @@ export async function definirFinancasAtivas(ativas: boolean): Promise<string | n
   return error ? traduzErroServidor(error.message) : null;
 }
 
-/** Liga ou desliga o registo por casa/número em toda a conta. Erro ou null. */
-export async function definirCasaAtiva(ativa: boolean): Promise<string | null> {
-  if (!supabase) return null;
-  const { error } = await supabase.rpc('definir_casa_ativa', { ativa });
-  return error ? traduzErroServidor(error.message) : null;
-}
+// O `definir_casa_ativa` era aqui. O interruptor do registo por casa deixou de
+// existir na app: o número do animal é agora um campo opcional sempre visível
+// (ver `FormularioAnimal`). O RPC e a coluna `casa_ativa` ficam no servidor,
+// intocados — apagar colunas de uma base em uso não se faz por causa de um
+// ecrã que saiu.
 
 const terrenoPayload = (t: Terreno) => ({
   id: t.id,

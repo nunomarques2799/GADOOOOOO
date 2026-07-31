@@ -165,17 +165,14 @@ export interface Exploracao extends ComVersao {
    */
   financasAtivas?: boolean;
   /**
-   * O registo por casa e número está ligado nesta exploração? Desligado (o
-   * valor por omissão) esconde os dois campos do formulário do animal.
+   * HERANÇA. O interruptor do "registo por casa e número" já não existe na app:
+   * o número do animal passou a um campo opcional sempre visível na ficha (ver
+   * `FormularioAnimal`), porque um interruptor para mostrar um campo de texto
+   * que quem não usa deixa vazio era uma decisão a pedir por nada.
    *
-   * Vive aqui, e não no perfil, pela mesma razão que `financasAtivas`: a RLS de
-   * `perfil` só deixa cada um ver o seu, e o trabalhador precisa de a ler para
-   * saber que campos preencher. Escrita só pelo RPC `definir_casa_ativa`.
-   *
-   * Ao contrário das finanças, isto não fecha nenhuma porta no servidor: são
-   * duas colunas de texto sem regra de permissão própria. O interruptor existe
-   * para não encher o formulário a quem nunca registou gado por casa — não é
-   * uma medida de segurança, e não se deve passar a tratá-lo como tal.
+   * A coluna continua no servidor e a leitura continua a mapeá-la — apagar
+   * colunas de uma base em uso não se faz por causa de um ecrã que saiu —, mas
+   * nada na app a lê nem a escreve. Não voltar a pendurar comportamento aqui.
    */
   casaAtiva?: boolean;
 }
@@ -204,15 +201,17 @@ export interface Animal extends ComVersao {
   raca?: string;
   corPelagem?: string;
   /**
-   * Registo tradicional por casa: o nome da casa e o número do animal dentro
-   * dela ("Casa do Monte, 12"). Muitos criadores identificam assim os animais
-   * há gerações, ao lado (ou em vez) do brinco.
-   *
-   * Os campos só aparecem no formulário com `Exploracao.casaAtiva` ligada, mas
-   * um animal que já os tenha preenchido mostra-os SEMPRE — desligar a opção
-   * esconde o que ainda não foi escrito, nunca o que já lá está.
+   * HERANÇA: o nome da casa ("Casa do Monte"), do tempo em que o registo
+   * tradicional eram dois campos. A app já não o pede nem o mostra — ficou só o
+   * número, que é o que se diz de facto ("a 12"). A coluna fica no servidor com
+   * o que lá estiver escrito; nada na app a lê.
    */
   casa?: string;
+  /**
+   * O número por que o animal é conhecido na exploração, a par do brinco.
+   * Muitos criadores numeram o gado de um a duzentos há gerações e é assim que
+   * o chamam. Opcional e sempre presente na ficha; entra na pesquisa.
+   */
   numeroCasa?: string;
   /** Só para bovinos. Ver `Finalidade`. */
   finalidade?: Finalidade;

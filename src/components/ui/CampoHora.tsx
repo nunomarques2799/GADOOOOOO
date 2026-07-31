@@ -8,6 +8,7 @@ import { mascaraHora, minutosDaHora } from '@/data/acessoTemporario';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 import { Button } from './Button';
+import { estiloBotaoCalendario } from './campoDataEstilo';
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
 
@@ -69,7 +70,8 @@ export function CampoHora({
           borderWidth: 1.5,
           borderColor: colors.border,
           backgroundColor: colors.surface,
-          paddingHorizontal: spacing.md,
+          paddingLeft: spacing.md,
+          paddingRight: 5, // o botão do relógio traz o seu próprio fundo
         }}>
         <Icon name={icon} size="md" color={colors.textMuted} />
         <TextInput
@@ -85,8 +87,8 @@ export function CampoHora({
           accessibilityRole="button"
           accessibilityLabel={rotuloRelogio}
           hitSlop={8}
-          style={({ pressed }) => [{ padding: 4 }, pressed && { opacity: 0.6 }]}>
-          <Icon name="clock-edit-outline" size="md" color={colors.primary} />
+          style={({ pressed }) => [estiloBotaoCalendario(), pressed && { opacity: 0.6 }]}>
+          <Icon name="clock-edit-outline" size="md" color={colors.primaryDark} />
         </Pressable>
       </View>
 

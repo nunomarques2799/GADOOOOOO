@@ -86,8 +86,6 @@ function valorDaColuna(a: Animal, campo: CampoImportado): string {
       return a.dataIdentificacao ? formatDataCurta(a.dataIdentificacao) : '';
     case 'finalidade':
       return a.finalidade ?? '';
-    case 'casa':
-      return a.casa ?? '';
     case 'numeroCasa':
       return a.numeroCasa ?? '';
     case 'comunicadoSnira':

@@ -229,14 +229,16 @@ describe('alertas', () => {
 
 describe('pesquisa por texto', () => {
   const efetivo = [
-    animal('a1', { nome: 'Mimosa', numeroIdentificacao: 'PT123', casa: 'Casa do Monte' }),
+    animal('a1', { nome: 'Mimosa', numeroIdentificacao: 'PT123', numeroCasa: '17' }),
     animal('a2', { nome: 'Estrela', raca: 'Barrosã' }),
   ];
 
-  it('procura no nome, brinco, raça e casa', () => {
+  it('procura no nome, brinco, raça e número', () => {
     expect(ids(efetivo, { texto: 'mimo' })).toEqual(['a1']);
     expect(ids(efetivo, { texto: 'PT123' })).toEqual(['a1']);
-    expect(ids(efetivo, { texto: 'monte' })).toEqual(['a1']);
+    // O número por que o animal é conhecido na exploração ("a 17"), que é como
+    // se procura o gado numerado — não pelos catorze dígitos do brinco.
+    expect(ids(efetivo, { texto: '17' })).toEqual(['a1']);
     expect(ids(efetivo, { texto: 'barrosa' })).toEqual(['a2']); // sem acento
   });
 
@@ -305,14 +307,13 @@ describe('facetasDisponiveis', () => {
 
   it('devolve só o que existe mesmo no efetivo, sem repetir', () => {
     const efetivo = [
-      animal('a1', { raca: 'Mertolenga', corPelagem: 'Preta', casa: 'Monte' }),
+      animal('a1', { raca: 'Mertolenga', corPelagem: 'Preta' }),
       animal('a2', { raca: 'mertolenga', corPelagem: 'Preta' }),
       animal('a3', { raca: 'Minhota' }),
     ];
     const v = facetas(efetivo);
     expect(v.racas).toEqual(['Mertolenga', 'Minhota']);
     expect(v.cores).toEqual(['Preta']);
-    expect(v.casas).toEqual(['Monte']);
   });
 
   it('o efetivo que já saiu não conta para as opções', () => {

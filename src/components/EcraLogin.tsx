@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { entraPorCodigo, INTENCOES, type Intencao } from '@/data/intencao';
+import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 type Modo = 'entrar' | 'registar' | 'recuperar';
@@ -13,6 +14,7 @@ type Modo = 'entrar' | 'registar' | 'recuperar';
 /** Ecrã de entrada — mostrado quando há Supabase configurado mas sem sessão. */
 export function EcraLogin() {
   const insets = useSafeAreaInsets();
+  const desktop = useDesktop();
   const { entrar, registar, recuperarPalavra } = useAuth();
 
   const [modo, setModo] = useState<Modo>('entrar');
@@ -75,16 +77,28 @@ export function EcraLogin() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1 }}>
+          contentContainerStyle={{
+            flexGrow: 1,
+            // No computador o formulário fica ao meio da janela em vez de
+            // encostado ao topo, com o resto do ecrã vazio por baixo.
+            justifyContent: desktop ? 'center' : 'flex-start',
+            paddingVertical: desktop ? spacing.xl : 0,
+          }}>
           {/* Cabeçalho verde */}
           <LinearGradient
             colors={[colors.headerFrom, colors.headerTo]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{
-              paddingTop: insets.top + spacing.xxl,
+              // No telemóvel encosta ao topo (e passa por baixo da barra de
+              // estado); no computador é um cartão solto, arredondado dos
+              // quatro lados, com margem à volta.
+              paddingTop: desktop ? spacing.xxl : insets.top + spacing.xxl,
               paddingBottom: spacing.xxl,
               paddingHorizontal: spacing.lg,
+              marginHorizontal: desktop ? spacing.xl : 0,
+              borderTopLeftRadius: desktop ? radii.xl : 0,
+              borderTopRightRadius: desktop ? radii.xl : 0,
               borderBottomLeftRadius: radii.xl,
               borderBottomRightRadius: radii.xl,
               alignItems: 'center',
@@ -110,7 +124,11 @@ export function EcraLogin() {
           </LinearGradient>
 
           {/* Formulário */}
-          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
+          <View
+            style={{
+              paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
+              paddingTop: spacing.xl,
+            }}>
             {/*
               A pergunta vem ANTES do nome de propósito: é ela que decide o que
               acontece a seguir a criar a conta (esperar por aprovação, ou pedir

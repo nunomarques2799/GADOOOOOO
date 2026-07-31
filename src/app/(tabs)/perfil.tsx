@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar, Badge, Card, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { confirmar } from '@/data/avisos';
+import { saiuDoEfetivo } from '@/data/historicoAnimais';
 import { useMembros } from '@/data/membros';
 import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
@@ -14,7 +15,7 @@ import { colors, layout, radii, spacing } from '@/theme';
 /**
  * Quem sou eu nesta app: a conta, os papéis e o que se pode fazer com ela.
  *
- * As opções de funcionamento (finanças, casa, notificações, exportações)
+ * As opções de funcionamento (finanças, notificações, exportações)
  * mudaram-se para o ecrã Definições. Estavam aqui à mistura, e a lista tinha
  * crescido ao ponto de "Terminar sessão" vir a seguir a "Exportar CSV" — duas
  * coisas que não têm nada que ver uma com a outra.
@@ -56,6 +57,10 @@ export default function PerfilScreen() {
   // vê (ou não vê) certos botões, e não estava dito em lado nenhum.
   const papeis = [...new Set(membros.map((m) => m.role))];
 
+  // Só os que estão no efetivo. Os que saíram vivem no Histórico do efetivo e
+  // não entram na conta — ver o mesmo cálculo no ecrã Início.
+  const noEfetivo = animais.filter((a) => !saiuDoEfetivo(a)).length;
+
   const coluna = {
     width: '100%',
     maxWidth: desktop ? layout.conteudoEstreito : undefined,
@@ -96,7 +101,7 @@ export default function PerfilScreen() {
                     gap: spacing.xs,
                     marginTop: spacing.xs,
                   }}>
-                  <Badge tone="brand" icon="cow" label={`${animais.length} animais`} />
+                  <Badge tone="brand" icon="cow" label={`${noEfetivo} animais`} />
                   <Badge tone="neutral" icon="barn" label={`${exploracoes.length} explor.`} />
                 </View>
               </View>

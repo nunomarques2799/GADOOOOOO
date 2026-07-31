@@ -82,7 +82,7 @@ export default function AnimaisScreen() {
     () =>
       animais.filter(
         (a) =>
-          (!a.estado || a.estado === 'ativo')
+          !saiuDoEfetivo(a)
           && (!filtros.exploracaoId || a.exploracaoId === filtros.exploracaoId),
       ),
     [animais, filtros.exploracaoId],
@@ -139,7 +139,6 @@ export default function AnimaisScreen() {
     if (filtros.raca) out.push({ chave: 'raca', label: filtros.raca, limpar: tirar('raca') });
     if (filtros.cor) out.push({ chave: 'cor', label: filtros.cor, limpar: tirar('cor') });
     if (filtros.finalidade) out.push({ chave: 'finalidade', label: filtros.finalidade, limpar: tirar('finalidade') });
-    if (filtros.casa) out.push({ chave: 'casa', label: `Casa ${filtros.casa}`, limpar: tirar('casa') });
     if (filtros.terrenoId) {
       const nome = filtros.terrenoId === SEM_TERRENO ? 'Sem terreno' : (terrenoById(filtros.terrenoId)?.nome ?? 'Terreno');
       out.push({ chave: 'terreno', label: nome, limpar: tirar('terrenoId') });
@@ -251,7 +250,7 @@ export default function AnimaisScreen() {
                 <TextInput
                   value={filtros.texto ?? ''}
                   onChangeText={(t) => setFiltros((f) => ({ ...f, texto: t }))}
-                  placeholder="Nome, brinco, raça ou casa"
+                  placeholder="Nome, brinco, raça ou número"
                   placeholderTextColor={colors.textMuted}
                   style={{
                     flex: 1,

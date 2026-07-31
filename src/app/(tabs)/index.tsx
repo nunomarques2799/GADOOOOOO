@@ -17,6 +17,7 @@ import { StatCard } from '@/components/StatCard';
 import { Avatar, Badge, Card, Icon, SectionHeader, Text } from '@/components/ui';
 import { resumoFinanceiro } from '@/data/financas';
 import { dataExtensa, formatEuro, saudacao } from '@/data/helpers';
+import { saiuDoEfetivo } from '@/data/historicoAnimais';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
@@ -59,6 +60,17 @@ export default function InicioScreen() {
       filtro: { exploracaoIds: ids, animais },
     });
   }, [eventos, movimentos, exploracoes, animais, podeVer]);
+
+  /**
+   * O EFETIVO — os animais que ainda lá estão.
+   *
+   * `animais` traz também os que saíram (falecidos, vendidos, eliminados): eles
+   * ficam guardados para a genealogia e para o Histórico do efetivo, e não são
+   * o número que o criador conta quando olha para o campo. Somá-los aqui punha
+   * "119 animais" no Início e "112 no efetivo" na lista para onde este cartão
+   * leva — o mesmo rebanho com duas contas diferentes.
+   */
+  const efetivo = animais.filter((a) => !saiuDoEfetivo(a));
 
   // Superadmin não gere gado — vai direto para o painel de clientes.
   if (isSuperadmin) return <Redirect href="/(superadmin)/clientes" />;
@@ -116,7 +128,7 @@ export default function InicioScreen() {
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         <StatCard
           icon="cow"
-          value={animais.length}
+          value={efetivo.length}
           label="Animais"
           onPress={() => router.push('/animais')}
         />

@@ -16,7 +16,6 @@ const vazio: EstadoTutorial = {
   avisosLigados: false,
   suportaAvisos: true,
   financasLigadas: false,
-  casaLigada: false,
   podeConfigurar: true,
 };
 
@@ -31,14 +30,13 @@ const feito: EstadoTutorial = {
 
 describe('passosTutorial', () => {
   it('reflete os dados reais em cada passo', () => {
-    const passos = passosTutorial({ ...vazio, temExploracoes: true, casaLigada: true });
+    const passos = passosTutorial({ ...vazio, temExploracoes: true, financasLigadas: true });
     expect(passos.map((p) => [p.chave, p.feito])).toEqual([
       ['exploracao', true],
       ['terreno', false],
       ['animal', false],
       ['avisos', false],
-      ['financas', false],
-      ['casa', true],
+      ['financas', true],
     ]);
   });
 
@@ -55,8 +53,8 @@ describe('passosTutorial', () => {
   });
 
   it('não oferece os interruptores da conta a quem não é dono', () => {
-    // Um trabalhador convidado não liga finanças nem registo por casa: o
-    // servidor recusa-lhe, e o passo era um convite a bater numa porta fechada.
+    // Um trabalhador convidado não liga a gestão financeira: o servidor
+    // recusa-lhe, e o passo era um convite a bater numa porta fechada.
     const passos = passosTutorial({ ...vazio, podeConfigurar: false });
     expect(opcionais(passos)).toEqual([]);
   });
@@ -85,8 +83,8 @@ describe('progresso', () => {
   });
 
   it('os opcionais não entram na conta', () => {
-    // Sem isto, quem não quer contabilidade nem numeração por casa ficava com um
-    // "4 de 6" eterno em cima do Início — um guia que nunca se pode acabar.
+    // Sem isto, quem não quer contabilidade ficava com um "4 de 5" eterno em
+    // cima do Início — um guia que nunca se pode acabar.
     const semExtras = progresso(passosTutorial({ ...vazio, podeConfigurar: false }));
     const comExtras = progresso(passosTutorial(vazio));
     expect(comExtras).toEqual(semExtras);
@@ -108,7 +106,7 @@ describe('deveMostrar', () => {
   });
 
   it('um opcional por ligar não prende o guia no ecrã', () => {
-    // `feito` tem finanças e casa desligadas de propósito.
+    // `feito` tem as finanças desligadas de propósito.
     expect(opcionais(passosTutorial(feito)).every((p) => !p.feito)).toBe(true);
     expect(deveMostrar(passosTutorial(feito), false)).toBe(false);
   });

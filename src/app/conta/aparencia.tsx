@@ -33,7 +33,7 @@ export default function AparenciaScreen() {
     if (aAplicar || p.id === escolhida) return;
     confirmar(
       `Mudar para "${p.nome}"?`,
-      'A app volta a abrir para ficar tudo com as cores novas. Não se perde nada do que está registado.',
+      'A app volta a abrir para ficar tudo com as cores novas. Não se perde nada do que está registado, e os outros aparelhos onde entrar com esta conta passam a abrir assim.',
       () => {
         void aplicar(p);
       },
@@ -109,8 +109,8 @@ export default function AparenciaScreen() {
           variant="caption"
           color={colors.textMuted}
           style={{ marginTop: spacing.md, textAlign: 'center' }}>
-          A escolha é deste aparelho. Noutro telemóvel ou no computador escolhe-se
-          outra vez.
+          A escolha fica na sua conta: os outros aparelhos onde entrar passam a
+          abrir com estas cores.
         </Text>
       </Screen>
     </View>

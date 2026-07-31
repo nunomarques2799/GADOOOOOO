@@ -59,7 +59,6 @@ export type Filtros = {
   finalidade?: Finalidade;
   /** Id do terreno, ou `SEM_TERRENO`. */
   terrenoId?: string;
-  casa?: string;
   idade?: FaixaIdade;
   /** true = cobertas (com parto previsto); false = não cobertas. */
   prenhe?: boolean;
@@ -69,7 +68,7 @@ export type Filtros = {
   alerta?: true | Alerta['categoria'];
   /** Mostrar também falecidos e vendidos. */
   incluirSaidos?: boolean;
-  /** Pesquisa por nome, brinco, raça ou casa. */
+  /** Pesquisa por nome, brinco, raça, pelagem ou número. */
   texto?: string;
 };
 
@@ -84,7 +83,6 @@ export function contarAtivos(f: Filtros): number {
   if (f.cor) n++;
   if (f.finalidade) n++;
   if (f.terrenoId) n++;
-  if (f.casa) n++;
   if (f.idade) n++;
   if (f.prenhe !== undefined) n++;
   if (f.semBrinco) n++;
@@ -126,7 +124,6 @@ export function filtrarAnimais(
     if (f.finalidade && a.finalidade !== f.finalidade) return false;
     if (f.raca && normalizar(a.raca ?? '') !== normalizar(f.raca)) return false;
     if (f.cor && normalizar(a.corPelagem ?? '') !== normalizar(f.cor)) return false;
-    if (f.casa && normalizar(a.casa ?? '') !== normalizar(f.casa)) return false;
 
     if (f.terrenoId) {
       if (f.terrenoId === SEM_TERRENO) {
@@ -154,7 +151,9 @@ export function filtrarAnimais(
     }
 
     if (q) {
-      const campos = [a.nome, a.numeroIdentificacao, a.raca, a.corPelagem, a.casa];
+      // O número do animal na exploração entra na pesquisa: quem numera o gado
+      // procura-o por aí ("a 12"), e não pelos catorze dígitos do brinco.
+      const campos = [a.nome, a.numeroIdentificacao, a.raca, a.corPelagem, a.numeroCasa];
       if (!campos.some((c) => c && normalizar(c).includes(q))) return false;
     }
 
@@ -273,7 +272,6 @@ export type Facetas = {
   sexos: Sexo[];
   racas: string[];
   cores: string[];
-  casas: string[];
   finalidades: Finalidade[];
   /** Ids de terreno, mais `SEM_TERRENO` se houver animais soltos. */
   terrenoIds: string[];
@@ -319,7 +317,6 @@ export function facetasDisponiveis(
   const porSexo = sem('sexo');
   const porRaca = sem('raca');
   const porCor = sem('cor');
-  const porCasa = sem('casa');
   const porFinalidade = sem('finalidade');
   const porTerreno = sem('terrenoId');
   const porIdade = sem('idade');
@@ -344,7 +341,6 @@ export function facetasDisponiveis(
     sexos: comEscolhido(juntar(porSexo, (a) => a.sexo) as Sexo[], f.sexo),
     racas: comEscolhido(juntar(porRaca, (a) => a.raca), f.raca),
     cores: comEscolhido(juntar(porCor, (a) => a.corPelagem), f.cor),
-    casas: comEscolhido(juntar(porCasa, (a) => a.casa), f.casa),
     finalidades: comEscolhido(
       juntar(porFinalidade, (a) => a.finalidade) as Finalidade[],
       f.finalidade,

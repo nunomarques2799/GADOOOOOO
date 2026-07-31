@@ -17,10 +17,10 @@
  *   - os ESSENCIAIS, que são o caminho até a app servir para alguma coisa
  *     (exploração → terrenos → animais → avisos). São estes que contam para a
  *     barra de progresso e que decidem quando o guia se cala;
- *   - os OPCIONAIS (a gestão do dinheiro, o registo por casa e número), que são
- *     feitios da app que muita gente nunca quer. Aparecem para se saber que
- *     existem — nunca para ficarem por fazer: se contassem para o progresso, o
- *     guia ficava eternamente incompleto em cima do Início de quem não os quer.
+ *   - os OPCIONAIS (a gestão do dinheiro), que são feitios da app que muita
+ *     gente nunca quer. Aparecem para se saber que existem — nunca para ficarem
+ *     por fazer: se contassem para o progresso, o guia ficava eternamente
+ *     incompleto em cima do Início de quem não os quer.
  *
  * Persistido via `armazenamento.ts` (KV síncrono), como o resto das
  * preferências do aparelho.
@@ -33,8 +33,7 @@ export type ChavePasso =
   | 'terreno'
   | 'animal'
   | 'avisos'
-  | 'financas'
-  | 'casa';
+  | 'financas';
 
 export type Passo = {
   chave: ChavePasso;
@@ -62,8 +61,6 @@ export type EstadoTutorial = {
   suportaAvisos: boolean;
   /** A gestão económica está ligada nalguma exploração. */
   financasLigadas: boolean;
-  /** O registo por casa e número está ligado nalguma exploração. */
-  casaLigada: boolean;
   /**
    * É dono de alguma exploração? Só ele liga os interruptores da conta — a um
    * trabalhador convidado, esses passos são um convite a bater numa porta
@@ -130,30 +127,18 @@ export function passosTutorial(e: EstadoTutorial): Passo[] {
     });
   }
 
-  // Os interruptores da conta: existem, mas não é toda a gente que os quer.
+  // O interruptor da conta: existe, mas não é toda a gente que o quer.
   if (e.podeConfigurar) {
-    passos.push(
-      {
-        chave: 'financas',
-        titulo: 'Ligar a gestão do dinheiro',
-        descricao: 'Só se quiser apontar despesas e vendas na app.',
-        detalhe:
-          'Ligando a gestão financeira, passa a poder apontar o que gasta (ração, veterinário, rendas) e o que recebe (vendas, leite, subsídios), e a app mostra-lhe o saldo da exploração e quanto lhe custou cada animal. Se não a ligar, nada de dinheiro aparece na app. Pode ligar e desligar quando quiser — desligar esconde, não apaga.',
-        acao: 'Ver a gestão do dinheiro',
-        opcional: true,
-        feito: e.financasLigadas,
-      },
-      {
-        chave: 'casa',
-        titulo: 'Numerar os animais por casa',
-        descricao: 'Só se costuma dizer "a 12 da casa de cima".',
-        detalhe:
-          'Muitos criadores conhecem os animais pelo número dentro da casa ou do bardo, e não pelo brinco. Ligando isto, cada animal ganha os campos "casa" e "número", que passam a servir para procurar. Se não ligar, o formulário fica mais curto — e desligar mais tarde não apaga o que já tiver escrito.',
-        acao: 'Ver o registo por casa',
-        opcional: true,
-        feito: e.casaLigada,
-      },
-    );
+    passos.push({
+      chave: 'financas',
+      titulo: 'Ligar a gestão do dinheiro',
+      descricao: 'Só se quiser apontar despesas e vendas na app.',
+      detalhe:
+        'Ligando a gestão financeira, passa a poder apontar o que gasta (ração, veterinário, rendas) e o que recebe (vendas, leite, subsídios), e a app mostra-lhe o saldo da exploração e quanto lhe custou cada animal. Se não a ligar, nada de dinheiro aparece na app. Pode ligar e desligar quando quiser — desligar esconde, não apaga.',
+      acao: 'Ver a gestão do dinheiro',
+      opcional: true,
+      feito: e.financasLigadas,
+    });
   }
 
   return passos;
@@ -172,9 +157,8 @@ export function opcionais(passos: Passo[]): Passo[] {
 /**
  * Passos cumpridos e total — para a barra de progresso do painel.
  *
- * Conta só os essenciais: um progresso que dissesse "3 de 6" a quem já tem a
- * app a funcionar, só porque não quer contabilidade nem numeração por casa,
- * media o que ele não pediu.
+ * Conta só os essenciais: um progresso que dissesse "3 de 5" a quem já tem a
+ * app a funcionar, só porque não quer contabilidade, media o que ele não pediu.
  */
 export function progresso(passos: Passo[]): { feitos: number; total: number; completo: boolean } {
   const conta = essenciais(passos);

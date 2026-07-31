@@ -27,7 +27,6 @@ const PASSO_META: Record<ChavePasso, { icon: IconName; rota: Href }> = {
   animal: { icon: 'cow', rota: '/animal/novo' },
   avisos: { icon: 'bell-ring-outline', rota: '/conta/notificacoes' },
   financas: { icon: 'cash-multiple', rota: '/conta/financas' },
-  casa: { icon: 'home-group', rota: '/conta/casa' },
 };
 
 /**
@@ -83,7 +82,6 @@ export function PainelPrimeirosPassos() {
     avisosLigados: preferencias.noTelemovel && permitido,
     suportaAvisos: suportaNotificacoes,
     financasLigadas: exploracoes.some((e) => e.financasAtivas),
-    casaLigada: exploracoes.some((e) => e.casaAtiva),
     // O mesmo critério do ecrã que liga os interruptores (ver `useFinancas`):
     // são do dono da exploração.
     podeConfigurar: podeEmAlguma('editarExploracao'),

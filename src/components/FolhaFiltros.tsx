@@ -203,20 +203,6 @@ export function FolhaFiltros({
               </Grupo>
             ) : null}
 
-            {vale(facetas.casas, filtros.casa) ? (
-              <Grupo titulo="Casa">
-                {facetas.casas.map((c) => (
-                  <Chip
-                    key={c}
-                    label={c}
-                    icon="home-outline"
-                    selected={filtros.casa === c}
-                    onPress={() => alternar('casa', c)}
-                  />
-                ))}
-              </Grupo>
-            ) : null}
-
             {vale(facetas.terrenoIds, filtros.terrenoId) ? (
               <Grupo titulo="Terreno">
                 {facetas.terrenoIds.map((id) => (
@@ -338,7 +324,6 @@ function semNadaParaAfinar(f: Facetas, filtros: Filtros): boolean {
     !vale(f.idades, filtros.idade) &&
     !vale(f.racas, filtros.raca) &&
     !vale(f.cores, filtros.cor) &&
-    !vale(f.casas, filtros.casa) &&
     !vale(f.finalidades, filtros.finalidade) &&
     !vale(f.terrenoIds, filtros.terrenoId) &&
     f.categoriasAlerta.length === 0 &&

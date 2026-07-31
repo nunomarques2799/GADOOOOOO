@@ -22,6 +22,7 @@ import {
 } from '@/components/ui';
 import { avisar } from '@/data/avisos';
 import { especieMeta } from '@/data/constants';
+import { SEM_TERRENO } from '@/data/filtrosAnimais';
 import { useMembros } from '@/data/membros';
 import {
   formatDataPt,
@@ -32,9 +33,9 @@ import {
 } from '@/data/helpers';
 import { normalizar } from '@/data/racas';
 import { useGado } from '@/data/store';
-import { useToasts } from '@/data/toasts';
+import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
-import type { EventoTipo, Sexo } from '@/data/types';
+import type { Animal, EventoTipo, Sexo } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 /* ------------------------------------------------------------------ *
@@ -106,7 +107,16 @@ function paraNumero(txt: string): number {
 export default function NovoEventoScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { animais, especieDe, addEvento, updateAnimal, animalById, eventosByAnimal } = useGadoAdaptado();
+  const {
+    animais,
+    terrenos,
+    especieDe,
+    addAnimal,
+    addEvento,
+    updateAnimal,
+    animalById,
+    eventosByAnimal,
+  } = useGadoAdaptado();
   const { podeEmAlguma } = useMembros();
   const toast = useToasts();
 
@@ -118,15 +128,26 @@ export default function NovoEventoScreen() {
   const [tipo, setTipo] = useState<Registavel>(tipoInicial);
   const [animalIds, setAnimalIds] = useState<string[]>(params.animalId ? [params.animalId] : []);
   const [procura, setProcura] = useState('');
+  /**
+   * Em que terreno se está a olhar. `null` = ainda a escolher o terreno.
+   *
+   * Sem isto, escolher a vaca do parto era percorrer o efetivo inteiro numa
+   * parede de cem etiquetas com nomes que se parecem. Quem trata de gado sabe
+   * ONDE está o animal antes de saber como se chama — o terreno é o filtro que
+   * ele tem na cabeça, e é por aí que a lista tem de começar.
+   */
+  const [terrenoAberto, setTerrenoAberto] = useState<string | null>(null);
   const [diasAtras, setDiasAtras] = useState(0);
   // Data escrita à mão. Os atalhos cobrem o registo do próprio dia, que é o
   // caso comum; isto cobre o resto — a vacina que se deu no mês passado e só
   // agora se está a lançar, ou o parto que aconteceu enquanto não havia rede.
   const [dataManual, setDataManual] = useState('');
 
-  // Parto
+  // Parto — um parto, uma cria. Nasceram duas? São dois registos, cada um com
+  // o seu resultado e o seu sexo. O campo "número de crias" que aqui esteve
+  // dava um registo só a dizer "2 crias" e nenhuma delas ficava a existir na
+  // app; e no dia em que uma nasce viva e a outra morta, o registo era falso.
   const [tipoParto, setTipoParto] = useState<'Normal' | 'Distócico' | 'Cesariana'>('Normal');
-  const [nCrias, setNCrias] = useState(1);
   const [criaViva, setCriaViva] = useState(true);
   const [sexoCria, setSexoCria] = useState<Sexo | undefined>(undefined);
 
@@ -176,16 +197,70 @@ export default function NovoEventoScreen() {
     );
   }, [animais, tipo]);
 
-  /** O que a pesquisa deixa à vista — é sobre isto que age o "escolher todos". */
+  /**
+   * Os animais arrumados pelo terreno onde andam.
+   *
+   * Os que não têm terreno atribuído vão para um grupo próprio, no fim: são
+   * animais a sério e não podem desaparecer da escolha só por lhes faltar um
+   * campo. Terrenos sem animais nenhuns não aparecem — seria um botão que abre
+   * uma lista vazia.
+   */
+  const grupos = useMemo(() => {
+    const nomes = new Map(terrenos.map((t) => [t.id, t.nome]));
+    const porTerreno = new Map<string, Animal[]>();
+    for (const a of animaisEscolha) {
+      const chave = a.terrenoId && nomes.has(a.terrenoId) ? a.terrenoId : SEM_TERRENO;
+      const lista = porTerreno.get(chave);
+      if (lista) lista.push(a);
+      else porTerreno.set(chave, [a]);
+    }
+    return [...porTerreno.entries()]
+      .map(([id, lista]) => ({
+        id,
+        nome: id === SEM_TERRENO ? 'Sem terreno' : (nomes.get(id) ?? 'Terreno'),
+        animais: lista,
+      }))
+      .sort((x, y) => {
+        // "Sem terreno" fica sempre no fim: é o resto, não um sítio.
+        if (x.id === SEM_TERRENO) return 1;
+        if (y.id === SEM_TERRENO) return -1;
+        return x.nome.localeCompare(y.nome, 'pt');
+      });
+  }, [animaisEscolha, terrenos]);
+
+  /**
+   * Que terreno está aberto de facto.
+   *
+   * Com um grupo só, o passo do terreno não decide nada — seria um toque a mais
+   * para chegar exatamente à mesma lista — por isso abre-se sozinho.
+   *
+   * E um terreno que deixou de existir na lista volta ao passo da escolha: ao
+   * trocar de "Pesagem" para "Parto" a lista passa a ser só de fêmeas, e um
+   * cercado só de machos ficava aberto e vazio, sem nada por onde voltar atrás.
+   */
+  const aberto = terrenoAberto && grupos.some((g) => g.id === terrenoAberto)
+    ? terrenoAberto
+    : null;
+  const grupoAberto = aberto ?? (grupos.length === 1 ? grupos[0].id : null);
+  const terrenoEscolhido = grupos.find((g) => g.id === grupoAberto);
+
+  /**
+   * O que está à vista — e é sobre isto que age o "escolher todos".
+   *
+   * A procura passa POR CIMA dos terrenos: quem escreve o nome de um animal
+   * quer aquele animal, não quer primeiro adivinhar em que terreno ele anda.
+   */
   const aVista = useMemo(() => {
     const q = normalizar(procura.trim());
-    if (!q) return animaisEscolha;
-    return animaisEscolha.filter((a) =>
-      [a.nome, a.numeroIdentificacao, a.raca, a.casa].some(
-        (c) => c && normalizar(c).includes(q),
-      ),
-    );
-  }, [animaisEscolha, procura]);
+    if (q) {
+      return animaisEscolha.filter((a) =>
+        [a.nome, a.numeroIdentificacao, a.raca, a.numeroCasa].some(
+          (c) => c && normalizar(c).includes(q),
+        ),
+      );
+    }
+    return terrenoEscolhido?.animais ?? [];
+  }, [animaisEscolha, procura, terrenoEscolhido]);
 
   /**
    * Trocar para um tipo que não é de massa com vinte animais escolhidos não
@@ -211,10 +286,14 @@ export default function NovoEventoScreen() {
   const valido =
     animalIds.length > 0 &&
     !dataManualInvalida &&
-    (tipo === 'Parto' ||
-      (tipo === 'Vacinação' && vacina.trim().length > 0) ||
-      (tipo === 'Medicamento' && medicamento.trim().length > 0) ||
-      (tipo === 'Pesagem' && Number.isFinite(pesoNum) && pesoNum > 0));
+    // O sexo da cria passou a ser obrigatório num parto de nado-vivo: é com ele
+    // que a app cria o animal recém-nascido (ver `guardar`), e um animal sem
+    // sexo não existe. Nado-morto não cria nada, e por isso não o pede.
+    (tipo === 'Parto'
+      ? !criaViva || sexoCria !== undefined
+      : (tipo === 'Vacinação' && vacina.trim().length > 0) ||
+        (tipo === 'Medicamento' && medicamento.trim().length > 0) ||
+        (tipo === 'Pesagem' && Number.isFinite(pesoNum) && pesoNum > 0));
 
   /** Ganho médio diário desde a última pesagem registada, se existir. */
   function calcularGmd(kg: number): string | undefined {
@@ -241,8 +320,8 @@ export default function NovoEventoScreen() {
     if (tipo === 'Parto') {
       const rotulo =
         tipoParto === 'Normal' ? 'normal' : tipoParto === 'Distócico' ? 'distócico' : 'por cesariana';
-      descricao = `Parto ${rotulo}: ${nCrias} ${nCrias === 1 ? 'cria' : 'crias'}`;
-      if (nCrias === 1 && sexoCria) partes.push(`cria ${sexoCria === 'Fêmea' ? 'fêmea' : 'macho'}`);
+      descricao = `Parto ${rotulo}`;
+      if (sexoCria) partes.push(`cria ${sexoCria === 'Fêmea' ? 'fêmea' : 'macho'}`);
       partes.push(criaViva ? 'nado-vivo' : 'nado-morto');
     } else if (tipo === 'Vacinação') {
       descricao = `Vacina: ${vacina.trim()}`;
@@ -321,6 +400,47 @@ export default function NovoEventoScreen() {
       return;
     }
 
+    /**
+     * Um parto de nado-vivo cria o animal recém-nascido.
+     *
+     * Sem isto, registar o parto e registar a cria eram duas tarefas separadas,
+     * e a segunda esquecia-se: o vitelo existia no histórico da mãe e em mais
+     * lado nenhum — sem prazo de identificação a contar, sem alerta de SNIRA,
+     * fora do efetivo. Ora é exatamente o animal que a lei manda identificar em
+     * 20 dias.
+     *
+     * Nasce com o mínimo: espécie e terreno da mãe, a data do parto, a mãe na
+     * genealogia. Sem nome e sem brinco de propósito — não os há ainda —, o que
+     * o faz aparecer na lista marcado como POR COMPLETAR (ver `AnimalRow`) e
+     * gera o alerta de identificação. O nado-morto não cria nada: nunca entrou
+     * no efetivo.
+     */
+    let cria: Animal | undefined;
+    if (tipo === 'Parto' && criaViva && sexoCria) {
+      const mae = animalById(animalIds[0]);
+      if (mae) {
+        try {
+          cria = await addAnimal({
+            exploracaoId: mae.exploracaoId,
+            terrenoId: mae.terrenoId,
+            maeId: mae.id,
+            // O pai fica por saber: numa cobrição de manada não há forma de o
+            // adivinhar, e escrever um palpite na genealogia é pior do que
+            // deixar em branco. Acrescenta-se na ficha da cria, se se souber.
+            especie: mae.especie,
+            sexo: sexoCria,
+            dataNascimento: data,
+            estado: 'ativo',
+          });
+        } catch (e) {
+          // O parto ficou gravado — isso é o que interessa e não se desfaz. O
+          // que falhou foi a ficha da cria, e é preciso dizê-lo: em silêncio, o
+          // criador contava com um animal que a app não tem.
+          toast.erro('Parto guardado, cria por registar', mensagemDeErro(e));
+        }
+      }
+    }
+
     if (falhados.length > 0) {
       // Nomear quem ficou de fora é o que permite repetir só esses. Um
       // "gravado com erros" sem dizer quais obrigava a conferir trinta fichas.
@@ -339,9 +459,11 @@ export default function NovoEventoScreen() {
 
     toast.sucesso(
       META[tipo].feito,
-      gravados === 1
-        ? `${descricao} · ${formatDataPt(data)}`
-        : `${descricao} em ${gravados} animais, a ${formatDataPt(data)}`,
+      cria
+        ? `${descricao}. A cria já está na lista — falta pôr-lhe o brinco.`
+        : gravados === 1
+          ? `${descricao} · ${formatDataPt(data)}`
+          : `${descricao} em ${gravados} animais, a ${formatDataPt(data)}`,
     );
 
     if (animalIds.length === 1) {
@@ -417,80 +539,133 @@ export default function NovoEventoScreen() {
           ) : (
             <>
               {/* Com efetivo grande, percorrer cem chips à procura de um animal
-                  é pior do que escrever três letras do nome. */}
+                  é pior do que escrever três letras do nome. E a procura passa
+                  por cima dos terrenos: quem escreve o nome quer o animal, não
+                  quer adivinhar primeiro onde ele anda. */}
               {animaisEscolha.length > 8 ? (
-                <View style={{ marginBottom: spacing.xs }}>
+                <View style={{ marginBottom: spacing.sm }}>
                   <TextField
                     value={procura}
                     onChangeText={setProcura}
-                    placeholder="Procurar por nome, brinco, raça ou casa"
+                    placeholder="Procurar por nome, brinco, raça ou número"
                     icon="magnify"
                   />
                 </View>
               ) : null}
 
-              {varios && aVista.length > 0 ? (
-                <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xs }}>
-                  {/* Age sobre o que a pesquisa deixou à vista, não sobre o
-                      efetivo todo: é assim que se vacina "os Mertolengos"
-                      sem os escolher um a um. */}
-                  <Button
-                    label={
-                      procura.trim()
-                        ? `Escolher os ${aVista.length} à vista`
-                        : `Escolher todos (${aVista.length})`
-                    }
-                    icon="checkbox-multiple-marked-outline"
-                    variant="secondary"
-                    fullWidth={false}
-                    onPress={() =>
-                      setAnimalIds((ids) => [
-                        ...new Set([...ids, ...aVista.map((a) => a.id)]),
-                      ])
-                    }
-                  />
-                  {animalIds.length > 0 ? (
-                    <Button
-                      label="Limpar"
-                      icon="close"
-                      variant="ghost"
-                      fullWidth={false}
-                      onPress={() => setAnimalIds([])}
+              {animaisEscolha.length === 0 ? (
+                <Text variant="secondary" color={colors.textMuted}>
+                  {tipo === 'Parto'
+                    ? 'Não há fêmeas registadas para associar a um parto.'
+                    : 'Ainda não há animais registados.'}
+                </Text>
+              ) : !procura.trim() && grupoAberto === null ? (
+                /* Passo 1: em que terreno. */
+                <View style={{ gap: spacing.xs }}>
+                  <Text variant="secondary" color={colors.textSecondary}>
+                    Escolha o terreno onde o animal anda.
+                  </Text>
+                  {grupos.map((g) => (
+                    <LinhaTerreno
+                      key={g.id}
+                      nome={g.nome}
+                      quantos={g.animais.length}
+                      escolhidos={g.animais.filter((a) => animalIds.includes(a.id)).length}
+                      semTerreno={g.id === SEM_TERRENO}
+                      onPress={() => setTerrenoAberto(g.id)}
                     />
-                  ) : null}
+                  ))}
                 </View>
-              ) : null}
+              ) : (
+                /* Passo 2: os animais desse terreno (ou o que a procura achou). */
+                <>
+                  {!procura.trim() && terrenoEscolhido ? (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: spacing.xs,
+                        marginBottom: spacing.xs,
+                      }}>
+                      <Icon name="map-marker" size="md" color={colors.primary} />
+                      <Text variant="bodyStrong" style={{ flex: 1 }}>
+                        {terrenoEscolhido.nome}
+                      </Text>
+                      {/* Só com mais do que um terreno: com um só, o passo nem
+                          chegou a existir e este botão não levava a lado nenhum. */}
+                      {grupos.length > 1 ? (
+                        <Button
+                          label="Trocar de terreno"
+                          icon="swap-horizontal"
+                          variant="ghost"
+                          fullWidth={false}
+                          onPress={() => setTerrenoAberto(null)}
+                        />
+                      ) : null}
+                    </View>
+                  ) : null}
 
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-                {aVista.map((a) => (
-                  <Chip
-                    key={a.id}
-                    label={a.nome ?? a.numeroIdentificacao ?? 'Sem nome'}
-                    icon={animalIds.includes(a.id) ? 'check' : especieDe(a.especie)}
-                    selected={animalIds.includes(a.id)}
-                    onPress={() => alternarAnimal(a.id)}
-                  />
-                ))}
-                {animaisEscolha.length === 0 ? (
-                  <Text variant="secondary" color={colors.textMuted}>
-                    {tipo === 'Parto'
-                      ? 'Não há fêmeas registadas para associar a um parto.'
-                      : 'Ainda não há animais registados.'}
-                  </Text>
-                ) : aVista.length === 0 ? (
-                  <Text variant="secondary" color={colors.textMuted}>
-                    Nenhum animal corresponde a “{procura.trim()}”.
-                  </Text>
-                ) : null}
-              </View>
+                  {varios && aVista.length > 0 ? (
+                    <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xs }}>
+                      {/* Age sobre o que está à VISTA — os animais deste
+                          terreno, ou o que a procura deixou — e não sobre o
+                          efetivo todo: é assim que se vacina um cercado
+                          inteiro sem escolher animal a animal. */}
+                      <Button
+                        label={
+                          procura.trim()
+                            ? `Escolher os ${aVista.length} à vista`
+                            : `Escolher os ${aVista.length} deste terreno`
+                        }
+                        icon="checkbox-multiple-marked-outline"
+                        variant="secondary"
+                        fullWidth={false}
+                        onPress={() =>
+                          setAnimalIds((ids) => [
+                            ...new Set([...ids, ...aVista.map((a) => a.id)]),
+                          ])
+                        }
+                      />
+                      {animalIds.length > 0 ? (
+                        <Button
+                          label="Limpar"
+                          icon="close"
+                          variant="ghost"
+                          fullWidth={false}
+                          onPress={() => setAnimalIds([])}
+                        />
+                      ) : null}
+                    </View>
+                  ) : null}
 
-              {/* Os que estão escolhidos mas a pesquisa escondeu continuam
-                  escolhidos — sem este aviso, gravava-se em animais que já não
-                  estavam à vista sem se perceber porquê. */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+                    {aVista.map((a) => (
+                      <Chip
+                        key={a.id}
+                        label={a.nome ?? a.numeroIdentificacao ?? 'Sem nome'}
+                        icon={animalIds.includes(a.id) ? 'check' : especieDe(a.especie)}
+                        selected={animalIds.includes(a.id)}
+                        onPress={() => alternarAnimal(a.id)}
+                      />
+                    ))}
+                    {aVista.length === 0 ? (
+                      <Text variant="secondary" color={colors.textMuted}>
+                        {procura.trim()
+                          ? `Nenhum animal corresponde a “${procura.trim()}”.`
+                          : 'Não há animais neste terreno.'}
+                      </Text>
+                    ) : null}
+                  </View>
+                </>
+              )}
+
+              {/* Os que estão escolhidos noutro terreno (ou que a procura
+                  escondeu) continuam escolhidos — sem este aviso, gravava-se em
+                  animais que já não estavam à vista sem se perceber porquê. */}
               {varios && escondidos > 0 ? (
                 <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.xs }}>
                   Mais {escondidos} {escondidos === 1 ? 'animal escolhido' : 'animais escolhidos'}{' '}
-                  fora desta procura.
+                  fora do que está à vista.
                 </Text>
               ) : null}
             </>
@@ -551,36 +726,31 @@ export default function NovoEventoScreen() {
                 ))}
               </View>
             </Field>
-            <Field label="Número de crias" obrigatorio>
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                {[1, 2, 3].map((n) => (
-                  <BigToggle
-                    key={n}
-                    label={String(n)}
-                    selected={nCrias === n}
-                    onPress={() => {
-                      setNCrias(n);
-                      if (n > 1) setSexoCria(undefined);
-                    }}
-                  />
-                ))}
-              </View>
-            </Field>
             <Field label="Resultado" obrigatorio>
               <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                 <BigToggle label="Nado-vivo" icon="heart-pulse" selected={criaViva} onPress={() => setCriaViva(true)} />
                 <BigToggle label="Nado-morto" icon="heart-broken" selected={!criaViva} onPress={() => setCriaViva(false)} />
               </View>
             </Field>
-            {nCrias === 1 && criaViva ? (
-              <Field label="Sexo da cria" opcional>
+            {criaViva ? (
+              <Field label="Sexo da cria" obrigatorio>
                 <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                   <BigToggle label="Fêmea" icon="gender-female" selected={sexoCria === 'Fêmea'} onPress={() => setSexoCria('Fêmea')} />
                   <BigToggle label="Macho" icon="gender-male" selected={sexoCria === 'Macho'} onPress={() => setSexoCria('Macho')} />
                 </View>
+                <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
+                  Guardamos a cria como animal novo, com este sexo, a data do
+                  parto e a mãe já preenchidos.
+                </Text>
               </Field>
             ) : null}
-            <Aviso texto="Depois do parto, lembre-se de identificar a cria (brinco) até aos 20 dias e comunicar o nascimento ao SNIRA." />
+            <Aviso
+              texto={
+                criaViva
+                  ? 'A cria fica registada sozinha, por completar: acrescente-lhe o brinco até aos 20 dias e comunique o nascimento ao SNIRA. Se nasceram duas crias, registe dois partos.'
+                  : 'Um parto por cada cria: se nasceram duas, registe dois partos.'
+              }
+            />
           </>
         ) : null}
 
@@ -734,6 +904,10 @@ function useGadoAdaptado() {
 }
 
 /* ------------------------------------------------------------------ *
+ *  Escolha do animal por terreno
+ * ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ *
  *  Componentes locais de formulário (partilham o estilo de animal/novo)
  * ------------------------------------------------------------------ */
 
@@ -818,6 +992,68 @@ function TextField({
         }}
       />
     </View>
+  );
+}
+
+/**
+ * Um terreno na escolha do animal: o nome, quantos animais lá andam e quantos
+ * já estão escolhidos.
+ *
+ * Linha inteira tocável e alta, como o resto das listas de escolha da app. O
+ * número de escolhidos é o que permite vacinar dois cercados seguidos sem
+ * perder a conta ao voltar atrás.
+ */
+function LinhaTerreno({
+  nome,
+  quantos,
+  escolhidos,
+  semTerreno,
+  onPress,
+}: {
+  nome: string;
+  quantos: number;
+  escolhidos: number;
+  semTerreno: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${nome}, ${quantos} ${quantos === 1 ? 'animal' : 'animais'}${
+        escolhidos > 0 ? `, ${escolhidos} escolhidos` : ''
+      }`}
+      style={({ pressed }) => [
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+          minHeight: sizes.touchMin,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.sm,
+          borderRadius: radii.md,
+          borderWidth: 1.5,
+          borderColor: escolhidos > 0 ? colors.primary : colors.border,
+          backgroundColor: escolhidos > 0 ? colors.primaryTint : colors.surface,
+        },
+        pressed && { opacity: 0.85 },
+      ]}>
+      <Icon
+        name={semTerreno ? 'map-marker-off-outline' : 'map-marker'}
+        size="md"
+        color={escolhidos > 0 ? colors.primaryDark : colors.textSecondary}
+      />
+      <View style={{ flex: 1 }}>
+        <Text variant="bodyStrong" color={escolhidos > 0 ? colors.primaryDark : colors.text}>
+          {nome}
+        </Text>
+        <Text variant="secondary" color={colors.textSecondary}>
+          {quantos} {quantos === 1 ? 'animal' : 'animais'}
+          {escolhidos > 0 ? ` · ${escolhidos} escolhido${escolhidos === 1 ? '' : 's'}` : ''}
+        </Text>
+      </View>
+      <Icon name="chevron-right" size="md" color={colors.textMuted} />
+    </Pressable>
   );
 }
 
