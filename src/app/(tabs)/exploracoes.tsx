@@ -15,18 +15,18 @@ export default function ExploracoesScreen() {
   const router = useRouter();
   const desktop = useDesktop();
   const { exploracoes } = useGado();
-  const { estadoPerfil } = useMembros();
+  const { podeCriarExploracoes } = useMembros();
   const { controlo: controloAtualizar } = useAtualizarPuxando();
-  // Só clientes aprovados (perfil ativo) podem criar explorações. Membros por
-  // convite (trabalhador/veterinário) veem as suas mas não criam novas.
+  // Quem pode criar: perfil ativo E conta que não entrou por convite de outra
+  // pessoa. A decisão vive em `permissoes.ts` (`podeCriarExploracao`) e espelha
+  // a política `exploracao_ativo_insert` — a UI segue a RLS, não a contraria.
   //
-  // Ser superadmin não conta aqui, ao contrário do resto da app: a política
-  // `exploracao_ativo_insert` exige `perfil_ativo()` e não abre exceção a
-  // ninguém. Enquanto isto dizia `|| isSuperadmin`, uma conta superadmin ainda
-  // por aprovar via o botão "Nova" e recebia, ao gravar, um "new row violates
-  // row-level security policy" em cru — o erro que este ficheiro existe para
-  // evitar mostrar. Ver `permissoes.ts`: a UI espelha a RLS, não a contraria.
-  const podeCriar = estadoPerfil === 'ativo';
+  // Ser superadmin não conta para o perfil ativo: a política exige
+  // `perfil_ativo()` e não abre exceção a ninguém. Enquanto isto dizia
+  // `|| isSuperadmin`, uma conta superadmin ainda por aprovar via o botão
+  // "Nova" e recebia, ao gravar, um "new row violates row-level security
+  // policy" em cru — o erro que este ficheiro existe para evitar mostrar.
+  const podeCriar = podeCriarExploracoes;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -70,7 +70,7 @@ export default function ExploracoesScreen() {
             message={
               podeCriar
                 ? 'Crie a sua primeira exploração para começar a registar terrenos e animais.'
-                : 'Ainda não foi associado a nenhuma exploração. Peça um código ao cliente responsável.'
+                : 'Ainda não foi associado a nenhuma exploração. Peça um código a quem a gere.'
             }
             actionLabel={podeCriar ? 'Nova exploração' : undefined}
             onAction={podeCriar ? () => router.push('/exploracao/nova') : undefined}

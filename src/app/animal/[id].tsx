@@ -64,9 +64,11 @@ export default function AnimalDetalheScreen() {
   const toast = useToasts();
 
   const animal = animalById(id);
-  // Todos os papéis mexem na ficha e nos eventos; marcar a saída (uma venda,
-  // com preço) fica com quem gere o efetivo. Ver `permissoes.ts`.
+  // Três perguntas e não uma. O veterinário regista o que fez ao animal e não
+  // lhe toca na ficha nem o dá por morto ou vendido; o trabalhador e o dono
+  // fazem as três coisas. Ver `permissoes.ts`.
   const podeEditar = pode(animal?.exploracaoId, 'editarAnimais');
+  const podeRegistarEvento = pode(animal?.exploracaoId, 'registarTratamentos');
   const podeRegistarSaida = pode(animal?.exploracaoId, 'registarSaida');
 
   // Acima do `return` do animal inexistente de propósito: os hooks têm de
@@ -443,21 +445,21 @@ export default function AnimalDetalheScreen() {
         <View style={{ gap: spacing.sm, marginTop: spacing.xl }}>
           {!saiu ? (
             <>
+              {podeRegistarEvento ? (
+                <Button
+                  label="Registar evento"
+                  icon="plus"
+                  variant="secondary"
+                  onPress={() => router.push({ pathname: '/evento/novo', params: { animalId: animal.id } })}
+                />
+              ) : null}
               {podeEditar ? (
-                <>
-                  <Button
-                    label="Registar evento"
-                    icon="plus"
-                    variant="secondary"
-                    onPress={() => router.push({ pathname: '/evento/novo', params: { animalId: animal.id } })}
-                  />
-                  <Button
-                    label="Editar dados do animal"
-                    icon="pencil-outline"
-                    variant="ghost"
-                    onPress={() => router.push(`/animal/editar/${animal.id}`)}
-                  />
-                </>
+                <Button
+                  label="Editar dados do animal"
+                  icon="pencil-outline"
+                  variant="ghost"
+                  onPress={() => router.push(`/animal/editar/${animal.id}`)}
+                />
               ) : null}
               {!podeRegistarSaida ? null : !saidaOpen ? (
                 <Button

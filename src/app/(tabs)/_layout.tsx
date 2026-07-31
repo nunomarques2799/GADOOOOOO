@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BarraLateral, type ItemNav } from '@/components/BarraLateral';
 import { Icon, type IconName, Text } from '@/components/ui';
 import { useMembros } from '@/data/membros';
+import type { CapacidadeLeitura } from '@/data/permissoes';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, spacing } from '@/theme';
 
@@ -28,6 +29,12 @@ type Destino = {
   icon: IconName;
   /** Só aparece a quem gere a equipa de alguma exploração. */
   soComEquipa?: boolean;
+  /**
+   * Só aparece a quem pode CONSULTAR isto nalguma exploração. Serve os
+   * separadores que um convidado não tem que abrir: as contas da exploração e
+   * os ficheiros com o efetivo lá dentro.
+   */
+  exigeLeitura?: CapacidadeLeitura;
 };
 
 /**
@@ -52,8 +59,20 @@ const DESTINOS: Destino[] = [
     icon: 'account-hard-hat',
     soComEquipa: true,
   },
-  { nome: 'financas', rota: '/financas', label: 'Finanças', icon: 'cash-multiple' },
-  { nome: 'documentos', rota: '/documentos', label: 'Documentos', icon: 'file-document-outline' },
+  {
+    nome: 'financas',
+    rota: '/financas',
+    label: 'Finanças',
+    icon: 'cash-multiple',
+    exigeLeitura: 'verFinancas',
+  },
+  {
+    nome: 'documentos',
+    rota: '/documentos',
+    label: 'Documentos',
+    icon: 'file-document-outline',
+    exigeLeitura: 'verDocumentos',
+  },
   { nome: 'definicoes', rota: '/definicoes', label: 'Definições', icon: 'cog-outline' },
   { nome: 'perfil', rota: '/perfil', label: 'Perfil', icon: 'account' },
 ];
@@ -80,9 +99,24 @@ const NO_TELEMOVEL = ['index', 'animais', 'exploracoes', 'alertas'];
  * é a NAVEGAÇÃO, para ninguém tropeçar num ecrã que a RLS lhe fecha.
  */
 function useDestinos(): Destino[] {
-  const { podeEmAlguma } = useMembros();
+  const { podeEmAlguma, podeVer } = useMembros();
   const comEquipa = podeEmAlguma('gerirEquipa');
-  return useMemo(() => DESTINOS.filter((d) => !d.soComEquipa || comEquipa), [comEquipa]);
+  // `podeVer(undefined, …)` responde por QUALQUER exploração de que se seja
+  // membro: quem tem duas quintas e as contas ligadas só numa continua a ver o
+  // separador. É a mesma pergunta que os ecrãs de dentro fazem.
+  const comFinancas = podeVer(undefined, 'verFinancas');
+  const comDocumentos = podeVer(undefined, 'verDocumentos');
+
+  return useMemo(
+    () =>
+      DESTINOS.filter((d) => {
+        if (d.soComEquipa && !comEquipa) return false;
+        if (d.exigeLeitura === 'verFinancas') return comFinancas;
+        if (d.exigeLeitura === 'verDocumentos') return comDocumentos;
+        return true;
+      }),
+    [comEquipa, comFinancas, comDocumentos],
+  );
 }
 
 function TabBar({ state, navigation }: TabBarProps) {

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
+import { entraPorCodigo, INTENCOES, type Intencao } from '@/data/intencao';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 type Modo = 'entrar' | 'registar' | 'recuperar';
@@ -18,6 +19,7 @@ export function EcraLogin() {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [palavra, setPalavra] = useState('');
+  const [intencao, setIntencao] = useState<Intencao | null>(null);
   const [aProcessar, setAProcessar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [confirmacao, setConfirmacao] = useState(false);
@@ -29,7 +31,7 @@ export function EcraLogin() {
     email.trim().length > 3 &&
     email.includes('@') &&
     (recuperar || palavra.length >= 6) &&
-    (!registo || nome.trim().length > 0);
+    (!registo || (nome.trim().length > 0 && intencao !== null));
 
   function irPara(novo: Modo) {
     setModo(novo);
@@ -54,7 +56,7 @@ export function EcraLogin() {
       if (e) setErro(e);
       else setRecuperado(true);
     } else if (registo) {
-      const r = await registar(email, palavra, nome);
+      const r = await registar(email, palavra, nome, intencao ?? undefined);
       if ('erro' in r) setErro(r.erro);
       else if (r.confirmarEmail) setConfirmacao(true);
       // se criou sessão, o portão de autenticação troca para a app sozinho
@@ -109,6 +111,30 @@ export function EcraLogin() {
 
           {/* Formulário */}
           <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
+            {/*
+              A pergunta vem ANTES do nome de propósito: é ela que decide o que
+              acontece a seguir a criar a conta (esperar por aprovação, ou pedir
+              um código de convite ao dono da exploração — ver `intencao.ts`).
+            */}
+            {registo ? (
+              <View style={{ marginBottom: spacing.lg }}>
+                <Text variant="label" style={{ marginBottom: spacing.xs }}>
+                  O que veio cá fazer?
+                </Text>
+                <View style={{ gap: spacing.xs }}>
+                  {INTENCOES.map((op) => (
+                    <OpcaoIntencao
+                      key={op.id}
+                      rotulo={op.rotulo}
+                      descricao={op.descricao}
+                      icone={op.icone}
+                      escolhida={intencao === op.id}
+                      onPress={() => setIntencao(op.id)}
+                    />
+                  ))}
+                </View>
+              </View>
+            ) : null}
             {registo ? (
               <Campo
                 label="Nome"
@@ -178,7 +204,9 @@ export function EcraLogin() {
                 <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
                   {recuperado
                     ? 'Se existir uma conta com este email, enviámos um link para redefinir a palavra-passe. Verifique a caixa de entrada.'
-                    : 'Conta criada. Enviámos um email de confirmação: confirme e depois entre.'}
+                    : entraPorCodigo(intencao ?? undefined)
+                      ? 'Conta criada. Enviámos um email de confirmação: confirme, entre, e use o código de convite que lhe deram.'
+                      : 'Conta criada. Enviámos um email de confirmação: confirme e depois entre.'}
                 </Text>
               </View>
             ) : null}
@@ -217,6 +245,73 @@ export function EcraLogin() {
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
+  );
+}
+
+/**
+ * Uma das respostas a "o que veio cá fazer?".
+ *
+ * Linha inteira tocável, com o ícone à esquerda e a marca à direita — o mesmo
+ * desenho das listas de opções do resto da app. Não é um `<Picker>` nem uma
+ * lista que abre: são três, cabem todas no ecrã, e ver as três lado a lado é o
+ * que deixa perceber a diferença entre elas.
+ */
+function OpcaoIntencao({
+  rotulo,
+  descricao,
+  icone,
+  escolhida,
+  onPress,
+}: {
+  rotulo: string;
+  descricao: string;
+  icone: IconName;
+  escolhida: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      // O `aria-checked` a acompanhar o `accessibilityState`: no react-native-web
+      // desta versão o estado não chega ao DOM sozinho, e um leitor de ecrã
+      // anunciava as três opções exatamente da mesma maneira.
+      accessibilityState={{ checked: escolhida }}
+      aria-checked={escolhida}
+      accessibilityLabel={`${rotulo}. ${descricao}`}
+      style={({ pressed }) => [
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+          minHeight: sizes.touchMin,
+          padding: spacing.sm,
+          borderRadius: radii.md,
+          borderWidth: escolhida ? 2 : 1.5,
+          borderColor: escolhida ? colors.primary : colors.border,
+          backgroundColor: escolhida ? colors.primaryTint : colors.surface,
+        },
+        pressed && { opacity: 0.85 },
+      ]}>
+      <Icon
+        name={icone}
+        size="lg"
+        color={escolhida ? colors.primaryDark : colors.textSecondary}
+      />
+      <View style={{ flex: 1 }}>
+        <Text variant="bodyStrong" color={escolhida ? colors.primaryDark : colors.text}>
+          {rotulo}
+        </Text>
+        <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: 2 }}>
+          {descricao}
+        </Text>
+      </View>
+      <Icon
+        name={escolhida ? 'check-circle' : 'circle-outline'}
+        size="md"
+        color={escolhida ? colors.primary : colors.textMuted}
+      />
+    </Pressable>
   );
 }
 

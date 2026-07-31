@@ -1,16 +1,20 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CampoLocalidade } from '@/components/CampoLocalidade';
 import { Button, Card, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
+import { entraPorCodigo, lerIntencao } from '@/data/intencao';
 import { useMembros } from '@/data/membros';
 import { explicarRecusa } from '@/data/supabaseRepo';
 import { supabase } from '@/data/supabase';
+import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, sizes, spacing } from '@/theme';
 
-type Aba = 'aguardar' | 'criar' | 'convite';
+/** O que a pessoa escolheu fazer neste ecrã. `null` = ainda não escolheu. */
+type Opcao = 'criar' | 'convite';
 
 function novoId(prefixo: string): string {
   const g = globalThis as { crypto?: { randomUUID?: () => string } };
@@ -20,22 +24,39 @@ function novoId(prefixo: string): string {
 
 /**
  * Ecrã mostrado a utilizadores autenticados que ainda não têm acesso.
- * O que mostra depende do estado:
- *   - estado='pendente'                      → "aguarda aprovação do superadmin"
- *     mas pode entrar um código de convite (trabalhador/vet).
- *   - estado='ativo' + 0 membros             → pode criar a sua primeira exploração
- *     ou resgatar um código.
+ * ------------------------------------------------------------------
+ * O que mostra depende de duas coisas: se a conta já foi aprovada e do que a
+ * pessoa disse ser quando se registou (ver `data/intencao.ts`).
+ *
+ *   - estado='pendente' + dono     → aguarda aprovação do superadmin
+ *   - estado='pendente' + equipa   → não espera por ninguém: entra com código
+ *   - estado='ativo'   + 0 membros → cria a primeira exploração, ou usa código
+ *
+ * O ecrã teve durante algum tempo um separador "Aguardar" ao lado dos outros
+ * dois. Estava sempre escolhido de origem, e tocar-lhe não fazia nada — parecia
+ * um botão avariado. Aqui só há opções que MUDAM alguma coisa; esperar não é
+ * uma delas, é o que acontece quando não se escolhe nada.
  */
 export function EcraPendente() {
   const insets = useSafeAreaInsets();
+  const desktop = useDesktop();
   const { utilizador, sair } = useAuth();
   const { recarregar, aCarregar, estadoPerfil, resgatarConvite } = useMembros();
 
   const nome = utilizador?.user_metadata?.nome as string | undefined;
   const email = utilizador?.email ?? '';
   const aprovado = estadoPerfil === 'ativo';
+  const intencao = lerIntencao(utilizador?.user_metadata);
+  const porCodigo = entraPorCodigo(intencao);
 
-  const [aba, setAba] = useState<Aba>('aguardar');
+  // Quem já disse ao que vem chega aqui com o caminho aberto: o trabalhador e o
+  // veterinário no campo do código, o dono aprovado no formulário da
+  // exploração. Quem se registou antes de a pergunta existir escolhe agora.
+  const [escolha, setEscolha] = useState<Opcao | null>(() => {
+    if (porCodigo) return 'convite';
+    if (aprovado && intencao === 'dono') return 'criar';
+    return null;
+  });
 
   // Formulário de criar exploração (só se aprovado).
   const [nomeExp, setNomeExp] = useState('');
@@ -80,6 +101,8 @@ export function EcraPendente() {
     // Se OK, `recarregar` dentro de `resgatarConvite` faz o gate desaparecer.
   }
 
+  const titulo = aprovado ? 'Bem-vindo' : porCodigo ? 'Falta o código' : 'A aguardar aprovação';
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <LinearGradient
@@ -87,122 +110,152 @@ export function EcraPendente() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{
-          paddingTop: insets.top + spacing.xxl,
-          paddingBottom: spacing.xxl,
-          paddingHorizontal: spacing.lg,
+          // Em janela larga o cabeçalho é uma faixa, não meio ecrã: o mesmo
+          // desenho vertical que serve um telemóvel empurrava tudo o que
+          // interessa para fora da vista num monitor.
+          paddingTop: insets.top + (desktop ? spacing.lg : spacing.xxl),
+          paddingBottom: desktop ? spacing.lg : spacing.xxl,
+          paddingHorizontal: desktop ? spacing.xl : spacing.lg,
           borderBottomLeftRadius: radii.xl,
           borderBottomRightRadius: radii.xl,
-          alignItems: 'center',
+          alignItems: desktop ? 'flex-start' : 'center',
         }}>
         <View
           style={{
-            width: 84,
-            height: 84,
-            borderRadius: radii.pill,
-            backgroundColor: 'rgba(255,255,255,0.16)',
+            flexDirection: desktop ? 'row' : 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: spacing.sm,
+            gap: desktop ? spacing.md : 0,
+            alignSelf: 'stretch',
           }}>
-          <Icon name={aprovado ? 'barn' : 'clock-outline'} size={48} color={colors.textOnDark} />
+          <View
+            style={{
+              width: desktop ? 60 : 84,
+              height: desktop ? 60 : 84,
+              borderRadius: radii.pill,
+              backgroundColor: 'rgba(255,255,255,0.16)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: desktop ? 0 : spacing.sm,
+            }}>
+            <Icon
+              name={aprovado ? 'barn' : porCodigo ? 'ticket-confirmation-outline' : 'clock-outline'}
+              size={desktop ? 32 : 48}
+              color={colors.textOnDark}
+            />
+          </View>
+          <View style={{ flex: desktop ? 1 : undefined, alignItems: desktop ? 'flex-start' : 'center' }}>
+            <Text variant={desktop ? 'h1' : 'display'} color={colors.textOnDark}>
+              {titulo}
+            </Text>
+            <Text
+              variant="body"
+              color={colors.textOnDarkMuted}
+              style={{ marginTop: 2, textAlign: desktop ? 'left' : 'center' }}>
+              {nome ? `Olá, ${nome.split(' ')[0]}.` : email}
+            </Text>
+          </View>
         </View>
-        <Text variant="display" color={colors.textOnDark}>
-          {aprovado ? 'Bem-vindo' : 'A aguardar aprovação'}
-        </Text>
-        <Text variant="body" color={colors.textOnDarkMuted} style={{ marginTop: 2, textAlign: 'center' }}>
-          {nome ? `Olá, ${nome.split(' ')[0]}.` : ''}
-        </Text>
       </LinearGradient>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xxl }}>
-        {/* Cartão informativo */}
-        {aprovado ? (
-          <Card>
-            <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' }}>
-              <Icon name="check-circle" size="lg" color={colors.success} />
-              <View style={{ flex: 1 }}>
-                <Text variant="bodyStrong">A sua conta está ativa</Text>
-                <Text variant="body" color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
-                  Pode criar a sua primeira exploração ou associar-se a uma através de
-                  um código de convite.
-                </Text>
-                <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm }}>
-                  Conta: {email}
-                </Text>
-              </View>
+        contentContainerStyle={{
+          paddingHorizontal: desktop ? spacing.xl : spacing.lg,
+          paddingTop: desktop ? spacing.lg : spacing.xl,
+          paddingBottom: spacing.xxl,
+        }}>
+        {/* Cartão informativo — o estado da conta, em texto. */}
+        <Card>
+          <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' }}>
+            <Icon
+              name={aprovado ? 'check-circle' : 'information-outline'}
+              size="lg"
+              color={aprovado ? colors.success : colors.info}
+            />
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyStrong">
+                {aprovado ? 'A sua conta está ativa' : 'A sua conta está pendente'}
+              </Text>
+              <Text variant="body" color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
+                {aprovado
+                  ? porCodigo
+                    ? 'Peça o código de convite a quem gere a exploração onde vai trabalhar e escreva-o abaixo.'
+                    : 'Pode criar a sua primeira exploração ou associar-se a uma através de um código de convite.'
+                  : porCodigo
+                    ? 'Não tem de esperar por ninguém: com o código de convite de uma exploração entra de imediato. Peça-o a quem a gere.'
+                    : 'O administrador da plataforma vai analisar o pedido de acesso. Se tiver recebido um código de convite de um cliente, pode usá-lo já para entrar.'}
+              </Text>
+              <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm }}>
+                Conta: {email}
+              </Text>
             </View>
-          </Card>
-        ) : (
-          <Card>
-            <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' }}>
-              <Icon name="information-outline" size="lg" color={colors.info} />
-              <View style={{ flex: 1 }}>
-                <Text variant="bodyStrong">A sua conta está pendente</Text>
-                <Text variant="body" color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
-                  O administrador da plataforma vai analisar o pedido de acesso.
-                  Se recebeu um <Text variant="bodyStrong">código de convite</Text> de
-                  um cliente para trabalhar/prestar serviço veterinário, use-o abaixo
-                  para entrar de imediato.
-                </Text>
-                <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm }}>
-                  Conta: {email}
-                </Text>
-              </View>
-            </View>
-          </Card>
-        )}
+          </View>
+        </Card>
 
-        {/* Abas */}
-        <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.lg }}>
-          <AbaBtn
-            label="Aguardar"
-            icon="clock-outline"
-            ativa={aba === 'aguardar'}
-            onPress={() => setAba('aguardar')}
-          />
+        {/* As opções que MUDAM alguma coisa. Esperar não é uma delas. */}
+        <View
+          style={{
+            flexDirection: desktop ? 'row' : 'column',
+            gap: spacing.sm,
+            marginTop: spacing.lg,
+          }}>
           {aprovado ? (
-            <AbaBtn
-              label="Criar exploração"
-              icon="barn"
-              ativa={aba === 'criar'}
-              onPress={() => setAba('criar')}
+            <CartaoOpcao
+              icone="barn"
+              titulo="Criar exploração"
+              descricao="Registar a minha exploração e começar a lançar animais."
+              escolhida={escolha === 'criar'}
+              onPress={() => setEscolha('criar')}
             />
           ) : null}
-          <AbaBtn
-            label="Tenho um código"
-            icon="ticket-confirmation-outline"
-            ativa={aba === 'convite'}
-            onPress={() => setAba('convite')}
+          <CartaoOpcao
+            icone="ticket-confirmation-outline"
+            titulo="Tenho um código"
+            descricao="Entrar na exploração de outra pessoa com um código de convite."
+            escolhida={escolha === 'convite'}
+            onPress={() => setEscolha('convite')}
           />
         </View>
 
-        {aba === 'aguardar' ? (
+        {escolha === 'criar' && aprovado ? (
           <View style={{ marginTop: spacing.lg }}>
-            <Button
-              label="Verificar novamente"
-              icon="refresh"
-              onPress={recarregar}
-              loading={aCarregar}
-            />
-            <Button
-              label="Terminar sessão"
-              icon="logout"
-              variant="ghost"
-              onPress={sair}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        ) : null}
-
-        {aba === 'criar' && aprovado ? (
-          <View style={{ marginTop: spacing.lg }}>
-            <Campo label="Nome" icon="barn" value={nomeExp} onChangeText={setNomeExp} placeholder="Ex: Monte do Avô" />
-            <Campo label="Marca de exploração" icon="barcode" value={marca} onChangeText={setMarca} placeholder="PT 00 000 0000" autoCapitalize="characters" />
-            <Campo label="NIF do detentor" icon="card-account-details-outline" value={nifDetentor} onChangeText={setNif} placeholder="000 000 000" keyboardType="number-pad" />
-            <Campo label="Localização" icon="map-marker" value={localizacao} onChangeText={setLocalizacao} placeholder="Ex: Idanha-a-Nova" opcional />
+            <View style={{ flexDirection: desktop ? 'row' : 'column', gap: desktop ? spacing.md : 0 }}>
+              <Campo
+                label="Nome"
+                icon="barn"
+                value={nomeExp}
+                onChangeText={setNomeExp}
+                placeholder="Ex: Monte do Avô"
+              />
+              <Campo
+                label="Marca de exploração"
+                icon="barcode"
+                value={marca}
+                onChangeText={setMarca}
+                placeholder="PT 00 000 0000"
+                autoCapitalize="characters"
+              />
+            </View>
+            <View style={{ flexDirection: desktop ? 'row' : 'column', gap: desktop ? spacing.md : 0 }}>
+              <Campo
+                label="NIF do detentor"
+                icon="card-account-details-outline"
+                value={nifDetentor}
+                onChangeText={setNif}
+                placeholder="000 000 000"
+                keyboardType="number-pad"
+              />
+              <Campo label="Localização" opcional>
+                {/* A localidade sai da mesma lista que dá a meteorologia — ver
+                    `CampoLocalidade`. Escrita à mão continua a valer. */}
+                <CampoLocalidade
+                  value={localizacao}
+                  onChangeText={setLocalizacao}
+                  placeholder="Ex: Idanha-a-Nova"
+                />
+              </Campo>
+            </View>
             {erroCriar ? <ErroBox mensagem={erroCriar} /> : null}
             <Button
               label="Criar e continuar"
@@ -210,24 +263,26 @@ export function EcraPendente() {
               onPress={criarPrimeiraExploracao}
               disabled={!validoExp}
               loading={aGravar}
-              style={{ marginTop: spacing.lg }}
+              fullWidth={!desktop}
+              style={{ marginTop: spacing.md }}
             />
           </View>
         ) : null}
 
-        {aba === 'convite' ? (
-          <View style={{ marginTop: spacing.lg }}>
-            <Campo
-              label="Código de convite"
-              icon="ticket-confirmation-outline"
-              value={codigo}
-              onChangeText={(t) => setCodigo(t.toUpperCase())}
-              placeholder="Ex: A7BXK2M9"
-              autoCapitalize="characters"
-            />
-            <Text variant="caption" color={colors.textMuted} style={{ marginTop: -spacing.md + 4, marginBottom: spacing.md }}>
-              Peça o código ao cliente responsável pela exploração.
-            </Text>
+        {escolha === 'convite' ? (
+          <View style={{ marginTop: spacing.lg, maxWidth: desktop ? 420 : undefined }}>
+            <Campo label="Código de convite" icon="ticket-confirmation-outline">
+              <CampoTexto
+                icon="ticket-confirmation-outline"
+                value={codigo}
+                onChangeText={(t) => setCodigo(t.toUpperCase())}
+                placeholder="Ex: A7BXK2M9"
+                autoCapitalize="characters"
+              />
+              <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
+                Peça o código ao responsável pela exploração.
+              </Text>
+            </Campo>
             {erroResgate ? <ErroBox mensagem={erroResgate} /> : null}
             <Button
               label="Entrar com este código"
@@ -235,9 +290,37 @@ export function EcraPendente() {
               onPress={submeterCodigo}
               disabled={!codigo.trim()}
               loading={aResgatar}
+              fullWidth={!desktop}
             />
           </View>
         ) : null}
+
+        {/* Ações que existem sempre: voltar a perguntar ao servidor e sair. */}
+        <View
+          style={{
+            flexDirection: desktop ? 'row' : 'column',
+            gap: spacing.sm,
+            marginTop: spacing.xl,
+            paddingTop: spacing.lg,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+          }}>
+          <Button
+            label="Verificar novamente"
+            icon="refresh"
+            variant={escolha === null ? 'primary' : 'secondary'}
+            onPress={recarregar}
+            loading={aCarregar}
+            fullWidth={!desktop}
+          />
+          <Button
+            label="Terminar sessão"
+            icon="logout"
+            variant="ghost"
+            onPress={sair}
+            fullWidth={!desktop}
+          />
+        </View>
       </ScrollView>
     </View>
   );
@@ -252,26 +335,66 @@ function traduzErroConvite(msg: string): string {
   return msg;
 }
 
-function AbaBtn({
-  label,
-  icon,
-  ativa,
+/**
+ * Uma das duas maneiras de sair deste ecrã.
+ *
+ * Cartão inteiro tocável, com o que acontece escrito por baixo do título: quem
+ * chega aqui não sabe necessariamente a diferença entre "criar exploração" e
+ * "código de convite", e o rótulo sozinho não a explica.
+ */
+function CartaoOpcao({
+  icone,
+  titulo,
+  descricao,
+  escolhida,
   onPress,
 }: {
-  label: string;
-  icon: IconName;
-  ativa: boolean;
+  icone: IconName;
+  titulo: string;
+  descricao: string;
+  escolhida: boolean;
   onPress: () => void;
 }) {
   return (
-    <View style={{ flex: 1 }}>
-      <Button
-        label={label}
-        icon={icon}
-        variant={ativa ? 'primary' : 'ghost'}
-        onPress={onPress}
-      />
-    </View>
+    <Card
+      onPress={onPress}
+      // O cartão é um botão, e um botão não tem estado de escolhido para
+      // anunciar — daí ir no rótulo. Sem isto, quem ouve o ecrã não sabe qual
+      // dos dois formulários está aberto por baixo.
+      accessibilityLabel={`${titulo}. ${descricao}${escolhida ? ' Escolhido.' : ''}`}
+      style={{
+        flex: 1,
+        borderWidth: escolhida ? 2 : 1,
+        borderColor: escolhida ? colors.primary : colors.border,
+        backgroundColor: escolhida ? colors.primaryTint : colors.surface,
+      }}>
+      <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: radii.pill,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: escolhida ? colors.primary : colors.primaryTint,
+          }}>
+          <Icon name={icone} size="md" color={escolhida ? colors.onPrimary : colors.primaryDark} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text variant="bodyStrong" color={escolhida ? colors.primaryDark : colors.text}>
+            {titulo}
+          </Text>
+          <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: 2 }}>
+            {descricao}
+          </Text>
+        </View>
+        <Icon
+          name={escolhida ? 'check-circle' : 'chevron-right'}
+          size="md"
+          color={escolhida ? colors.primary : colors.textMuted}
+        />
+      </View>
+    </Card>
   );
 }
 
@@ -285,7 +408,7 @@ function ErroBox({ mensagem }: { mensagem: string }) {
         backgroundColor: colors.dangerTint,
         padding: spacing.sm,
         borderRadius: radii.md,
-        marginTop: spacing.sm,
+        marginBottom: spacing.sm,
       }}>
       <Icon name="alert-circle-outline" size="sm" color={colors.danger} />
       <Text variant="secondary" color={colors.danger} style={{ flex: 1 }}>{mensagem}</Text>
@@ -293,6 +416,7 @@ function ErroBox({ mensagem }: { mensagem: string }) {
   );
 }
 
+/** Rótulo + campo. Em janela larga, dois destes lado a lado dividem a linha. */
 function Campo({
   label,
   icon,
@@ -302,46 +426,77 @@ function Campo({
   autoCapitalize,
   keyboardType,
   opcional,
+  children,
 }: {
   label: string;
-  icon: IconName;
+  icon?: IconName;
+  value?: string;
+  onChangeText?: (t: string) => void;
+  placeholder?: string;
+  autoCapitalize?: 'none' | 'characters' | 'words' | 'sentences';
+  keyboardType?: 'default' | 'number-pad';
+  opcional?: boolean;
+  children?: ReactNode;
+}) {
+  return (
+    <View style={{ flex: 1, marginBottom: spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs }}>
+        <Text variant="label">{label}</Text>
+        {opcional ? <Text variant="caption" color={colors.textMuted}>opcional</Text> : null}
+      </View>
+      {children ?? (
+        <CampoTexto
+          icon={icon}
+          value={value ?? ''}
+          onChangeText={onChangeText ?? (() => {})}
+          placeholder={placeholder ?? ''}
+          autoCapitalize={autoCapitalize}
+          keyboardType={keyboardType}
+        />
+      )}
+    </View>
+  );
+}
+
+function CampoTexto({
+  icon,
+  value,
+  onChangeText,
+  placeholder,
+  autoCapitalize,
+  keyboardType,
+}: {
+  icon?: IconName;
   value: string;
   onChangeText: (t: string) => void;
   placeholder: string;
   autoCapitalize?: 'none' | 'characters' | 'words' | 'sentences';
   keyboardType?: 'default' | 'number-pad';
-  opcional?: boolean;
 }) {
   return (
-    <View style={{ marginBottom: spacing.md }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs }}>
-        <Text variant="label">{label}</Text>
-        {opcional ? <Text variant="caption" color={colors.textMuted}>opcional</Text> : null}
-      </View>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spacing.xs,
-          height: sizes.input,
-          borderRadius: radii.md,
-          borderWidth: 1.5,
-          borderColor: colors.border,
-          backgroundColor: colors.surface,
-          paddingHorizontal: spacing.md,
-        }}>
-        <Icon name={icon} size="md" color={colors.textMuted} />
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textMuted}
-          autoCapitalize={autoCapitalize}
-          keyboardType={keyboardType}
-          autoCorrect={false}
-          style={{ flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 17, color: colors.text }}
-        />
-      </View>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+        height: sizes.input,
+        borderRadius: radii.md,
+        borderWidth: 1.5,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        paddingHorizontal: spacing.md,
+      }}>
+      {icon ? <Icon name={icon} size="md" color={colors.textMuted} /> : null}
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textMuted}
+        autoCapitalize={autoCapitalize}
+        keyboardType={keyboardType}
+        autoCorrect={false}
+        style={{ flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 17, color: colors.text }}
+      />
     </View>
   );
 }

@@ -4,7 +4,7 @@ import { ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CampoLocalidade } from '@/components/CampoLocalidade';
-import { Button, EcraComTeclado, Header, Icon, type IconName, Text } from '@/components/ui';
+import { Button, EcraComTeclado, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
@@ -17,7 +17,7 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { addExploracao, updateExploracao, deleteExploracao } = useGado();
-  const { pode } = useMembros();
+  const { pode, podeCriarExploracoes } = useMembros();
   const toast = useToasts();
 
   const editar = !!exploracao;
@@ -86,6 +86,23 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
       `Vai eliminar "${exploracao.nome}", os seus terrenos, animais e histórico. Esta ação não pode ser desfeita.`,
       () => void executar(),
       { rotuloConfirmar: 'Eliminar', destrutivo: true },
+    );
+  }
+
+  // Criar sem poder criar: o botão já não aparece em lado nenhum, mas a rota
+  // continua declarada e um link guardado chega cá. Sem isto, o formulário
+  // deixava preencher tudo e só rebentava no Guardar, com o "new row violates
+  // row-level security policy" do servidor por cima do trabalho já escrito.
+  if (!editar && !podeCriarExploracoes) {
+    return (
+      <EcraComTeclado>
+        <Header title="Nova exploração" />
+        <EmptyState
+          icon="barn"
+          title="Só quem tem a sua própria exploração"
+          message="Entrou nesta app por convite de quem gere uma exploração, e é lá que trabalha. Para abrir uma exploração sua, crie uma conta própria."
+        />
+      </EcraComTeclado>
     );
   }
 

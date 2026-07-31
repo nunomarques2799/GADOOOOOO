@@ -27,6 +27,14 @@ O site é estático. Publica-o **uma vez** no Netlify:
 
 Não precisas de repetir isto quando lançares versões novas da app — ver abaixo.
 
+**Mas precisas de repetir quando mexeres na própria página.** Este site não
+está ligado ao GitHub: um `git push` com alterações ao `website/` não muda nada
+do que está online. Para publicar o que mudou, vai a
+<https://app.netlify.com> → o site `gestaogado` → **Deploys** → arrasta a pasta
+`website` outra vez para a zona de *drag and drop* (ou usa o `netlify.com/drop`
+e depois liga o site antigo). É o passo que se esquece: o site continua a
+servir a versão antiga e nada avisa.
+
 ## O site da app (uma vez só)
 
 Este tem de ser ligado ao GitHub, porque é construído a cada publicação:

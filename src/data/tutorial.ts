@@ -3,13 +3,24 @@
  * ------------------------------------------------------------------
  * Cada ecrã da app explica-se a si mesmo, mas nada dizia por ONDE começar. Uma
  * conta acabada de criar é uma sequência de estados vazios — sem explorações
- * não há onde pôr animais, sem animais não há alertas — e o criador de 82 anos,
- * sozinho, não tem porque adivinhar essa ordem.
+ * não há onde pôr terrenos, sem terrenos não se sabe onde anda o gado, sem
+ * animais não há alertas — e o criador de 82 anos, sozinho, não tem porque
+ * adivinhar essa ordem.
  *
  * Isto é a lógica desse guia, à parte do ecrã para poder ser testada: quais são
  * os passos, quais já estão feitos (lido dos DADOS, não de uma caixa que se
  * marca — um passo "feito" é um animal que existe mesmo), e se o guia ainda se
  * mostra. O painel em si é `components/PainelPrimeirosPassos.tsx`.
+ *
+ * Há duas famílias de passos:
+ *
+ *   - os ESSENCIAIS, que são o caminho até a app servir para alguma coisa
+ *     (exploração → terrenos → animais → avisos). São estes que contam para a
+ *     barra de progresso e que decidem quando o guia se cala;
+ *   - os OPCIONAIS (a gestão do dinheiro, o registo por casa e número), que são
+ *     feitios da app que muita gente nunca quer. Aparecem para se saber que
+ *     existem — nunca para ficarem por fazer: se contassem para o progresso, o
+ *     guia ficava eternamente incompleto em cima do Início de quem não os quer.
  *
  * Persistido via `armazenamento.ts` (KV síncrono), como o resto das
  * preferências do aparelho.
@@ -17,12 +28,25 @@
 
 import { guardar as guardarKv, ler as lerKv } from './armazenamento';
 
-export type ChavePasso = 'exploracao' | 'animal' | 'avisos';
+export type ChavePasso =
+  | 'exploracao'
+  | 'terreno'
+  | 'animal'
+  | 'avisos'
+  | 'financas'
+  | 'casa';
 
 export type Passo = {
   chave: ChavePasso;
   titulo: string;
+  /** Uma linha, sempre visível na lista. */
   descricao: string;
+  /** A explicação por extenso, mostrada no passo que está a ser apontado. */
+  detalhe: string;
+  /** O que diz o botão desse passo. */
+  acao: string;
+  /** Feitio à escolha: não conta para o progresso nem prende o guia. */
+  opcional: boolean;
   /** Já está cumprido? Vem dos dados reais, não de uma marca do utilizador. */
   feito: boolean;
 };
@@ -30,15 +54,30 @@ export type Passo = {
 /** O que a app sabe para decidir que passos estão cumpridos. */
 export type EstadoTutorial = {
   temExploracoes: boolean;
+  temTerrenos: boolean;
   temAnimais: boolean;
   /** Os avisos no telemóvel estão ligados e autorizados. */
   avisosLigados: boolean;
   /** A plataforma agenda avisos locais? (falso na web/computador.) */
   suportaAvisos: boolean;
+  /** A gestão económica está ligada nalguma exploração. */
+  financasLigadas: boolean;
+  /** O registo por casa e número está ligado nalguma exploração. */
+  casaLigada: boolean;
+  /**
+   * É dono de alguma exploração? Só ele liga os interruptores da conta — a um
+   * trabalhador convidado, esses passos são um convite a bater numa porta
+   * fechada.
+   */
+  podeConfigurar: boolean;
 };
 
 /**
  * Os passos, por ordem, com o estado de cada um.
+ *
+ * A ordem não é decorativa: os terrenos vêm antes dos animais porque é no
+ * formulário do animal que se diz em que terreno ele anda — ao contrário, esse
+ * campo aparece vazio e sem nada por onde escolher.
  *
  * O passo dos avisos só entra onde há avisos para ligar: na web/computador a
  * app está sempre aberta à frente do criador e a lista de alertas faz o
@@ -49,39 +88,107 @@ export function passosTutorial(e: EstadoTutorial): Passo[] {
     {
       chave: 'exploracao',
       titulo: 'Criar a sua exploração',
-      descricao: 'É onde entram os animais e os terrenos. Comece por aqui.',
+      descricao: 'É a sua quinta dentro da app. Comece por aqui.',
+      detalhe:
+        'A exploração é a sua quinta ou herdade dentro da app: é dentro dela que ficam os terrenos, os animais e tudo o que registar. Basta o nome por que lhe chama e a localidade — a marca de exploração e o resto podem ficar para depois. Se tiver duas quintas, crie duas: a app mantém as contas de cada uma separadas.',
+      acao: 'Criar a exploração',
+      opcional: false,
       feito: e.temExploracoes,
+    },
+    {
+      chave: 'terreno',
+      titulo: 'Registar os seus terrenos',
+      descricao: 'As pastagens, os cercados e os currais onde o gado anda.',
+      detalhe:
+        'Um terreno é cada sítio onde os animais podem estar: uma pastagem, um cercado, um curral. Dê-lhe o nome por que lhe chama ("Courela de Baixo") e, se quiser, marque-o no mapa por satélite. Feito isto, pode dizer em que terreno está cada animal e ver, de uma olhadela, quantos estão em cada sítio.',
+      acao: 'Adicionar um terreno',
+      opcional: false,
+      feito: e.temTerrenos,
     },
     {
       chave: 'animal',
       titulo: 'Registar o primeiro animal',
       descricao: 'Basta a espécie, o sexo e a idade: o resto fica para depois.',
+      detalhe:
+        'Comece por um animal só, para ver como é. Não precisa de ter tudo à mão: a espécie, o sexo e a data de nascimento chegam para o registar, e o brinco, a raça, a fotografia e o terreno acrescentam-se quando quiser. Se já tiver o efetivo escrito num ficheiro Excel, pode importá-lo todo de uma vez em vez de o escrever à mão.',
+      acao: 'Registar um animal',
+      opcional: false,
       feito: e.temAnimais,
     },
   ];
+
   if (e.suportaAvisos) {
     passos.push({
       chave: 'avisos',
       titulo: 'Ligar os avisos no telemóvel',
       descricao: 'Para os prazos legais o avisarem a tempo, mesmo com a app fechada.',
+      detalhe:
+        'A app conta os prazos por si — identificar um vitelo, comunicar ao SNIRA, a próxima vacinação — mas só o consegue chamar se lhe der autorização. Com os avisos ligados, o recado aparece no ecrã do telemóvel no dia certo, mesmo que não abra a app nessa semana.',
+      acao: 'Ligar os avisos',
+      opcional: false,
       feito: e.avisosLigados,
     });
   }
+
+  // Os interruptores da conta: existem, mas não é toda a gente que os quer.
+  if (e.podeConfigurar) {
+    passos.push(
+      {
+        chave: 'financas',
+        titulo: 'Ligar a gestão do dinheiro',
+        descricao: 'Só se quiser apontar despesas e vendas na app.',
+        detalhe:
+          'Ligando a gestão financeira, passa a poder apontar o que gasta (ração, veterinário, rendas) e o que recebe (vendas, leite, subsídios), e a app mostra-lhe o saldo da exploração e quanto lhe custou cada animal. Se não a ligar, nada de dinheiro aparece na app. Pode ligar e desligar quando quiser — desligar esconde, não apaga.',
+        acao: 'Ver a gestão do dinheiro',
+        opcional: true,
+        feito: e.financasLigadas,
+      },
+      {
+        chave: 'casa',
+        titulo: 'Numerar os animais por casa',
+        descricao: 'Só se costuma dizer "a 12 da casa de cima".',
+        detalhe:
+          'Muitos criadores conhecem os animais pelo número dentro da casa ou do bardo, e não pelo brinco. Ligando isto, cada animal ganha os campos "casa" e "número", que passam a servir para procurar. Se não ligar, o formulário fica mais curto — e desligar mais tarde não apaga o que já tiver escrito.',
+        acao: 'Ver o registo por casa',
+        opcional: true,
+        feito: e.casaLigada,
+      },
+    );
+  }
+
   return passos;
 }
 
-/** Passos cumpridos e total — para a barra de progresso do painel. */
+/** Só o caminho essencial — é dele que se faz o progresso. */
+export function essenciais(passos: Passo[]): Passo[] {
+  return passos.filter((p) => !p.opcional);
+}
+
+/** Os feitios à escolha, mostrados à parte. */
+export function opcionais(passos: Passo[]): Passo[] {
+  return passos.filter((p) => p.opcional);
+}
+
+/**
+ * Passos cumpridos e total — para a barra de progresso do painel.
+ *
+ * Conta só os essenciais: um progresso que dissesse "3 de 6" a quem já tem a
+ * app a funcionar, só porque não quer contabilidade nem numeração por casa,
+ * media o que ele não pediu.
+ */
 export function progresso(passos: Passo[]): { feitos: number; total: number; completo: boolean } {
-  const feitos = passos.filter((p) => p.feito).length;
-  return { feitos, total: passos.length, completo: feitos === passos.length };
+  const conta = essenciais(passos);
+  const feitos = conta.filter((p) => p.feito).length;
+  return { feitos, total: conta.length, completo: feitos === conta.length };
 }
 
 /**
  * O guia deve aparecer?
  *
- * Enquanto houver passos por fazer e o criador não o tiver escondido. Quando
- * está tudo feito, deixa de aparecer sozinho — mas continua a poder ser
- * reaberto pela Ajuda, para quem o quiser rever.
+ * Enquanto houver passos essenciais por fazer e o criador não o tiver
+ * escondido. Quando o caminho está andado, deixa de aparecer sozinho — mesmo
+ * com opcionais por ligar — mas continua a poder ser reaberto pela Ajuda, para
+ * quem o quiser rever.
  */
 export function deveMostrar(passos: Passo[], escondido: boolean): boolean {
   if (escondido) return false;

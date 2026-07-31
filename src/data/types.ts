@@ -91,6 +91,12 @@ export interface Convite {
    * só entra três dias depois tem as horas todas.
    */
   acessoHoras?: number;
+  /**
+   * O instante EXATO em que o acesso termina, quando o dono marcou dia e hora
+   * em vez de uma duração ("até quinta às 18h"). Marcado, ganha ao
+   * `acessoHoras` — e o servidor guarda só um dos dois.
+   */
+  acessoAte?: string;
   usadoPor?: string;
   usadoEm?: string;
   descricao?: string;

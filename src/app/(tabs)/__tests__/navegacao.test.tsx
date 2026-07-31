@@ -13,6 +13,8 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Text as TextoRN, View } from 'react-native';
 
 const mockComEquipa = { valor: true };
+/** O que `podeVer(undefined, capacidade)` responde — por capacidade de leitura. */
+const mockLeitura: Record<string, boolean> = { verFinancas: true, verDocumentos: true };
 
 jest.mock('expo-router', () => {
   const { View: Caixa } = jest.requireActual<typeof import('react-native')>('react-native');
@@ -25,7 +27,10 @@ jest.mock('expo-router', () => {
 jest.mock('@/hooks/useDesktop', () => ({ useDesktop: () => true, BREAKPOINT_DESKTOP: 900 }));
 
 jest.mock('@/data/membros', () => {
-  const api = { podeEmAlguma: () => mockComEquipa.valor };
+  const api = {
+    podeEmAlguma: () => mockComEquipa.valor,
+    podeVer: (_exploracaoId: string | undefined, cap: string) => mockLeitura[cap] ?? true,
+  };
   return { useMembros: () => api };
 });
 
@@ -77,5 +82,45 @@ describe('navegação por papel', () => {
     // Os outros destinos ficam todos — não se escondeu a app por engano.
     expect(lista).toContain('Animais');
     expect(lista).toContain('Perfil');
+  });
+
+  /**
+   * O veterinário é uma visita: vem ver os animais e registar o que fez. As
+   * contas da exploração e os ficheiros com o efetivo inteiro lá dentro não são
+   * assunto dele — e um separador que abre só para dizer "não pode" é um
+   * separador a mais na barra de quem já lá tem pouco espaço.
+   */
+  it('quem não vê contas nem documentos fica sem as duas abas', () => {
+    mockComEquipa.valor = false;
+    mockLeitura.verFinancas = false;
+    mockLeitura.verDocumentos = false;
+    const lista = rotulos(montar());
+    expect(lista).not.toContain('Finanças');
+    expect(lista).not.toContain('Documentos');
+    // E o resto da app continua lá: é para trabalhar que ele foi convidado.
+    expect(lista).toContain('Animais');
+    expect(lista).toContain('Alertas');
+    expect(lista).toContain('Explorações');
+  });
+
+  it('as duas abas são independentes uma da outra', () => {
+    // O trabalhador não vê as contas e vê os documentos. Uma condição só para
+    // as duas dava-lhe a app de um veterinário.
+    mockComEquipa.valor = false;
+    mockLeitura.verFinancas = false;
+    mockLeitura.verDocumentos = true;
+    const lista = rotulos(montar());
+    expect(lista).not.toContain('Finanças');
+    expect(lista).toContain('Documentos');
+  });
+
+  it('o dono vê tudo', () => {
+    mockComEquipa.valor = true;
+    mockLeitura.verFinancas = true;
+    mockLeitura.verDocumentos = true;
+    const lista = rotulos(montar());
+    expect(lista).toContain('Finanças');
+    expect(lista).toContain('Documentos');
+    expect(lista).toContain('Trabalhadores');
   });
 });

@@ -38,8 +38,10 @@ create policy nota_self on public.nota
 -- ---- updated_at a cada alteração ----
 -- Reutiliza a função de schema_versoes.sql; recriada aqui (create or replace)
 -- para este ficheiro poder correr mesmo que aquele ainda não tenha corrido.
+-- Tem de ficar igual à de lá, `set search_path` incluído: um `create or replace`
+-- sem a cláusula APAGA-A da função que já existe, e o aviso do linter voltava.
 create or replace function public.toca_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = '' as $$
 begin
   new.updated_at := now();
   return new;

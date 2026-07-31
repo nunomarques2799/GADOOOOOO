@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { limparCache } from './cacheLocal';
+import type { Intencao } from './intencao';
 import { supabase, supabaseConfigurado } from './supabase';
 
 /** Destino do link de recuperação de palavra-passe (página no site). */
@@ -40,7 +41,17 @@ type AuthContext = {
   /** true enquanto o utilizador está a redefinir a palavra-passe (link de email). */
   emRecuperacao: boolean;
   entrar: (email: string, palavra: string) => Promise<string | null>;
-  registar: (email: string, palavra: string, nome: string) => Promise<ResultadoRegisto>;
+  /**
+   * Cria a conta. A `intencao` (dono / trabalhador / veterinário) fica no
+   * `user_metadata` e só decide o que a app mostra a seguir — ver
+   * `data/intencao.ts`. Quem dá acesso a alguma coisa é o servidor.
+   */
+  registar: (
+    email: string,
+    palavra: string,
+    nome: string,
+    intencao?: Intencao,
+  ) => Promise<ResultadoRegisto>;
   /** Envia o email com o link de recuperação. Devolve msg de erro ou null. */
   recuperarPalavra: (email: string) => Promise<string | null>;
   /** Define a nova palavra-passe (durante a recuperação). Erro ou null. */
@@ -89,12 +100,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const registar = useCallback(
-    async (email: string, palavra: string, nome: string): Promise<ResultadoRegisto> => {
+    async (
+      email: string,
+      palavra: string,
+      nome: string,
+      intencao?: Intencao,
+    ): Promise<ResultadoRegisto> => {
       if (!supabase) return { erro: 'Supabase não configurado.' };
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password: palavra,
-        options: { data: { nome: nome.trim() } },
+        // O `nome` já era lido pelo trigger `handle_new_user` (schema.sql) para
+        // a tabela `perfil`. A `intencao` fica só nos metadados: não há coluna
+        // nenhuma a lê-la, e nada no servidor decide seja o que for a partir
+        // dela.
+        options: { data: { nome: nome.trim(), ...(intencao ? { intencao } : {}) } },
       });
       if (error) return { erro: traduzErro(error.message) };
       // Sem sessão imediata => o projeto exige confirmação de email.

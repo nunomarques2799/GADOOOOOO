@@ -2,15 +2,30 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, View } from 'react-native';
 
-import { Button, Card, Chip, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
+import {
+  Button,
+  CampoData,
+  CampoHora,
+  Card,
+  Chip,
+  EmptyState,
+  Header,
+  Icon,
+  type IconName,
+  Text,
+} from '@/components/ui';
 import {
   acessoTerminou,
+  combinarDataHora,
   DURACAO_OMISSAO,
   DURACOES_ACESSO,
+  HORA_OMISSAO,
+  HORAS_SUGERIDAS,
+  problemaComFim,
   rotuloDuracao,
   rotuloPrazo,
 } from '@/data/acessoTemporario';
-import { formatDataHora } from '@/data/helpers';
+import { formatDataCurta as formatarDia, formatDataHora, parseDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useToasts } from '@/data/toasts';
@@ -36,6 +51,7 @@ export default function EquipaExploracaoScreen() {
     criarConvite,
     removerConvite,
     definirPrazoDeAcesso,
+    definirFimDeAcesso,
     pode,
     isSuperadmin,
   } = useMembros();
@@ -58,9 +74,11 @@ export default function EquipaExploracaoScreen() {
   const [rolePedido, setRolePedido] = useState<Exclude<RoleMembro, 'admin'>>('trabalhador');
   const [descricao, setDescricao] = useState('');
   const [aGerar, setAGerar] = useState(false);
-  const [codigoNovo, setCodigoNovo] = useState<{ codigo: string; acessoHoras?: number } | null>(
-    null,
-  );
+  const [codigoNovo, setCodigoNovo] = useState<{
+    codigo: string;
+    acessoHoras?: number;
+    acessoAte?: string;
+  } | null>(null);
   /**
    * Quanto tempo o acesso dura. Só se pergunta ao VETERINÁRIO: ele vem à
    * exploração, faz o que tem a fazer e vai-se embora, e um acesso que só
@@ -68,7 +86,25 @@ export default function EquipaExploracaoScreen() {
    * trabalhador anda lá todos os dias e fica sem prazo.
    */
   const [acessoHoras, setAcessoHoras] = useState<number>(DURACAO_OMISSAO);
+  /**
+   * As duas maneiras de dizer até quando, porque são duas perguntas diferentes:
+   *
+   *   'duracao' — "durante 4 horas", a contar de quando ele usar o código. Serve
+   *               quando não se sabe o dia da visita.
+   *   'ate'     — "até quinta às 18h", a hora exata. É a frase que o criador diz
+   *               de facto quando já combinou a visita, e com a duração ela não
+   *               se conseguia escrever: obrigava a adivinhar a que horas é que
+   *               o veterinário ia entrar e a fazer a conta de cabeça.
+   */
+  const [modoPrazo, setModoPrazo] = useState<'duracao' | 'ate'>('duracao');
+  /** Quem tem os campos de dia/hora abertos na lista de membros (pelo id do vínculo). */
+  const [aMarcar, setAMarcar] = useState<string | undefined>(undefined);
+  const [diaFim, setDiaFim] = useState(() => formatarDia(new Date().toISOString()));
+  const [horaFim, setHoraFim] = useState(HORA_OMISSAO);
   const comPrazo = rolePedido === 'veterinario';
+
+  /** O instante escolhido nos campos de dia/hora, ou `null` se ainda não serve. */
+  const fimEscolhido = combinarDataHora(parseDataPt(diaFim, { permitirFuturo: true }), horaFim);
 
   const carregar = useCallback(async () => {
     if (!id) return;
@@ -91,11 +127,26 @@ export default function EquipaExploracaoScreen() {
 
   async function gerarConvite() {
     if (!id) return;
+
+    // O que se envia: OU as horas, OU a hora marcada. Nunca as duas — o
+    // servidor limpa uma delas de qualquer forma, mas mandar as duas era pedir
+    // uma coisa e receber outra sem nada o dizer.
+    const comHoraMarcada = comPrazo && modoPrazo === 'ate';
+    if (comHoraMarcada) {
+      const problema = problemaComFim(parseDataPt(diaFim, { permitirFuturo: true }), horaFim);
+      if (problema) {
+        setErro(problema);
+        toast.erro('Código não criado', problema);
+        return;
+      }
+    }
+    const horas = comPrazo && !comHoraMarcada ? acessoHoras : undefined;
+    const ate = comHoraMarcada ? (fimEscolhido ?? undefined) : undefined;
+
     setAGerar(true);
     setCodigoNovo(null);
     setErro(null);
-    const horas = comPrazo ? acessoHoras : undefined;
-    const r = await criarConvite(id, rolePedido, descricao.trim() || undefined, 168, horas);
+    const r = await criarConvite(id, rolePedido, descricao.trim() || undefined, 168, horas, ate);
     setAGerar(false);
     if (r.erro) {
       setErro(r.erro);
@@ -103,12 +154,14 @@ export default function EquipaExploracaoScreen() {
       return;
     }
     if (r.codigo) {
-      setCodigoNovo({ codigo: r.codigo, acessoHoras: horas });
+      setCodigoNovo({ codigo: r.codigo, acessoHoras: horas, acessoAte: ate });
       setDescricao('');
-      toast.sucesso(
-        'Código criado',
-        `${r.codigo} · ${legendaRole(rolePedido)}${horas ? ` · ${rotuloDuracao(horas)}` : ''}`,
-      );
+      const prazo = ate
+        ? ` · até ${formatDataHora(ate)}`
+        : horas
+          ? ` · ${rotuloDuracao(horas)}`
+          : '';
+      toast.sucesso('Código criado', `${r.codigo} · ${legendaRole(rolePedido)}${prazo}`);
       await carregar();
     }
   }
@@ -122,6 +175,25 @@ export default function EquipaExploracaoScreen() {
       return;
     }
     toast.sucesso(comoSeChama, membro.nome);
+    await carregar();
+  }
+
+  /** Marca a hora exata a que o acesso de alguém termina. */
+  async function marcarFim(membro: MembroComNome) {
+    const problema = problemaComFim(parseDataPt(diaFim, { permitirFuturo: true }), horaFim);
+    if (problema) {
+      setErro(problema);
+      toast.erro('A hora não foi marcada', problema);
+      return;
+    }
+    const e = await definirFimDeAcesso(membro.id, fimEscolhido);
+    if (e) {
+      setErro(e);
+      toast.erro('O tempo de acesso não mudou', e);
+      return;
+    }
+    setAMarcar(undefined);
+    toast.sucesso('Acesso marcado', `${membro.nome} · até ${formatDataHora(fimEscolhido as string)}`);
     await carregar();
   }
 
@@ -306,6 +378,16 @@ export default function EquipaExploracaoScreen() {
                             }
                           />
                         ))}
+                        {/* A hora exata, para quem já cá está. É a mesma escolha
+                            do convite: "mais 4 horas" e "até quinta às 18h" são
+                            as duas frases que se dizem, e só uma delas se
+                            conseguia escrever. */}
+                        <Chip
+                          label="Até dia e hora"
+                          icon="calendar-clock"
+                          selected={aMarcar === m.id}
+                          onPress={() => setAMarcar(aMarcar === m.id ? undefined : m.id)}
+                        />
                         {m.expiraEm && !terminou ? (
                           <Chip
                             label="Terminar já"
@@ -318,6 +400,50 @@ export default function EquipaExploracaoScreen() {
                             sem prazo
                           </Text>
                         )}
+                      </View>
+                    ) : null}
+
+                    {aMarcar === m.id ? (
+                      <View
+                        style={{
+                          marginTop: spacing.sm,
+                          marginLeft: 40 + spacing.sm,
+                          gap: spacing.sm,
+                        }}>
+                        <CampoData
+                          value={diaFim}
+                          onChangeText={setDiaFim}
+                          placeholder="dd/mm/aaaa"
+                          permitirFuturo
+                          rotuloCalendario={`Dia em que o acesso de ${m.nome} termina`}
+                        />
+                        <CampoHora
+                          value={horaFim}
+                          onChangeText={setHoraFim}
+                          rotuloRelogio={`Hora a que o acesso de ${m.nome} termina`}
+                        />
+                        <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
+                          {HORAS_SUGERIDAS.map((h) => (
+                            <Chip
+                              key={h}
+                              label={h}
+                              selected={horaFim === h}
+                              onPress={() => setHoraFim(h)}
+                            />
+                          ))}
+                        </View>
+                        <Text
+                          variant="secondary"
+                          color={fimEscolhido ? colors.primaryDark : colors.danger}>
+                          {problemaComFim(parseDataPt(diaFim, { permitirFuturo: true }), horaFim)
+                            ?? `Termina a ${formatDataHora(fimEscolhido as string)}.`}
+                        </Text>
+                        <Button
+                          label="Marcar esta hora"
+                          icon="calendar-clock"
+                          variant="secondary"
+                          onPress={() => void marcarFim(m)}
+                        />
                       </View>
                     ) : null}
                   </View>
@@ -353,22 +479,82 @@ export default function EquipaExploracaoScreen() {
           {comPrazo ? (
             <View style={{ marginTop: spacing.md }}>
               <Text variant="bodyStrong" style={{ marginBottom: 4 }}>
-                Durante quanto tempo?
+                Até quando?
               </Text>
               <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.sm }}>
-                O tempo começa a contar quando ele usar o código, não agora. Passado o prazo,
-                deixa de ver esta exploração. A conta dele fica, e pode voltar a ser convidado.
+                Passado o prazo, deixa de ver esta exploração. A conta dele fica, e pode
+                voltar a ser convidado.
               </Text>
+
               <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
-                {DURACOES_ACESSO.map((d) => (
-                  <Chip
-                    key={d.horas}
-                    label={d.label}
-                    selected={acessoHoras === d.horas}
-                    onPress={() => setAcessoHoras(d.horas)}
-                  />
-                ))}
+                <Chip
+                  label="Durante um tempo"
+                  icon="timer-sand"
+                  selected={modoPrazo === 'duracao'}
+                  onPress={() => setModoPrazo('duracao')}
+                />
+                <Chip
+                  label="Até dia e hora"
+                  icon="calendar-clock"
+                  selected={modoPrazo === 'ate'}
+                  onPress={() => setModoPrazo('ate')}
+                />
               </View>
+
+              {modoPrazo === 'duracao' ? (
+                <View style={{ marginTop: spacing.sm }}>
+                  <Text variant="caption" color={colors.textMuted} style={{ marginBottom: spacing.xs }}>
+                    O tempo começa a contar quando ele usar o código, não agora.
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
+                    {DURACOES_ACESSO.map((d) => (
+                      <Chip
+                        key={d.horas}
+                        label={d.label}
+                        selected={acessoHoras === d.horas}
+                        onPress={() => setAcessoHoras(d.horas)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              ) : (
+                <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
+                  <Text variant="caption" color={colors.textMuted}>
+                    O acesso termina nesta hora, tenha ele entrado quando tiver.
+                  </Text>
+                  <CampoData
+                    value={diaFim}
+                    onChangeText={setDiaFim}
+                    placeholder="dd/mm/aaaa"
+                    permitirFuturo
+                    rotuloCalendario="Escolher o dia em que o acesso termina"
+                  />
+                  <CampoHora
+                    value={horaFim}
+                    onChangeText={setHoraFim}
+                    rotuloRelogio="Escolher a hora a que o acesso termina"
+                  />
+                  <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
+                    {HORAS_SUGERIDAS.map((h) => (
+                      <Chip
+                        key={h}
+                        label={h}
+                        selected={horaFim === h}
+                        onPress={() => setHoraFim(h)}
+                      />
+                    ))}
+                  </View>
+                  {/* O que ficou escolhido, por extenso. Confirmar a data pelos
+                      dígitos que se acabou de escrever é ler o mesmo engano
+                      duas vezes. */}
+                  <Text
+                    variant="secondary"
+                    color={fimEscolhido ? colors.primaryDark : colors.danger}>
+                    {problemaComFim(parseDataPt(diaFim, { permitirFuturo: true }), horaFim)
+                      ?? `Termina a ${formatDataHora(fimEscolhido as string)}.`}
+                  </Text>
+                </View>
+              )}
             </View>
           ) : null}
 
@@ -388,14 +574,20 @@ export default function EquipaExploracaoScreen() {
                 borderRadius: radii.md,
                 alignItems: 'center',
               }}>
-              <Text variant="caption" color={colors.textSecondary}>Código (válido 7 dias)</Text>
+              <Text variant="caption" color={colors.textSecondary}>
+                {codigoNovo.acessoAte
+                  ? `Código (válido até ${formatDataHora(codigoNovo.acessoAte)})`
+                  : 'Código (válido 7 dias)'}
+              </Text>
               <Text style={{ fontFamily: 'Nunito_800ExtraBold', fontSize: 32, letterSpacing: 3, color: colors.primaryDark, marginVertical: 4 }}>
                 {codigoNovo.codigo}
               </Text>
               <Text variant="secondary" color={colors.textSecondary} center style={{ marginBottom: spacing.sm }}>
-                {codigoNovo.acessoHoras
-                  ? `Dá acesso durante ${rotuloDuracao(codigoNovo.acessoHoras)} a contar de quando o usar.`
-                  : 'Dá acesso sem prazo, até ser removido da equipa.'}
+                {codigoNovo.acessoAte
+                  ? `Dá acesso até ${formatDataHora(codigoNovo.acessoAte)}, entre ele quando entrar.`
+                  : codigoNovo.acessoHoras
+                    ? `Dá acesso durante ${rotuloDuracao(codigoNovo.acessoHoras)} a contar de quando o usar.`
+                    : 'Dá acesso sem prazo, até ser removido da equipa.'}
               </Text>
               <Button
                 label="Copiar código"
@@ -431,8 +623,14 @@ export default function EquipaExploracaoScreen() {
                       <Text variant="bodyStrong" style={{ letterSpacing: 2 }}>{c.codigo}</Text>
                       <Text variant="secondary" color={colors.textSecondary}>
                         {legendaRole(c.role)}
-                        {c.acessoHoras ? ` · ${rotuloDuracao(c.acessoHoras)} de acesso` : ''}
-                        {c.expiraEm ? ` · código expira ${formatDataCurta(c.expiraEm)}` : ''}
+                        {c.acessoAte
+                          ? ` · acesso até ${formatDataHora(c.acessoAte)}`
+                          : c.acessoHoras
+                            ? ` · ${rotuloDuracao(c.acessoHoras)} de acesso`
+                            : ''}
+                        {c.expiraEm && !c.acessoAte
+                          ? ` · código expira ${formatDataCurta(c.expiraEm)}`
+                          : ''}
                       </Text>
                     </View>
                     <Pressable onPress={() => copiar(c.codigo)} hitSlop={8} accessibilityLabel="Copiar">

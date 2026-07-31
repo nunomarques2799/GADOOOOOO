@@ -25,6 +25,7 @@ import { carregarNomesEquipa, esquecerNomesEquipa } from './nomesEquipa';
 import {
   CAPACIDADES_GERIVEIS,
   podeConsultar,
+  podeCriarExploracao,
   podeEscrever,
   type Capacidade,
   type CapacidadeLeitura,
@@ -91,6 +92,15 @@ type MembrosContext = {
   contaSuspensa: boolean;
   /** true se o utilizador é admin de pelo menos uma exploração. */
   isAdminEmAlguma: boolean;
+  /**
+   * true se esta conta pode criar uma exploração nova.
+   *
+   * Fica à parte do `pode(...)` porque não é uma capacidade DENTRO de uma
+   * exploração: quem entrou por um código de outra pessoa não vem para abrir
+   * quinta. Espelha a política `exploracao_ativo_insert` (ver
+   * `supabase/schema_papel_veterinario.sql`).
+   */
+  podeCriarExploracoes: boolean;
   /** Recarrega perfil + membros a partir do Supabase. */
   recarregar: () => Promise<void>;
 
@@ -109,12 +119,23 @@ type MembrosContext = {
     validadeHoras?: number,
     /** Quanto tempo o ACESSO dura depois de o código ser usado. */
     acessoHoras?: number,
+    /**
+     * O instante EXATO em que o acesso termina (ISO). Alternativa às horas, para
+     * "até quinta às 18h" — ver `acessoTemporario.ts`. Marcada a hora, ela manda
+     * e as horas são ignoradas (é o servidor que o garante).
+     */
+    acessoAte?: string,
   ) => Promise<{ codigo?: string; erro?: string }>;
   /**
    * Muda o prazo de acesso de alguém da equipa. `horas` a `null` tira o prazo
    * (acesso permanente); `0` termina-o já. Devolve a razão da recusa ou `null`.
    */
   definirPrazoDeAcesso: (membroId: string, horas: number | null) => Promise<string | null>;
+  /**
+   * O mesmo, com o instante em vez das horas: "o acesso termina nesta hora".
+   * `null` tira o prazo. Devolve a razão da recusa ou `null`.
+   */
+  definirFimDeAcesso: (membroId: string, fimIso: string | null) => Promise<string | null>;
   removerConvite: (codigo: string) => Promise<string | null>;
   listarMembrosDe: (exploracaoId: string) => Promise<
     (MembroExploracao & { nome: string })[]
@@ -188,6 +209,7 @@ type RowConvite = {
   criado_em?: string | null;
   expira_em?: string | null;
   acesso_horas?: number | null;
+  acesso_ate?: string | null;
   usado_por?: string | null;
   usado_em?: string | null;
   descricao?: string | null;
@@ -202,6 +224,7 @@ function toConvite(r: RowConvite): Convite {
     criadoEm: r.criado_em ?? undefined,
     expiraEm: r.expira_em ?? undefined,
     acessoHoras: r.acesso_horas ?? undefined,
+    acessoAte: r.acesso_ate ?? undefined,
     usadoPor: r.usado_por ?? undefined,
     usadoEm: r.usado_em ?? undefined,
     descricao: r.descricao ?? undefined,
@@ -434,6 +457,22 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
 
   const isAdminEmAlguma = useMemo(() => membros.some((m) => m.role === 'admin'), [membros]);
 
+  /**
+   * TODOS os vínculos, não só os vivos: um veterinário cujo prazo caiu ontem
+   * continua a ser uma visita. Com os vivos apenas, o acesso a expirar dava-lhe
+   * o direito de criar explorações no instante exato em que o perdia.
+   */
+  const podeCriarExploracoes = useMemo(
+    () =>
+      podeCriarExploracao({
+        ...contexto,
+        // Não se pergunta por uma exploração: a decisão é sobre a conta inteira.
+        role: undefined,
+        papeis: todosMembros.map((m) => m.role),
+      }),
+    [contexto, todosMembros],
+  );
+
   // "Tinha e já não tem", que é diferente de "nunca teve": a quem nunca teve, a
   // app oferece criar uma exploração ou pedir um código; a quem expirou, o que
   // faz falta é dizer o que aconteceu.
@@ -470,7 +509,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase
       .from('convite')
       .select(
-        'codigo, exploracao_id, role, criado_por, criado_em, expira_em, acesso_horas, usado_por, usado_em, descricao',
+        'codigo, exploracao_id, role, criado_por, criado_em, expira_em, acesso_horas, acesso_ate, usado_por, usado_em, descricao',
       )
       .eq('exploracao_id', exploracaoId)
       .order('criado_em', { ascending: false });
@@ -484,6 +523,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       descricao?: string,
       validadeHoras = 168,
       acessoHoras?: number,
+      acessoAte?: string,
     ): Promise<{ codigo?: string; erro?: string }> => {
       if (!supabase) return { erro: 'Supabase não configurado.' };
       const { data, error } = await supabase.rpc('criar_convite', {
@@ -495,6 +535,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
         // a função ficava a receber o valor por omissão — que é o mesmo `null`,
         // mas por acidente. Escrito assim, "sem prazo" é uma decisão.
         acesso_horas: acessoHoras ?? null,
+        acesso_ate: acessoAte ?? null,
       });
       if (error) return { erro: error.message };
       return { codigo: typeof data === 'string' ? data : undefined };
@@ -512,6 +553,22 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       if (error) return error.message;
       // O prazo pode ser o do próprio (um superadmin a assistir), e nesse caso
       // o que a app mostra tem de mudar já.
+      await recarregar();
+      return null;
+    },
+    [recarregar],
+  );
+
+  const definirFimDeAcesso = useCallback(
+    async (membroId: string, fimIso: string | null): Promise<string | null> => {
+      if (!supabase) return 'Isto exige ligação à conta: a app está em modo local.';
+      const { error } = await supabase.rpc('definir_fim_de_acesso', {
+        membro_id: membroId,
+        fim: fimIso,
+      });
+      if (error) return error.message;
+      // Mesma razão do `definirPrazoDeAcesso`: o vínculo mexido pode ser o do
+      // próprio, e o que a app mostra tem de acompanhar.
       await recarregar();
       return null;
     },
@@ -604,6 +661,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       podeEmAlguma,
       contaSuspensa,
       isAdminEmAlguma,
+      podeCriarExploracoes,
       recarregar,
       listarPendentes,
       aprovarCliente,
@@ -615,16 +673,18 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       removerMembro,
       definirPermissoes,
       definirPrazoDeAcesso,
+      definirFimDeAcesso,
       resgatarConvite,
     }),
     [
       aCarregar, membros, membrosExpirados, acessoExpirado,
       isSuperadmin, estadoPerfil, roleEm, permissoesEm,
       pode, podeVer, podeEmAlguma,
-      contaSuspensa, isAdminEmAlguma,
+      contaSuspensa, isAdminEmAlguma, podeCriarExploracoes,
       recarregar, listarPendentes, aprovarCliente, bloquearCliente,
       listarConvites, criarConvite, removerConvite, listarMembrosDe,
-      removerMembro, definirPermissoes, definirPrazoDeAcesso, resgatarConvite,
+      removerMembro, definirPermissoes, definirPrazoDeAcesso, definirFimDeAcesso,
+      resgatarConvite,
     ],
   );
 

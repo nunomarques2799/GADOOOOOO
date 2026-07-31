@@ -9,9 +9,20 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, CampoData, Chip, EcraComTeclado, Header, Icon, type IconName, Text } from '@/components/ui';
+import {
+  Button,
+  CampoData,
+  Chip,
+  EcraComTeclado,
+  EmptyState,
+  Header,
+  Icon,
+  type IconName,
+  Text,
+} from '@/components/ui';
 import { avisar } from '@/data/avisos';
 import { especieMeta } from '@/data/constants';
+import { useMembros } from '@/data/membros';
 import {
   formatDataPt,
   isoDaysAgo,
@@ -96,6 +107,7 @@ export default function NovoEventoScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { animais, especieDe, addEvento, updateAnimal, animalById, eventosByAnimal } = useGadoAdaptado();
+  const { podeEmAlguma } = useMembros();
   const toast = useToasts();
 
   const params = useLocalSearchParams<{ tipo?: string; animalId?: string }>();
@@ -154,6 +166,7 @@ export default function NovoEventoScreen() {
   const { podeRegistarCustoTratamento: podeRegistarCusto } = useFinancas(
     (animal ?? (animalIds[0] ? animalById(animalIds[0]) : undefined))?.exploracaoId,
   );
+  const podeRegistarEmAlguma = podeEmAlguma('registarTratamentos');
 
   // Lista para escolher o animal (só fêmeas quando é um parto).
   const animaisEscolha = useMemo(() => {
@@ -336,6 +349,27 @@ export default function NovoEventoScreen() {
       return;
     }
     router.back();
+  }
+
+  // Este ecrã nunca teve porteiro: até aqui, quem podia mexer em animais podia
+  // registar, e eram a mesma permissão. Agora que `registarTratamentos` existe
+  // sozinha, há quem a possa ter desligada — e o formulário deixava preencher
+  // tudo para falhar contra a RLS no fim.
+  //
+  // `podeEmAlguma` e não `pode(exploracao)` porque ao abrir ainda não há animal
+  // escolhido, e portanto não há exploração pela qual perguntar. Quem puder
+  // registar nalguma entra; a gravação em si é filtrada pela RLS de cada uma.
+  if (!podeRegistarEmAlguma) {
+    return (
+      <EcraComTeclado>
+        <Header title={META[tipo].titulo} />
+        <EmptyState
+          icon="lock-outline"
+          title="Sem permissão para registar"
+          message="Quem gere esta exploração não lhe deu acesso a registar tratamentos. Fale com essa pessoa se acha que é engano."
+        />
+      </EcraComTeclado>
+    );
   }
 
   return (

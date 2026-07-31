@@ -1,9 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ModalMensagemApoio } from '@/components/ModalMensagemApoio';
 import { Button, Card, Header, Icon, Text } from '@/components/ui';
+import { EMAIL_APOIO, type TipoMensagem } from '@/data/apoio';
+import { reporIntroducoes } from '@/data/introducoes';
 import { useToasts } from '@/data/toasts';
 import { reporTutorial } from '@/data/tutorial';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -15,10 +18,18 @@ export default function AjudaScreen() {
   const desktop = useDesktop();
   const router = useRouter();
   const toast = useToasts();
+  /** Que folha está aberta (a de escrever ou a de reportar), ou nenhuma. */
+  const [aEscrever, setAEscrever] = useState<TipoMensagem | null>(null);
 
   function reverGuia() {
     reporTutorial();
-    toast.info('Guia reposto', 'Os primeiros passos voltam a aparecer no Início.');
+    // Também as apresentações dos separadores: quem pede para rever o guia está
+    // a pedir que lhe expliquem a app, não só o Início.
+    reporIntroducoes();
+    toast.info(
+      'Guia reposto',
+      'Os primeiros passos voltam ao Início e os separadores voltam a apresentar-se.',
+    );
     router.navigate('/');
   }
 
@@ -54,15 +65,51 @@ export default function AjudaScreen() {
                 Escreva-nos com a sua dúvida ou o que aconteceu. Costumamos
                 responder no mesmo dia útil.
               </Text>
+              {/* O botão abre um formulário aqui dentro, e não o `mailto:` do
+                  aparelho: num Android sem conta de correio configurada, o
+                  `mailto:` não abre, não falha e não diz nada — quem o carregava
+                  ficava convencido de que tinha escrito. */}
               <Button
-                label="Enviar email"
-                icon="email-outline"
-                onPress={() =>
-                  void Linking.openURL(
-                    'mailto:apoio@gestaogado.pt?subject=' +
-                      encodeURIComponent('Ajuda com a Terrabovina'),
-                  )
-                }
+                label="Enviar mensagem"
+                icon="email-fast-outline"
+                onPress={() => setAEscrever('apoio')}
+              />
+              <Text
+                variant="caption"
+                color={colors.textMuted}
+                center
+                style={{ marginTop: spacing.sm }}>
+                Vai para {EMAIL_APOIO}
+              </Text>
+            </Card>
+          </View>
+
+          {/* Reportar um problema. À parte da mensagem de apoio, e não um
+              assunto à escolha lá dentro: quem tem a app a fechar-se não vai
+              procurar a palavra certa numa lista — procura o botão que diz o
+              que lhe está a acontecer. */}
+          <View>
+            <Text
+              variant="label"
+              color={colors.textSecondary}
+              style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
+              ALGUMA COISA NÃO FUNCIONA?
+            </Text>
+            <Card>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Icon name="bug-outline" size="lg" color={colors.warning} />
+                <Text variant="body" style={{ flex: 1 }}>
+                  Se a app fez algo que não devia — fechou-se, não gravou, mostrou
+                  um erro — conte-nos o que estava a fazer. A versão da app e o
+                  aparelho seguem sozinhos.
+                </Text>
+              </View>
+              <Button
+                label="Reportar um problema"
+                icon="bug-outline"
+                variant="secondary"
+                onPress={() => setAEscrever('bug')}
+                style={{ marginTop: spacing.sm }}
               />
             </Card>
           </View>
@@ -92,7 +139,8 @@ export default function AjudaScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <Icon name="flag-checkered" size="lg" color={colors.primary} />
                 <Text variant="body" style={{ flex: 1 }}>
-                  Voltar a ver o guia de primeiros passos no ecrã inicial.
+                  Voltar a ver o guia de primeiros passos no ecrã inicial e as
+                  explicações de cada separador.
                 </Text>
               </View>
               <Button
@@ -106,6 +154,16 @@ export default function AjudaScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Montada só quando é preciso: fora disso não há folha nenhuma a guardar
+          uma mensagem meio escrita de um assunto que já não é o que se quer. */}
+      {aEscrever ? (
+        <ModalMensagemApoio
+          visivel
+          tipo={aEscrever}
+          onFechar={() => setAEscrever(null)}
+        />
+      ) : null}
     </View>
   );
 }

@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 
 import { AlertItem } from '@/components/AlertItem';
 import { CalendarioAlertas } from '@/components/CalendarioAlertas';
+import { CartaoIntroducao } from '@/components/CartaoIntroducao';
 import { Card, Chip, EmptyState, Icon, type IconName, Screen, Text } from '@/components/ui';
 import { useGado } from '@/data/store';
 import type { Alerta, AlertaGravidade } from '@/data/types';
@@ -47,6 +48,23 @@ export default function AlertasScreen() {
           <Text variant="body" color={colors.textSecondary}>
             Prazos legais e tarefas por fazer
           </Text>
+        </View>
+
+        {/* À primeira vez, o que é este separador. O nome diz o assunto e não
+            diz o trabalho: ninguém adivinha que os prazos são contados pela app
+            a partir das datas dos animais, nem que alguns se podem calar. */}
+        <View style={{ marginBottom: spacing.md }}>
+          <CartaoIntroducao
+            chave="alertas"
+            icon="bell-ring-outline"
+            titulo="Para que serve este separador"
+            pontos={[
+              'A app conta sozinha os prazos legais a partir das datas que registou: identificar um vitelo, comunicar ao SNIRA, o fim de um intervalo de segurança.',
+              'Em cima ficam os urgentes, e a seguir o que é desta semana. Quando trata do assunto no animal, o alerta desaparece daqui.',
+              'No Calendário vê os mesmos prazos por dias, para saber o que o espera na semana que vem.',
+              'Só os avisos sem contagem decrescente se podem dispensar. O que tem prazo a correr fica — é o que não pode ser esquecido.',
+            ]}
+          />
         </View>
 
         {/* Lista ou calendário */}

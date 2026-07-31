@@ -25,8 +25,21 @@ export type Capacidade =
   | 'gerirEquipa'
   /** Criar, editar e apagar terrenos. */
   | 'gerirTerrenos'
-  /** Criar e editar animais, e registar eventos. */
+  /**
+   * Criar animais e corrigir a FICHA: nome, brinco, raça, datas, e o terreno
+   * onde o animal anda (que é uma coluna da ficha como as outras).
+   *
+   * Não inclui registar tratamentos — ver `registarTratamentos`. Foram a mesma
+   * capacidade até 2026-07-30, e por isso o veterinário, que precisa da
+   * segunda, ficava com a primeira de arrasto: podia trocar o brinco de um
+   * animal e mudá-lo de courela.
+   */
   | 'editarAnimais'
+  /**
+   * Escrever eventos na ficha de um animal — vacinas, medicamentos, partos,
+   * pesagens — sem lhe tocar na ficha. É o ato veterinário.
+   */
+  | 'registarTratamentos'
   /**
    * Tirar um animal da lista. Não apaga nada: marca-o como eliminado e guarda
    * quem o fez (ver `supabase/schema_auditoria.sql`).
@@ -42,9 +55,16 @@ export type Capacidade =
   | 'registarCustoTratamento';
 
 /**
- * O veterinário trata dos animais, não do património: mexe nas fichas e regista
- * eventos e saídas (certificar uma morte é ato veterinário), mas não apaga
- * registos nem toca em terrenos, na exploração ou na equipa.
+ * O veterinário é uma VISITA, não um segundo dono: escreve o que fez ao animal
+ * e mais nada. Não corrige fichas, não muda animais de terreno, não dá um
+ * animal por morto ou vendido, não apaga registos, não toca na exploração nem
+ * na equipa.
+ *
+ * Até 2026-07-30 tinha `editarAnimais`, que na altura queria dizer as duas
+ * coisas ao mesmo tempo — corrigir a ficha e registar um tratamento. Quem vem à
+ * exploração uma manhã ficava a poder trocar o brinco de um animal e mudá-lo de
+ * courela, e nada disso é ato veterinário. Separadas as duas, fica só com a
+ * segunda.
  *
  * No dinheiro a régua é mais apertada, e a assimetria é de propósito: o
  * trabalhador lança despesas (é ele que traz a fatura da ração do armazém), o
@@ -59,6 +79,7 @@ const PERMISSOES: Record<RoleMembro, readonly Capacidade[]> = {
     'gerirEquipa',
     'gerirTerrenos',
     'editarAnimais',
+    'registarTratamentos',
     'eliminarAnimais',
     'registarSaida',
     'registarDespesa',
@@ -68,12 +89,13 @@ const PERMISSOES: Record<RoleMembro, readonly Capacidade[]> = {
   trabalhador: [
     'gerirTerrenos',
     'editarAnimais',
+    'registarTratamentos',
     'eliminarAnimais',
     'registarSaida',
     'registarDespesa',
     'registarCustoTratamento',
   ],
-  veterinario: ['editarAnimais', 'registarSaida', 'registarCustoTratamento'],
+  veterinario: ['registarTratamentos', 'registarCustoTratamento'],
 };
 
 /**
@@ -84,17 +106,33 @@ export type CapacidadeLeitura =
   /** Abrir o ecrã Finanças: saldo, dashboards, movimentos de toda a exploração. */
   | 'verFinancas'
   /** Ver o custo/resultado económico na ficha de um animal. */
-  | 'verBalancoAnimal';
+  | 'verBalancoAnimal'
+  /**
+   * Abrir o separador Documentos: importar e exportar o efetivo, relatórios,
+   * notas.
+   *
+   * Ao contrário das outras duas, esta NÃO tem uma política de RLS por trás — é
+   * uma decisão da interface. O que os Documentos fazem é reempacotar dados que
+   * quem os abre já pode ler, portanto não há nada que o servidor possa recusar
+   * sem lhe fechar também a lista de animais, de que ele precisa para
+   * trabalhar. Fica escrito aqui para não se tomar por uma barreira que não é:
+   * ao veterinário fecha-se a porta da frente, e é quanto se consegue.
+   */
+  | 'verDocumentos';
 
 /**
  * Consultar as contas é do dono. O trabalhador e o veterinário veem apenas o
  * que eles próprios lançaram (a RLS filtra por `criado_por`) — o suficiente
  * para corrigirem um erro de digitação, sem lhes abrir as margens da
  * exploração.
+ *
+ * Os Documentos ficam com quem tem a exploração a cargo todos os dias: o dono e
+ * o trabalhador. O veterinário não tem que levar o efetivo de outra pessoa num
+ * ficheiro Excel a caminho da quinta seguinte.
  */
 const LEITURA: Record<RoleMembro, readonly CapacidadeLeitura[]> = {
-  admin: ['verFinancas', 'verBalancoAnimal'],
-  trabalhador: [],
+  admin: ['verFinancas', 'verBalancoAnimal', 'verDocumentos'],
+  trabalhador: ['verDocumentos'],
   veterinario: [],
 };
 
@@ -151,6 +189,7 @@ export type PermissoesMembro = Partial<Record<Capacidade, boolean>>;
 export const CAPACIDADES_GERIVEIS: readonly Capacidade[] = [
   'gerirTerrenos',
   'editarAnimais',
+  'registarTratamentos',
   'registarSaida',
   'eliminarAnimais',
   'registarDespesa',
@@ -212,7 +251,9 @@ export function legendaCapacidade(c: Capacidade): string {
     case 'gerirTerrenos':
       return 'Terrenos';
     case 'editarAnimais':
-      return 'Animais e registos';
+      return 'Fichas dos animais';
+    case 'registarTratamentos':
+      return 'Tratamentos e registos';
     case 'eliminarAnimais':
       return 'Eliminar animais';
     case 'registarSaida':
@@ -238,7 +279,9 @@ export function explicacaoCapacidade(c: Capacidade): string {
     case 'gerirTerrenos':
       return 'Criar, editar e apagar terrenos, e mudar animais de terreno.';
     case 'editarAnimais':
-      return 'Registar animais novos, corrigir fichas e lançar vacinas, medicamentos, partos e pesagens.';
+      return 'Registar animais novos e corrigir a ficha: nome, brinco, raça, datas, e o terreno onde o animal anda.';
+    case 'registarTratamentos':
+      return 'Lançar vacinas, medicamentos, partos e pesagens na ficha de um animal, sem poder alterar a ficha em si.';
     case 'eliminarAnimais':
       return 'Tirar um animal da lista para sempre. O registo fica guardado no histórico do efetivo, com o nome de quem o eliminou.';
     case 'registarSaida':
@@ -299,6 +342,44 @@ export function podeConsultar(ctx: ContextoAcesso, capacidade: CapacidadeLeitura
   if (ctx.isSuperadmin) return true;
   if (!ctx.role) return false;
   return LEITURA[ctx.role].includes(capacidade);
+}
+
+/**
+ * Esta conta entrou pela porta de outra pessoa?
+ *
+ * "Convidada" é a conta que tem vínculos e nenhum deles é de dono. A pergunta é
+ * feita assim, e não "é veterinário?", porque o que importa não é o papel: é a
+ * conta ter chegado por um código. Um veterinário que também tenha a sua
+ * exploração é admin nalgum lado e não é convidado de ninguém.
+ *
+ * Uma conta NOVA, ainda sem vínculo nenhum, não é convidada — e tem de o não
+ * ser, ou ninguém conseguiria criar a primeira exploração.
+ *
+ * Recebe TODOS os vínculos, incluindo os que já expiraram: o veterinário cujo
+ * acesso caiu ontem continua a ser uma visita, e a alternativa era ele ganhar o
+ * direito de criar explorações no instante exato em que o prazo acabou.
+ * Espelha `eh_convidado()` em `supabase/schema_papel_veterinario.sql`.
+ */
+export function eConvidado(papeis: readonly RoleMembro[]): boolean {
+  return papeis.length > 0 && !papeis.includes('admin');
+}
+
+/**
+ * Pode criar uma exploração nova?
+ *
+ * Não é uma `Capacidade` porque não se exerce DENTRO de uma exploração — a
+ * pergunta é sobre a conta inteira, e passá-la pelo `pode(exploracaoId, …)`
+ * obrigava a inventar uma exploração para perguntar por ela.
+ *
+ * Espelha a política `exploracao_ativo_insert`.
+ */
+export function podeCriarExploracao(
+  ctx: ContextoAcesso & { papeis: readonly RoleMembro[] },
+): boolean {
+  if (!ctx.supabaseConfigurado || !ctx.temSessao) return true;
+  if (ctx.isSuperadmin) return true;
+  if (ctx.estadoPerfil !== 'ativo') return false;
+  return !eConvidado(ctx.papeis);
 }
 
 /** Nome do papel para mostrar ao utilizador. */
