@@ -18,7 +18,10 @@ import { colors, radii, shadow, sizes, spacing } from '@/theme';
 export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { addExploracao, updateExploracao, deleteExploracao } = useGado();
+  const {
+    addExploracao, updateExploracao, deleteExploracao,
+    terrenos, animais, eventos, movimentos,
+  } = useGado();
   const { pode, podeCriarExploracoes } = useMembros();
   const toast = useToasts();
 
@@ -75,6 +78,38 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
     }
   }
 
+  /**
+   * "3 terrenos, 11 animais, 47 registos e 13 movimentos" — os números do que a
+   * cascata vai levar.
+   *
+   * Contados aqui e não escritos à mão: uma frase genérica ("e o histórico")
+   * não dá a dimensão do que se perde, e é a dimensão que faz alguém parar.
+   */
+  function resumoDoQueSeVai(): string {
+    if (!exploracao) return 'nada';
+    const meusTerrenos = terrenos.filter((t) => t.exploracaoId === exploracao.id);
+    const meusAnimais = animais.filter((a) => a.exploracaoId === exploracao.id);
+    const ids = new Set(meusAnimais.map((a) => a.id));
+    const meusEventos = eventos.filter((e) => ids.has(e.animalId));
+    const meusMovimentos = movimentos.filter((m) => m.exploracaoId === exploracao.id);
+
+    const partes = [
+      `${meusTerrenos.length} ${meusTerrenos.length === 1 ? 'terreno' : 'terrenos'}`,
+      `${meusAnimais.length} ${meusAnimais.length === 1 ? 'animal' : 'animais'}`,
+      `${meusEventos.length} ${meusEventos.length === 1 ? 'registo' : 'registos'}`,
+    ];
+    // O dinheiro só se nomeia se existir: numa conta sem gestão económica
+    // ligada, falar de despesas era assustar com uma coisa que não há.
+    if (meusMovimentos.length > 0) {
+      partes.push(
+        `${meusMovimentos.length} ${
+          meusMovimentos.length === 1 ? 'despesa ou receita' : 'despesas e receitas'
+        }`,
+      );
+    }
+    return partes.join(', ');
+  }
+
   function confirmarEliminar() {
     if (!exploracao) return;
     // Sair do ecrã antes de saber o resultado escondia as recusas: a app ia
@@ -91,9 +126,15 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
         avisar('Não foi possível eliminar', mensagemDeErro(e));
       }
     };
+    // O aviso conta o que a cascata leva DE FACTO. Dizia "terrenos, animais e
+    // histórico" e ficavam de fora o dinheiro e a equipa — que é precisamente o
+    // que ninguém espera perder ao apagar uma exploração.
     confirmar(
       'Eliminar exploração',
-      `Vai eliminar "${exploracao.nome}", os seus terrenos, animais e histórico. Esta ação não pode ser desfeita.`,
+      `Vai eliminar "${exploracao.nome}" e tudo o que está lá dentro: `
+        + `${resumoDoQueSeVai()}. `
+        + 'Leva também os animais que já tinham saído do efetivo, e com eles a '
+        + 'genealogia. Esta ação não pode ser desfeita.',
       () => void executar(),
       { rotuloConfirmar: 'Eliminar', destrutivo: true },
     );

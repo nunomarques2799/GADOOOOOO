@@ -24,7 +24,7 @@ export function FormularioTerreno({
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { addTerreno, updateTerreno, deleteTerreno, exploracaoById } = useGado();
+  const { addTerreno, updateTerreno, deleteTerreno, exploracaoById, animais } = useGado();
   const { pode } = useMembros();
   const toast = useToasts();
 
@@ -112,9 +112,19 @@ export function FormularioTerreno({
         avisar('Não foi possível eliminar', mensagemDeErro(e));
       }
     };
+    // Ao contrário da exploração, apagar um terreno NÃO apaga nada em cascata:
+    // os animais e as despesas que lhe estavam imputadas ficam todos, só deixam
+    // de apontar para aqui. Vale a pena dizê-lo — o receio de perder o efetivo é
+    // o que faz alguém deixar terrenos velhos na lista para sempre.
+    const quantos = animais.filter((a) => a.terrenoId === terreno.id).length;
     confirmar(
       'Eliminar terreno',
-      `Vai eliminar "${terreno.nome}". Os animais lá afetos ficarão sem terreno.`,
+      `Vai eliminar "${terreno.nome}". `
+        + (quantos > 0
+          ? `Os ${quantos} ${quantos === 1 ? 'animal fica' : 'animais ficam'} sem terreno — `
+          : 'Nenhum animal se perde — ')
+        + 'nada é apagado além do próprio terreno. As despesas que lhe estavam '
+        + 'imputadas continuam nas contas da exploração.',
       () => void executar(),
       { rotuloConfirmar: 'Eliminar', destrutivo: true },
     );
