@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
@@ -54,6 +55,9 @@ export default function ExploracaoDetalheScreen() {
   const terrenos = terrenosByExploracao(exploracao.id);
   const animais = animaisByExploracao(exploracao.id);
   const areaTotal = terrenos.reduce((s, t) => s + (t.area ?? 0), 0);
+  const semTerreno = animais.filter(
+    (a) => !a.terrenoId || !terrenos.some((t) => t.id === a.terrenoId),
+  ).length;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -80,8 +84,17 @@ export default function ExploracaoDetalheScreen() {
                 backgroundColor: 'rgba(255,255,255,0.16)',
                 alignItems: 'center',
                 justifyContent: 'center',
+                overflow: 'hidden',
               }}>
-              <Icon name="barn" size={38} color={colors.textOnDark} />
+              {exploracao.fotografia ? (
+                <Image
+                  source={{ uri: exploracao.fotografia }}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                />
+              ) : (
+                <Icon name="barn" size={38} color={colors.textOnDark} />
+              )}
             </View>
             <View style={{ flex: 1 }}>
               <Text variant="h1" color={colors.textOnDark} numberOfLines={1}>
@@ -146,7 +159,7 @@ export default function ExploracaoDetalheScreen() {
                 </Text>
                 {estado === 'sem-local' ? (
                   <Text variant="secondary" color={colors.textSecondary}>
-                    Adicione coordenadas a um terreno ou preencha a localização da exploração.
+                    Edite a exploração e escreva a localização, ou marque no mapa onde ela fica.
                   </Text>
                 ) : null}
               </View>
@@ -206,6 +219,11 @@ export default function ExploracaoDetalheScreen() {
             <View style={{ paddingHorizontal: spacing.md }}>
               {terrenos.map((t, i) => {
                 const meta = tipoTerrenoMeta[t.tipo ?? 'Outro'];
+                // Quantos animais andam neste terreno. É a informação que dá
+                // sentido à lista — sem ela, o criador tinha de entrar em cada
+                // terreno para saber onde está o gado, e a soma dos cercados
+                // nunca batia com o número do topo sem fazer as contas à mão.
+                const nAnimais = animais.filter((a) => a.terrenoId === t.id).length;
                 return (
                   <Pressable
                     key={t.id}
@@ -222,7 +240,15 @@ export default function ExploracaoDetalheScreen() {
                       },
                       pressed && { opacity: 0.6 },
                     ]}>
-                    <IconBadge name={meta.icon} color={meta.cor} background={colors.primaryTint} size={44} iconSize={22} />
+                    {t.fotografia ? (
+                      <Image
+                        source={{ uri: t.fotografia }}
+                        style={{ width: 44, height: 44, borderRadius: radii.md }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <IconBadge name={meta.icon} color={meta.cor} background={colors.primaryTint} size={44} iconSize={22} />
+                    )}
                     <View style={{ flex: 1 }}>
                       <Text variant="bodyStrong">{t.nome}</Text>
                       <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
@@ -231,6 +257,11 @@ export default function ExploracaoDetalheScreen() {
                         {t.latitude != null && t.longitude != null ? ' · GPS' : ''}
                       </Text>
                     </View>
+                    <Badge
+                      tone={nAnimais > 0 ? 'brand' : 'neutral'}
+                      icon="cow"
+                      label={String(nAnimais)}
+                    />
                     <Icon name="chevron-right" size="md" color={colors.textMuted} />
                   </Pressable>
                 );
@@ -238,6 +269,16 @@ export default function ExploracaoDetalheScreen() {
             </View>
           </Card>
         )}
+
+        {/* Sem isto, as contagens dos terrenos não somavam o total do topo e
+            não havia nada a explicar a diferença. É também o caminho mais curto
+            para arrumar o gado que ficou por atribuir. */}
+        {semTerreno > 0 && terrenos.length > 0 ? (
+          <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.xs }}>
+            {semTerreno} {semTerreno === 1 ? 'animal ainda sem terreno' : 'animais ainda sem terreno'}
+            . Abra um terreno e use “Associar animais”.
+          </Text>
+        ) : null}
 
         {/* Animais */}
         <TituloSeccao

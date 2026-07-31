@@ -58,6 +58,8 @@ type ExploracaoRow = ComUpdatedAt & {
   marca_exploracao: string;
   nif_detentor: string;
   localizacao?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   fotografia?: string | null;
   financas_ativas?: boolean | null;
   casa_ativa?: boolean | null;
@@ -72,6 +74,7 @@ type TerrenoRow = ComUpdatedAt & {
   longitude?: number | null;
   area?: number | null;
   tipo?: string | null;
+  fotografia?: string | null;
 };
 
 type AnimalRow = ComUpdatedAt & {
@@ -138,6 +141,8 @@ const toExploracao = (r: ExploracaoRow): Exploracao => ({
   marcaExploracao: r.marca_exploracao,
   nifDetentor: r.nif_detentor,
   localizacao: r.localizacao ?? undefined,
+  latitude: r.latitude ?? undefined,
+  longitude: r.longitude ?? undefined,
   fotografia: r.fotografia ?? undefined,
   financasAtivas: r.financas_ativas ?? false,
   casaAtiva: r.casa_ativa ?? false,
@@ -153,6 +158,7 @@ const toTerreno = (r: TerrenoRow): Terreno => ({
   longitude: r.longitude ?? undefined,
   area: r.area ?? undefined,
   tipo: (r.tipo as TipoTerreno) ?? undefined,
+  fotografia: r.fotografia ?? undefined,
 });
 
 const toAnimal = (r: AnimalRow): Animal => ({
@@ -220,6 +226,8 @@ const exploracaoPayload = (e: Exploracao) => ({
   marca_exploracao: e.marcaExploracao,
   nif_detentor: e.nifDetentor,
   localizacao: e.localizacao ?? null,
+  latitude: e.latitude ?? null,
+  longitude: e.longitude ?? null,
   fotografia: e.fotografia ?? null,
   // `financas_ativas` e `casa_ativa` não vão no payload de propósito: são do
   // servidor, escritas só pelos RPC respetivos. Incluí-las aqui fazia com que
@@ -249,6 +257,7 @@ const terrenoPayload = (t: Terreno) => ({
   longitude: t.longitude ?? null,
   area: t.area ?? null,
   tipo: t.tipo ?? null,
+  fotografia: t.fotografia ?? null,
 });
 
 const animalPayload = (a: Animal) => ({

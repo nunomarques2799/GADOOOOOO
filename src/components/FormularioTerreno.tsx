@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Chip, EcraComTeclado, Header, Icon, type IconName, Text } from '@/components/ui';
 import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
+import { SeletorFoto } from '@/components/SeletorFoto';
 import { avisar, confirmar } from '@/data/avisos';
 import { tiposTerreno, tipoTerrenoMeta } from '@/data/constants';
 import { useMembros } from '@/data/membros';
@@ -35,6 +36,7 @@ export function FormularioTerreno({
   const [descricao, setDescricao] = useState(terreno?.descricao ?? '');
   const [latitude, setLatitude] = useState(terreno?.latitude != null ? String(terreno.latitude) : '');
   const [longitude, setLongitude] = useState(terreno?.longitude != null ? String(terreno.longitude) : '');
+  const [foto, setFoto] = useState<string | undefined>(terreno?.fotografia);
   const [manual, setManual] = useState(false);
   const [erroGuardar, setErroGuardar] = useState<string | null>(null);
   const [aGravar, setAGravar] = useState(false);
@@ -73,6 +75,7 @@ export function FormularioTerreno({
       descricao: descricao.trim() || undefined,
       latitude: latNum,
       longitude: lngNum,
+      fotografia: foto,
     };
     try {
       if (editar && terreno) {
@@ -128,6 +131,14 @@ export function FormularioTerreno({
           Exploração: {exploracao?.nome ?? 'Sem exploração'}
         </Text>
 
+        <SeletorFoto
+          foto={foto}
+          onMudar={setFoto}
+          icone={tipoTerrenoMeta[tipo].icon}
+          assunto="do terreno"
+          forma="cartao"
+        />
+
         <Field label="Nome" obrigatorio>
           <TextField
             value={nome}
@@ -180,7 +191,7 @@ export function FormularioTerreno({
           latitude={latNum}
           longitude={lngNum}
           selecionavel
-          altura={240}
+          altura={320}
           onEscolher={(lat, lng) => {
             setLatitude(lat.toFixed(6));
             setLongitude(lng.toFixed(6));

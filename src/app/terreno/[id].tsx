@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { View } from 'react-native';
@@ -17,11 +18,13 @@ import {
 import { tipoTerrenoMeta } from '@/data/constants';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 export default function TerrenoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const desktop = useDesktop();
   const { terrenoById, exploracaoById, animais } = useGado();
   const { pode } = useMembros();
 
@@ -66,8 +69,17 @@ export default function TerrenoDetalheScreen() {
                 backgroundColor: 'rgba(255,255,255,0.16)',
                 alignItems: 'center',
                 justifyContent: 'center',
+                overflow: 'hidden',
               }}>
-              <Icon name={meta.icon} size={38} color={colors.textOnDark} />
+              {terreno.fotografia ? (
+                <Image
+                  source={{ uri: terreno.fotografia }}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                />
+              ) : (
+                <Icon name={meta.icon} size={38} color={colors.textOnDark} />
+              )}
             </View>
             <View style={{ flex: 1 }}>
               <Text variant="h1" color={colors.textOnDark} numberOfLines={1}>
@@ -102,7 +114,15 @@ export default function TerrenoDetalheScreen() {
         </Text>
         {temCoords ? (
           <>
-            <MapaLocalizacao latitude={terreno.latitude} longitude={terreno.longitude} altura={200} />
+            {/* Alto, não uma faixa. A 200px o mapa era uma tira em que só cabia
+                o pino: para perceber onde fica o cercado em relação ao caminho
+                e ao vizinho era preciso arrastar às cegas. Em ecrã largo cresce
+                mais, que é onde há espaço para isso. */}
+            <MapaLocalizacao
+              latitude={terreno.latitude}
+              longitude={terreno.longitude}
+              altura={desktop ? 460 : 340}
+            />
             <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.xs, marginBottom: spacing.sm }}>
               Como chegar ao terreno:
             </Text>

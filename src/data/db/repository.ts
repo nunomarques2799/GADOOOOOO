@@ -74,6 +74,8 @@ function toExploracao(r: Row): Exploracao {
     marcaExploracao: String(r.marcaExploracao),
     nifDetentor: String(r.nifDetentor),
     localizacao: asStr(r.localizacao),
+    latitude: asNum(r.latitude),
+    longitude: asNum(r.longitude),
     fotografia: asStr(r.fotografia),
     financasAtivas: asBool(r.financasAtivas) ?? false,
     casaAtiva: asBool(r.casaAtiva) ?? false,
@@ -90,6 +92,7 @@ function toTerreno(r: Row): Terreno {
     longitude: asNum(r.longitude),
     area: asNum(r.area),
     tipo: asStr(r.tipo) as TipoTerreno | undefined,
+    fotografia: asStr(r.fotografia),
   };
 }
 
@@ -192,11 +195,12 @@ export function guardarUtilizador(db: SQLiteDatabase, u: Utilizador): void {
 
 export function guardarExploracao(db: SQLiteDatabase, e: Exploracao): void {
   db.runSync(
-    `INSERT OR REPLACE INTO exploracao (id, utilizadorId, nome, marcaExploracao, nifDetentor, localizacao, fotografia, financasAtivas, casaAtiva, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO exploracao (id, utilizadorId, nome, marcaExploracao, nifDetentor, localizacao, latitude, longitude, fotografia, financasAtivas, casaAtiva, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       e.id, e.utilizadorId, e.nome, e.marcaExploracao, e.nifDetentor,
-      txt(e.localizacao), txt(e.fotografia), bool(e.financasAtivas ?? false),
+      txt(e.localizacao), num(e.latitude), num(e.longitude),
+      txt(e.fotografia), bool(e.financasAtivas ?? false),
       bool(e.casaAtiva ?? false), agora(),
     ],
   );
@@ -204,9 +208,9 @@ export function guardarExploracao(db: SQLiteDatabase, e: Exploracao): void {
 
 export function guardarTerreno(db: SQLiteDatabase, t: Terreno): void {
   db.runSync(
-    `INSERT OR REPLACE INTO terreno (id, exploracaoId, nome, descricao, latitude, longitude, area, tipo, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [t.id, t.exploracaoId, t.nome, txt(t.descricao), num(t.latitude), num(t.longitude), num(t.area), txt(t.tipo), agora()],
+    `INSERT OR REPLACE INTO terreno (id, exploracaoId, nome, descricao, latitude, longitude, area, tipo, fotografia, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [t.id, t.exploracaoId, t.nome, txt(t.descricao), num(t.latitude), num(t.longitude), num(t.area), txt(t.tipo), txt(t.fotografia), agora()],
   );
 }
 

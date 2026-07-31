@@ -9,7 +9,7 @@
 
 import type { IconName } from '@/components/ui';
 
-import type { Meteorologia } from './types';
+import type { DiaMeteo, Meteorologia } from './types';
 
 /** Agrupamento do estado do tempo, para escolher conselho e ícone. */
 type GrupoTempo = 'limpo' | 'nuvens' | 'nevoeiro' | 'chuva' | 'neve' | 'trovoada';
@@ -101,14 +101,55 @@ type OpenMeteoResp = {
     is_day?: number;
   };
   daily?: {
+    time?: string[];
     temperature_2m_max?: number[];
     temperature_2m_min?: number[];
+    weather_code?: number[];
+    precipitation_sum?: number[];
+    precipitation_probability_max?: number[];
   };
 };
 
 /**
- * Obtém a meteorologia atual para as coordenadas dadas. Lança em caso de
- * falha de rede ou resposta inválida — quem chama decide o fallback.
+ * Quantos dias se pedem: hoje mais sete. O criador pediu "o dia seguinte e os
+ * próximos 7 dias", e são os mesmos oito dias — amanhã é o primeiro desses
+ * sete. Pedir hoje junto é de graça e é o que garante que o cartão de cima e o
+ * primeiro dia da lista contam a mesma história.
+ */
+const DIAS_PREVISAO = 8;
+
+/** O bloco diário da resposta, convertido em dias. Vazio se não vier nada. */
+function diasDe(daily: OpenMeteoResp['daily']): DiaMeteo[] {
+  const datas = daily?.time ?? [];
+  const dias: DiaMeteo[] = [];
+  for (let i = 0; i < datas.length; i++) {
+    const max = daily?.temperature_2m_max?.[i];
+    const min = daily?.temperature_2m_min?.[i];
+    // Um dia sem temperaturas não é um dia: mostrá-lo dava um cartão com dois
+    // travessões, que se lê como avaria e não como "a API não sabe".
+    if (max == null || min == null) continue;
+    const code = Number(daily?.weather_code?.[i] ?? 3);
+    const info = CODIGOS_WMO[code] ?? DESCONHECIDO;
+    const prob = daily?.precipitation_probability_max?.[i];
+    dias.push({
+      data: datas[i],
+      maxima: Math.round(max),
+      minima: Math.round(min),
+      condicao: info.condicao,
+      // Sempre o ícone de dia: uma previsão é sobre o dia inteiro, e uma lua
+      // ao lado de "amanhã" lê-se como se fosse a previsão para a noite.
+      icone: iconePara(code, true),
+      precipitacao: Math.round((daily?.precipitation_sum?.[i] ?? 0) * 10) / 10,
+      probabilidadeChuva: prob == null ? undefined : Math.round(prob),
+    });
+  }
+  return dias;
+}
+
+/**
+ * Obtém a meteorologia atual e a previsão dos próximos dias para as coordenadas
+ * dadas. Lança em caso de falha de rede ou resposta inválida — quem chama
+ * decide o fallback.
  */
 export async function fetchMeteorologia(
   loc: LocalMeteo,
@@ -118,9 +159,10 @@ export async function fetchMeteorologia(
     latitude: String(loc.latitude),
     longitude: String(loc.longitude),
     current: 'temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,is_day',
-    daily: 'temperature_2m_max,temperature_2m_min',
+    daily:
+      'temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum,precipitation_probability_max',
     timezone: 'auto',
-    forecast_days: '1',
+    forecast_days: String(DIAS_PREVISAO),
   });
   const resp = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { signal });
   if (!resp.ok) throw new Error(`Open-Meteo respondeu ${resp.status}`);
@@ -149,5 +191,6 @@ export async function fetchMeteorologia(
     maxima,
     minima,
     conselho: conselhoPecuario({ grupo: info.grupo, maxima, minima, vento, precipitacao }),
+    dias: diasDe(dados.daily),
   };
 }

@@ -154,7 +154,12 @@ export default function DocumentosScreen() {
                     descarregar(
                       `animais-${hojeISO()}.xlsx`,
                       `${exportaveis.length} ${exportaveis.length === 1 ? 'animal' : 'animais'}`,
-                      () => exportarAnimaisExcel(exportaveis, exploracoes, terrenos),
+                      // `animais` (o efetivo TODO) no fim, e não só os
+                      // exportáveis: é de lá que saem os nomes da mãe e do pai,
+                      // e um progenitor já vendido não está na lista que sai na
+                      // folha — sem isto, a coluna vinha vazia justamente nos
+                      // animais mais antigos.
+                      () => exportarAnimaisExcel(exportaveis, exploracoes, terrenos, animais),
                     )
                   }
                 />

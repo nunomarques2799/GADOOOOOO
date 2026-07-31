@@ -12,7 +12,7 @@
 export const DB_NAME = 'gado.db';
 
 /** Versão do schema (PRAGMA user_version). Incrementar ao migrar. */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export const CREATE_TABLES_SQL = `
 PRAGMA journal_mode = WAL;
@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS exploracao (
   marcaExploracao TEXT NOT NULL,
   nifDetentor TEXT NOT NULL,
   localizacao TEXT,
+  latitude REAL,
+  longitude REAL,
   fotografia TEXT,
   financasAtivas INTEGER,
   casaAtiva INTEGER,
@@ -49,6 +51,7 @@ CREATE TABLE IF NOT EXISTS terreno (
   longitude REAL,
   area REAL,
   tipo TEXT,
+  fotografia TEXT,
   updatedAt TEXT
 );
 

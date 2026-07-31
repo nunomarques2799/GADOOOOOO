@@ -20,9 +20,8 @@ import {
   type IconName,
   Text,
 } from '@/components/ui';
+import { SeletorAnimais } from '@/components/SeletorAnimais';
 import { avisar } from '@/data/avisos';
-import { especieMeta } from '@/data/constants';
-import { SEM_TERRENO } from '@/data/filtrosAnimais';
 import { useMembros } from '@/data/membros';
 import {
   formatDataPt,
@@ -31,7 +30,6 @@ import {
   paraEuro,
   parseDataPt,
 } from '@/data/helpers';
-import { normalizar } from '@/data/racas';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
@@ -110,13 +108,12 @@ export default function NovoEventoScreen() {
   const {
     animais,
     terrenos,
-    especieDe,
     addAnimal,
     addEvento,
     updateAnimal,
     animalById,
     eventosByAnimal,
-  } = useGadoAdaptado();
+  } = useGado();
   const { podeEmAlguma } = useMembros();
   const toast = useToasts();
 
@@ -127,16 +124,6 @@ export default function NovoEventoScreen() {
 
   const [tipo, setTipo] = useState<Registavel>(tipoInicial);
   const [animalIds, setAnimalIds] = useState<string[]>(params.animalId ? [params.animalId] : []);
-  const [procura, setProcura] = useState('');
-  /**
-   * Em que terreno se está a olhar. `null` = ainda a escolher o terreno.
-   *
-   * Sem isto, escolher a vaca do parto era percorrer o efetivo inteiro numa
-   * parede de cem etiquetas com nomes que se parecem. Quem trata de gado sabe
-   * ONDE está o animal antes de saber como se chama — o terreno é o filtro que
-   * ele tem na cabeça, e é por aí que a lista tem de começar.
-   */
-  const [terrenoAberto, setTerrenoAberto] = useState<string | null>(null);
   const [diasAtras, setDiasAtras] = useState(0);
   // Data escrita à mão. Os atalhos cobrem o registo do próprio dia, que é o
   // caso comum; isto cobre o resto — a vacina que se deu no mês passado e só
@@ -198,71 +185,6 @@ export default function NovoEventoScreen() {
   }, [animais, tipo]);
 
   /**
-   * Os animais arrumados pelo terreno onde andam.
-   *
-   * Os que não têm terreno atribuído vão para um grupo próprio, no fim: são
-   * animais a sério e não podem desaparecer da escolha só por lhes faltar um
-   * campo. Terrenos sem animais nenhuns não aparecem — seria um botão que abre
-   * uma lista vazia.
-   */
-  const grupos = useMemo(() => {
-    const nomes = new Map(terrenos.map((t) => [t.id, t.nome]));
-    const porTerreno = new Map<string, Animal[]>();
-    for (const a of animaisEscolha) {
-      const chave = a.terrenoId && nomes.has(a.terrenoId) ? a.terrenoId : SEM_TERRENO;
-      const lista = porTerreno.get(chave);
-      if (lista) lista.push(a);
-      else porTerreno.set(chave, [a]);
-    }
-    return [...porTerreno.entries()]
-      .map(([id, lista]) => ({
-        id,
-        nome: id === SEM_TERRENO ? 'Sem terreno' : (nomes.get(id) ?? 'Terreno'),
-        animais: lista,
-      }))
-      .sort((x, y) => {
-        // "Sem terreno" fica sempre no fim: é o resto, não um sítio.
-        if (x.id === SEM_TERRENO) return 1;
-        if (y.id === SEM_TERRENO) return -1;
-        return x.nome.localeCompare(y.nome, 'pt');
-      });
-  }, [animaisEscolha, terrenos]);
-
-  /**
-   * Que terreno está aberto de facto.
-   *
-   * Com um grupo só, o passo do terreno não decide nada — seria um toque a mais
-   * para chegar exatamente à mesma lista — por isso abre-se sozinho.
-   *
-   * E um terreno que deixou de existir na lista volta ao passo da escolha: ao
-   * trocar de "Pesagem" para "Parto" a lista passa a ser só de fêmeas, e um
-   * cercado só de machos ficava aberto e vazio, sem nada por onde voltar atrás.
-   */
-  const aberto = terrenoAberto && grupos.some((g) => g.id === terrenoAberto)
-    ? terrenoAberto
-    : null;
-  const grupoAberto = aberto ?? (grupos.length === 1 ? grupos[0].id : null);
-  const terrenoEscolhido = grupos.find((g) => g.id === grupoAberto);
-
-  /**
-   * O que está à vista — e é sobre isto que age o "escolher todos".
-   *
-   * A procura passa POR CIMA dos terrenos: quem escreve o nome de um animal
-   * quer aquele animal, não quer primeiro adivinhar em que terreno ele anda.
-   */
-  const aVista = useMemo(() => {
-    const q = normalizar(procura.trim());
-    if (q) {
-      return animaisEscolha.filter((a) =>
-        [a.nome, a.numeroIdentificacao, a.raca, a.numeroCasa].some(
-          (c) => c && normalizar(c).includes(q),
-        ),
-      );
-    }
-    return terrenoEscolhido?.animais ?? [];
-  }, [animaisEscolha, procura, terrenoEscolhido]);
-
-  /**
    * Trocar para um tipo que não é de massa com vinte animais escolhidos não
    * pode gravar vinte partos. Fica o primeiro, que é o que o criador vê no
    * cartão — em vez de a app apagar a escolha toda sem dizer nada.
@@ -271,16 +193,6 @@ export default function NovoEventoScreen() {
     setTipo(t);
     if (!EM_MASSA.includes(t)) setAnimalIds((ids) => ids.slice(0, 1));
   }
-
-  function alternarAnimal(id: string) {
-    setAnimalIds((ids) => {
-      if (ids.includes(id)) return ids.filter((x) => x !== id);
-      return varios ? [...ids, id] : [id];
-    });
-  }
-
-  /** Escolhidos que a procura atual não mostra — senão gravava-se às cegas. */
-  const escondidos = animalIds.filter((id) => !aVista.some((a) => a.id === id)).length;
 
   const pesoNum = paraNumero(peso);
   const valido =
@@ -527,149 +439,18 @@ export default function NovoEventoScreen() {
                 : 'Animal'
           }
           obrigatorio>
-          {/* Um só animal escolhido, num tipo individual: o cartão com o nome
-              e o brinco confirma em quem se está a registar. */}
-          {!varios && animal ? (
-            <AnimalSelecionado
-              icone={especieDe(animal.especie)}
-              nome={animal.nome ?? 'Sem nome'}
-              brinco={animal.numeroIdentificacao ?? 'Sem brinco'}
-              onTrocar={() => setAnimalIds([])}
-            />
-          ) : (
-            <>
-              {/* Com efetivo grande, percorrer cem chips à procura de um animal
-                  é pior do que escrever três letras do nome. E a procura passa
-                  por cima dos terrenos: quem escreve o nome quer o animal, não
-                  quer adivinhar primeiro onde ele anda. */}
-              {animaisEscolha.length > 8 ? (
-                <View style={{ marginBottom: spacing.sm }}>
-                  <TextField
-                    value={procura}
-                    onChangeText={setProcura}
-                    placeholder="Procurar por nome, brinco, raça ou número"
-                    icon="magnify"
-                  />
-                </View>
-              ) : null}
-
-              {animaisEscolha.length === 0 ? (
-                <Text variant="secondary" color={colors.textMuted}>
-                  {tipo === 'Parto'
-                    ? 'Não há fêmeas registadas para associar a um parto.'
-                    : 'Ainda não há animais registados.'}
-                </Text>
-              ) : !procura.trim() && grupoAberto === null ? (
-                /* Passo 1: em que terreno. */
-                <View style={{ gap: spacing.xs }}>
-                  <Text variant="secondary" color={colors.textSecondary}>
-                    Escolha o terreno onde o animal anda.
-                  </Text>
-                  {grupos.map((g) => (
-                    <LinhaTerreno
-                      key={g.id}
-                      nome={g.nome}
-                      quantos={g.animais.length}
-                      escolhidos={g.animais.filter((a) => animalIds.includes(a.id)).length}
-                      semTerreno={g.id === SEM_TERRENO}
-                      onPress={() => setTerrenoAberto(g.id)}
-                    />
-                  ))}
-                </View>
-              ) : (
-                /* Passo 2: os animais desse terreno (ou o que a procura achou). */
-                <>
-                  {!procura.trim() && terrenoEscolhido ? (
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: spacing.xs,
-                        marginBottom: spacing.xs,
-                      }}>
-                      <Icon name="map-marker" size="md" color={colors.primary} />
-                      <Text variant="bodyStrong" style={{ flex: 1 }}>
-                        {terrenoEscolhido.nome}
-                      </Text>
-                      {/* Só com mais do que um terreno: com um só, o passo nem
-                          chegou a existir e este botão não levava a lado nenhum. */}
-                      {grupos.length > 1 ? (
-                        <Button
-                          label="Trocar de terreno"
-                          icon="swap-horizontal"
-                          variant="ghost"
-                          fullWidth={false}
-                          onPress={() => setTerrenoAberto(null)}
-                        />
-                      ) : null}
-                    </View>
-                  ) : null}
-
-                  {varios && aVista.length > 0 ? (
-                    <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xs }}>
-                      {/* Age sobre o que está à VISTA — os animais deste
-                          terreno, ou o que a procura deixou — e não sobre o
-                          efetivo todo: é assim que se vacina um cercado
-                          inteiro sem escolher animal a animal. */}
-                      <Button
-                        label={
-                          procura.trim()
-                            ? `Escolher os ${aVista.length} à vista`
-                            : `Escolher os ${aVista.length} deste terreno`
-                        }
-                        icon="checkbox-multiple-marked-outline"
-                        variant="secondary"
-                        fullWidth={false}
-                        onPress={() =>
-                          setAnimalIds((ids) => [
-                            ...new Set([...ids, ...aVista.map((a) => a.id)]),
-                          ])
-                        }
-                      />
-                      {animalIds.length > 0 ? (
-                        <Button
-                          label="Limpar"
-                          icon="close"
-                          variant="ghost"
-                          fullWidth={false}
-                          onPress={() => setAnimalIds([])}
-                        />
-                      ) : null}
-                    </View>
-                  ) : null}
-
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-                    {aVista.map((a) => (
-                      <Chip
-                        key={a.id}
-                        label={a.nome ?? a.numeroIdentificacao ?? 'Sem nome'}
-                        icon={animalIds.includes(a.id) ? 'check' : especieDe(a.especie)}
-                        selected={animalIds.includes(a.id)}
-                        onPress={() => alternarAnimal(a.id)}
-                      />
-                    ))}
-                    {aVista.length === 0 ? (
-                      <Text variant="secondary" color={colors.textMuted}>
-                        {procura.trim()
-                          ? `Nenhum animal corresponde a “${procura.trim()}”.`
-                          : 'Não há animais neste terreno.'}
-                      </Text>
-                    ) : null}
-                  </View>
-                </>
-              )}
-
-              {/* Os que estão escolhidos noutro terreno (ou que a procura
-                  escondeu) continuam escolhidos — sem este aviso, gravava-se em
-                  animais que já não estavam à vista sem se perceber porquê. */}
-              {varios && escondidos > 0 ? (
-                <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.xs }}>
-                  Mais {escondidos} {escondidos === 1 ? 'animal escolhido' : 'animais escolhidos'}{' '}
-                  fora do que está à vista.
-                </Text>
-              ) : null}
-            </>
-          )}
+          <SeletorAnimais
+            animais={animaisEscolha}
+            terrenos={terrenos}
+            escolhidos={animalIds}
+            onMudar={setAnimalIds}
+            varios={varios}
+            vazio={
+              tipo === 'Parto'
+                ? 'Não há fêmeas registadas para associar a um parto.'
+                : 'Ainda não há animais registados.'
+            }
+          />
         </Field>
 
         {/* Data */}
@@ -891,22 +672,6 @@ export default function NovoEventoScreen() {
   );
 }
 
-/**
- * Pequeno adaptador sobre useGado: expõe um seletor de ícone por espécie
- * para não repetir o mapa especieMeta em vários pontos do ecrã.
- */
-function useGadoAdaptado() {
-  const gado = useGado();
-  return {
-    ...gado,
-    especieDe: (especie: keyof typeof especieMeta): IconName => especieMeta[especie].icon,
-  };
-}
-
-/* ------------------------------------------------------------------ *
- *  Escolha do animal por terreno
- * ------------------------------------------------------------------ */
-
 /* ------------------------------------------------------------------ *
  *  Componentes locais de formulário (partilham o estilo de animal/novo)
  * ------------------------------------------------------------------ */
@@ -995,68 +760,6 @@ function TextField({
   );
 }
 
-/**
- * Um terreno na escolha do animal: o nome, quantos animais lá andam e quantos
- * já estão escolhidos.
- *
- * Linha inteira tocável e alta, como o resto das listas de escolha da app. O
- * número de escolhidos é o que permite vacinar dois cercados seguidos sem
- * perder a conta ao voltar atrás.
- */
-function LinhaTerreno({
-  nome,
-  quantos,
-  escolhidos,
-  semTerreno,
-  onPress,
-}: {
-  nome: string;
-  quantos: number;
-  escolhidos: number;
-  semTerreno: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${nome}, ${quantos} ${quantos === 1 ? 'animal' : 'animais'}${
-        escolhidos > 0 ? `, ${escolhidos} escolhidos` : ''
-      }`}
-      style={({ pressed }) => [
-        {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spacing.sm,
-          minHeight: sizes.touchMin,
-          paddingHorizontal: spacing.md,
-          paddingVertical: spacing.sm,
-          borderRadius: radii.md,
-          borderWidth: 1.5,
-          borderColor: escolhidos > 0 ? colors.primary : colors.border,
-          backgroundColor: escolhidos > 0 ? colors.primaryTint : colors.surface,
-        },
-        pressed && { opacity: 0.85 },
-      ]}>
-      <Icon
-        name={semTerreno ? 'map-marker-off-outline' : 'map-marker'}
-        size="md"
-        color={escolhidos > 0 ? colors.primaryDark : colors.textSecondary}
-      />
-      <View style={{ flex: 1 }}>
-        <Text variant="bodyStrong" color={escolhidos > 0 ? colors.primaryDark : colors.text}>
-          {nome}
-        </Text>
-        <Text variant="secondary" color={colors.textSecondary}>
-          {quantos} {quantos === 1 ? 'animal' : 'animais'}
-          {escolhidos > 0 ? ` · ${escolhidos} escolhido${escolhidos === 1 ? '' : 's'}` : ''}
-        </Text>
-      </View>
-      <Icon name="chevron-right" size="md" color={colors.textMuted} />
-    </Pressable>
-  );
-}
-
 /** Cartão grande de escolha do tipo de evento (ícone + rótulo). */
 function TipoButton({
   label,
@@ -1098,68 +801,6 @@ function TipoButton({
         {label}
       </Text>
     </Pressable>
-  );
-}
-
-/** Resumo do animal escolhido, com opção de trocar. */
-function AnimalSelecionado({
-  icone,
-  nome,
-  brinco,
-  onTrocar,
-}: {
-  icone: IconName;
-  nome: string;
-  brinco: string;
-  onTrocar: () => void;
-}) {
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.sm,
-        borderRadius: radii.md,
-        borderWidth: 1.5,
-        borderColor: colors.primary,
-        backgroundColor: colors.primaryTint,
-        padding: spacing.sm,
-      }}>
-      <View
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: radii.pill,
-          backgroundColor: colors.surface,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-        <Icon name={icone} size="md" color={colors.primary} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text variant="bodyStrong">{nome}</Text>
-        <Text variant="secondary" color={colors.textSecondary}>
-          {brinco}
-        </Text>
-      </View>
-      <Pressable onPress={onTrocar} accessibilityRole="button" accessibilityLabel="Trocar animal" hitSlop={8}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-            paddingHorizontal: spacing.sm,
-            paddingVertical: 6,
-            borderRadius: radii.pill,
-            backgroundColor: colors.surface,
-          }}>
-          <Icon name="swap-horizontal" size="sm" color={colors.primaryDark} />
-          <Text variant="label" color={colors.primaryDark}>
-            Trocar
-          </Text>
-        </View>
-      </Pressable>
-    </View>
   );
 }
 

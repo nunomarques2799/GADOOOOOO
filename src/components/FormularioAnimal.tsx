@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { FotoAnimal } from '@/components/FotoAnimal';
+import { SeletorFoto } from '@/components/SeletorFoto';
 import {
   Button,
   CampoData,
@@ -374,7 +374,12 @@ export function FormularioAnimal({
 
         {/* Fotografia — o rosto do animal, para se reconhecer de relance na
             lista. A silhueta segue a espécie escolhida. */}
-        <FotoAnimal foto={foto} onMudar={setFoto} icone={especieMeta[especie].icon} />
+        <SeletorFoto
+          foto={foto}
+          onMudar={setFoto}
+          icone={especieMeta[especie].icon}
+          assunto="do animal"
+        />
 
         {/* Espécie */}
         <Field label="Espécie" obrigatorio>

@@ -218,8 +218,15 @@ export const COLUNAS: ColunaTemplate[] = [
  * escolhem na app (a exploração de destino escolhe-se no ecrã de importação) ou
  * estado que ela própria calcula. Ficam aqui reconhecidas para não aparecerem
  * como "coluna desconhecida" a quem exporta, edita e reimporta o mesmo ficheiro.
+ *
+ * A MÃE E O PAI saem por NOME, e por isso não voltam a entrar. A genealogia
+ * liga-se por identificador, e um nome não chega para a reconstruir: "Malhada"
+ * pode ser três vacas, e escrever à mão uma mãe que não existe criaria um
+ * parentesco inventado — que é o pior erro possível numa árvore genealógica.
+ * Quem quer mudar a mãe de um animal fá-lo na ficha dele, onde escolhe de uma
+ * lista de animais que existem mesmo.
  */
-export const COLUNAS_INFORMATIVAS = ['Exploração', 'Terreno', 'Estado'] as const;
+export const COLUNAS_INFORMATIVAS = ['Exploração', 'Terreno', 'Mãe', 'Pai', 'Estado'] as const;
 
 /** Linhas de exemplo, para a folha de instruções do template. */
 export const EXEMPLOS: Record<CampoImportado, string>[] = [

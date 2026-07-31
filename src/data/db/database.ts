@@ -125,6 +125,16 @@ export function inicializarBd(): SQLiteDatabase {
     garantirColuna(db, 'movimento', 'criadoEm', 'TEXT');
   }
 
+  // v7 → v8: fotografia do terreno e coordenadas da exploração. Ficam vazias no
+  // que já existe — as coordenadas dos terrenos NÃO se copiam para a
+  // exploração: o primeiro terreno com GPS não é a sede da quinta, e inventar
+  // isso punha a meteorologia a mudar de sítio sozinha em quem nunca a marcou.
+  if (versao < 8) {
+    garantirColuna(db, 'terreno', 'fotografia', 'TEXT');
+    garantirColuna(db, 'exploracao', 'latitude', 'REAL');
+    garantirColuna(db, 'exploracao', 'longitude', 'REAL');
+  }
+
   if (versao < SCHEMA_VERSION) {
     db.execSync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   }

@@ -94,6 +94,42 @@ export async function carregarAtividade(
   }));
 }
 
+/**
+ * O historial de UM registo — quem o criou, quem lhe mexeu e quando.
+ *
+ * A mesma tabela e a mesma RLS da lista geral; muda só a pergunta. Serve o ecrã
+ * de editar uma despesa: sem isto, corrigir um lançamento era uma alteração
+ * silenciosa, e numa exploração com equipa ninguém sabia se os 45 € tinham sido
+ * sempre 45 € ou se alguém lhes mexeu ontem.
+ *
+ * Devolve vazio sem servidor (modo local) e vazio quando a RLS não deixa ver —
+ * que é o caso do trabalhador a olhar para o que outra pessoa lançou.
+ */
+export async function carregarHistoricoDe(
+  tabela: TabelaAtividade,
+  registoId: string,
+): Promise<Atividade[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('registo_atividade')
+    .select('id, em, exploracao_id, user_id, tabela, registo_id, acao, resumo')
+    .eq('tabela', tabela)
+    .eq('registo_id', registoId)
+    .order('em', { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as LinhaAtividade[]).map((l) => ({
+    id: l.id,
+    em: l.em,
+    exploracaoId: l.exploracao_id,
+    userId: l.user_id ?? undefined,
+    tabela: l.tabela,
+    registoId: l.registo_id ?? undefined,
+    acao: l.acao,
+    resumo: l.resumo ?? '',
+  }));
+}
+
 /* ---------------- Apresentação (lógica pura) ---------------- */
 
 const NOME_TABELA: Record<TabelaAtividade, string> = {

@@ -202,6 +202,15 @@ export default function InicioScreen() {
           tint={colors.infoTint}
           onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Parto' } })}
         />
+        {/* A vacinação faltava aqui e é o registo que mais vezes se faz a um
+            lote inteiro — a campanha da língua azul num dia, o cercado todo.
+            Chegava-se a ela por Medicamento e depois trocando o tipo lá dentro,
+            que é um passo a mais no registo mais repetido do ano. */}
+        <QuickAction
+          icon="needle"
+          label="Vacinação"
+          onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Vacinação' } })}
+        />
         <QuickAction
           icon="medical-bag"
           label="Medicamento"

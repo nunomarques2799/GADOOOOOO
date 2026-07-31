@@ -25,4 +25,5 @@ schema_acesso_ate.sql
 schema_atividade.sql
 schema_apoio.sql
 schema_papel_veterinario.sql
+schema_fotos_localizacao.sql
 schema_lint.sql

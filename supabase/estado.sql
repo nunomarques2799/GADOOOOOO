@@ -104,13 +104,16 @@ select * from (
              join pg_namespace n on n.oid = p.pronamespace
             where n.nspname = 'public' and p.proname = 'role_padrao_pode'
               and pg_get_functiondef(p.oid) like '%registarTratamentos%'))),
-    -- O 21 não cria nada: só mexe em permissões. A marca é o efeito dele. São
+    (21, 'schema_fotos_localizacao.sql','terreno.fotografia + exploracao.latitude',
+        (exists (select 1 from col where tabela = 'terreno' and coluna = 'fotografia')
+         and exists (select 1 from col where tabela = 'exploracao' and coluna = 'latitude'))),
+    -- O 22 não cria nada: só mexe em permissões. A marca é o efeito dele. São
     -- DUAS condições porque a primeira, sozinha, mente: a limpeza do anon já
     -- tinha sido feita pelo `schema_seguranca.sql` (4.º), por isso uma base a
-    -- que faltava o 21 inteiro dava `t` na passagem a produção de 2026-07-31.
+    -- que faltava o 22 inteiro dava `t` na passagem a produção de 2026-07-31.
     -- A segunda só este ficheiro a produz — o 5.º dá o `execute` de
     -- `apagar_a_minha_conta()` a `authenticated` e mais nenhum o tira.
-    (21, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
+    (22, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
         (not exists (
            select 1 from pg_proc p
              join pg_namespace n on n.oid = p.pronamespace

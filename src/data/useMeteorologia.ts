@@ -1,9 +1,23 @@
 /**
  * Hook de meteorologia para uma dada exploração.
  * ------------------------------------------------------------------
- * Usa as coordenadas GPS dos terrenos da exploração; se não houver
- * nenhuma, tenta geo-codificar a localização textual via Open-Meteo
- * Geocoding API (também gratuita e sem chave).
+ * Três origens para o sítio, pela ordem em que se confia nelas:
+ *   1. as coordenadas da PRÓPRIA exploração, se o criador as marcou no mapa;
+ *   2. as de um terreno com GPS;
+ *   3. a localização escrita, passada pela geocodificação do Open-Meteo.
+ *
+ * A ordem mudou quando a exploração ganhou mapa: antes começava no terreno, e
+ * quem tem os cercados espalhados por vinte quilómetros via a previsão do
+ * primeiro que por acaso tivesse GPS.
+ *
+ * CUIDADO COM AS DEPENDÊNCIAS DO EFEITO. Elas são valores simples (números e
+ * strings), e têm de continuar a ser. `terrenosByExploracao()` devolve um array
+ * NOVO em cada render, e `exploracaoById()` muda de identidade sempre que a
+ * lista de explorações é substituída: com qualquer um deles nas dependências, o
+ * efeito voltava a correr a cada render, abortava o pedido anterior antes de ele
+ * chegar e punha o estado outra vez em 'a-carregar' — o loader que nunca
+ * acabava, e que só aparecia a quem tinha coordenadas nalgum lado (sem elas o
+ * valor era `null`, que é estável, e o ciclo não se fechava).
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -61,28 +75,34 @@ export function useMeteorologia(exploracaoId: string | undefined): Resultado {
   const exploracao = exploracaoId ? exploracaoById(exploracaoId) : undefined;
   const terrenos = exploracaoId ? terrenosByExploracao(exploracaoId) : [];
 
-  // Coordenadas diretas dos terrenos (prioridade).
-  const localDireto = useMemo<LocalMeteo | null>(() => {
-    const t = terrenos.find((t) => t.latitude != null && t.longitude != null);
-    if (t?.latitude != null && t.longitude != null) {
-      return {
-        latitude: t.latitude,
-        longitude: t.longitude,
-        local: exploracao?.localizacao?.split(',')[0]?.trim() || t.nome,
-      };
-    }
-    return null;
-  }, [terrenos, exploracao]);
+  // Coordenadas já conhecidas: as da exploração, senão as do primeiro terreno
+  // com GPS. Guardadas como três valores simples — ver o aviso no cabeçalho.
+  const comGps = terrenos.find((t) => t.latitude != null && t.longitude != null);
+  const latitude = exploracao?.latitude ?? comGps?.latitude;
+  const longitude = exploracao?.longitude ?? comGps?.longitude;
+  const nomeLocal =
+    exploracao?.localizacao?.split(',')[0]?.trim() || comGps?.nome || exploracao?.nome || '';
+  const textoLocal = exploracao?.localizacao?.trim() || '';
+  const existe = !!exploracao;
 
-  const textoLocal = exploracao?.localizacao?.trim() || null;
   const controladorRef = useRef<AbortController | null>(null);
+
+  // O objeto que o `fetch` recebe é montado a partir dos valores simples acima.
+  // Fica FORA das dependências do efeito de propósito: é reconstruído a cada
+  // render, e não é a identidade dele que decide se é preciso pedir de novo.
+  const localDireto = useMemo<LocalMeteo | null>(
+    () => (latitude != null && longitude != null
+      ? { latitude, longitude, local: nomeLocal || 'A exploração' }
+      : null),
+    [latitude, longitude, nomeLocal],
+  );
 
   useEffect(() => {
     controladorRef.current?.abort();
     const controlador = new AbortController();
     controladorRef.current = controlador;
 
-    if (!exploracao) {
+    if (!existe) {
       setEstado('sem-local');
       setMeteo(null);
       return () => controlador.abort();
@@ -100,6 +120,7 @@ export function useMeteorologia(exploracaoId: string | undefined): Resultado {
           return;
         }
         const m = await fetchMeteorologia(local, controlador.signal);
+        if (controlador.signal.aborted) return;
         setMeteo(m);
         setEstado('atual');
       } catch (e: unknown) {
@@ -110,7 +131,10 @@ export function useMeteorologia(exploracaoId: string | undefined): Resultado {
 
     void obter();
     return () => controlador.abort();
-  }, [exploracao, localDireto, textoLocal, tentativa]);
+    // `localDireto` está fora de propósito (ver o cabeçalho): o que decide
+    // repetir o pedido são as coordenadas em si, não o objeto que as embrulha.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existe, latitude, longitude, nomeLocal, textoLocal, tentativa]);
 
   return {
     meteo,

@@ -150,6 +150,17 @@ export interface Exploracao extends ComVersao {
   marcaExploracao: string;
   nifDetentor: string;
   localizacao?: string;
+  /**
+   * Onde fica a sede da exploração, marcada no mapa. Opcional: escrever o nome
+   * da terra continua a chegar (é o `localizacao`), e é o que a maioria faz.
+   *
+   * Quando existe, manda na meteorologia — ver `useMeteorologia`. Antes disto o
+   * tempo saía das coordenadas do PRIMEIRO terreno com GPS, ou de uma
+   * geocodificação do texto; quem tem os cercados espalhados por vinte
+   * quilómetros via a previsão de um sítio que não escolheu.
+   */
+  latitude?: number;
+  longitude?: number;
   fotografia?: string;
   /**
    * A gestão económica está ligada nesta exploração? Desligada (o valor por
@@ -186,6 +197,12 @@ export interface Terreno extends ComVersao {
   longitude?: number;
   area?: number; // hectares
   tipo?: TipoTerreno;
+  /**
+   * Fotografia do sítio, como a do animal: data URI JPEG reduzido, guardado na
+   * própria coluna (ver `data/foto.ts`). Um lameiro reconhece-se de vista muito
+   * antes de se ler o nome que alguém lhe deu na app.
+   */
+  fotografia?: string;
 }
 
 export interface Animal extends ComVersao {
@@ -359,6 +376,24 @@ export interface Alerta {
   categoria: 'snira' | 'identificacao' | 'parto' | 'medicamento' | 'vacinacao';
 }
 
+/**
+ * Um dia da previsão. Sem hora, sem humidade e sem vento de propósito: a
+ * pergunta que se faz a uma previsão a três dias é "chove?" e "que frio faz de
+ * manhã", e o resto é ruído com ar de precisão.
+ */
+export interface DiaMeteo {
+  /** O dia (ISO aaaa-mm-dd). */
+  data: string;
+  maxima: number;
+  minima: number;
+  condicao: string;
+  icone: string; // nome de ícone MaterialCommunityIcons
+  /** Chuva prevista para o dia inteiro, em mm. */
+  precipitacao: number;
+  /** Probabilidade de precipitação (%), quando a API a dá. */
+  probabilidadeChuva?: number;
+}
+
 export interface Meteorologia {
   local: string;
   temperatura: number;
@@ -370,4 +405,13 @@ export interface Meteorologia {
   maxima: number;
   minima: number;
   conselho: string;
+  /**
+   * Hoje e os dias seguintes, por ordem. O primeiro é sempre hoje — é o que
+   * deixa os cartões da previsão e os números de cima virem da mesma resposta,
+   * em vez de discordarem um do outro por causa de dois pedidos.
+   *
+   * Pode vir vazio: uma resposta sem bloco diário ainda serve para mostrar o
+   * tempo que está agora, e é melhor do que um ecrã de erro.
+   */
+  dias: DiaMeteo[];
 }

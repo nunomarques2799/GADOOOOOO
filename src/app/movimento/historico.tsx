@@ -135,9 +135,10 @@ export default function HistoricoMovimentosScreen() {
                     autor={nomeDe(m.criadoPor)}
                     animal={m.animalId ? (animalById(m.animalId)?.nome ?? undefined) : undefined}
                     divider={i < visiveis.length - 1}
-                    onPress={
-                      m.animalId ? () => router.push(`/animal/${m.animalId}`) : undefined
-                    }
+                    // Abre o lançamento, não a ficha do animal: quem vem a este
+                    // ecrã veio conferir quem lançou o quê, e o passo seguinte
+                    // de "isto está mal" é corrigi-lo.
+                    onPress={() => router.push(`/movimento/editar/${m.id}`)}
                   />
                 ))}
               </View>
