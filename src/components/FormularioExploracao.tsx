@@ -157,6 +157,23 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
     );
   }
 
+  // E o mesmo para EDITAR. Faltava: o ramo acima só cobria a criação, portanto
+  // um trabalhador ou um veterinário que chegasse a `/exploracao/editar/[id]`
+  // encontrava o nome, a marca e o NIF da exploração de outra pessoa num
+  // formulário aberto, pronto a gravar contra uma RLS que o ia recusar.
+  if (editar && !pode(exploracao?.id, 'editarExploracao')) {
+    return (
+      <EcraComTeclado>
+        <Header title="Editar exploração" />
+        <EmptyState
+          icon="lock-outline"
+          title="A exploração é de quem a tem a cargo"
+          message="O nome, a marca de exploração, o NIF e a localização são alterados por quem responde por ela. Continua a poder trabalhar nos animais e no que lhe compete."
+        />
+      </EcraComTeclado>
+    );
+  }
+
   return (
     <EcraComTeclado>
       <Header title={editar ? 'Editar exploração' : 'Nova exploração'} />

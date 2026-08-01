@@ -99,6 +99,19 @@ export default function EquipaExploracaoScreen() {
   const [modoPrazo, setModoPrazo] = useState<'duracao' | 'ate'>('duracao');
   /** Quem tem os campos de dia/hora abertos na lista de membros (pelo id do vínculo). */
   const [aMarcar, setAMarcar] = useState<string | undefined>(undefined);
+  /**
+   * O código que está mesmo na área de transferência.
+   *
+   * Guarda-se o CÓDIGO e não um simples `true`: há dois sítios a copiar (a caixa
+   * do código acabado de gerar e a lista dos que estão por usar), e com um
+   * booleano copiar um deles marcava-os todos como copiados.
+   *
+   * Não se apaga sozinho ao fim de uns segundos. Quem copia um código vai
+   * colá-lo noutra aplicação — no WhatsApp, numa mensagem — e volta à app
+   * depois; encontrar o aviso já desaparecido deixava a dúvida de saber se
+   * chegou a copiar. Fica até se copiar outro.
+   */
+  const [copiado, setCopiado] = useState<string | null>(null);
   const [diaFim, setDiaFim] = useState(() => formatarDia(new Date().toISOString()));
   const [horaFim, setHoraFim] = useState(HORA_OMISSAO);
   const comPrazo = rolePedido === 'veterinario';
@@ -203,10 +216,16 @@ export default function EquipaExploracaoScreen() {
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(codigo);
+        // A marca de "copiado" só se põe DEPOIS de o browser aceitar. Pô-la
+        // antes, ou no ramo do alerta lá em baixo, dava um ecrã a garantir que
+        // o código estava na área de transferência quando não estava — e quem
+        // fosse colá-lo à mensagem colava outra coisa qualquer.
+        setCopiado(codigo);
         toast.sucesso('Código copiado', codigo);
       } catch {
         // O browser pode recusar a área de transferência (sem HTTPS, sem foco).
         // O código continua à vista no ecrã — é só dizer que não foi copiado.
+        setCopiado(null);
         toast.erro('Não foi possível copiar', 'Escreva o código à mão.');
       }
       return;
@@ -589,8 +608,29 @@ export default function EquipaExploracaoScreen() {
                     ? `Dá acesso durante ${rotuloDuracao(codigoNovo.acessoHoras)} a contar de quando o usar.`
                     : 'Dá acesso sem prazo, até ser removido da equipa.'}
               </Text>
+              {/* Copiar é a única ação desta caixa que não deixa rasto nenhum:
+                  o código já estava no ecrã antes e continua igual depois. Sem
+                  esta linha, quem carregava ficava sem saber se tinha carregado
+                  — e carregava outra vez, por via das dúvidas. */}
+              {copiado === codigoNovo.codigo ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                    marginBottom: spacing.sm,
+                  }}>
+                  <Icon name="check-circle" size="md" color={colors.success} />
+                  <Text variant="bodyStrong" color={colors.success}>
+                    Código copiado
+                  </Text>
+                </View>
+              ) : null}
+              {/* O botão continua lá, e a copiar: o rótulo é que muda para
+                  dizer o que já aconteceu. Desativá-lo prendia quem tivesse
+                  copiado e depois perdido a área de transferência noutra app. */}
               <Button
-                label="Copiar código"
+                label={copiado === codigoNovo.codigo ? 'Copiar outra vez' : 'Copiar código'}
                 icon="content-copy"
                 variant="secondary"
                 fullWidth={false}
@@ -632,9 +672,26 @@ export default function EquipaExploracaoScreen() {
                           ? ` · código expira ${formatDataCurta(c.expiraEm)}`
                           : ''}
                       </Text>
+                      {copiado === c.codigo ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                          <Icon name="check-circle" size="xs" color={colors.success} />
+                          <Text variant="caption" color={colors.success}>
+                            Código copiado
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
-                    <Pressable onPress={() => copiar(c.codigo)} hitSlop={8} accessibilityLabel="Copiar">
-                      <Icon name="content-copy" size="md" color={colors.primary} />
+                    {/* Mesmo botão, mesma ação: só o ícone diz que já foi
+                        copiado uma vez. Ver a nota da caixa do código novo. */}
+                    <Pressable
+                      onPress={() => copiar(c.codigo)}
+                      hitSlop={8}
+                      accessibilityLabel={copiado === c.codigo ? 'Copiar outra vez' : 'Copiar'}>
+                      <Icon
+                        name={copiado === c.codigo ? 'check-circle' : 'content-copy'}
+                        size="md"
+                        color={copiado === c.codigo ? colors.success : colors.primary}
+                      />
                     </Pressable>
                     <Pressable onPress={() => apagarConvite(c.codigo)} hitSlop={8} accessibilityLabel="Apagar convite">
                       <Icon name="trash-can-outline" size="md" color={colors.danger} />

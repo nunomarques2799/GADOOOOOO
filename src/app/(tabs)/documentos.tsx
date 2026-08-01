@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CartaoIntroducao } from '@/components/CartaoIntroducao';
 import { ModalRelatorioPrazos } from '@/components/ModalRelatorioPrazos';
+import { SeccaoDocumentos } from '@/components/SeccaoDocumentos';
 import { Button, Card, EmptyState, FolhaComTeclado, Icon, type IconName, Text } from '@/components/ui';
 import { exportarAnimaisExcel } from '@/data/animalExcelFicheiro';
 import { avisar, confirmar } from '@/data/avisos';
@@ -15,6 +16,7 @@ import { useMembros } from '@/data/membros';
 import { useNotas, type Nota } from '@/data/notas';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
+import { useDocumentos } from '@/data/useDocumentos';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, sizes, spacing } from '@/theme';
 
@@ -33,6 +35,10 @@ export default function DocumentosScreen() {
   const { animais, eventos, exploracoes, terrenos, alertas } = useGado();
   const { contaSuspensa, podeVer } = useMembros();
   const notasApi = useNotas();
+  // Acima do desvio de "sem permissão" mais abaixo, como os outros hooks: um
+  // `return` condicional pelo meio mudava a contagem de hooks entre renders (o
+  // papel chega da cache e é corrigido pelo servidor logo a seguir).
+  const documentosApi = useDocumentos();
   const toast = useToasts();
 
   const [relatorioAberto, setRelatorioAberto] = useState(false);
@@ -109,7 +115,7 @@ export default function DocumentosScreen() {
         <View style={{ ...coluna, paddingTop: insets.top + spacing.md, paddingBottom: spacing.lg }}>
           <Text variant="display">Documentos</Text>
           <Text variant="body" color={colors.textSecondary}>
-            Importar, exportar e as suas notas
+            Guardar papéis, importar, exportar e as suas notas
           </Text>
         </View>
 
@@ -123,12 +129,19 @@ export default function DocumentosScreen() {
             icon="file-document-multiple-outline"
             titulo="Para que serve este separador"
             pontos={[
+              'Guarde aqui os papéis que recebe: fotografe a fatura da ração, a guia de circulação ou o recibo do veterinário e ficam arrumados por gaveta, na exploração e não no telemóvel.',
               'Se já tem os animais escritos num ficheiro Excel, pode trazê-los todos de uma vez em vez de os escrever um a um.',
               'Daqui também leva os seus dados para fora: a lista de animais em Excel, e relatórios de prazos para imprimir ou entregar.',
               'As notas são suas e só suas: servem para o que não cabe na ficha de um animal — combinações, telefones, o que ficou por fazer.',
-              'Importar e exportar ficheiros só funciona no computador. No telemóvel o resto do separador funciona na mesma.',
+              'Importar e exportar ficheiros só funciona no computador. Guardar documentos e as notas funcionam também no telemóvel.',
             ]}
           />
+
+          {/* Os documentos guardados vêm em PRIMEIRO. O que estava aqui antes
+              era tudo sobre ficheiros que saem — exportações e relatórios — e é
+              trabalho de fim de mês; guardar a fatura que se acabou de receber
+              é o que se faz todas as semanas. */}
+          <SeccaoDocumentos api={documentosApi} />
 
           {/* Importar — só web/Electron (o telemóvel não escolhe ficheiros sem build nativo) */}
           {comFicheiros && !contaSuspensa ? (

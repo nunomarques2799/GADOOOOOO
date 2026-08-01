@@ -38,7 +38,10 @@ Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
 | 19 | `schema_apoio.sql` | Escrever ao apoio e reportar problemas de dentro da app; o motor de envio muda para o schema `interno`. | **16** |
 | 20 | `schema_papel_veterinario.sql` | `registarTratamentos` separada de `editarAnimais`; o veterinário deixa de mexer em fichas, terrenos e saídas; contas convidadas não criam explorações. | 2, **13**, 15 |
 | 21 | `schema_fotos_localizacao.sql` | `terreno.fotografia` e `exploracao.latitude`/`longitude`: foto do sítio e sede marcada no mapa. | 1 |
-| 22 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. | **todos** |
+| 22 | `schema_convite_por_papel.sql` | Um código de trabalhador deixa de servir a uma conta de veterinário (e vice-versa): o `resgatar_convite` confere o papel do código com o que a conta disse ser. | **17** |
+| 23 | `schema_agenda.sql` | `evento_agenda`: os eventos que as pessoas marcam (dia, hora opcional, público ou privado). O veterinário não tem agenda. | 1, 2, **20** |
+| 24 | `schema_documentos.sql` | `documento` + o bucket privado `documentos`: guardar faturas e papéis na exploração, por categoria. O veterinário não os vê. | 1, 2, **20** |
+| 25 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. | **todos** |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 

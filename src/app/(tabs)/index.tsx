@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,11 +10,15 @@ import { BannerAtualizacao } from '@/components/BannerAtualizacao';
 import { BannerNaoGravado } from '@/components/BannerNaoGravado';
 import { BannerAcessoExpirado } from '@/components/BannerAcessoExpirado';
 import { BannerSuspensao } from '@/components/BannerSuspensao';
+import { CalendarioAgenda } from '@/components/CalendarioAgenda';
+import { ModalDiaAgenda } from '@/components/ModalDiaAgenda';
 import { PainelPrimeirosPassos } from '@/components/PainelPrimeirosPassos';
 import { ExploracaoRow } from '@/components/ExploracaoRow';
 import { QuickAction } from '@/components/QuickAction';
 import { StatCard } from '@/components/StatCard';
 import { Avatar, Badge, Card, Icon, SectionHeader, Text } from '@/components/ui';
+import { useAgenda } from '@/data/useAgenda';
+import { agruparPorDia } from '@/data/calendario';
 import { resumoFinanceiro } from '@/data/financas';
 import { dataExtensa, formatEuro, saudacao } from '@/data/helpers';
 import { saiuDoEfetivo } from '@/data/historicoAnimais';
@@ -30,12 +34,23 @@ export default function InicioScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
-  const { isSuperadmin, podeVer, estadoPerfil, acessoExpirado } = useMembros();
+  const { isSuperadmin, podeVer, podeEmAlguma, estadoPerfil, acessoExpirado } = useMembros();
   const { controlo: controloAtualizar } = useAtualizarPuxando();
   const {
     utilizador, exploracoes, terrenos, animais, eventos, movimentos, alertas, online,
     pendentesSinc,
   } = useGado();
+
+  // O calendário. Como os restantes hooks, fica ACIMA do desvio do superadmin —
+  // um `return` condicional pelo meio mudava a contagem de hooks entre renders
+  // e derrubava a app com "Rendered fewer hooks than expected" (ver a nota do
+  // `useFinancas` mais abaixo, que é o mesmo problema).
+  const { porDia: eventosPorDia } = useAgenda();
+  const temAgenda = podeVer(undefined, 'verAgenda');
+  const podeMarcarEventos = podeEmAlguma('marcarEventos');
+  /** O dia que o modal está a mostrar, ou `undefined` se está fechado. */
+  const [diaAberto, setDiaAberto] = useState<string | undefined>(undefined);
+  const alertasPorDia = useMemo(() => agruparPorDia(alertas), [alertas]);
 
   // Duas condições, uma só resposta (ver `useFinancas`): a gestão económica
   // tem de estar ligada na conta E esta pessoa tem de a poder consultar.
@@ -85,6 +100,30 @@ export default function InicioScreen() {
     .slice(0, 2)
     .join('');
   const urgentes = alertas.filter((a) => a.gravidade === 'urgente').length;
+
+  /**
+   * O calendário, em primeiro no Início.
+   *
+   * Vem antes dos avisos de propósito: a lista de avisos responde a "o que está
+   * atrasado", e o calendário a "o que me espera" — que é a pergunta com que se
+   * pega no telemóvel de manhã. Ao veterinário não aparece de todo (ver
+   * `verAgenda` em `permissoes.ts`): a agenda diz quando é a feira e a que horas
+   * se carrega o camião, que é o movimento da casa de outra pessoa.
+   */
+  const secaoCalendario = temAgenda ? (
+    <>
+      <SectionHeader
+        title="O que aí vem"
+        actionLabel={podeMarcarEventos ? 'Marcar' : undefined}
+        onAction={podeMarcarEventos ? () => router.push('/agenda/novo') : undefined}
+      />
+      <CalendarioAgenda
+        eventosPorDia={eventosPorDia}
+        alertas={alertas}
+        onAbrirDia={setDiaAberto}
+      />
+    </>
+  ) : null;
 
   const secaoAlertas = (
     <>
@@ -194,6 +233,18 @@ export default function InicioScreen() {
     <>
       <SectionHeader title="Ações rápidas" />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+        {/* Em primeiro, e não no fim: marcar um evento é o que se faz assim que
+            se combina alguma coisa ao telefone, e é a única ação rápida que não
+            precisa de ter um animal à frente. */}
+        {podeMarcarEventos ? (
+          <QuickAction
+            icon="calendar-plus"
+            label="Novo evento"
+            color={colors.primary}
+            tint={colors.primaryTint}
+            onPress={() => router.push('/agenda/novo')}
+          />
+        ) : null}
         <QuickAction icon="plus-circle" label="Novo animal" onPress={() => router.push('/animal/novo')} />
         <QuickAction
           icon="baby-bottle-outline"
@@ -353,12 +404,14 @@ export default function InicioScreen() {
               é que lhe diz o que fazer. */}
           {estadoPerfil === 'ativo' && !acessoExpirado ? <PainelPrimeirosPassos /> : null}
 
-          {/* Em desktop há largura para duas colunas: o que exige ação à
-              esquerda, os números e atalhos à direita. No telemóvel segue
-              tudo em pilha, pela mesma ordem de importância. */}
+          {/* Em desktop há largura para duas colunas: à ESQUERDA o tempo — o
+              calendário, os prazos a vencer e as explorações onde tudo isso
+              acontece; à direita os números e os atalhos. No telemóvel segue
+              tudo em pilha, pela mesma ordem. */}
           {desktop ? (
             <View style={{ flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' }}>
               <View style={{ flex: 3 }}>
+                {secaoCalendario}
                 {secaoAlertas}
                 {secaoExploracoes}
               </View>
@@ -369,14 +422,37 @@ export default function InicioScreen() {
             </View>
           ) : (
             <>
+              {secaoCalendario}
               {secaoAlertas}
-              {secaoResumo}
               {secaoExploracoes}
+              {secaoResumo}
               {secaoAcoes}
             </>
           )}
         </View>
       </ScrollView>
+
+      {/* O dia que se tocou no calendário. Montado só quando está aberto: fora
+          disso não há modal nenhum a guardar o dia de uma sessão anterior. */}
+      {diaAberto ? (
+        <ModalDiaAgenda
+          aberto
+          dia={diaAberto}
+          eventos={eventosPorDia.get(diaAberto) ?? []}
+          alertas={alertasPorDia.get(diaAberto) ?? []}
+          podeMarcar={podeMarcarEventos}
+          onFechar={() => setDiaAberto(undefined)}
+          onMudarDia={setDiaAberto}
+          onEditar={(e) => {
+            setDiaAberto(undefined);
+            router.push(`/agenda/editar/${e.id}`);
+          }}
+          onNovo={(dia) => {
+            setDiaAberto(undefined);
+            router.push({ pathname: '/agenda/novo', params: { dia } });
+          }}
+        />
+      ) : null}
     </View>
   );
 }

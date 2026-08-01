@@ -47,6 +47,17 @@ export type Capacidade =
   | 'eliminarAnimais'
   /** Marcar um animal como falecido ou vendido. */
   | 'registarSaida'
+  /**
+   * Marcar eventos na agenda da exploração: a feira, a entrega da ração, o dia
+   * de carregar para o matadouro.
+   *
+   * NÃO é ajustável pessoa a pessoa (fora de `CAPACIDADES_GERIVEIS`), ao
+   * contrário de quase tudo o que está à volta. Uma agenda que uns podem
+   * escrever e outros não deixa de ser uma agenda da exploração e passa a ser
+   * um mural de recados de meia dúzia — e o que se ganhava não paga o
+   * interruptor a mais numa folha que já tem oito.
+   */
+  | 'marcarEventos'
   /** Lançar uma despesa da exploração (ração, energia, gasóleo, rendas…). */
   | 'registarDespesa'
   /** Lançar uma receita (venda, leite, subsídios). Decide quanto entrou. */
@@ -82,6 +93,7 @@ const PERMISSOES: Record<RoleMembro, readonly Capacidade[]> = {
     'registarTratamentos',
     'eliminarAnimais',
     'registarSaida',
+    'marcarEventos',
     'registarDespesa',
     'registarReceita',
     'registarCustoTratamento',
@@ -92,6 +104,7 @@ const PERMISSOES: Record<RoleMembro, readonly Capacidade[]> = {
     'registarTratamentos',
     'eliminarAnimais',
     'registarSaida',
+    'marcarEventos',
     'registarDespesa',
     'registarCustoTratamento',
   ],
@@ -118,7 +131,16 @@ export type CapacidadeLeitura =
    * trabalhar. Fica escrito aqui para não se tomar por uma barreira que não é:
    * ao veterinário fecha-se a porta da frente, e é quanto se consegue.
    */
-  | 'verDocumentos';
+  | 'verDocumentos'
+  /**
+   * Ver o calendário da exploração e os eventos marcados nele.
+   *
+   * Esta, ao contrário dos Documentos, TEM política de RLS por trás
+   * (`tem_agenda()` em `supabase/schema_agenda.sql`): a agenda não reempacota
+   * nada que o veterinário já pudesse ler, portanto fechá-la no servidor não
+   * lhe tira nada do trabalho.
+   */
+  | 'verAgenda';
 
 /**
  * Consultar as contas é do dono. O trabalhador e o veterinário veem apenas o
@@ -131,8 +153,8 @@ export type CapacidadeLeitura =
  * ficheiro Excel a caminho da quinta seguinte.
  */
 const LEITURA: Record<RoleMembro, readonly CapacidadeLeitura[]> = {
-  admin: ['verFinancas', 'verBalancoAnimal', 'verDocumentos'],
-  trabalhador: ['verDocumentos'],
+  admin: ['verFinancas', 'verBalancoAnimal', 'verDocumentos', 'verAgenda'],
+  trabalhador: ['verDocumentos', 'verAgenda'],
   veterinario: [],
 };
 
@@ -258,6 +280,8 @@ export function legendaCapacidade(c: Capacidade): string {
       return 'Eliminar animais';
     case 'registarSaida':
       return 'Mortes e vendas';
+    case 'marcarEventos':
+      return 'Marcar eventos';
     case 'registarDespesa':
       return 'Despesas';
     case 'registarReceita':
@@ -286,6 +310,8 @@ export function explicacaoCapacidade(c: Capacidade): string {
       return 'Tirar um animal da lista para sempre. O registo fica guardado no histórico do efetivo, com o nome de quem o eliminou.';
     case 'registarSaida':
       return 'Marcar um animal como falecido ou vendido.';
+    case 'marcarEventos':
+      return 'Marcar no calendário da exploração o que aí vem: a feira, a entrega da ração, o dia de carregar.';
     case 'registarDespesa':
       return 'Lançar o que se gastou: ração, gasóleo, energia, rendas.';
     case 'registarReceita':

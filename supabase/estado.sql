@@ -107,13 +107,23 @@ select * from (
     (21, 'schema_fotos_localizacao.sql','terreno.fotografia + exploracao.latitude',
         (exists (select 1 from col where tabela = 'terreno' and coluna = 'fotografia')
          and exists (select 1 from col where tabela = 'exploracao' and coluna = 'latitude'))),
-    -- O 22 não cria nada: só mexe em permissões. A marca é o efeito dele. São
+    (22, 'schema_convite_por_papel.sql','intencao_de_equipa() existe',
+        (exists (select 1 from func where nome = 'intencao_de_equipa'))),
+    (23, 'schema_agenda.sql',          'tabela evento_agenda',
+        (to_regclass('public.evento_agenda') is not null)),
+    -- Duas marcas porque este ficheiro escreve em dois sítios que se aplicam
+    -- separadamente: a tabela (base) e o bucket (Storage). Uma base com a
+    -- tabela e sem o bucket lista documentos que não abrem.
+    (24, 'schema_documentos.sql',      'tabela documento + bucket documentos',
+        (to_regclass('public.documento') is not null
+         and exists (select 1 from storage.buckets where id = 'documentos'))),
+    -- O último não cria nada: só mexe em permissões. A marca é o efeito dele. São
     -- DUAS condições porque a primeira, sozinha, mente: a limpeza do anon já
     -- tinha sido feita pelo `schema_seguranca.sql` (4.º), por isso uma base a
-    -- que faltava o 22 inteiro dava `t` na passagem a produção de 2026-07-31.
-    -- A segunda só este ficheiro a produz — o 5.º dá o `execute` de
+    -- que faltava este ficheiro inteiro dava `t` na passagem a produção de
+    -- 2026-07-31. A segunda só ele a produz — o 5.º dá o `execute` de
     -- `apagar_a_minha_conta()` a `authenticated` e mais nenhum o tira.
-    (22, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
+    (25, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
         (not exists (
            select 1 from pg_proc p
              join pg_namespace n on n.oid = p.pronamespace

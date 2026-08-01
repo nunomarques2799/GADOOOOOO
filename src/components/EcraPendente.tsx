@@ -332,6 +332,11 @@ function traduzErroConvite(msg: string): string {
   if (m.includes('código inválido')) return 'Código inválido.';
   if (m.includes('já foi usado') || m.includes('ja foi usado')) return 'Este código já foi utilizado.';
   if (m.includes('expirado')) return 'Este código expirou. Peça um novo ao cliente.';
+  // O código é de um papel e a conta foi criada para o outro (ver
+  // `supabase/schema_convite_por_papel.sql`). A frase do servidor já diz qual é
+  // qual e o que pedir a seguir — só lhe falta a maiúscula, porque as mensagens
+  // do Postgres começam em minúscula por convenção.
+  if (m.includes('a sua conta foi criada como')) return msg.charAt(0).toUpperCase() + msg.slice(1);
   return msg;
 }
 

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Chip, EcraComTeclado, Header, Icon, type IconName, Text } from '@/components/ui';
+import { Button, Chip, EcraComTeclado, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
 import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
 import { SeletorFoto } from '@/components/SeletorFoto';
 import { avisar, confirmar } from '@/data/avisos';
@@ -29,7 +29,8 @@ export function FormularioTerreno({
   const toast = useToasts();
 
   const editar = !!terreno;
-  const podeEliminar = pode(exploracaoId, 'gerirTerrenos');
+  const podeGerir = pode(exploracaoId, 'gerirTerrenos');
+  const podeEliminar = podeGerir;
   const [nome, setNome] = useState(terreno?.nome ?? '');
   const [tipo, setTipo] = useState<TipoTerreno>(terreno?.tipo ?? 'Pastagem');
   const [area, setArea] = useState(terreno?.area != null ? String(terreno.area) : '');
@@ -127,6 +128,29 @@ export function FormularioTerreno({
         + 'imputadas continuam nas contas da exploração.',
       () => void executar(),
       { rotuloConfirmar: 'Eliminar', destrutivo: true },
+    );
+  }
+
+  // Os terrenos são de quem gere a exploração. Ao veterinário — que não os
+  // gere — os botões que trazem aqui já não aparecem, mas a rota existe: um
+  // link guardado, o botão de voltar do navegador ou a barra lateral do
+  // computador chegam cá na mesma. Sem isto, ele preenchia o formulário todo e
+  // só descobria no Guardar — ou, estando sem rede, nunca: a escrita entrava na
+  // fila e era o servidor a deitá-la fora muito depois, sem ninguém a ver.
+  if (!podeGerir) {
+    return (
+      <EcraComTeclado>
+        <Header title={editar ? 'Editar terreno' : 'Novo terreno'} />
+        <EmptyState
+          icon="lock-outline"
+          title="Os terrenos são de quem gere a exploração"
+          message={
+            editar
+              ? 'Pode ver este terreno e os animais que lá andam, mas alterá-lo é de quem tem a exploração a cargo.'
+              : 'Registar terrenos novos é de quem tem a exploração a cargo.'
+          }
+        />
+      </EcraComTeclado>
     );
   }
 

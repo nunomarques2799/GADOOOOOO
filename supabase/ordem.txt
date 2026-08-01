@@ -26,4 +26,7 @@ schema_atividade.sql
 schema_apoio.sql
 schema_papel_veterinario.sql
 schema_fotos_localizacao.sql
+schema_convite_por_papel.sql
+schema_agenda.sql
+schema_documentos.sql
 schema_lint.sql
