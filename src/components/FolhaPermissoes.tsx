@@ -456,8 +456,16 @@ function SeccaoPrazo({
         {/* "Terminar já" e "Tirar o prazo" são o contrário uma da outra e são
             fáceis de trocar — daí os rótulos dizerem o que acontece e não o que
             se mexe. A primeira fecha a porta agora; a segunda deixa-a aberta
-            para sempre, e por isso só aparece a quem tem prazo. */}
-        {vinculo.expiraEm && !terminou ? (
+            para sempre.
+
+            "Terminar já" aparece a QUALQUER pessoa que não seja dona, tenha ela
+            prazo ou não. Enquanto só aparecia a quem já tinha um, o veterinário
+            convidado sem prazo — que é o que acontece quando se escolhe "sem
+            prazo" no convite — não se conseguia cortar de todo: era preciso
+            removê-lo da equipa, o que apaga o vínculo e a folha de permissões
+            dele com ele. Fechar a porta e apagar a fechadura não são a mesma
+            coisa. */}
+        {!terminou ? (
           <Chip
             label="Terminar já"
             icon="clock-remove-outline"

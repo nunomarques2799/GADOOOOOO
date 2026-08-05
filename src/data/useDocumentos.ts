@@ -81,6 +81,7 @@ type LinhaDocumento = {
   categoria?: string | null;
   caminho: string;
   tamanho?: number | null;
+  publico?: boolean | null;
   criado_em?: string | null;
 };
 
@@ -93,16 +94,21 @@ function toDocumento(r: LinhaDocumento): Documento {
     categoria: categoriaValida(r.categoria),
     caminho: r.caminho,
     tamanho: r.tamanho ?? undefined,
+    // Ausente conta como público: é o que a coluna faz no servidor (`default
+    // true`) e o que os documentos guardados antes de a escolha existir são.
+    publico: r.publico !== false,
     criadoEm: r.criado_em ?? new Date().toISOString(),
   };
 }
 
-const COLUNAS = 'id, exploracao_id, criado_por, titulo, categoria, caminho, tamanho, criado_em';
+const COLUNAS =
+  'id, exploracao_id, criado_por, titulo, categoria, caminho, tamanho, publico, criado_em';
 
 export type EntradaDocumento = {
   exploracaoId: string;
   titulo: string;
   categoria: CategoriaDocumento;
+  publico: boolean;
   ficheiro: FicheiroEscolhido;
 };
 
@@ -112,10 +118,14 @@ export type UseDocumentos = {
   erro: string | null;
   /** Sobe o ficheiro e grava a linha. Devolve o documento guardado. */
   carregarDocumento: (entrada: EntradaDocumento) => Promise<Documento>;
-  /** Muda o nome ou a gaveta de um documento já guardado. */
+  /**
+   * Muda o nome, a gaveta ou a visibilidade de um documento já guardado. O
+   * FICHEIRO não se troca — para isso apaga-se e carrega-se outro, e assim o
+   * caminho nunca aponta para coisa diferente da que lá estava.
+   */
   atualizarDocumento: (
     id: string,
-    campos: { titulo?: string; categoria?: CategoriaDocumento },
+    campos: { titulo?: string; categoria?: CategoriaDocumento; publico?: boolean },
   ) => Promise<void>;
   /** Apaga a linha E o ficheiro. */
   eliminarDocumento: (id: string) => Promise<void>;
@@ -188,6 +198,7 @@ export function useDocumentos(): UseDocumentos {
         categoria: entrada.categoria,
         caminho,
         tamanho: entrada.ficheiro.tamanho,
+        publico: entrada.publico,
         criadoEm: new Date().toISOString(),
       };
 
@@ -202,6 +213,7 @@ export function useDocumentos(): UseDocumentos {
         categoria: documento.categoria,
         caminho: documento.caminho,
         tamanho: documento.tamanho,
+        publico: documento.publico,
       });
       if (erroLinha) {
         // Em `try/catch` porque esta limpeza não pode roubar o erro à causa: o
@@ -228,7 +240,7 @@ export function useDocumentos(): UseDocumentos {
   const atualizarDocumento = useCallback(
     async (
       id: string,
-      campos: { titulo?: string; categoria?: CategoriaDocumento },
+      campos: { titulo?: string; categoria?: CategoriaDocumento; publico?: boolean },
     ): Promise<void> => {
       if (usaSupabase && supabase) {
         const { error } = await supabase
@@ -236,6 +248,7 @@ export function useDocumentos(): UseDocumentos {
           .update({
             ...(campos.titulo !== undefined ? { titulo: campos.titulo.trim() } : {}),
             ...(campos.categoria !== undefined ? { categoria: campos.categoria } : {}),
+            ...(campos.publico !== undefined ? { publico: campos.publico } : {}),
           })
           .eq('id', id);
         if (error) throw new Error(error.message);
@@ -247,6 +260,7 @@ export function useDocumentos(): UseDocumentos {
                 ...d,
                 titulo: campos.titulo?.trim() ?? d.titulo,
                 categoria: campos.categoria ?? d.categoria,
+                publico: campos.publico ?? d.publico,
               }
             : d,
         );

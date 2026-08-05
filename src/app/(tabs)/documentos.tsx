@@ -137,11 +137,6 @@ export default function DocumentosScreen() {
             ]}
           />
 
-          {/* Os documentos guardados vêm em PRIMEIRO. O que estava aqui antes
-              era tudo sobre ficheiros que saem — exportações e relatórios — e é
-              trabalho de fim de mês; guardar a fatura que se acabou de receber
-              é o que se faz todas as semanas. */}
-          <SeccaoDocumentos api={documentosApi} />
 
           {/* Importar — só web/Electron (o telemóvel não escolhe ficheiros sem build nativo) */}
           {comFicheiros && !contaSuspensa ? (
@@ -226,6 +221,12 @@ export default function DocumentosScreen() {
               </View>
             )}
           </Grupo>
+
+          {/* As gavetas dos papéis guardados, a seguir às exportações. Só as
+              pastas: os documentos vivem dentro delas, em `/gaveta/[categoria]`
+              — com meia dúzia de faturas, a lista aberta aqui era mais comprida
+              do que tudo o resto do separador junto. */}
+          <SeccaoDocumentos api={documentosApi} />
 
           {/* Notas */}
           <SeccaoNotas notas={notasApi} />

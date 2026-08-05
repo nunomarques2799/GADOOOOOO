@@ -30,4 +30,5 @@ schema_convite_por_papel.sql
 schema_agenda.sql
 schema_documentos.sql
 schema_equipa_e_foto.sql
+schema_documento_visibilidade.sql
 schema_lint.sql

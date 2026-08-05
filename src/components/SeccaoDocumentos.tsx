@@ -1,34 +1,22 @@
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Linking, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import {
-  Button,
-  Card,
-  Chip,
-  FolhaComTeclado,
-  Icon,
-  Text,
-  TextField,
-} from '@/components/ui';
-import { avisar, confirmar } from '@/data/avisos';
+  FolhaGuardarDocumento,
+  type RascunhoDocumento,
+} from '@/components/FolhaGuardarDocumento';
+import { Button, Card, Icon, Text } from '@/components/ui';
+import { avisar } from '@/data/avisos';
 import {
   CATEGORIAS_DOCUMENTO,
   CATEGORIA_OMISSAO,
+  contarPorCategoria,
   explicacaoCategoria,
-  filtrarPorCategoria,
   iconeCategoria,
-  problemaComDocumento,
-  tamanhoLegivel,
   type CategoriaDocumento,
-  type Documento,
 } from '@/data/documentos';
-import {
-  escolherDocumento,
-  fotografarDocumento,
-  suportaCamera,
-  type FicheiroEscolhido,
-} from '@/data/ficheiroDocumento';
-import { formatDataPt } from '@/data/helpers';
+import { escolherDocumento, fotografarDocumento, suportaCamera } from '@/data/ficheiroDocumento';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
@@ -36,39 +24,37 @@ import type { UseDocumentos } from '@/data/useDocumentos';
 import { colors, radii, spacing } from '@/theme';
 
 /**
- * Os documentos guardados na exploração — faturas, guias, papéis.
+ * As GAVETAS dos documentos guardados.
  * ------------------------------------------------------------------
- * A outra metade do separador: até aqui só saíam ficheiros (exportações,
- * relatórios) e havia notas de texto. Isto é o que ENTRA e fica.
+ * Isto era uma lista de todos os documentos, um a um, no meio do separador. Com
+ * meia dúzia de faturas já era mais comprida do que tudo o resto junto, e o
+ * separador — que também tem importar, exportar e as notas — passava a ser uma
+ * pilha de papéis com o resto escondido por baixo.
  *
- * O ficheiro vive no Supabase Storage, e não numa coluna como a foto do animal
- * — ver o cabeçalho de `supabase/schema_documentos.sql` para o porquê. Aqui,
- * o que se vê é sempre a mesma coisa: um nome, uma gaveta e uma data.
+ * Passam a ser quatro pastas com a contagem. Os documentos vivem lá dentro, em
+ * `/gaveta/[categoria]`, que é onde se lhes mexe: abrir, mudar o nome, mudar
+ * quem os vê, apagar.
  */
 export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
+  const router = useRouter();
   const { exploracoes } = useGado();
   const { pode, contaSuspensa } = useMembros();
   const toast = useToasts();
 
-  const [gaveta, setGaveta] = useState<CategoriaDocumento | undefined>(undefined);
-  const [rascunho, setRascunho] = useState<Rascunho | null>(null);
-  const [aAbrir, setAAbrir] = useState<string | null>(null);
+  const [rascunho, setRascunho] = useState<RascunhoDocumento | null>(null);
 
-  // Só as explorações onde esta pessoa pode mesmo guardar. Sem o filtro, o
-  // formulário oferecia uma exploração que a RLS ia recusar no fim.
+  // Só as explorações onde esta pessoa pode mesmo guardar. Sem o filtro, a
+  // folha oferecia uma exploração que a RLS ia recusar no fim.
   const disponiveis = useMemo(
     () => exploracoes.filter((e) => pode(e.id, 'editarAnimais')),
     [exploracoes, pode],
   );
   const podeGuardar = !contaSuspensa && disponiveis.length > 0;
 
-  const visiveis = useMemo(
-    () => filtrarPorCategoria(api.documentos, gaveta),
-    [api.documentos, gaveta],
-  );
+  const contagem = useMemo(() => contarPorCategoria(api.documentos), [api.documentos]);
 
-  /** Abre o seletor, prepara a imagem e mostra o formulário do nome/gaveta. */
-  async function escolher(comCamera: boolean) {
+  /** Abre o seletor, prepara a imagem e mostra a folha do nome/gaveta. */
+  async function escolher(comCamera: boolean, categoria: CategoriaDocumento) {
     try {
       const r = comCamera ? await fotografarDocumento() : await escolherDocumento();
       if (r.estado === 'sem-permissao') {
@@ -84,50 +70,16 @@ export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
       setRascunho({
         ficheiro: r.ficheiro,
         titulo: '',
-        categoria: CATEGORIA_OMISSAO,
+        categoria,
+        // Nasce PÚBLICO, que é o caso comum: a fatura da ração e a guia de
+        // circulação são papéis da casa. Quem quer o contrário muda numa linha
+        // que está à vista na mesma folha.
+        publico: true,
         exploracaoId: disponiveis[0]?.id,
       });
     } catch (e) {
       toast.erro('Não foi possível preparar a imagem', mensagemDeErro(e));
     }
-  }
-
-  /**
-   * Abre o documento.
-   *
-   * Uma ligação assinada e de prazo curto, pedida na hora — o bucket é privado
-   * e não há URL fixo. `Linking.openURL` serve as duas plataformas: no
-   * navegador abre noutro separador, no telemóvel no visualizador do sistema.
-   */
-  async function abrir(d: Documento) {
-    if (aAbrir) return;
-    setAAbrir(d.id);
-    try {
-      const url = await api.ligacaoPara(d);
-      await Linking.openURL(url);
-    } catch (e) {
-      toast.erro('Não foi possível abrir', mensagemDeErro(e));
-    } finally {
-      setAAbrir(null);
-    }
-  }
-
-  function eliminar(d: Documento) {
-    confirmar(
-      'Eliminar documento',
-      `Vai apagar "${d.titulo}" e a imagem que lhe está guardada. Não há como voltar atrás.`,
-      () => {
-        void (async () => {
-          try {
-            await api.eliminarDocumento(d.id);
-            toast.sucesso('Documento eliminado', d.titulo);
-          } catch (e) {
-            toast.erro('Não foi possível eliminar', mensagemDeErro(e));
-          }
-        })();
-      },
-      { rotuloConfirmar: 'Eliminar', destrutivo: true },
-    );
   }
 
   return (
@@ -149,37 +101,6 @@ export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
         ) : null}
       </View>
 
-      {/* As gavetas. Só aparecem com documentos que dê para filtrar — com dois
-          papéis guardados, quatro chips são mais botões do que conteúdo. */}
-      {api.documentos.length > 2 ? (
-        <View
-          style={{
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: spacing.xs,
-            marginBottom: spacing.sm,
-          }}>
-          <Chip
-            label={`Todos (${api.documentos.length})`}
-            selected={gaveta === undefined}
-            onPress={() => setGaveta(undefined)}
-          />
-          {CATEGORIAS_DOCUMENTO.map((c) => {
-            const quantos = api.documentos.filter((d) => d.categoria === c).length;
-            if (quantos === 0) return null;
-            return (
-              <Chip
-                key={c}
-                label={`${c} (${quantos})`}
-                icon={iconeCategoria(c)}
-                selected={gaveta === c}
-                onPress={() => setGaveta(gaveta === c ? undefined : c)}
-              />
-            );
-          })}
-        </View>
-      ) : null}
-
       {api.erro ? (
         <Card style={{ backgroundColor: colors.dangerTint, marginBottom: spacing.sm }}>
           <View style={{ flexDirection: 'row', gap: spacing.xs }}>
@@ -192,30 +113,21 @@ export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
         </Card>
       ) : null}
 
-      {visiveis.length === 0 ? (
-        <Card>
-          <View style={{ alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm }}>
-            <Icon name="file-image-outline" size="lg" color={colors.textMuted} />
-            <Text variant="secondary" color={colors.textSecondary} center>
-              {gaveta
-                ? `Nada guardado em "${gaveta}".`
-                : 'Ainda não guardou nenhum documento. Fotografe uma fatura, uma guia ou um recibo e fica aqui — na exploração, e não no telemóvel.'}
-            </Text>
-          </View>
-        </Card>
-      ) : (
-        <View style={{ gap: spacing.sm }}>
-          {visiveis.map((d) => (
-            <CartaoDocumento
-              key={d.id}
-              documento={d}
-              aAbrir={aAbrir === d.id}
-              onAbrir={() => void abrir(d)}
-              onEliminar={() => eliminar(d)}
-            />
-          ))}
-        </View>
-      )}
+      {/* As quatro pastas, sempre as quatro — mesmo vazias. Uma gaveta que só
+          aparece depois de ter alguma coisa dentro não ensina onde arrumar o
+          primeiro papel. */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+        {CATEGORIAS_DOCUMENTO.map((c) => (
+          <Pasta
+            key={c}
+            categoria={c}
+            quantos={contagem[c]}
+            onPress={() =>
+              router.push({ pathname: '/gaveta/[categoria]', params: { categoria: c } })
+            }
+          />
+        ))}
+      </View>
 
       {podeGuardar ? (
         <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
@@ -225,7 +137,7 @@ export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
               icon="camera-outline"
               variant="secondary"
               style={{ flex: 1 }}
-              onPress={() => void escolher(true)}
+              onPress={() => void escolher(true, CATEGORIA_OMISSAO)}
             />
           ) : null}
           <Button
@@ -233,7 +145,7 @@ export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
             icon={suportaCamera ? 'image-outline' : 'plus'}
             variant="secondary"
             style={{ flex: 1 }}
-            onPress={() => void escolher(false)}
+            onPress={() => void escolher(false, CATEGORIA_OMISSAO)}
           />
         </View>
       ) : (
@@ -244,7 +156,7 @@ export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
         </Text>
       )}
 
-      <FolhaNovoDocumento
+      <FolhaGuardarDocumento
         rascunho={rascunho}
         exploracoes={disponiveis}
         onMudar={setRascunho}
@@ -255,319 +167,70 @@ export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
   );
 }
 
-/* ------------------------------------------------------------------ *
- *  Cartão de um documento
- * ------------------------------------------------------------------ */
-
-function CartaoDocumento({
-  documento,
-  aAbrir,
-  onAbrir,
-  onEliminar,
-}: {
-  documento: Documento;
-  aAbrir: boolean;
-  onAbrir: () => void;
-  onEliminar: () => void;
-}) {
-  return (
-    <Card padded={false}>
-      {/* A linha é uma View com dois Pressable IRMÃOS e não um dentro do outro:
-          aninhados, a web gerava um <button> dentro de outro (HTML inválido) e
-          os leitores de ecrã anunciavam um só controlo com duas ações. É a
-          mesma nota do `AlertItem`. */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: spacing.sm }}>
-        <Pressable
-          onPress={onAbrir}
-          accessibilityRole="button"
-          accessibilityLabel={`Abrir ${documento.titulo}`}
-          accessibilityHint="Abre a imagem guardada"
-          style={({ pressed }) => [
-            {
-              flex: 1,
-              minWidth: 0,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing.sm,
-              padding: spacing.md,
-            },
-            pressed && { opacity: 0.6 },
-          ]}>
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: radii.md,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: colors.primaryTint,
-            }}>
-            <Icon
-              name={aAbrir ? 'progress-download' : iconeCategoria(documento.categoria)}
-              size="md"
-              color={colors.primaryDark}
-            />
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text variant="bodyStrong" numberOfLines={2}>
-              {documento.titulo}
-            </Text>
-            <Text variant="caption" color={colors.textMuted} numberOfLines={1}>
-              {documento.categoria} · {formatDataPt(documento.criadoEm)}
-              {documento.tamanho ? ` · ${tamanhoLegivel(documento.tamanho)}` : ''}
-            </Text>
-          </View>
-          <Icon name="open-in-new" size="sm" color={colors.textMuted} />
-        </Pressable>
-
-        <Pressable
-          onPress={onEliminar}
-          hitSlop={spacing.xs}
-          accessibilityRole="button"
-          accessibilityLabel={`Eliminar ${documento.titulo}`}
-          style={({ pressed }) => [
-            {
-              width: 44,
-              height: 44,
-              borderRadius: radii.pill,
-              alignItems: 'center',
-              justifyContent: 'center',
-            },
-            pressed && { opacity: 0.6 },
-          ]}>
-          <Icon name="trash-can-outline" size="md" color={colors.danger} />
-        </Pressable>
-      </View>
-    </Card>
-  );
-}
-
-/* ------------------------------------------------------------------ *
- *  Folha de "guardar este documento"
- * ------------------------------------------------------------------ */
-
-type Rascunho = {
-  ficheiro: FicheiroEscolhido;
-  titulo: string;
-  categoria: CategoriaDocumento;
-  exploracaoId?: string;
-};
-
 /**
- * Abre DEPOIS de a imagem estar escolhida e preparada, e não antes.
+ * Uma gaveta.
  *
- * A ordem importa: perguntar o nome e a gaveta primeiro obrigava a escrevê-los
- * outra vez de cada vez que o seletor de ficheiros fosse cancelado — que, com o
- * dedo e a apanhar a fotografia certa no meio da galeria, é as vezes que forem
- * precisas.
+ * Duas por linha e não quatro: a quatro, o nome "Documentos pessoais" partia-se
+ * em três linhas num telemóvel de 375px — e em quatro com a letra do sistema no
+ * máximo, que é o cenário que esta app tem de aguentar.
  */
-function FolhaNovoDocumento({
-  rascunho,
-  exploracoes,
-  onMudar,
-  onFechar,
-  onGuardar,
+function Pasta({
+  categoria,
+  quantos,
+  onPress,
 }: {
-  rascunho: Rascunho | null;
-  exploracoes: { id: string; nome: string }[];
-  onMudar: (r: Rascunho | null) => void;
-  onFechar: () => void;
-  onGuardar: UseDocumentos['carregarDocumento'];
+  categoria: CategoriaDocumento;
+  quantos: number;
+  onPress: () => void;
 }) {
-  const [aGuardar, setAGuardar] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const toast = useToasts();
-
-  async function guardar() {
-    if (!rascunho || aGuardar) return;
-    const problema = problemaComDocumento(rascunho.titulo, rascunho.ficheiro.tamanho);
-    if (problema) {
-      setErro(problema);
-      return;
-    }
-    if (!rascunho.exploracaoId) {
-      setErro('Escolha a exploração a que este documento pertence.');
-      return;
-    }
-    setAGuardar(true);
-    setErro(null);
-    try {
-      await onGuardar({
-        exploracaoId: rascunho.exploracaoId,
-        titulo: rascunho.titulo,
-        categoria: rascunho.categoria,
-        ficheiro: rascunho.ficheiro,
-      });
-      toast.sucesso('Documento guardado', rascunho.titulo.trim());
-      onFechar();
-    } catch (e) {
-      const razao = mensagemDeErro(e);
-      setErro(razao);
-      toast.erro('Documento não guardado', razao);
-    } finally {
-      setAGuardar(false);
-    }
-  }
-
   return (
-    <Modal visible={rascunho !== null} animationType="slide" transparent onRequestClose={onFechar}>
-      <FolhaComTeclado>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel="Fechar" />
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${categoria}. ${
+        quantos === 0
+          ? 'Vazia.'
+          : `${quantos} ${quantos === 1 ? 'documento' : 'documentos'}.`
+      } ${explicacaoCategoria(categoria)}`}
+      style={({ pressed }) => [
+        {
+          // `48%` e não `50%`: o `gap` do contentor soma-se à largura, e a dois
+          // por linha exatos a segunda pasta descia para a linha seguinte.
+          width: '48%',
+          flexGrow: 1,
+          padding: spacing.md,
+          borderRadius: radii.lg,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.border,
+          gap: spacing.xs,
+        },
+        pressed && { opacity: 0.6 },
+      ]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View
           style={{
-            backgroundColor: colors.background,
-            borderTopLeftRadius: radii.xl,
-            borderTopRightRadius: radii.xl,
-            paddingTop: spacing.lg,
-            maxHeight: '90%',
+            width: 40,
+            height: 40,
+            borderRadius: radii.md,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: quantos > 0 ? colors.primaryTint : colors.surfaceSunken,
           }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: spacing.lg,
-              marginBottom: spacing.sm,
-            }}>
-            <Text variant="h3" style={{ flex: 1 }}>
-              Guardar documento
-            </Text>
-            <Pressable
-              onPress={onFechar}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Fechar">
-              <Icon name="close" size="lg" color={colors.textSecondary} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{
-              paddingHorizontal: spacing.lg,
-              paddingBottom: spacing.xxl,
-              gap: spacing.md,
-            }}>
-            <Card style={{ backgroundColor: colors.successTint }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Icon name="image-check-outline" size="lg" color={colors.success} />
-                <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
-                  Imagem pronta{rascunho ? ` · ${tamanhoLegivel(rascunho.ficheiro.tamanho)}` : ''}.
-                  Falta dizer o que é e em que gaveta fica.
-                </Text>
-              </View>
-            </Card>
-
-            <View>
-              <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                O que é
-              </Text>
-              <TextField
-                value={rascunho?.titulo ?? ''}
-                onChangeText={(t) => onMudar(rascunho ? { ...rascunho, titulo: t } : rascunho)}
-                placeholder="Ex: Fatura da ração de julho"
-                icon="file-document-outline"
-              />
-            </View>
-
-            <View>
-              <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                Gaveta
-              </Text>
-              <View style={{ gap: spacing.xs }}>
-                {CATEGORIAS_DOCUMENTO.map((c) => (
-                  <Pressable
-                    key={c}
-                    onPress={() => onMudar(rascunho ? { ...rascunho, categoria: c } : rascunho)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: rascunho?.categoria === c }}
-                    accessibilityLabel={`${c}. ${explicacaoCategoria(c)}`}
-                    style={({ pressed }) => [
-                      {
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: spacing.sm,
-                        padding: spacing.md,
-                        borderRadius: radii.md,
-                        borderWidth: rascunho?.categoria === c ? 2 : 1,
-                        borderColor:
-                          rascunho?.categoria === c ? colors.primary : colors.border,
-                        backgroundColor:
-                          rascunho?.categoria === c ? colors.primaryTint : colors.surface,
-                      },
-                      pressed && { opacity: 0.7 },
-                    ]}>
-                    <Icon
-                      name={iconeCategoria(c)}
-                      size="md"
-                      color={rascunho?.categoria === c ? colors.primaryDark : colors.textMuted}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        variant="bodyStrong"
-                        color={rascunho?.categoria === c ? colors.primaryDark : colors.text}>
-                        {c}
-                      </Text>
-                      <Text variant="caption" color={colors.textSecondary}>
-                        {explicacaoCategoria(c)}
-                      </Text>
-                    </View>
-                    {rascunho?.categoria === c ? (
-                      <Icon name="check-circle" size="md" color={colors.primary} />
-                    ) : null}
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {exploracoes.length > 1 ? (
-              <View>
-                <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                  Exploração
-                </Text>
-                <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
-                  {exploracoes.map((e) => (
-                    <Chip
-                      key={e.id}
-                      label={e.nome}
-                      icon="barn"
-                      selected={rascunho?.exploracaoId === e.id}
-                      onPress={() =>
-                        onMudar(rascunho ? { ...rascunho, exploracaoId: e.id } : rascunho)
-                      }
-                    />
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            {erro ? (
-              <Card style={{ backgroundColor: colors.dangerTint }}>
-                <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-                  <Icon name="alert-circle-outline" size="md" color={colors.danger} />
-                  <Text variant="secondary" color={colors.danger} style={{ flex: 1 }}>
-                    {erro}
-                  </Text>
-                </View>
-              </Card>
-            ) : null}
-
-            <Button
-              label={aGuardar ? 'A guardar…' : 'Guardar documento'}
-              icon="check"
-              loading={aGuardar}
-              disabled={aGuardar}
-              onPress={() => void guardar()}
-            />
-
-            {Platform.OS !== 'web' ? (
-              <Text variant="caption" color={colors.textMuted} center>
-                Guardar um documento precisa de ligação — a imagem sobe para a sua conta.
-              </Text>
-            ) : null}
-          </ScrollView>
+          <Icon
+            name={iconeCategoria(categoria)}
+            size="md"
+            color={quantos > 0 ? colors.primaryDark : colors.textMuted}
+          />
         </View>
-      </FolhaComTeclado>
-    </Modal>
+        <Icon name="chevron-right" size="sm" color={colors.textMuted} />
+      </View>
+      <Text variant="bodyStrong" numberOfLines={2}>
+        {categoria}
+      </Text>
+      <Text variant="caption" color={quantos > 0 ? colors.textSecondary : colors.textMuted}>
+        {quantos === 0 ? 'Vazia' : `${quantos} ${quantos === 1 ? 'documento' : 'documentos'}`}
+      </Text>
+    </Pressable>
   );
 }

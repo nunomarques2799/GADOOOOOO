@@ -21,6 +21,7 @@ function doc(p: Partial<Documento> & { id: string }): Documento {
     titulo: 'Fatura',
     categoria: 'Outros',
     caminho: 'exp-1/x.jpg',
+    publico: true,
     criadoEm: '2026-08-01T10:00:00.000Z',
     ...p,
   };

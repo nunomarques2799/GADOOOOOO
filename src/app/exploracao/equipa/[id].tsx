@@ -407,7 +407,11 @@ export default function EquipaExploracaoScreen() {
                           selected={aMarcar === m.id}
                           onPress={() => setAMarcar(aMarcar === m.id ? undefined : m.id)}
                         />
-                        {m.expiraEm && !terminou ? (
+                        {/* Sem exigir que já tenha prazo: quem foi convidado
+                            "sem prazo" também se tem de conseguir cortar, e a
+                            alternativa era removê-lo da equipa — que apaga o
+                            vínculo e as permissões dele com ele. */}
+                        {!terminou ? (
                           <Chip
                             label="Terminar já"
                             icon="clock-remove-outline"

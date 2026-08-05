@@ -131,7 +131,9 @@ select * from (
     -- do ficheiro, que fechava só o `apagar_a_minha_conta`. Para saber se a
     -- versão de 2026-08-05 (a que fecha as CINCO) já correu, é a consulta 4 do
     -- fim do `schema_lint.sql` que responde.
-    (26, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
+    (26, 'schema_documento_visibilidade.sql', 'documento.publico',
+        (exists (select 1 from col where tabela = 'documento' and coluna = 'publico'))),
+    (27, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
         (not exists (
            select 1 from pg_proc p
              join pg_namespace n on n.oid = p.pronamespace

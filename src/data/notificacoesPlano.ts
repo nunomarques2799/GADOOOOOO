@@ -85,3 +85,87 @@ export function planear(
     .sort((x, y) => x.quando.getTime() - y.quando.getTime())
     .slice(0, MAX_AGENDADAS);
 }
+
+/* ==================================================================
+ * O acesso a acabar
+ * ================================================================== */
+
+/**
+ * Quantos minutos antes do fim do acesso é que o telemóvel avisa.
+ *
+ * Três avisos e não um: o de 30 minutos é o que ainda dá para acabar o que se
+ * está a fazer, o de 5 é o que faz guardar. Um só, a qualquer distância, ou
+ * chega cedo de mais para servir de aviso ou tarde de mais para servir de nada.
+ */
+export const MINUTOS_AVISO_ACESSO = [30, 15, 5] as const;
+
+/** Um vínculo com prazo, como o plano precisa de o ver. */
+export type AcessoComPrazo = {
+  /** Identifica o vínculo, para o aviso saber de qual fala. */
+  membroId: string;
+  nomeExploracao: string;
+  /** ISO. Sem isto não há nada a avisar. */
+  expiraEm?: string;
+};
+
+export type AvisoAcesso = {
+  membroId: string;
+  titulo: string;
+  corpo: string;
+  quando: Date;
+  /** Minutos que faltavam quando este aviso foi marcado. */
+  minutosAntes: number;
+};
+
+/**
+ * Os avisos de "o seu acesso está a acabar", para o telemóvel de quem o tem.
+ *
+ * É o outro lado do prazo do veterinário: ele entra por uma manhã e sai
+ * sozinho, e até aqui saía sem aviso nenhum — a app ficava vazia a meio de uma
+ * visita, com o trabalho por registar e sem nada que explicasse porquê.
+ *
+ * LIMITE HONESTO: isto são notificações LOCAIS, agendadas no aparelho enquanto
+ * a app está aberta. Não há servidor a empurrar nada. Se o veterinário nunca
+ * abrir a app dentro dos 30 minutos que antecedem o fim, não há aviso — não
+ * havia onde o agendar. Para avisos que cheguem com a app fechada há semanas
+ * era preciso push a sério, que é outra história (e outro servidor).
+ *
+ * Só conta o que ainda está para vir: um instante já passado agendaria uma
+ * notificação no passado, que o sistema dispara de imediato — a app a apitar
+ * três vezes seguidas mal se abre, a dizer que falta meia hora para uma coisa
+ * que já aconteceu.
+ */
+export function planearFimDeAcesso(
+  acessos: AcessoComPrazo[],
+  agora = new Date(),
+): AvisoAcesso[] {
+  const avisos: AvisoAcesso[] = [];
+
+  for (const a of acessos) {
+    if (!a.expiraEm) continue;
+    const fim = new Date(a.expiraEm).getTime();
+    // Uma data que não se lê não gera aviso nenhum: é o mesmo lado seguro do
+    // `acessoTerminou`, que perante lixo deixa passar em vez de trancar.
+    if (Number.isNaN(fim) || fim <= agora.getTime()) continue;
+
+    for (const minutos of MINUTOS_AVISO_ACESSO) {
+      const quando = new Date(fim - minutos * 60_000);
+      if (quando.getTime() <= agora.getTime()) continue;
+      avisos.push({
+        membroId: a.membroId,
+        titulo: `Acesso a ${a.nomeExploracao} termina em ${minutos} minutos`,
+        // Diz o que fazer, e não só o que se passa. Quem lê isto está no campo
+        // com o telemóvel numa mão.
+        corpo:
+          minutos <= 5
+            ? 'Grave já o que tiver por registar. Passado o prazo deixa de conseguir escrever.'
+            : 'Depois disso deixa de ver esta exploração. Peça mais tempo a quem o convidou se precisar.',
+        quando,
+        minutosAntes: minutos,
+      });
+    }
+  }
+
+  // Os mais próximos primeiro: são os que têm de sobreviver ao teto do sistema.
+  return avisos.sort((x, y) => x.quando.getTime() - y.quando.getTime());
+}

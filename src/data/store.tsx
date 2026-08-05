@@ -53,11 +53,6 @@ import {
 import { computeAlertas } from './helpers';
 import { filtrarAlertas, useNotificacoes } from './notificacoes';
 import {
-  agendar as agendarNotificacoes,
-  cancelarTudo as cancelarNotificacoes,
-  suportaNotificacoes,
-} from './notificacoesLocais';
-import {
   animaisSeed,
   eventosSeed,
   exploracoesSeed,
@@ -396,20 +391,19 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     return filtrarAlertas(alertasBrutos, prefsNotif).filter((a) => !visiveis.has(a.id));
   }, [alertasBrutos, prefsNotif, alertas]);
 
-  /**
-   * Reagenda os avisos do telemóvel sempre que os alertas mudam. O atraso
-   * evita repetir o trabalho durante uma sincronização, que atualiza os dados
-   * várias vezes seguidas — cancelar e reagendar dezenas de notificações a
-   * cada passo seria trabalho deitado fora.
+  /*
+   * O agendamento dos avisos do telemóvel esteve AQUI e mudou-se para
+   * `components/AgendadorAvisos.tsx`.
+   *
+   * Não foi arrumação: os avisos passaram a incluir o fim do acesso, que vem do
+   * `useMembros()`, e o `membros.tsx` chega a este ficheiro por um caminho
+   * indireto (`membros` → `nomesEquipa` → `store`). Importá-lo aqui fechava o
+   * ciclo. O agendador é um componente montado dentro deste provider, onde os
+   * três contextos já existem.
+   *
+   * Continua a haver UM só: o `agendar()` cancela tudo antes de agendar, e dois
+   * a correr apagavam o trabalho um do outro.
    */
-  useEffect(() => {
-    if (!suportaNotificacoes) return;
-    const t = setTimeout(() => {
-      if (prefsNotif.noTelemovel) void agendarNotificacoes(alertas, prefsNotif);
-      else void cancelarNotificacoes();
-    }, 2000);
-    return () => clearTimeout(t);
-  }, [alertas, prefsNotif]);
 
   const [online, setOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine !== false : true,

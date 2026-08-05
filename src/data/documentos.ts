@@ -44,6 +44,20 @@ export type Documento = {
   caminho: string;
   /** Bytes. */
   tamanho?: number;
+  /**
+   * Toda a equipa da exploração vê (`true`) ou só quem o guardou (`false`).
+   *
+   * O privado é fechado pela RLS — e nos DOIS sítios, a linha e o ficheiro (ver
+   * `supabase/schema_documento_visibilidade.sql`). Fechar só a linha deixava o
+   * privado escondido da lista e aberto a quem soubesse o caminho, que é
+   * `<exploracao>/<id>.jpg` e se adivinha a partir de um id já visto.
+   *
+   * Nem o dono da exploração vê os privados dos outros. É deliberado: se o "só
+   * eu vejo" tiver uma exceção para o patrão, não é uma promessa — e a app
+   * estaria a convidar as pessoas a guardarem ali o cartão de cidadão com base
+   * numa frase que não cumpre.
+   */
+  publico: boolean;
   criadoEm: string;
 };
 

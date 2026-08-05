@@ -22,6 +22,7 @@ import { FaixaAmbiente } from '@/components/FaixaAmbiente';
 import { LimiteDeErro } from '@/components/LimiteDeErro';
 import { EcraNovaPalavra } from '@/components/EcraNovaPalavra';
 import { EcraPendente } from '@/components/EcraPendente';
+import { AgendadorAvisos } from '@/components/AgendadorAvisos';
 import { AuthProvider, useAuth } from '@/data/auth';
 import { MembrosProvider, useMembros } from '@/data/membros';
 import { NotificacoesProvider } from '@/data/notificacoes';
@@ -231,6 +232,10 @@ export default function RootLayout() {
                     aviso ainda existe) e ao lado da navegação (é ela que ele
                     manda para a ficha). Não desenha nada. */}
                 <AberturaPorAviso />
+                {/* Quem agenda os avisos no telemóvel: prazos do efetivo e o
+                    fim do acesso. Aqui dentro porque precisa dos três
+                    contextos ao mesmo tempo — ver o cabeçalho dele. */}
+                <AgendadorAvisos />
                 <Stack
                   screenOptions={{
                     headerShown: false,
