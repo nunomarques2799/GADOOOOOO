@@ -13,7 +13,17 @@ enquanto só há uma base de dados. Deixa de chegar no momento em que é preciso
 ## A ordem
 
 Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
-`drop … if exists` antes de recriar), portanto correr de novo é seguro.
+`drop … if exists` antes de recriar), portanto correr a SEQUÊNCIA de novo é
+seguro.
+
+> **Correr o 1.º sozinho por cima de uma base que já anda NÃO é seguro.** O
+> `schema.sql` recria as políticas da era de utilizador único (`perfil_self`,
+> `exploracao_owner`, … — `for all`, guiadas só pelo `user_id`), e as políticas
+> de um comando somam-se por OR: as novas continuam lá e deixam de decidir
+> nada, porque basta uma dizer que sim. Ninguém vê erro nenhum — a app funciona,
+> e o isolamento entre clientes é que deixou de existir. Se for preciso mexer no
+> 1.º, corre-se a sequência INTEIRA a seguir (é o que o `_completo.sql` faz),
+> nunca só ele. Achado da auditoria de 2026-07-18.
 
 | # | Ficheiro | O que traz | Depende de |
 | --- | --- | --- | --- |
