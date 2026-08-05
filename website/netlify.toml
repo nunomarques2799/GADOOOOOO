@@ -1,8 +1,37 @@
-# Configuração do Netlify — Terrabovina (site estático)
-# A pasta "website" é publicada tal como está.
+# Configuração do Netlify — Terrabovina (página de apresentação)
+# ---------------------------------------------------------------------------
+# Este ficheiro só é lido se a "base directory" do site no Netlify for
+# `website`. Com a base vazia o Netlify lê o `netlify.toml` da RAIZ e constrói a
+# APP em cima do endereço da apresentação — ver o cabeçalho desse ficheiro.
+#
+# A pasta é publicada tal como está: não há build, e é por isso que não há
+# `command` nenhum aqui.
 
 [build]
   publish = "."
+
+  # Sem isto, QUALQUER push reconstruía esta página — incluindo mexer só na app,
+  # nos schemas ou na documentação. É a mesma razão do `ignore` da raiz: o plano
+  # grátis tem um teto de builds por mês e não vale gastá-los a republicar uma
+  # página que não mudou.
+  #
+  # Sair com código 0 CANCELA o build, e é isso que o `git diff --quiet` faz
+  # quando não encontra alterações.
+  #
+  # DOIS cuidados que não são óbvios, e que errados dão uma página que nunca
+  # atualiza — em silêncio, que é o pior modo de falhar:
+  #
+  # 1. O caminho vai como `:/website` e não como `website` nem `.`. O Netlify
+  #    corre este comando a partir da BASE DIRECTORY (`website/`), onde
+  #    `-- website` procuraria `website/website`, não encontrava nada e cancelava
+  #    sempre. O prefixo `:/` do git resolve a partir da raiz do repositório,
+  #    esteja o comando onde estiver — verificado das duas posições.
+  #
+  # 2. O `test -n` à frente é para o PRIMEIRO build depois de ligar o
+  #    repositório, quando o `CACHED_COMMIT_REF` ainda não existe: sem ele o
+  #    comando ficava a comparar contra vazio, podia dar 0 e cancelava logo o
+  #    deploy inicial — exatamente aquele que se está à espera de ver.
+  ignore = "test -n \"$CACHED_COMMIT_REF\" && git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- :/website"
 
 # O instalador é servido pelo GitHub Releases (link no botão de download),
 # por isso não pesa no tráfego do Netlify.

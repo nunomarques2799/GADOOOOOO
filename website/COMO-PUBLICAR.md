@@ -3,10 +3,13 @@
 São **dois sites Netlify** (ambos no plano grátis), a partir deste mesmo
 repositório:
 
-| Site | O que é | Que ficheiro o configura |
-| --- | --- | --- |
-| `gestaogado.netlify.app` | A página de apresentação | `website/netlify.toml` |
-| `app-gestaogado.netlify.app` | A app propriamente dita | `netlify.toml` (na raiz) |
+| Site | O que é | Base directory | Que ficheiro o configura |
+| --- | --- | --- | --- |
+| `gestaogado.netlify.app` | A página de apresentação | `website` | `website/netlify.toml` |
+| `app-gestaogado.netlify.app` | A app propriamente dita | *(vazia)* | `netlify.toml` (na raiz) |
+
+**A *base directory* é o que separa os dois.** É ela que decide qual dos dois
+`netlify.toml` o Netlify lê, e trocá-la põe um site a servir o conteúdo do outro.
 
 **Porque não é tudo o mesmo site:** a app tem de ficar na raiz do seu próprio
 endereço. O build do Expo referencia tudo por caminhos absolutos (`/_expo/...`)
@@ -17,23 +20,39 @@ instalada é identificada pelo endereço: os dados offline e a sessão ficam
 guardados por origem. Mudar de endereço deixa quem a tinha instalada com uma
 app vazia e sem sessão.
 
-## A página de apresentação (uma vez só)
+## A página de apresentação
 
-O site é estático. Publica-o **uma vez** no Netlify:
+Também é construída a cada `push`, tal como a app. **Os dois sites saem do mesmo
+repositório e é a *base directory* que os distingue** — é a única definição que
+não se pode errar aqui.
 
-1. Vai a <https://app.netlify.com/drop>.
-2. Arrasta a pasta **`website`** inteira para a página.
-3. Fica online em segundos. (Podes mudar o nome/domínio nas definições.)
+### Ligar ao GitHub (uma vez só)
 
-Não precisas de repetir isto quando lançares versões novas da app — ver abaixo.
+O site nasceu por *drag and drop*, o que obrigava a repetir o arrasto a cada
+alteração — e era o passo que se esquecia, porque o site continuava a servir a
+versão antiga sem nada avisar. Para acabar com isso, liga-o ao repositório:
 
-**Mas precisas de repetir quando mexeres na própria página.** Este site não
-está ligado ao GitHub: um `git push` com alterações ao `website/` não muda nada
-do que está online. Para publicar o que mudou, vai a
-<https://app.netlify.com> → o site `gestaogado` → **Deploys** → arrasta a pasta
-`website` outra vez para a zona de *drag and drop* (ou usa o `netlify.com/drop`
-e depois liga o site antigo). É o passo que se esquece: o site continua a
-servir a versão antiga e nada avisa.
+1. Em <https://app.netlify.com> → o site **`gestaogado`** → **Site
+   configuration** → **Build & deploy** → **Continuous deployment** →
+   **Link repository** → **GitHub** → o repositório `GADOOOOOO`.
+2. **Branch to deploy: `main`.** É o branch de produção; o `dev` não deve
+   publicar a página real.
+3. **Base directory: `website`** ← **é esta que importa.** Com ela vazia o
+   Netlify lê o `netlify.toml` da RAIZ e constrói a **app** em cima do endereço
+   da apresentação, deixando os dois sites a servir a mesma coisa.
+4. *Build command* e *publish directory*: **deixar vazios**. Vêm do
+   `website/netlify.toml`, e o site é estático — não há build nenhum.
+
+A partir daqui, cada `push` para o `main` que mexa em `website/` republica a
+página sozinho. Um push que não lhe toque é cancelado pela regra `ignore` do
+`website/netlify.toml`, para não gastar builds do plano grátis.
+
+### Confirmar que ficou bem ligado
+
+O primeiro deploy depois de ligar deve aparecer em **Deploys** com origem no
+commit do GitHub (e não como *manual deploy*). Se aparecer um build a correr
+`npx expo export`, a *base directory* ficou vazia — é a app a ser construída no
+site errado. Corrige o passo 3 e volta a fazer *Trigger deploy*.
 
 ## O site da app (uma vez só)
 
@@ -74,17 +93,25 @@ O download **não vive no site** — vive no **GitHub Releases** e é reconstru�
 sozinho. O botão do site aponta sempre para:
 
 ```
-https://github.com/nunomarques2799/GADOOOOOO/releases/download/windows/GestaoDeGado-Windows.zip
+https://github.com/nunomarques2799/GADOOOOOO/releases/latest/download/GestaoDeGado-Setup.exe
 ```
+
+`latest/download/` e um nome de ficheiro FIXO, de propósito: cada publicação cria
+um Release novo (`1.0.<número do build>`) e este link resolve sempre para o mais
+recente, sem nunca precisar de ser mexido. O ZIP portátil que aqui esteve foi
+abandonado — o `electron-updater` não sabe atualizar a partir de um ZIP no
+Windows, e sem instalador não havia auto-update nenhum.
 
 ### O que acontece quando mudas a app
 
 1. Fazes as tuas alterações no código da app.
 2. Fazes **commit + push** para o `main` no GitHub.
 3. O GitHub Actions (`.github/workflows/build-windows.yml`) corre sozinho:
-   gera o build web → empacota a app Windows → cria o ZIP → atualiza o
-   Release `windows`.
-4. O link do site passa a servir a versão nova **automaticamente**.
+   gera o build web → empacota a app Windows → constrói o instalador NSIS →
+   publica-o num Release novo `1.0.<número do build>`, com o `latest.yml` que o
+   auto-update lê.
+4. O link do site passa a servir a versão nova **automaticamente**, e quem já a
+   tem instalada recebe o banner "Atualizar agora".
 
 ➡️ **Não voltas a tocar no site nem a gerar ZIPs à mão.**
 
