@@ -292,6 +292,18 @@ export default function TrabalhadoresScreen() {
             />
           ) : null}
 
+          {/* E quem já cá NÃO anda. A lista de cima mostra a equipa de hoje; a
+              pergunta que ela não responde — «e o veterinário do mês passado?»
+              — é a que leva aqui. */}
+          {minhas.length > 0 ? (
+            <Button
+              label="Ver quem já cá esteve"
+              icon="account-clock-outline"
+              variant="secondary"
+              onPress={() => router.push('/equipa/historico')}
+            />
+          ) : null}
+
           {/* Por exploração, à vista e não escondido, como nos Animais */}
           {minhas.length > 1 ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>

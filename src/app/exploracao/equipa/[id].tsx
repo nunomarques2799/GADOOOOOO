@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, View } from 'react-native';
 
@@ -44,6 +44,7 @@ const rolesOpcoes: { valor: Exclude<RoleMembro, 'admin'>; label: string; icon: I
 /** Ecrã para o admin duma exploração gerir a equipa (membros + convites). */
 export default function EquipaExploracaoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { exploracaoById } = useGado();
   const {
     roleEm,
@@ -251,7 +252,21 @@ export default function EquipaExploracaoScreen() {
     Alert.alert('Código', codigo, [{ text: 'OK' }]);
   }
 
-  async function confirmarRemover(membro: MembroComNome) {
+  /**
+   * Tirar alguém da equipa, a perguntar primeiro.
+   *
+   * Pergunta pelo `confirmar()` da app e não pelo diálogo do sistema (ver
+   * `data/avisos.ts`): este era dos últimos sítios com um `window.confirm`, que
+   * na app de computador aparecia como uma barra do navegador agarrada ao topo
+   * da janela — com "localhost:8081 diz" por cima da pergunta mais destrutiva
+   * deste ecrã.
+   *
+   * A pergunta diz o que se perde e o que fica. As permissões que o dono
+   * ajustou àquela pessoa vão-se com o vínculo, e essa é a parte que ninguém
+   * espera; a passagem dela pela exploração fica no histórico, e essa é a parte
+   * que sossega quem hesita em remover.
+   */
+  function confirmarRemover(membro: MembroComNome) {
     const executar = async () => {
       const e = await removerMembro(membro.id);
       if (e) {
@@ -262,14 +277,13 @@ export default function EquipaExploracaoScreen() {
       toast.sucesso('Removido da equipa', membro.nome);
       await carregar();
     };
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(`Remover ${membro.nome} desta exploração?`)) await executar();
-      return;
-    }
-    Alert.alert('Remover membro', `Remover ${membro.nome} desta exploração?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: () => void executar() },
-    ]);
+    confirmar(
+      'Remover da equipa',
+      `${membro.nome} deixa de ver esta exploração já. As permissões que lhe ajustou perdem-se, e para voltar precisa de um código novo. `
+        + 'A passagem dele por aqui fica no histórico da equipa, e o que ele registou não se apaga.',
+      () => void executar(),
+      { rotuloConfirmar: 'Remover', destrutivo: true },
+    );
   }
 
   async function apagarConvite(codigo: string) {
@@ -496,6 +510,17 @@ export default function EquipaExploracaoScreen() {
             </View>
           </Card>
         )}
+
+        {/* Quem já cá não anda. Fica ao pé da lista de quem cá anda porque é a
+            pergunta seguinte a essa — e porque é aqui que se dá por falta de
+            alguém que se lembra de ter convidado. */}
+        <Button
+          label="Ver quem já cá esteve"
+          icon="account-clock-outline"
+          variant="ghost"
+          onPress={() => router.push(`/equipa/historico?exploracao=${id}`)}
+          style={{ marginTop: spacing.sm }}
+        />
 
         {/* ---- Gerar novo convite ---- */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>

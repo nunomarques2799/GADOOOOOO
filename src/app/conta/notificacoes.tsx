@@ -12,6 +12,7 @@ import {
   type Categoria,
 } from '@/data/notificacoes';
 import { pedirPermissao, suportaNotificacoes, temPermissao } from '@/data/notificacoesLocais';
+import { definirSom, somLigado, somSucesso } from '@/data/som';
 import { useGado } from '@/data/store';
 import { definirVibracao, vibracaoLigada, vibrarSucesso } from '@/data/vibrar';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -68,6 +69,8 @@ export default function NotificacoesScreen() {
           <AvisoNoTelemovel />
 
           <VibracaoAoGravar />
+
+          <SomAoGravar />
 
           {CATEGORIAS.map((c) => (
             <LinhaCategoria
@@ -223,6 +226,65 @@ function VibracaoAoGravar() {
         {ligada
           ? 'O aparelho dá um toque curto quando um registo fica gravado, e um toque diferente quando alguma coisa falha. Dá para confirmar sem ler o ecrã.'
           : 'Os registos só se confirmam pelo aviso no ecrã.'}
+      </Text>
+    </Card>
+  );
+}
+
+/**
+ * Som ao gravar.
+ *
+ * Ao lado da vibração porque é a mesma pergunta — "como é que a app me avisa" —
+ * e porque os dois se completam: o telemóvel no bolso sente-se, o computador da
+ * secretária ouve-se. Também esta preferência é do APARELHO e não da conta.
+ *
+ * Ligar toca o som de propósito, pela mesma razão que ligar a vibração vibra: é
+ * a única forma de saber o que se acabou de ligar sem ir gravar alguma coisa só
+ * para experimentar. E é também assim que se percebe que a app instalada ainda
+ * não o traz — ver o cabeçalho de `data/som.ts`.
+ */
+function SomAoGravar() {
+  const [ligado, setLigado] = useState(() => somLigado());
+
+  function alternar(v: boolean) {
+    definirSom(v);
+    setLigado(v);
+    if (v) somSucesso();
+  }
+
+  return (
+    <Card>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: radii.pill,
+            backgroundColor: ligado ? colors.primaryTint : colors.surfaceSunken,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <Icon
+            name={ligado ? 'volume-high' : 'volume-off'}
+            size="md"
+            color={ligado ? colors.primary : colors.textMuted}
+          />
+        </View>
+        <Text variant="bodyStrong" style={{ flex: 1 }}>
+          Som ao gravar
+        </Text>
+        <Switch
+          value={ligado}
+          onValueChange={alternar}
+          trackColor={{ true: colors.primary, false: colors.borderStrong }}
+          thumbColor={colors.white}
+          accessibilityLabel="Som ao gravar"
+        />
+      </View>
+      <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
+        {ligado
+          ? 'A app dá um sinal sonoro curto quando um registo fica gravado, e outro diferente quando alguma coisa falha. O aparelho no silencioso continua calado.'
+          : 'Os registos só se confirmam pelo aviso no ecrã e pela vibração.'}
       </Text>
     </Card>
   );

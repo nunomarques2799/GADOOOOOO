@@ -31,4 +31,5 @@ schema_agenda.sql
 schema_documentos.sql
 schema_equipa_e_foto.sql
 schema_documento_visibilidade.sql
+schema_historico_equipa.sql
 schema_lint.sql

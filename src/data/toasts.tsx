@@ -30,6 +30,7 @@ import {
 } from 'react';
 import { AccessibilityInfo } from 'react-native';
 
+import { somErro, somSucesso } from './som';
 import { vibrarErro, vibrarSucesso } from './vibrar';
 
 export type TipoToast = 'sucesso' | 'erro' | 'info';
@@ -156,8 +157,17 @@ export function ToastsProvider({ children }: { children: ReactNode }) {
 
       // Sentir e ouvir, além de ver. Aqui, e não em cada ecrã: é este o sítio
       // por onde passa toda a ação que grava, apaga ou escreve um ficheiro.
-      if (tipo === 'sucesso') vibrarSucesso();
-      else if (tipo === 'erro') vibrarErro();
+      //
+      // O `info` continua calado nos dois: é o aviso que não traz notícia
+      // nenhuma ("relatório aberto para impressão"), e um som a cada um deles
+      // ensinava a não ouvir os outros dois.
+      if (tipo === 'sucesso') {
+        vibrarSucesso();
+        somSucesso();
+      } else if (tipo === 'erro') {
+        vibrarErro();
+        somErro();
+      }
 
       // O cartão desaparece em segundos e a `accessibilityLiveRegion` só existe
       // no Android — sem este anúncio, quem usa o leitor de ecrã só ouvia o

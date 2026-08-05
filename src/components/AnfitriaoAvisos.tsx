@@ -25,6 +25,9 @@ import { colors, radii, shadow, spacing } from '@/theme';
  *
  * Fechar pelo fundo ou pelo botão do sistema é sempre CANCELAR: quem tocou fora
  * não respondeu à pergunta, e a ação destrutiva não pode acontecer por omissão.
+ *
+ * O `Modal` só existe enquanto houver pergunta — ver a nota do `if (!pedido)`
+ * mais abaixo, que é o que o põe POR CIMA das folhas da app.
  */
 type Pedido =
   | ({ tipo: 'aviso' } & PedidoAviso)
@@ -58,12 +61,28 @@ export function AnfitriaoAvisos() {
     if (pedido?.tipo === 'confirmacao') pedido.aoConfirmar();
   }, [pedido]);
 
+  /**
+   * Sem pergunta não há `Modal` NENHUM montado — e é isso que faz a pergunta
+   * aparecer por cima e não por baixo.
+   *
+   * O `Modal` da web (react-native-web) desenha-se num `<div>` que é criado e
+   * pendurado no `body` quando o componente MONTA, não quando fica visível, e
+   * nenhum deles leva `z-index`: quem está mais abaixo no documento é quem fica
+   * à frente. Este anfitrião monta no arranque da app (`_layout.tsx`), portanto
+   * o `div` dele era sempre o primeiro — e qualquer folha aberta depois (a das
+   * permissões, a dos filtros) tapava-o. O resultado era uma pergunta invisível
+   * atrás da folha, com a app à espera de uma resposta que não se conseguia
+   * dar: os chips de "Reabrir 4 horas" deixavam de fazer o que quer que fosse.
+   *
+   * Montado só à chegada do pedido, o `div` é o último do documento e a
+   * pergunta fica à frente de tudo o que estiver aberto. No Android é o mesmo
+   * pela mesma ordem (o `Modal` é um diálogo, e o último a ser mostrado fica em
+   * cima).
+   */
+  if (!pedido) return null;
+
   return (
-    <Modal
-      visible={pedido !== null}
-      transparent
-      animationType="fade"
-      onRequestClose={fechar}>
+    <Modal visible transparent animationType="fade" onRequestClose={fechar}>
       <Pressable
         onPress={fechar}
         accessibilityLabel="Fechar"
@@ -90,63 +109,59 @@ export function AnfitriaoAvisos() {
             },
             shadow.lg,
           ]}>
-          {pedido ? (
-            <>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: spacing.sm,
-                  marginBottom: spacing.sm,
-                }}>
-                <Icon
-                  name={
-                    pedido.tipo === 'confirmacao' && pedido.destrutivo
-                      ? 'alert-circle'
-                      : 'information'
-                  }
-                  size="lg"
-                  color={
-                    pedido.tipo === 'confirmacao' && pedido.destrutivo
-                      ? colors.danger
-                      : colors.primary
-                  }
-                />
-                <Text variant="h2" style={{ flex: 1 }}>
-                  {pedido.titulo}
-                </Text>
-              </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.sm,
+              marginBottom: spacing.sm,
+            }}>
+            <Icon
+              name={
+                pedido.tipo === 'confirmacao' && pedido.destrutivo
+                  ? 'alert-circle'
+                  : 'information'
+              }
+              size="lg"
+              color={
+                pedido.tipo === 'confirmacao' && pedido.destrutivo
+                  ? colors.danger
+                  : colors.primary
+              }
+            />
+            <Text variant="h2" style={{ flex: 1 }}>
+              {pedido.titulo}
+            </Text>
+          </View>
 
-              {/* Rola quando é preciso: a confirmação de eliminar um animal
-                  explica o que acontece à genealogia e ao histórico, e num
-                  telemóvel com a letra ampliada isso não cabe num ecrã. */}
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                style={{ flexGrow: 0 }}
-                contentContainerStyle={{ paddingBottom: spacing.md }}>
-                <Text variant="body" color={colors.textSecondary}>
-                  {pedido.mensagem}
-                </Text>
-              </ScrollView>
+          {/* Rola quando é preciso: a confirmação de eliminar um animal
+              explica o que acontece à genealogia e ao histórico, e num
+              telemóvel com a letra ampliada isso não cabe num ecrã. */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={{ flexGrow: 0 }}
+            contentContainerStyle={{ paddingBottom: spacing.md }}>
+            <Text variant="body" color={colors.textSecondary}>
+              {pedido.mensagem}
+            </Text>
+          </ScrollView>
 
-              {pedido.tipo === 'aviso' ? (
-                <Button label="Entendido" icon="check" onPress={fechar} />
-              ) : (
-                // Em coluna, e o confirmar em BAIXO: a ação sem volta é a que
-                // exige mais um instante de leitura, e não a que fica debaixo
-                // do dedo de quem vinha a tocar sem ler.
-                <View style={{ gap: spacing.sm }}>
-                  <Button label="Cancelar" variant="ghost" onPress={fechar} />
-                  <Button
-                    label={pedido.rotuloConfirmar}
-                    icon={pedido.destrutivo ? 'trash-can-outline' : 'check'}
-                    variant={pedido.destrutivo ? 'danger' : 'primary'}
-                    onPress={responder}
-                  />
-                </View>
-              )}
-            </>
-          ) : null}
+          {pedido.tipo === 'aviso' ? (
+            <Button label="Entendido" icon="check" onPress={fechar} />
+          ) : (
+            // Em coluna, e o confirmar em BAIXO: a ação sem volta é a que
+            // exige mais um instante de leitura, e não a que fica debaixo
+            // do dedo de quem vinha a tocar sem ler.
+            <View style={{ gap: spacing.sm }}>
+              <Button label="Cancelar" variant="ghost" onPress={fechar} />
+              <Button
+                label={pedido.rotuloConfirmar}
+                icon={pedido.destrutivo ? 'trash-can-outline' : 'check'}
+                variant={pedido.destrutivo ? 'danger' : 'primary'}
+                onPress={responder}
+              />
+            </View>
+          )}
         </Pressable>
       </Pressable>
     </Modal>

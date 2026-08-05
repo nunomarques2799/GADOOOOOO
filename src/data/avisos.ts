@@ -21,6 +21,7 @@
 
 import { Alert, Platform } from 'react-native';
 
+import { somAviso } from './som';
 import { vibrarAviso } from './vibrar';
 
 const naWeb = Platform.OS === 'web';
@@ -59,9 +60,11 @@ export function definirAnfitriaoAvisos(a: AnfitriaoAvisos | null): void {
 /** Mensagem informativa com um só botão. */
 export function avisar(titulo: string, mensagem: string): void {
   // Isto interrompe porque tem de ser lido (ver a tabela do DESIGN_SYSTEM.md).
-  // A vibração é o que chama a atenção de quem já ia a guardar o telemóvel no
-  // bolso — a lista de animais que ficaram por gravar está aqui, não no ecrã.
+  // A vibração e o som são o que chama a atenção de quem já ia a guardar o
+  // telemóvel no bolso — a lista de animais que ficaram por gravar está aqui,
+  // não no ecrã.
   vibrarAviso();
+  somAviso();
   if (anfitriao) {
     anfitriao.avisar({ titulo, mensagem });
     return;

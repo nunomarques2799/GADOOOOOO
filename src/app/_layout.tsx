@@ -263,6 +263,7 @@ export default function RootLayout() {
                   <Stack.Screen name="terreno/editar/[id]" />
                   <Stack.Screen name="terreno/animais/[id]" options={{ animation: 'slide_from_bottom' }} />
                   <Stack.Screen name="exploracao/equipa/[id]" />
+                  <Stack.Screen name="equipa/historico" />
                   <Stack.Screen name="atividade" />
                   <Stack.Screen name="cliente/[id]" />
                   <Stack.Screen name="conta/editar" />

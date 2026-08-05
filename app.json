@@ -16,7 +16,9 @@
       },
       "infoPlist": {
         "CFBundleDevelopmentRegion": "pt-PT",
-        "CFBundleLocalizations": ["pt-PT"],
+        "CFBundleLocalizations": [
+          "pt-PT"
+        ],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false,
           "NSAllowsLocalNetworking": true,
@@ -82,6 +84,15 @@
           "photosPermission": "A Terrabovina precisa de aceder às suas fotografias para ilustrar a ficha do animal e guardar faturas e guias.",
           "cameraPermission": "A Terrabovina precisa da câmara para fotografar o animal e os documentos da exploração.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
         }
       ]
     ],
