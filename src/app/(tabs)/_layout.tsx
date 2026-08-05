@@ -52,6 +52,13 @@ const DESTINOS: Destino[] = [
   { nome: 'terrenos', rota: '/terrenos', label: 'Terrenos', icon: 'grass' },
   { nome: 'animais', rota: '/animais', label: 'Animais', icon: 'cow' },
   { nome: 'alertas', rota: '/alertas', label: 'Alertas', icon: 'bell-outline' },
+  { nome: 'reproducao', rota: '/reproducao', label: 'Reprodução', icon: 'heart-pulse' },
+  {
+    nome: 'medicamentos',
+    rota: '/medicamentos',
+    label: 'Existências',
+    icon: 'package-variant-closed',
+  },
   {
     nome: 'trabalhadores',
     rota: '/trabalhadores',

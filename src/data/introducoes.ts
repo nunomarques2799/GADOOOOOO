@@ -28,7 +28,9 @@ export type ChaveIntroducao =
   | 'trabalhadores'
   | 'alertas'
   | 'documentos'
-  | 'financas';
+  | 'financas'
+  | 'reproducao'
+  | 'medicamentos';
 
 /** Todas as que existem — é o que a reposição percorre. */
 export const CHAVES_INTRODUCAO: ChaveIntroducao[] = [
@@ -36,6 +38,8 @@ export const CHAVES_INTRODUCAO: ChaveIntroducao[] = [
   'alertas',
   'documentos',
   'financas',
+  'reproducao',
+  'medicamentos',
 ];
 
 const chaveKv = (chave: ChaveIntroducao) => `gado.intro.${chave}.v1`;

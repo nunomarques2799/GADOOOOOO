@@ -1,5 +1,12 @@
-import { PartoPrevisaoCaducaDias, PrazosLegais, PrazosSanitarios } from './constants';
-import type { Alerta, Animal, Evento } from './types';
+/**
+ * Contas de data, formatação e as primitivas que o resto do domínio usa.
+ *
+ * O `computeAlertas` esteve aqui e mudou-se para `alertas.ts` — não foi
+ * arrumação: os alertas passaram a precisar do `reproducao.ts`, que por sua vez
+ * precisa das contas de datas deste ficheiro. Ficavam os dois a importar-se um
+ * ao outro. Este módulo é a camada de baixo e não deve conhecer nenhum dos que
+ * falam do domínio.
+ */
 
 const MESES_PT = [
   'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
@@ -176,159 +183,4 @@ export function idadeExtenso(iso: string): string {
   const mesesRest = Math.floor((dias - anos * 365.25) / 30.44);
   if (mesesRest === 0) return `${anos} anos`;
   return `${anos} ${anos === 1 ? 'ano' : 'anos'} e ${mesesRest} ${mesesRest === 1 ? 'mês' : 'meses'}`;
-}
-
-/* ---- Cálculo de alertas legais ---- */
-export function computeAlertas(animais: Animal[], eventos: Evento[] = []): Alerta[] {
-  const out: Alerta[] = [];
-
-  // Data da última vacinação por animal (ms), para os alertas de revacinação.
-  const ultimaVacinacao = new Map<string, number>();
-  for (const e of eventos) {
-    if (e.tipo !== 'Vacinação') continue;
-    const t = new Date(e.data).getTime();
-    if (Number.isNaN(t)) continue;
-    const anterior = ultimaVacinacao.get(e.animalId);
-    if (anterior === undefined || t > anterior) ultimaVacinacao.set(e.animalId, t);
-  }
-
-  for (const a of animais) {
-    // Animais que já saíram do efetivo (falecidos/vendidos) não geram alertas.
-    if (a.estado && a.estado !== 'ativo') continue;
-    const rotulo = a.nome ?? a.numeroIdentificacao ?? 'Sem nome';
-
-    // Identificação (brinco) até 20 dias de vida — bovinos
-    if (a.especie === 'Bovino' && !a.numeroIdentificacao) {
-      const prazo = PrazosLegais.identificacao - idadeDias(a.dataNascimento);
-      out.push({
-        id: `id-${a.id}`,
-        categoria: 'identificacao',
-        animalId: a.id,
-        exploracaoId: a.exploracaoId,
-        data: isoMaisDias(a.dataNascimento, PrazosLegais.identificacao),
-        gravidade: prazo <= 0 ? 'urgente' : prazo <= 5 ? 'aviso' : 'info',
-        titulo: prazo <= 0 ? 'Identificação em atraso' : 'Falta identificar (brinco)',
-        descricao:
-          prazo <= 0
-            ? `${rotulo} devia estar identificado. Prazo excedido há ${Math.abs(prazo)} dia(s).`
-            : `${rotulo} tem ${idadeDias(a.dataNascimento)} dias. Colocar brinco em ${prazo} dia(s).`,
-        diasRestantes: prazo,
-      });
-    }
-
-    // Comunicação ao SNIRA — 7 dias após identificação
-    if (a.dataIdentificacao && a.comunicadoSnira === false) {
-      const prazo = PrazosLegais.snira - idadeDias(a.dataIdentificacao);
-      out.push({
-        id: `snira-${a.id}`,
-        categoria: 'snira',
-        animalId: a.id,
-        exploracaoId: a.exploracaoId,
-        data: isoMaisDias(a.dataIdentificacao, PrazosLegais.snira),
-        gravidade: prazo <= 0 ? 'urgente' : prazo <= 3 ? 'aviso' : 'info',
-        titulo: prazo <= 0 ? 'Comunicação SNIRA em atraso' : 'Comunicar ao SNIRA',
-        descricao:
-          prazo <= 0
-            ? `${rotulo}: nascimento por comunicar ao SNIRA. Prazo excedido há ${Math.abs(prazo)} dia(s).`
-            : `${rotulo}: comunicar nascimento ao SNIRA em ${prazo} dia(s).`,
-        diasRestantes: prazo,
-      });
-    }
-
-    // Parto previsto
-    if (a.dataPrevistaParto) {
-      const dias = diasAte(a.dataPrevistaParto);
-      if (dias < -PartoPrevisaoCaducaDias) {
-        // Previsão caducada: ou o parto aconteceu e não foi registado, ou a
-        // conta estava errada. Continuar a contar dias de atraso não ajuda —
-        // o que falta é o criador dizer o que aconteceu. Sem `diasRestantes`,
-        // fica dispensável (ver `dispensados.ts`) e não fica preso na lista.
-        out.push({
-          id: `parto-${a.id}`,
-          categoria: 'parto',
-          animalId: a.id,
-          exploracaoId: a.exploracaoId,
-          data: a.dataPrevistaParto,
-          gravidade: 'info',
-          titulo: 'Parto previsto por confirmar',
-          descricao: `${rotulo}: a data prevista de parto já passou há mais de ${PartoPrevisaoCaducaDias} dias. Registe o parto ou corrija a previsão.`,
-        });
-      } else if (dias <= 14) {
-        out.push({
-          id: `parto-${a.id}`,
-          categoria: 'parto',
-          animalId: a.id,
-          exploracaoId: a.exploracaoId,
-          data: a.dataPrevistaParto,
-          gravidade: dias <= 3 ? 'aviso' : 'info',
-          titulo: 'Parto previsto',
-          descricao:
-            dias < 0
-              ? `${rotulo} passou a data prevista de parto há ${Math.abs(dias)} dia(s).`
-              : `${rotulo} está próxima do parto (${dias} dia(s)).`,
-          diasRestantes: dias,
-        });
-      }
-    }
-
-    // Intervalo de segurança de medicamento
-    if (a.fimIntervaloSeguranca) {
-      const dias = diasAte(a.fimIntervaloSeguranca);
-      if (dias > 0) {
-        out.push({
-          id: `med-${a.id}`,
-          categoria: 'medicamento',
-          animalId: a.id,
-          exploracaoId: a.exploracaoId,
-          data: a.fimIntervaloSeguranca,
-          gravidade: 'info',
-          titulo: 'Período de segurança',
-          descricao: `${rotulo}: em intervalo de segurança, não vender para abate (faltam ${dias} dia(s)).`,
-          diasRestantes: dias,
-        });
-      }
-    }
-
-    // Vacinação — revacinação anual (ou falta de registo em adultos).
-    const idade = idadeDias(a.dataNascimento);
-    const ultima = ultimaVacinacao.get(a.id);
-    if (ultima !== undefined) {
-      const diasDesde = Math.floor((Date.now() - ultima) / MS_DIA);
-      const restam = PrazosSanitarios.revacinacao - diasDesde;
-      if (restam <= PrazosSanitarios.avisoRevacinacaoDias) {
-        out.push({
-          id: `vac-${a.id}`,
-          categoria: 'vacinacao',
-          animalId: a.id,
-          exploracaoId: a.exploracaoId,
-          data: isoMaisDias(new Date(ultima).toISOString(), PrazosSanitarios.revacinacao),
-          gravidade: restam <= 0 ? 'urgente' : 'info',
-          titulo: restam <= 0 ? 'Revacinação em atraso' : 'Revacinação a aproximar-se',
-          descricao:
-            restam <= 0
-              ? `${rotulo}: passou ~1 ano da última vacinação. Prazo excedido há ${Math.abs(restam)} dia(s).`
-              : `${rotulo}: revacinar em ${restam} dia(s) (última há ${diasDesde} dias).`,
-          diasRestantes: restam,
-        });
-      }
-    } else if (idade >= PrazosSanitarios.idadeMinVacinacaoDias) {
-      out.push({
-        id: `vac-${a.id}`,
-        categoria: 'vacinacao',
-        animalId: a.id,
-        exploracaoId: a.exploracaoId,
-        // Sem `data` de propósito: não há prazo nenhum a correr, há um registo
-        // em falta. No calendário só apareceria a fingir de tarefa marcada.
-        gravidade: 'info',
-        titulo: 'Sem registo de vacinação',
-        descricao: `${rotulo} não tem nenhuma vacinação registada. Registe a última para acompanhar o plano.`,
-      });
-    }
-  }
-
-  const ordem = { urgente: 0, aviso: 1, info: 2 };
-  return out.sort((x, y) => {
-    if (ordem[x.gravidade] !== ordem[y.gravidade]) return ordem[x.gravidade] - ordem[y.gravidade];
-    return (x.diasRestantes ?? 99) - (y.diasRestantes ?? 99);
-  });
 }

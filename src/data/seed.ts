@@ -1,5 +1,13 @@
-import { isoDaysAgo, isoInDays } from './helpers';
-import type { Animal, Evento, Exploracao, Movimento, Terreno, Utilizador } from './types';
+import { diaIso, isoDaysAgo, isoInDays } from './helpers';
+import type {
+  Animal,
+  Evento,
+  Exploracao,
+  Medicamento,
+  Movimento,
+  Terreno,
+  Utilizador,
+} from './types';
 
 export const utilizadorSeed: Utilizador = {
   id: 'dev-user-001',
@@ -51,7 +59,6 @@ export const animaisSeed: Animal[] = [
     especie: 'Bovino', sexo: 'Fêmea', dataNascimento: isoDaysAgo(365 * 5 + 40),
     raca: 'Mertolenga', corPelagem: 'Vermelha', numeroIdentificacao: 'PT 6120 0011 2201',
     dataIdentificacao: isoDaysAgo(365 * 5 + 25), comunicadoSnira: true,
-    dataPrevistaParto: isoInDays(6),
   },
   {
     id: 'an-2', exploracaoId: 'exp-1', terrenoId: 'ter-1', nome: 'Estrela',
@@ -102,6 +109,10 @@ export const animaisSeed: Animal[] = [
     especie: 'Bovino', sexo: 'Fêmea', dataNascimento: isoDaysAgo(365 * 3 + 200),
     raca: 'Mertolenga', corPelagem: 'Castanha', numeroIdentificacao: 'PT 6120 0011 2209',
     dataIdentificacao: isoDaysAgo(365 * 3 + 185), comunicadoSnira: true,
+    // Prenhe e prestes a parir. A data bate certo com a cobrição registada em
+    // `eventosSeed` (277 dias atrás + 283 de gestação): as duas TÊM de
+    // concordar, ou o ecrã Reprodução mostra um ciclo que não fecha.
+    dataPrevistaParto: isoInDays(6),
   },
 
   // Vitelos recentes — geram alertas
@@ -148,13 +159,68 @@ export const animaisSeed: Animal[] = [
 
 export const eventosSeed: Evento[] = [
   { id: 'ev-1', animalId: 'an-1', tipo: 'Parto', data: isoDaysAgo(15), descricao: 'Parto normal: vitelo macho (Trovão)', detalhe: 'Sem complicações' },
-  { id: 'ev-2', animalId: 'an-1', tipo: 'Vacinação', data: isoDaysAgo(120), descricao: 'Vacina da língua azul', detalhe: 'Lote 4471 · próxima dose em 6 meses', valor: 18 },
-  { id: 'ev-3', animalId: 'an-7', tipo: 'Medicamento', data: isoDaysAgo(2), descricao: 'Antibiótico para mastite', detalhe: 'Dose 20ml · Vet. Dr. Sousa · segurança 10 dias', valor: 45 },
+  // Os dois saem de lotes da arrecadação (ver `medicamentosSeed`): é o que faz
+  // as existências descerem no ecrã em vez de mostrarem sempre o frasco cheio.
+  { id: 'ev-2', animalId: 'an-1', tipo: 'Vacinação', data: isoDaysAgo(120), descricao: 'Vacina da língua azul', detalhe: 'Lote 4471 · próxima dose em 6 meses', valor: 18, medicamentoId: 'med-1', quantidade: 4 },
+  { id: 'ev-3', animalId: 'an-7', tipo: 'Medicamento', data: isoDaysAgo(2), descricao: 'Antibiótico para mastite', detalhe: 'Dose 20ml · Vet. Dr. Sousa · segurança 10 dias', valor: 45, medicamentoId: 'med-2', quantidade: 20 },
   { id: 'ev-4', animalId: 'an-6', tipo: 'Parto', data: isoDaysAgo(25), descricao: 'Parto normal: vitela fêmea (Aurora)', detalhe: 'Sem complicações' },
   { id: 'ev-5', animalId: 'an-3', tipo: 'Pesagem', data: isoDaysAgo(30), descricao: 'Pesagem: 520 kg', detalhe: 'GMD 0,9 kg/dia' },
   { id: 'ev-6', animalId: 'an-13', tipo: 'Compra', data: isoDaysAgo(365), descricao: 'Compra na Feira de Nisa', detalhe: 'origem PT 44 552 1100', valor: 1350 },
   // O preço desta venda vive em `movimentosSeed` (é receita — ver financas.ts).
-  { id: 'ev-7', animalId: 'an-3', tipo: 'Venda', data: isoDaysAgo(10), descricao: 'Animal saiu por venda.', detalhe: 'Vendido no matadouro de Elvas' },
+  // `comunicadoSnira: false` de propósito: é o que põe esta saída na lista do
+  // ecrã "Comunicar ao SNIRA", que de outra forma abriria sempre vazia na demo.
+  { id: 'ev-7', animalId: 'an-3', tipo: 'Venda', data: isoDaysAgo(10), descricao: 'Animal saiu por venda.', detalhe: 'Vendido no matadouro de Elvas', comunicadoSnira: false },
+
+  /*
+   * Cinco ciclos reprodutivos, um por cada coisa que o ecrã Reprodução sabe
+   * mostrar. As DATAS TÊM DE FECHAR entre si — 283 dias de gestação num bovino
+   * — ou a demo mostra vacas a parir duas vezes no mesmo mês:
+   *
+   *   an-9 Castanha — coberta há 277 dias, gestante → PRESTES A PARIR daqui a
+   *                   6 dias (277 + 283 dá exatamente isso, e é a data que
+   *                   está na ficha dela).
+   *   an-2 Estrela  — coberta há 50 dias, sem diagnóstico → À ESPERA.
+   *   an-7 Preta    — pariu há 130 dias e não voltou ao touro → PARADA.
+   *   an-1 Mimosa   — ciclo FECHADO: coberta há 298, gestante, pariu há 15
+   *                   (o `ev-1`, que deu o Trovão). 298 − 283 = 15. ✓
+   *   an-4 Rosa     — diagnosticada vazia; volta à lista de quem cobrir.
+   */
+  { id: 'ev-8', animalId: 'an-9', tipo: 'Cobrição', data: isoDaysAgo(277), descricao: 'Cobrição por touro', detalhe: 'Touro: Marquês' },
+  { id: 'ev-9', animalId: 'an-9', tipo: 'Diagnóstico', data: isoDaysAgo(230), descricao: 'Diagnóstico de gestação: gestante', resultado: 'gestante', detalhe: 'Vet. Dr. Sousa' },
+  { id: 'ev-10', animalId: 'an-2', tipo: 'Cobrição', data: isoDaysAgo(50), descricao: 'Inseminação artificial', detalhe: 'Sémen: Alentejano 4471' },
+  { id: 'ev-11', animalId: 'an-4', tipo: 'Cobrição', data: isoDaysAgo(120), descricao: 'Cobrição por touro', detalhe: 'Touro: Marquês' },
+  { id: 'ev-12', animalId: 'an-4', tipo: 'Diagnóstico', data: isoDaysAgo(78), descricao: 'Diagnóstico de gestação: vazia', resultado: 'vazia', detalhe: 'Vet. Dr. Sousa' },
+  { id: 'ev-13', animalId: 'an-1', tipo: 'Cobrição', data: isoDaysAgo(298), descricao: 'Cobrição por touro', detalhe: 'Touro: Marquês' },
+  { id: 'ev-14', animalId: 'an-1', tipo: 'Diagnóstico', data: isoDaysAgo(250), descricao: 'Diagnóstico de gestação: gestante', resultado: 'gestante', detalhe: 'Vet. Dr. Sousa' },
+  // A cria desta ficou sem registo: foi vendida antes de a app existir. É o que
+  // acontece na vida real, e é bom que a demo o tenha.
+  { id: 'ev-15', animalId: 'an-7', tipo: 'Parto', data: isoDaysAgo(130), descricao: 'Parto normal', detalhe: 'Cria vendida' },
+];
+
+/**
+ * A arrecadação de exemplo. Um lote a meio, um quase no fim e um fora de
+ * validade — que é o que faz o ecrã Existências abrir com os três estados que
+ * ele sabe mostrar, em vez de três linhas iguais.
+ */
+export const medicamentosSeed: Medicamento[] = [
+  {
+    id: 'med-1', exploracaoId: 'exp-1', nome: 'Vacina Língua Azul', tipo: 'Vacina',
+    lote: '4471', validade: diaIso(isoInDays(210)), quantidade: 100, unidade: 'ml',
+    intervaloSegurancaDias: 0, fornecedor: 'Agro-Nisa', custo: 180,
+    dataCompra: diaIso(isoDaysAgo(130)),
+  },
+  {
+    id: 'med-2', exploracaoId: 'exp-1', nome: 'Antibiótico (Penicilina)', tipo: 'Medicamento',
+    lote: 'PN-2291', validade: diaIso(isoInDays(20)), quantidade: 250, unidade: 'ml',
+    intervaloSegurancaDias: 10, fornecedor: 'Farmácia Veterinária de Portalegre', custo: 95,
+    dataCompra: diaIso(isoDaysAgo(60)),
+  },
+  {
+    id: 'med-3', exploracaoId: 'exp-1', nome: 'Desparasitante', tipo: 'Medicamento',
+    lote: 'DS-118', validade: diaIso(isoDaysAgo(12)), quantidade: 500, unidade: 'ml',
+    intervaloSegurancaDias: 28, fornecedor: 'Agro-Nisa', custo: 140,
+    dataCompra: diaIso(isoDaysAgo(400)),
+  },
 ];
 
 /**

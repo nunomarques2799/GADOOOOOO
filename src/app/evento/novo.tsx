@@ -22,6 +22,7 @@ import {
 } from '@/components/ui';
 import { SeletorAnimais } from '@/components/SeletorAnimais';
 import { avisar } from '@/data/avisos';
+import { PrazosReproducao, resultadoMeta, resultadosDiagnostico } from '@/data/constants';
 import { useMembros } from '@/data/membros';
 import {
   formatDataPt,
@@ -30,18 +31,30 @@ import {
   paraEuro,
   parseDataPt,
 } from '@/data/helpers';
+import { formatQuantidade, lotesUtilizaveis, rotuloLote } from '@/data/medicamentos';
+import { preverParto } from '@/data/reproducao';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
-import type { Animal, EventoTipo, Sexo } from '@/data/types';
+import type { Animal, EventoTipo, ResultadoDiagnostico, Sexo } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 /* ------------------------------------------------------------------ *
  *  Tipos de evento cobertos por este formulário
  * ------------------------------------------------------------------ */
 
-const REGISTAVEIS = ['Parto', 'Vacinação', 'Medicamento', 'Pesagem'] as const;
+const REGISTAVEIS = [
+  'Parto',
+  'Cobrição',
+  'Diagnóstico',
+  'Vacinação',
+  'Medicamento',
+  'Pesagem',
+] as const;
 type Registavel = (typeof REGISTAVEIS)[number];
+
+/** Os que só se registam a fêmeas. */
+const SO_FEMEAS: Registavel[] = ['Parto', 'Cobrição', 'Diagnóstico'];
 
 /**
  * O que se pode registar a vários animais de uma vez.
@@ -53,8 +66,18 @@ type Registavel = (typeof REGISTAVEIS)[number];
  * Parto e pesagem ficam de fora porque o que se regista é diferente em cada
  * animal: um peso igual para trinta vacas não é um registo, é ruído que ainda
  * por cima estraga o cálculo do ganho médio diário.
+ *
+ * A COBRIÇÃO entra: numa manada com o touro à solta, o que se regista é "estas
+ * vinte estiveram com o Marquês entre março e maio", e é o mesmo facto para
+ * todas. O DIAGNÓSTICO não entra, apesar de o veterinário passar o rebanho todo
+ * numa manhã: o que ele diz é diferente em cada vaca, e um "gestante" aplicado
+ * a vinte cabeças de uma vez é a maneira mais rápida de pôr metade do efetivo a
+ * contar dias para um parto que não vem.
  */
-const EM_MASSA: Registavel[] = ['Vacinação', 'Medicamento'];
+const EM_MASSA: Registavel[] = ['Vacinação', 'Medicamento', 'Cobrição'];
+
+/** Os tipos que saem de um lote da arrecadação. */
+const COM_LOTE: Registavel[] = ['Vacinação', 'Medicamento'];
 
 const META: Record<
   Registavel,
@@ -65,6 +88,20 @@ const META: Record<
     cor: colors.info,
     titulo: 'Registar parto',
     feito: 'Parto registado',
+  },
+  Cobrição: {
+    icon: 'gender-male-female',
+    get cor() {
+      return colors.primaryDark;
+    },
+    titulo: 'Registar cobrição',
+    feito: 'Cobrição registada',
+  },
+  Diagnóstico: {
+    icon: 'stethoscope',
+    cor: colors.info,
+    titulo: 'Registar diagnóstico',
+    feito: 'Diagnóstico registado',
   },
   Vacinação: {
     icon: 'needle',
@@ -97,6 +134,10 @@ const VIAS = ['Injetável', 'Oral', 'Tópica', 'Intramamária'];
 const PROXIMA_DOSE = ['3 meses', '6 meses', '12 meses'];
 const SEGURANCA_DIAS = [0, 7, 10, 14, 28];
 
+/** Como a fêmea foi coberta. Muda o que se pergunta a seguir e mais nada. */
+const MODOS_COBRICAO = ['Touro', 'Inseminação artificial'] as const;
+type ModoCobricao = (typeof MODOS_COBRICAO)[number];
+
 /** Converte "20,5" ou "20.5" num número; NaN se inválido. */
 function paraNumero(txt: string): number {
   return parseFloat(txt.replace(',', '.'));
@@ -107,6 +148,8 @@ export default function NovoEventoScreen() {
   const insets = useSafeAreaInsets();
   const {
     animais,
+    eventos,
+    medicamentos,
     terrenos,
     addAnimal,
     addEvento,
@@ -138,11 +181,23 @@ export default function NovoEventoScreen() {
   const [criaViva, setCriaViva] = useState(true);
   const [sexoCria, setSexoCria] = useState<Sexo | undefined>(undefined);
 
+  // Cobrição
+  const [modoCobricao, setModoCobricao] = useState<ModoCobricao>('Touro');
+  const [touro, setTouro] = useState('');
+
+  // Diagnóstico
+  const [resultado, setResultado] = useState<ResultadoDiagnostico | undefined>(undefined);
+  const [vetDiag, setVetDiag] = useState('');
+
   // Vacinação
   const [vacina, setVacina] = useState('');
   const [lote, setLote] = useState('');
   const [proximaDose, setProximaDose] = useState<string | undefined>(undefined);
   const [vetVacina, setVetVacina] = useState('');
+
+  // Lote da arrecadação (vacinação e medicamento)
+  const [loteId, setLoteId] = useState<string | undefined>(undefined);
+  const [quantidade, setQuantidade] = useState('');
 
   // Medicamento
   const [medicamento, setMedicamento] = useState('');
@@ -176,13 +231,74 @@ export default function NovoEventoScreen() {
   );
   const podeRegistarEmAlguma = podeEmAlguma('registarTratamentos');
 
-  // Lista para escolher o animal (só fêmeas quando é um parto).
+  // Lista para escolher o animal (só fêmeas no que é reprodução).
   const animaisEscolha = useMemo(() => {
-    const lista = tipo === 'Parto' ? animais.filter((a) => a.sexo === 'Fêmea') : animais;
+    const lista = SO_FEMEAS.includes(tipo) ? animais.filter((a) => a.sexo === 'Fêmea') : animais;
     return [...lista].sort((a, b) =>
       (a.nome ?? a.numeroIdentificacao ?? '').localeCompare(b.nome ?? b.numeroIdentificacao ?? ''),
     );
   }, [animais, tipo]);
+
+  /**
+   * Os lotes que dá para usar hoje: desta exploração, do tipo certo, com stock
+   * e dentro da validade (ver `lotesUtilizaveis`).
+   *
+   * A exploração vem do PRIMEIRO animal escolhido. Numa vacinação em massa a
+   * app não impede escolher animais de duas explorações, e nesse caso o lote
+   * oferecido é o da primeira — que é também a única de que ele pode sair, já
+   * que um frasco está fisicamente numa arrecadação só.
+   */
+  const exploracaoEscolhida = animalById(animalIds[0] ?? '')?.exploracaoId;
+  const lotesDisponiveis = useMemo(
+    () =>
+      COM_LOTE.includes(tipo)
+        ? lotesUtilizaveis(
+            medicamentos,
+            eventos,
+            exploracaoEscolhida,
+            tipo === 'Vacinação' ? 'Vacina' : 'Medicamento',
+          )
+        : [],
+    [medicamentos, eventos, exploracaoEscolhida, tipo],
+  );
+  const loteEscolhido = lotesDisponiveis.find((l) => l.medicamento.id === loteId);
+
+  /**
+   * Escolher um lote preenche o resto: o nome do produto e o intervalo de
+   * segurança que vem na bula. É o que faz valer a pena ter a arrecadação
+   * registada — sem isto, escolher o frasco era um campo a mais em vez de
+   * trabalho a menos.
+   *
+   * O intervalo continua a poder ser corrigido à mão a seguir: o do lote é o
+   * ponto de partida, não uma imposição.
+   */
+  function escolherLote(id: string | undefined) {
+    setLoteId(id);
+    if (!id) return;
+    const l = lotesDisponiveis.find((x) => x.medicamento.id === id);
+    if (!l) return;
+    setSeguranca(l.medicamento.intervaloSegurancaDias);
+    if (tipo === 'Vacinação' && !vacina.trim()) setVacina(l.medicamento.nome);
+    if (tipo === 'Medicamento' && !medicamento.trim()) setMedicamento(l.medicamento.nome);
+    if (l.medicamento.lote?.trim() && !lote.trim()) setLote(l.medicamento.lote.trim());
+  }
+
+  /**
+   * A cobrição que este diagnóstico está a confirmar, para se poder mostrar a
+   * data prevista do parto ANTES de gravar. Ver a mesma conta em
+   * `reproducao.ts` — aqui é só para o criador poder conferir.
+   */
+  const cobricaoDoDiagnostico = useMemo(() => {
+    if (tipo !== 'Diagnóstico' || animalIds.length !== 1) return undefined;
+    return eventosByAnimal(animalIds[0]).find(
+      (e) => e.tipo === 'Cobrição' && new Date(e.data).getTime() <= new Date(data).getTime(),
+    );
+  }, [tipo, animalIds, eventosByAnimal, data]);
+
+  const partoPrevisto =
+    resultado === 'gestante' && animal && cobricaoDoDiagnostico
+      ? preverParto(animal.especie, cobricaoDoDiagnostico.data)
+      : undefined;
 
   /**
    * Trocar para um tipo que não é de massa com vinte animais escolhidos não
@@ -192,18 +308,42 @@ export default function NovoEventoScreen() {
   function mudarTipo(t: Registavel) {
     setTipo(t);
     if (!EM_MASSA.includes(t)) setAnimalIds((ids) => ids.slice(0, 1));
+    // Trocar de tipo larga o lote: um frasco de vacina não serve para registar
+    // um antibiótico, e um lote escolhido que fica pendurado num tipo onde nem
+    // aparece descontava stock de um sítio sem ninguém ver.
+    if (!COM_LOTE.includes(t)) {
+      setLoteId(undefined);
+      setQuantidade('');
+    }
+    // O mesmo para os animais: um macho escolhido não pode ficar num formulário
+    // de cobrição, que só oferece fêmeas.
+    if (SO_FEMEAS.includes(t)) {
+      setAnimalIds((ids) => ids.filter((id) => animalById(id)?.sexo === 'Fêmea'));
+    }
   }
 
   const pesoNum = paraNumero(peso);
+  const quantidadeNum = paraNumero(quantidade);
+  // Escolhido um lote, a quantidade passa a ser obrigatória: sem ela o stock
+  // não desce, e uma arrecadação que nunca desce é pior do que nenhuma — dá a
+  // impressão de estar controlada.
+  const quantidadeValida =
+    !loteEscolhido || (Number.isFinite(quantidadeNum) && quantidadeNum > 0);
+
   const valido =
     animalIds.length > 0 &&
     !dataManualInvalida &&
+    quantidadeValida &&
     // O sexo da cria passou a ser obrigatório num parto de nado-vivo: é com ele
     // que a app cria o animal recém-nascido (ver `guardar`), e um animal sem
     // sexo não existe. Nado-morto não cria nada, e por isso não o pede.
     (tipo === 'Parto'
       ? !criaViva || sexoCria !== undefined
-      : (tipo === 'Vacinação' && vacina.trim().length > 0) ||
+      : // A cobrição não pede mais nada: a data e o animal são o registo, e o
+        // touro é opcional porque numa manada muitas vezes não se sabe qual foi.
+        tipo === 'Cobrição' ||
+        (tipo === 'Diagnóstico' && resultado !== undefined) ||
+        (tipo === 'Vacinação' && vacina.trim().length > 0) ||
         (tipo === 'Medicamento' && medicamento.trim().length > 0) ||
         (tipo === 'Pesagem' && Number.isFinite(pesoNum) && pesoNum > 0));
 
@@ -235,6 +375,15 @@ export default function NovoEventoScreen() {
       descricao = `Parto ${rotulo}`;
       if (sexoCria) partes.push(`cria ${sexoCria === 'Fêmea' ? 'fêmea' : 'macho'}`);
       partes.push(criaViva ? 'nado-vivo' : 'nado-morto');
+    } else if (tipo === 'Cobrição') {
+      descricao = modoCobricao === 'Touro' ? 'Cobrição por touro' : 'Inseminação artificial';
+      if (touro.trim()) {
+        partes.push(`${modoCobricao === 'Touro' ? 'Touro' : 'Sémen'}: ${touro.trim()}`);
+      }
+    } else if (tipo === 'Diagnóstico') {
+      descricao = `Diagnóstico de gestação: ${resultadoMeta[resultado!].label.toLowerCase()}`;
+      if (vetDiag.trim()) partes.push(`Vet. ${vetDiag.trim()}`);
+      if (partoPrevisto) partes.push(`parto previsto ${formatDataPt(partoPrevisto)}`);
     } else if (tipo === 'Vacinação') {
       descricao = `Vacina: ${vacina.trim()}`;
       if (lote.trim()) partes.push(`Lote ${lote.trim()}`);
@@ -253,6 +402,11 @@ export default function NovoEventoScreen() {
       if (gmd) partes.push(gmd);
     }
 
+    if (loteEscolhido) {
+      partes.push(
+        `de ${rotuloLote(loteEscolhido.medicamento)} · ${formatQuantidade(quantidadeNum, loteEscolhido.medicamento.unidade)}`,
+      );
+    }
     if (notas.trim()) partes.push(notas.trim());
     const detalhe = partes.join(' · ') || undefined;
 
@@ -281,7 +435,19 @@ export default function NovoEventoScreen() {
 
     for (const id of animalIds) {
       try {
-        await addEvento({ animalId: id, tipo, data, descricao, detalhe, valor });
+        await addEvento({
+          animalId: id,
+          tipo,
+          data,
+          descricao,
+          detalhe,
+          valor,
+          resultado: tipo === 'Diagnóstico' ? resultado : undefined,
+          medicamentoId: loteEscolhido?.medicamento.id,
+          // A quantidade só vai com o lote: sozinha não desconta nada de lado
+          // nenhum e ficava um número solto no registo.
+          quantidade: loteEscolhido ? quantidadeNum : undefined,
+        });
 
         // Efeitos secundários no animal.
         // O intervalo de segurança conta a partir do dia do TRATAMENTO, não de
@@ -295,6 +461,30 @@ export default function NovoEventoScreen() {
         }
         if (tipo === 'Parto' && animalById(id)?.dataPrevistaParto) {
           await updateAnimal(id, { dataPrevistaParto: undefined });
+        }
+
+        /**
+         * O diagnóstico manda na data prevista do parto — é para isso que ele
+         * serve. Gestante põe-na (contada a partir da cobrição que ele
+         * confirmou); vazia e duvidoso TIRAM-NA.
+         *
+         * Tirá-la é tão importante como pô-la: sem isso, uma vaca dada como
+         * vazia continuava a contar dias para um parto que não vem, a aparecer
+         * no calendário e a gerar o aviso no telemóvel — e a app ficava a
+         * contradizer, todos os dias, o diagnóstico que o veterinário lhe deu.
+         */
+        if (tipo === 'Diagnóstico') {
+          const a = animalById(id);
+          if (resultado === 'gestante') {
+            const cobricao = eventosByAnimal(id).find(
+              (e) => e.tipo === 'Cobrição' && new Date(e.data).getTime() <= new Date(data).getTime(),
+            );
+            if (a && cobricao) {
+              await updateAnimal(id, { dataPrevistaParto: preverParto(a.especie, cobricao.data) });
+            }
+          } else if (a?.dataPrevistaParto) {
+            await updateAnimal(id, { dataPrevistaParto: undefined });
+          }
         }
         gravados++;
       } catch (e) {
@@ -435,8 +625,10 @@ export default function NovoEventoScreen() {
             tipo === 'Parto'
               ? 'Mãe (fêmea)'
               : varios
-                ? `Animais${animalIds.length > 0 ? ` (${animalIds.length} escolhidos)` : ''}`
-                : 'Animal'
+                ? `${SO_FEMEAS.includes(tipo) ? 'Fêmeas' : 'Animais'}${animalIds.length > 0 ? ` (${animalIds.length} escolhidas)` : ''}`
+                : SO_FEMEAS.includes(tipo)
+                  ? 'Fêmea'
+                  : 'Animal'
           }
           obrigatorio>
           <SeletorAnimais
@@ -446,8 +638,8 @@ export default function NovoEventoScreen() {
             onMudar={setAnimalIds}
             varios={varios}
             vazio={
-              tipo === 'Parto'
-                ? 'Não há fêmeas registadas para associar a um parto.'
+              SO_FEMEAS.includes(tipo)
+                ? 'Não há fêmeas registadas.'
                 : 'Ainda não há animais registados.'
             }
           />
@@ -533,6 +725,175 @@ export default function NovoEventoScreen() {
               }
             />
           </>
+        ) : null}
+
+        {tipo === 'Cobrição' ? (
+          <>
+            <Field label="Como" obrigatorio>
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                {MODOS_COBRICAO.map((m) => (
+                  <BigToggle
+                    key={m}
+                    label={m === 'Touro' ? 'Touro' : 'Inseminação'}
+                    icon={m === 'Touro' ? 'gender-male' : 'needle'}
+                    selected={modoCobricao === m}
+                    onPress={() => setModoCobricao(m)}
+                  />
+                ))}
+              </View>
+            </Field>
+            <Field label={modoCobricao === 'Touro' ? 'Touro' : 'Sémen'} opcional>
+              <TextField
+                value={touro}
+                onChangeText={setTouro}
+                placeholder={modoCobricao === 'Touro' ? 'Ex: Marquês' : 'Ex: Alentejano 4471'}
+                icon={modoCobricao === 'Touro' ? 'cow' : 'flask-outline'}
+                autoCapitalize="words"
+              />
+              {/* Campo de texto e não uma lista dos sementais da exploração: o
+                  touro é muitas vezes emprestado, alugado ou uma palheta de
+                  sémen, e nenhum deles está no efetivo. Uma lista fechada
+                  obrigaria a inventar um animal para poder registar a cobrição. */}
+              <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
+                Se não souber qual foi (manada com o touro à solta), deixe em branco.
+              </Text>
+            </Field>
+            <Aviso
+              texto={`A app começa a contar a partir de hoje: passados ${PrazosReproducao.diagnosticoAPartirDe} dias avisa que falta o diagnóstico de gestação.`}
+            />
+          </>
+        ) : null}
+
+        {tipo === 'Diagnóstico' ? (
+          <>
+            <Field label="Resultado" obrigatorio>
+              <View style={{ gap: spacing.xs }}>
+                {resultadosDiagnostico.map((r) => (
+                  <Pressable
+                    key={r}
+                    onPress={() => setResultado(r)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: resultado === r }}
+                    accessibilityLabel={resultadoMeta[r].label}
+                    style={({ pressed }) => [
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: spacing.sm,
+                        minHeight: 60,
+                        paddingHorizontal: spacing.md,
+                        borderRadius: radii.md,
+                        borderWidth: 1.5,
+                        borderColor: resultado === r ? colors.primary : colors.border,
+                        backgroundColor: resultado === r ? colors.primaryTint : colors.surface,
+                      },
+                      pressed && { opacity: 0.85 },
+                    ]}>
+                    <Icon
+                      name={resultadoMeta[r].icon}
+                      size="lg"
+                      color={resultado === r ? colors.primary : colors.textMuted}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text variant="bodyStrong" color={resultado === r ? colors.primaryDark : colors.text}>
+                        {resultadoMeta[r].label}
+                      </Text>
+                      <Text variant="caption" color={colors.textSecondary}>
+                        {resultadoMeta[r].explicacao}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            </Field>
+
+            {/* A conta feita, ANTES de gravar. É a única maneira de o criador
+                perceber que a data prevista sai da cobrição e não do ar — e de
+                reparar que a cobrição está com a data errada, se estiver. */}
+            {resultado === 'gestante' ? (
+              <Aviso
+                texto={
+                  partoPrevisto
+                    ? `Parto previsto para ${formatDataPt(partoPrevisto)}, contado a partir da cobrição de ${formatDataPt(cobricaoDoDiagnostico!.data)}. Fica marcado na ficha e no calendário.`
+                    : 'Não há cobrição registada antes desta data, por isso a app não consegue calcular o parto previsto. Registe a cobrição, ou escreva a data prevista na ficha do animal.'
+                }
+              />
+            ) : null}
+            {resultado === 'vazia' && animal?.dataPrevistaParto ? (
+              <Aviso texto="A data prevista de parto que estava na ficha vai ser apagada." />
+            ) : null}
+
+            <Field label="Veterinário" opcional>
+              <TextField
+                value={vetDiag}
+                onChangeText={setVetDiag}
+                placeholder="Ex: Dr. Sousa"
+                icon="stethoscope"
+                autoCapitalize="words"
+              />
+            </Field>
+          </>
+        ) : null}
+
+        {/* Lote da arrecadação — vacinação e medicamento. Só aparece se houver
+            alguma coisa lá dentro: um seletor vazio num formulário que se usa
+            no tronco é um campo a mais para ler e ignorar. */}
+        {COM_LOTE.includes(tipo) && lotesDisponiveis.length > 0 ? (
+          <Field label="Sai do stock" opcional>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+              <Chip
+                label="Não registar"
+                selected={!loteId}
+                onPress={() => {
+                  setLoteId(undefined);
+                  setQuantidade('');
+                }}
+              />
+              {lotesDisponiveis.map((l) => (
+                <Chip
+                  key={l.medicamento.id}
+                  label={`${rotuloLote(l.medicamento)} · restam ${formatQuantidade(l.resta, l.medicamento.unidade)}`}
+                  selected={loteId === l.medicamento.id}
+                  onPress={() => escolherLote(loteId === l.medicamento.id ? undefined : l.medicamento.id)}
+                />
+              ))}
+            </View>
+            {loteEscolhido ? (
+              <View style={{ marginTop: spacing.sm }}>
+                <Text variant="caption" color={colors.textMuted} style={{ marginBottom: 4 }}>
+                  Quanto se gastou, em {loteEscolhido.medicamento.unidade}
+                  {animalIds.length > 1 ? ' e POR ANIMAL' : ''}
+                </Text>
+                <TextField
+                  value={quantidade}
+                  onChangeText={setQuantidade}
+                  placeholder={`Ex: 20`}
+                  icon="beaker-outline"
+                  keyboardType="decimal-pad"
+                />
+                {/* A conta à frente: em massa, o que sai do frasco é a dose
+                    vezes os animais, e é aí que se vê se o lote chega. */}
+                {Number.isFinite(quantidadeNum) && quantidadeNum > 0 ? (
+                  <Text
+                    variant="caption"
+                    color={
+                      quantidadeNum * animalIds.length > loteEscolhido.resta
+                        ? colors.danger
+                        : colors.textMuted
+                    }
+                    style={{ marginTop: 4 }}>
+                    {animalIds.length > 1
+                      ? `${animalIds.length} animais × ${formatQuantidade(quantidadeNum, loteEscolhido.medicamento.unidade)} = ${formatQuantidade(quantidadeNum * animalIds.length, loteEscolhido.medicamento.unidade)}. `
+                      : ''}
+                    Restam {formatQuantidade(loteEscolhido.resta, loteEscolhido.medicamento.unidade)} neste lote.
+                    {quantidadeNum * animalIds.length > loteEscolhido.resta
+                      ? ' Não chega — o registo grava na mesma, mas confira o que está na arrecadação.'
+                      : ''}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+          </Field>
         ) : null}
 
         {tipo === 'Vacinação' ? (

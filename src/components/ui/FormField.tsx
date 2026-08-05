@@ -65,6 +65,7 @@ export function TextField({
   keyboardType,
   autoComplete,
   editable = true,
+  multiline = false,
 }: {
   value: string;
   onChangeText: (t: string) => void;
@@ -75,19 +76,26 @@ export function TextField({
   autoComplete?: 'email' | 'name' | 'off';
   /** Campos só de leitura ficam esbatidos e ignoram o teclado. */
   editable?: boolean;
+  /**
+   * Cresce com o texto, para notas e observações. O `height` fixo passa a
+   * `minHeight` e o ícone sobe para o topo — alinhado ao meio de um campo de
+   * quatro linhas ficava a flutuar a meio do parágrafo.
+   */
+  multiline?: boolean;
 }) {
   return (
     <View
       style={{
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: multiline ? 'flex-start' : 'center',
         gap: spacing.xs,
-        height: sizes.input,
+        ...(multiline ? { minHeight: sizes.input } : { height: sizes.input }),
         borderRadius: radii.md,
         borderWidth: 1.5,
         borderColor: colors.border,
         backgroundColor: editable ? colors.surface : colors.surfaceAlt,
         paddingHorizontal: spacing.md,
+        paddingVertical: multiline ? spacing.sm : 0,
       }}>
       {icon ? <Icon name={icon} size="md" color={colors.textMuted} /> : null}
       <TextInput
@@ -99,11 +107,15 @@ export function TextField({
         keyboardType={keyboardType}
         autoComplete={autoComplete}
         editable={editable}
+        multiline={multiline}
+        textAlignVertical={multiline ? 'top' : undefined}
         style={{
           flex: 1,
           fontFamily: 'Nunito_600SemiBold',
           fontSize: 17,
           color: editable ? colors.text : colors.textSecondary,
+          paddingTop: multiline ? 2 : 0,
+          minHeight: multiline ? 48 : undefined,
         }}
       />
     </View>

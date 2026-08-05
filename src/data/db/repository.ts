@@ -17,6 +17,7 @@ import {
   animaisSeed,
   eventosSeed,
   exploracoesSeed,
+  medicamentosSeed,
   movimentosSeed,
   terrenosSeed,
   utilizadorSeed,
@@ -30,9 +31,12 @@ import type {
   Evento,
   Exploracao,
   Finalidade,
+  Medicamento,
   Movimento,
+  ResultadoDiagnostico,
   Sexo,
   Terreno,
+  TipoMedicamento,
   TipoTerreno,
   Utilizador,
 } from '../types';
@@ -136,6 +140,30 @@ function toEvento(r: Row): Evento {
     descricao: String(r.descricao),
     detalhe: asStr(r.detalhe),
     valor: asNum(r.valor),
+    resultado: asStr(r.resultado) as ResultadoDiagnostico | undefined,
+    medicamentoId: asStr(r.medicamentoId),
+    quantidade: asNum(r.quantidade),
+    comunicadoSnira: asBool(r.comunicadoSnira),
+    comunicadoEm: asStr(r.comunicadoEm),
+  };
+}
+
+function toMedicamento(r: Row): Medicamento {
+  return {
+    id: String(r.id),
+    exploracaoId: String(r.exploracaoId),
+    nome: String(r.nome),
+    tipo: String(r.tipo) as TipoMedicamento,
+    lote: asStr(r.lote),
+    validade: asStr(r.validade),
+    quantidade: Number(r.quantidade),
+    unidade: String(r.unidade),
+    intervaloSegurancaDias: Number(r.intervaloSegurancaDias),
+    fornecedor: asStr(r.fornecedor),
+    custo: asNum(r.custo),
+    dataCompra: String(r.dataCompra),
+    notas: asStr(r.notas),
+    criadoPor: asStr(r.criadoPor),
   };
 }
 
@@ -171,6 +199,7 @@ export function carregarTudo(db: SQLiteDatabase): {
   animais: Animal[];
   eventos: Evento[];
   movimentos: Movimento[];
+  medicamentos: Medicamento[];
 } {
   return {
     exploracoes: db.getAllSync<Row>('SELECT * FROM exploracao ORDER BY nome').map(toExploracao),
@@ -178,6 +207,9 @@ export function carregarTudo(db: SQLiteDatabase): {
     animais: db.getAllSync<Row>('SELECT * FROM animal ORDER BY updatedAt DESC').map(toAnimal),
     eventos: db.getAllSync<Row>('SELECT * FROM evento ORDER BY data DESC').map(toEvento),
     movimentos: db.getAllSync<Row>('SELECT * FROM movimento ORDER BY data DESC').map(toMovimento),
+    medicamentos: db
+      .getAllSync<Row>('SELECT * FROM medicamento ORDER BY dataCompra DESC')
+      .map(toMedicamento),
   };
 }
 
@@ -236,10 +268,49 @@ export function guardarAnimal(db: SQLiteDatabase, a: Animal): void {
 
 export function guardarEvento(db: SQLiteDatabase, e: Evento): void {
   db.runSync(
-    `INSERT OR REPLACE INTO evento (id, animalId, tipo, data, descricao, detalhe, valor, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [e.id, e.animalId, e.tipo, e.data, e.descricao, txt(e.detalhe), num(e.valor), agora()],
+    `INSERT OR REPLACE INTO evento
+     (id, animalId, tipo, data, descricao, detalhe, valor,
+      resultado, medicamentoId, quantidade, comunicadoSnira, comunicadoEm, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      e.id, e.animalId, e.tipo, e.data, e.descricao, txt(e.detalhe), num(e.valor),
+      txt(e.resultado), txt(e.medicamentoId), num(e.quantidade),
+      bool(e.comunicadoSnira),
+      // Sem Supabase não há gatilho: aqui a data da comunicação é escrita pelo
+      // próprio aparelho, que é o único que existe. É a mesma cedência que
+      // `saidaPor`/`saidaEm` fazem neste ficheiro — offline puro não tem
+      // servidor a quem pedir a hora, e uma auditoria de uma pessoa só consigo
+      // mesma vale o que vale.
+      txt(e.comunicadoSnira ? (e.comunicadoEm ?? agora()) : undefined),
+      agora(),
+    ],
   );
+}
+
+export function guardarMedicamento(db: SQLiteDatabase, m: Medicamento): void {
+  db.runSync(
+    `INSERT OR REPLACE INTO medicamento
+     (id, exploracaoId, nome, tipo, lote, validade, quantidade, unidade,
+      intervaloSegurancaDias, fornecedor, custo, dataCompra, notas, criadoPor, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      m.id, m.exploracaoId, m.nome, m.tipo, txt(m.lote), txt(m.validade),
+      m.quantidade, m.unidade, m.intervaloSegurancaDias,
+      txt(m.fornecedor), num(m.custo), m.dataCompra, txt(m.notas),
+      txt(m.criadoPor), agora(),
+    ],
+  );
+}
+
+/**
+ * Apaga um lote. Os eventos que saíram dele ficam — o tratamento aconteceu — e
+ * perdem só a ligação ao frasco, tal como o `on delete set null` do servidor.
+ */
+export function eliminarMedicamento(db: SQLiteDatabase, id: string): void {
+  db.withTransactionSync(() => {
+    db.runSync('UPDATE evento SET medicamentoId = NULL WHERE medicamentoId = ?', [id]);
+    db.runSync('DELETE FROM medicamento WHERE id = ?', [id]);
+  });
 }
 
 export function guardarMovimento(db: SQLiteDatabase, m: Movimento): void {
@@ -298,6 +369,7 @@ export function eliminarExploracao(db: SQLiteDatabase, id: string): void {
     const animais = db.getAllSync<Row>('SELECT id FROM animal WHERE exploracaoId = ?', [id]);
     animais.forEach((a) => db.runSync('DELETE FROM evento WHERE animalId = ?', [String(a.id)]));
     db.runSync('DELETE FROM movimento WHERE exploracaoId = ?', [id]);
+    db.runSync('DELETE FROM medicamento WHERE exploracaoId = ?', [id]);
     db.runSync('DELETE FROM animal WHERE exploracaoId = ?', [id]);
     db.runSync('DELETE FROM terreno WHERE exploracaoId = ?', [id]);
     db.runSync('DELETE FROM exploracao WHERE id = ?', [id]);
@@ -314,6 +386,10 @@ export function semearBd(db: SQLiteDatabase): void {
     exploracoesSeed.forEach((e) => guardarExploracao(db, e));
     terrenosSeed.forEach((t) => guardarTerreno(db, t));
     animaisSeed.forEach((a) => guardarAnimal(db, a));
+    // Os medicamentos ANTES dos eventos: há eventos que apontam para um lote, e
+    // semear pela ordem contrária deixava a ligação a apontar para o vazio até
+    // ao arranque seguinte.
+    medicamentosSeed.forEach((m) => guardarMedicamento(db, m));
     eventosSeed.forEach((e) => guardarEvento(db, e));
     movimentosSeed.forEach((m) => guardarMovimento(db, m));
   });

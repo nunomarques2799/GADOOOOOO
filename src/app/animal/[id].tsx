@@ -27,6 +27,7 @@ import { balancoAnimal } from '@/data/financas';
 import { diasAte, formatDataCurta, formatDataHora, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useNomesEquipa } from '@/data/nomesEquipa';
+import { estadoReprodutivo, faseMeta } from '@/data/reproducao';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
@@ -35,6 +36,8 @@ import { colors, radii, shadow, spacing } from '@/theme';
 
 const eventoIcone: Record<EventoTipo, IconName> = {
   Parto: 'baby-bottle-outline',
+  Cobrição: 'gender-male-female',
+  Diagnóstico: 'stethoscope',
   Vacinação: 'needle',
   Medicamento: 'medical-bag',
   Pesagem: 'scale',
@@ -125,6 +128,9 @@ export default function AnimalDetalheScreen() {
   const crias = filhosDe(animais, animal.id);
   const eventos = eventosByAnimal(animal.id);
   const balanco = balancoAnimal(eventos, movimentosByAnimal(animal.id));
+  // Devolve `nao-aplicavel` a machos, a jovens e a quem já saiu — e é isso que
+  // esconde a secção inteira nesses casos.
+  const reproducao = estadoReprodutivo(animal, eventos);
   const meusAlertas = alertas.filter((a) => a.animalId === animal.id);
   const saiu = !!animal.estado && animal.estado !== 'ativo';
 
@@ -364,6 +370,57 @@ export default function AnimalDetalheScreen() {
           onPress={() => router.push(`/animal/genealogia/${animal.id}`)}
           style={{ marginTop: spacing.sm }}
         />
+
+        {/* Reprodução — só às fêmeas que já andam à reprodução. Nas outras
+            seria uma secção sempre vazia a dizer "—", e a ficha já é comprida.
+
+            Tudo isto é CALCULADO a partir do histórico (ver `reproducao.ts`):
+            não há aqui nenhum campo que alguém tenha de manter atualizado. */}
+        {reproducao && reproducao.fase !== 'nao-aplicavel' ? (
+          <>
+            <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+              Reprodução
+            </Text>
+            <Card>
+              <InfoField
+                icon="heart-pulse"
+                label="Estado"
+                value={`${faseMeta[reproducao.fase].label} · ${faseMeta[reproducao.fase].explicacao}`}
+              />
+              {reproducao.fase === 'coberta' || reproducao.fase === 'duvidosa' ? (
+                <InfoField
+                  icon="calendar-clock"
+                  label={reproducao.fase === 'coberta' ? 'Coberta há' : 'Por confirmar há'}
+                  value={`${reproducao.diasNaFase} dias${
+                    reproducao.detalheCobricao ? ` · ${reproducao.detalheCobricao}` : ''
+                  }`}
+                />
+              ) : null}
+              <InfoField
+                icon="baby-bottle-outline"
+                label="Partos"
+                value={
+                  reproducao.partos === 0
+                    ? 'Ainda nenhum'
+                    : `${reproducao.partos}${
+                        reproducao.diasDesdeUltimoParto != null
+                          ? ` · último há ${reproducao.diasDesdeUltimoParto} dias`
+                          : ''
+                      }`
+                }
+                last={reproducao.intervaloMedioPartos == null}
+              />
+              {reproducao.intervaloMedioPartos != null ? (
+                <InfoField
+                  icon="chart-timeline-variant"
+                  label="Intervalo entre partos"
+                  value={`${reproducao.intervaloMedioPartos} dias em média`}
+                  last
+                />
+              ) : null}
+            </Card>
+          </>
+        ) : null}
 
         {/* Localização */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>

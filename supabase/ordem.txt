@@ -32,4 +32,7 @@ schema_documentos.sql
 schema_equipa_e_foto.sql
 schema_documento_visibilidade.sql
 schema_historico_equipa.sql
+schema_snira.sql
+schema_reproducao.sql
+schema_medicamentos.sql
 schema_lint.sql

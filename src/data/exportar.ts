@@ -139,8 +139,10 @@ export const ROTULO_CATEGORIA: Record<Alerta['categoria'], string> = {
   snira: 'SNIRA',
   identificacao: 'Identificação',
   parto: 'Partos',
+  reproducao: 'Reprodução',
   medicamento: 'Medicamentos',
   vacinacao: 'Vacinação',
+  existencias: 'Existências',
 };
 
 /**

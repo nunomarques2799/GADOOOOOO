@@ -14,6 +14,7 @@ import { hojeISO, tabelaEventos } from '@/data/exportar';
 import { formatDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useNotas, type Nota } from '@/data/notas';
+import { comunicacoesPendentes } from '@/data/snira';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useDocumentos } from '@/data/useDocumentos';
@@ -52,6 +53,11 @@ export default function DocumentosScreen() {
   const exportaveis = useMemo(
     () => animais.filter((a) => a.estado !== 'eliminado'),
     [animais],
+  );
+
+  const porComunicar = useMemo(
+    () => comunicacoesPendentes(animais, eventos).length,
+    [animais, eventos],
   );
 
   /**
@@ -138,6 +144,26 @@ export default function DocumentosScreen() {
           />
 
 
+          {/* O SNIRA vem PRIMEIRO, e fora do grupo das exportações: não é um
+              ficheiro que se leva, é trabalho que tem prazo legal a correr. O
+              número ao lado é o que falta comunicar — quando é zero, a linha
+              continua lá a dizer que está tudo em dia.
+
+              Funciona no telemóvel, ao contrário de tudo o resto deste ecrã: a
+              lista lê-se e marca-se sem precisar de disco. Só levar a folha em
+              Excel ou em papel é que é do computador. */}
+          <Grupo titulo="OBRIGAÇÕES">
+            <Linha
+              icon="cloud-upload-outline"
+              label="Comunicar ao SNIRA"
+              trailing={
+                porComunicar === 0 ? 'em dia' : String(porComunicar)
+              }
+              onPress={() => router.push('/snira')}
+              last
+            />
+          </Grupo>
+
           {/* Importar — só web/Electron (o telemóvel não escolhe ficheiros sem build nativo) */}
           {comFicheiros && !contaSuspensa ? (
             <Grupo titulo="IMPORTAR">
@@ -194,18 +220,6 @@ export default function DocumentosScreen() {
                   label="Relatório de prazos (imprimir ou PDF)"
                   trailing={String(alertas.length)}
                   onPress={() => setRelatorioAberto(true)}
-                />
-                <Linha
-                  icon="file-export-outline"
-                  label="Exportar para o iDigital"
-                  trailing="Fase 2"
-                  onPress={() =>
-                    avisar(
-                      'Ainda em desenvolvimento',
-                      'A exportação para o iDigital chega numa próxima versão. Entretanto pode usar o "Relatório de prazos" ou o "Exportar animais".',
-                    )
-                  }
-                  last
                 />
               </>
             ) : (

@@ -115,10 +115,34 @@ export type EventoTipo =
   | 'Vacinação'
   | 'Medicamento'
   | 'Pesagem'
+  /**
+   * A fêmea foi coberta — por touro ou por inseminação artificial. É o começo
+   * do ciclo: é daqui que se contam os dias até valer a pena diagnosticar, e é
+   * a falta dele depois de um parto que põe a vaca na lista de quem está
+   * parada. O touro (ou o sémen) vai no `detalhe`, como o veterinário numa
+   * vacina — muitas vezes é um animal que não está na app.
+   */
+  | 'Cobrição'
+  /**
+   * Diagnóstico de gestação. O que interessa dele é o `resultado`, não o texto.
+   * `gestante` é o que põe a data prevista de parto no animal.
+   */
+  | 'Diagnóstico'
   | 'Movimentação'
   | 'Compra'
   | 'Venda'
   | 'Morte';
+
+/**
+ * O que o diagnóstico de gestação disse. `duvidoso` não é um meio-termo
+ * inventado: é o que o veterinário responde quando a gestação é demasiado
+ * recente para se ver, e trata-se de outra maneira — repete-se daí a umas
+ * semanas, em vez de se voltar a cobrir (que é o que se faz a uma vazia).
+ */
+export type ResultadoDiagnostico = 'gestante' | 'vazia' | 'duvidoso';
+
+/** Vacina ou medicamento. Decide em que formulário o lote aparece. */
+export type TipoMedicamento = 'Vacina' | 'Medicamento';
 
 export interface Utilizador {
   id: string;
@@ -285,6 +309,86 @@ export interface Evento extends ComVersao {
    * `Movimento` (tabela própria, com RLS por papel).
    */
   valor?: number;
+  /**
+   * O resultado de um `Diagnóstico`. Ausente em todos os outros tipos — uma
+   * pesagem não tem resultado nenhum.
+   *
+   * Está numa coluna e não dentro do `descricao` porque é a resposta de que
+   * depende o resto do ciclo. Lê-lo do texto com uma expressão regular é o que
+   * se faz ao peso ("520 kg"), e ali o pior que acontece é um ganho médio
+   * diário não aparecer; aqui o pior que acontece é uma vaca dada por prenhe
+   * quando não está.
+   */
+  resultado?: ResultadoDiagnostico;
+  /**
+   * O lote de onde saiu o que se administrou (ver `Medicamento`). Ausente
+   * quando o tratamento não veio da arrecadação — o veterinário que traz o
+   * seu — e é isso que faz o desconto das existências ignorar esta linha em
+   * vez de a contar como zero.
+   */
+  medicamentoId?: string;
+  /** Quanto se gastou, na unidade do lote. Só faz sentido com `medicamentoId`. */
+  quantidade?: number;
+  /**
+   * Este evento já foi comunicado ao SNIRA? Os três estados querem dizer
+   * coisas diferentes (ver `supabase/schema_snira.sql`):
+   *
+   *   `undefined` — não é comunicável, ou é anterior a esta funcionalidade.
+   *   `false`     — falta comunicar. É o que gera o alerta.
+   *   `true`      — já foi.
+   *
+   * O nascimento não passa por aqui: esse vive em `Animal.comunicadoSnira`,
+   * onde já estava.
+   */
+  comunicadoSnira?: boolean;
+  /**
+   * Quando foi comunicado (ISO com hora). Nunca é escrito pelo cliente: quem o
+   * mantém é o gatilho `evento_comunicacao`, pela mesma razão que `saidaEm` —
+   * uma data que prova o cumprimento de um prazo legal não pode sair do
+   * relógio de um telemóvel mal acertado.
+   */
+  comunicadoEm?: string;
+}
+
+/* ---- Existências de medicamentos e vacinas ---- */
+
+/**
+ * Um lote que entrou na exploração — não um produto.
+ *
+ * A distinção manda em tudo o resto: dois frascos do mesmo antibiótico
+ * comprados com três meses de diferença têm lotes e validades diferentes, e num
+ * surto é o lote que se rastreia. Uma linha por frasco, com a quantidade que
+ * trazia; acabou, fica a zero com o histórico do que saiu dele.
+ *
+ * O que RESTA não está aqui: calcula-se (ver `medicamentos.ts`) subtraindo à
+ * `quantidade` o que os eventos gastaram. Uma coluna a descontar teria de ser
+ * mantida certa a partir de dois aparelhos que podem estar offline, e a
+ * primeira gravação perdida deixava-a errada para sempre.
+ */
+export interface Medicamento extends ComVersao {
+  id: string;
+  exploracaoId: string;
+  nome: string;
+  tipo: TipoMedicamento;
+  lote?: string;
+  /** ISO aaaa-mm-dd. */
+  validade?: string;
+  /** O que o frasco trazia. Sempre positivo. */
+  quantidade: number;
+  unidade: string;
+  /**
+   * Dias a aguardar antes de o animal poder ir para abate. Vem da bula, por
+   * isso pertence ao produto e não a quem o administra — o formulário do
+   * tratamento propõe-o preenchido e deixa corrigir.
+   */
+  intervaloSegurancaDias: number;
+  fornecedor?: string;
+  /** Custo TOTAL do que entrou (não por unidade), em euros. */
+  custo?: number;
+  /** ISO aaaa-mm-dd. */
+  dataCompra: string;
+  notas?: string;
+  criadoPor?: string;
 }
 
 /* ---- Movimentos financeiros (o que não cabe num evento de animal) ---- */
@@ -373,7 +477,22 @@ export interface Alerta {
   data?: string;
   /** A exploração do animal, para se poderem ver os alertas de uma só. */
   exploracaoId?: string;
-  categoria: 'snira' | 'identificacao' | 'parto' | 'medicamento' | 'vacinacao';
+  /**
+   * `existencias` é a única categoria que não fala de um animal: fala da
+   * arrecadação (um lote fora de validade, um frasco a acabar). Por isso os
+   * seus alertas não trazem `animalId` — e quem os agrupa por animal tem de
+   * contar com isso.
+   */
+  categoria:
+    | 'snira'
+    | 'identificacao'
+    | 'parto'
+    | 'medicamento'
+    | 'vacinacao'
+    | 'reproducao'
+    | 'existencias';
+  /** O lote a que o alerta diz respeito (só em `existencias`). */
+  medicamentoId?: string;
 }
 
 /**

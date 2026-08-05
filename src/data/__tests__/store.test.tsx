@@ -14,7 +14,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
-import type { Animal, Evento, Exploracao, Movimento, Terreno } from '../types';
+import type { Animal, Evento, Exploracao, Medicamento, Movimento, Terreno } from '../types';
 
 /* ---- Fronteiras simuladas ---- */
 
@@ -64,6 +64,7 @@ type SnapshotMock = {
   animais: Animal[];
   eventos: Evento[];
   movimentos?: Movimento[];
+  medicamentos?: Medicamento[];
 };
 
 const mockServidor = {
@@ -94,7 +95,13 @@ jest.mock('../supabaseRepo', () => ({
       mockServidor.falhasCarregar -= 1;
       throw new Error('Network request failed');
     }
-    return { ...mockServidor.snapshot, movimentos: mockServidor.snapshot.movimentos ?? [] };
+    // Normalizado na fronteira, como o repositório real faz: o store conta com
+    // as listas sempre presentes.
+    return {
+      ...mockServidor.snapshot,
+      movimentos: mockServidor.snapshot.movimentos ?? [],
+      medicamentos: mockServidor.snapshot.medicamentos ?? [],
+    };
   },
   upsertAnimalSupabase: async (a: Animal) => mockRespostaEscrita(`upsert:animal:${a.id}`),
   upsertEventoSupabase: async (e: Evento) => mockRespostaEscrita(`upsert:evento:${e.id}`),
@@ -105,6 +112,10 @@ jest.mock('../supabaseRepo', () => ({
   eliminarTerrenoSupabase: async (id: string) => mockRespostaEscrita(`delete:terreno:${id}`),
   upsertMovimentoSupabase: async (m: Movimento) => mockRespostaEscrita(`upsert:movimento:${m.id}`),
   eliminarMovimentoSupabase: async (id: string) => mockRespostaEscrita(`delete:movimento:${id}`),
+  upsertMedicamentoSupabase: async (m: Medicamento) =>
+    mockRespostaEscrita(`upsert:medicamento:${m.id}`),
+  eliminarMedicamentoSupabase: async (id: string) =>
+    mockRespostaEscrita(`delete:medicamento:${id}`),
   // Classificação de erros: o store usa-as para separar conflito de recusa e
   // para limpar o marcador técnico antes de a mensagem chegar ao ecrã. Aqui
   // mantêm-se com o comportamento real, que é puro.
@@ -193,7 +204,13 @@ const exploracao: Exploracao = {
 
 beforeEach(() => {
   mockMapa.clear();
-  mockServidor.snapshot = { exploracoes: [], terrenos: [], animais: [], eventos: [] };
+  mockServidor.snapshot = {
+    exploracoes: [],
+    terrenos: [],
+    animais: [],
+    eventos: [],
+    medicamentos: [],
+  };
   mockServidor.erroSeguinte = null;
   mockServidor.recebidas = [];
   mockServidor.falhasCarregar = 0;
@@ -654,7 +671,7 @@ describe('saída do efetivo', () => {
     expect(ctx().movimentosByAnimal('a1')).toEqual([]);
   });
 
-  it('quem saiu deixa de contar no efetivo e de gerar alertas', async () => {
+  it('quem saiu deixa de contar no efetivo e de gerar alertas de maneio', async () => {
     const { ctx } = await montar();
 
     await act(async () => {
@@ -663,7 +680,30 @@ describe('saída do efetivo', () => {
 
     expect(ctx().animaisByExploracao('exp-1')).toEqual([]);
     expect(ctx().animaisByExploracaoIncluindoSaidos('exp-1')).toHaveLength(1);
-    expect(ctx().alertas.filter((al) => al.animalId === 'a1')).toEqual([]);
+
+    // Nada de brincos, vacinas, partos nem períodos de segurança: o animal
+    // saiu, e um prazo de maneio sobre quem já não cá está é ruído.
+    const doAnimal = ctx().alertas.filter((al) => al.animalId === 'a1');
+    expect(doAnimal.map((al) => al.categoria)).not.toContain('identificacao');
+    expect(doAnimal.map((al) => al.categoria)).not.toContain('vacinacao');
+    expect(doAnimal.map((al) => al.categoria)).not.toContain('parto');
+    expect(doAnimal.map((al) => al.categoria)).not.toContain('medicamento');
+  });
+
+  it('mas a SAÍDA em si fica por comunicar ao SNIRA', async () => {
+    // A exceção à regra de cima, e é o oposto de um pormenor: vender é das
+    // quatro coisas que a lei manda comunicar em sete dias. Se o animal sair da
+    // app e levar com ele o aviso da comunicação, o criador só descobre o prazo
+    // quando lhe chegar a coima.
+    const { ctx } = await montar();
+
+    await act(async () => {
+      await ctx().marcarSaida('a1', 'vendido', new Date().toISOString(), 'Feira');
+    });
+
+    const snira = ctx().alertas.find((al) => al.animalId === 'a1' && al.categoria === 'snira');
+    expect(snira).toBeDefined();
+    expect(snira?.diasRestantes).toBe(7);
   });
 
   it('uma saída recusada não deixa venda nem receita no ecrã', async () => {
@@ -741,5 +781,159 @@ describe('alertas dispensados', () => {
     const segunda = await montar();
 
     expect(segunda.ctx().alertas.find((a) => a.id === vacinacao.id)).toBeUndefined();
+  });
+});
+
+describe('existências de medicamentos', () => {
+  const lote = {
+    exploracaoId: 'exp-1',
+    nome: 'Penicilina',
+    tipo: 'Medicamento' as const,
+    lote: 'PN-1',
+    quantidade: 250,
+    unidade: 'ml',
+    intervaloSegurancaDias: 10,
+    custo: 95,
+    dataCompra: '2026-03-15',
+  };
+
+  beforeEach(() => {
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [],
+      animais: [],
+      eventos: [],
+      medicamentos: [],
+    };
+  });
+
+  it('dá entrada do lote e envia-o ao servidor', async () => {
+    const { ctx } = await montar();
+
+    await act(async () => {
+      await ctx().addMedicamento(lote);
+    });
+
+    expect(ctx().medicamentosByExploracao('exp-1')).toHaveLength(1);
+    expect(mockServidor.recebidas.some((r) => r.startsWith('upsert:medicamento:'))).toBe(true);
+    // Sem `lancarDespesa`, o dinheiro NÃO se mexe: quem chama é que sabe se a
+    // gestão económica está ligada e se esta pessoa pode lançar despesas.
+    expect(ctx().movimentos).toHaveLength(0);
+  });
+
+  it('com `lancarDespesa`, a compra entra nas contas em Sanidade', async () => {
+    const { ctx } = await montar();
+
+    await act(async () => {
+      await ctx().addMedicamento(lote, { lancarDespesa: true });
+    });
+
+    const despesa = ctx().movimentosByExploracao('exp-1')[0];
+    expect(despesa.direcao).toBe('despesa');
+    expect(despesa.categoria).toBe('Sanidade');
+    expect(despesa.valor).toBe(95);
+    expect(despesa.descricao).toContain('PN-1');
+  });
+
+  it('sem custo não há despesa, mesmo pedindo para a lançar', async () => {
+    // Um lançamento de 0 € nas contas é uma linha a mais que não diz nada.
+    const { ctx } = await montar();
+
+    await act(async () => {
+      await ctx().addMedicamento({ ...lote, custo: undefined }, { lancarDespesa: true });
+    });
+
+    expect(ctx().movimentos).toHaveLength(0);
+  });
+
+  it('uma entrada recusada não deixa lote nem despesa no ecrã', async () => {
+    // Mesma rede de segurança da saída do efetivo: sem ela, o criador via o
+    // erro à frente e, por trás, um frasco e uma despesa que não existem em
+    // servidor nenhum — e voltavam a desaparecer na sincronização seguinte.
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Não tem permissão para alterar este registo.';
+    await falhaCom(() => ctx().addMedicamento(lote, { lancarDespesa: true }));
+
+    expect(ctx().medicamentos).toHaveLength(0);
+    expect(ctx().movimentos).toHaveLength(0);
+  });
+
+  it('eliminar o lote não apaga os tratamentos que saíram dele', async () => {
+    // O tratamento aconteceu. O que se perde é a rastreabilidade do frasco, e
+    // isso é o preço de apagar o frasco — não o registo clínico do animal.
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [],
+      animais: [animal('a1')],
+      eventos: [
+        {
+          id: 'e1',
+          animalId: 'a1',
+          tipo: 'Medicamento',
+          data: new Date().toISOString(),
+          descricao: 'Antibiótico',
+          medicamentoId: 'm1',
+          quantidade: 20,
+        },
+      ],
+      medicamentos: [{ id: 'm1', ...lote }],
+    };
+    const { ctx } = await montar();
+
+    await act(async () => {
+      await ctx().deleteMedicamento('m1');
+    });
+
+    expect(ctx().medicamentos).toHaveLength(0);
+    const evento = ctx().eventosByAnimal('a1')[0];
+    expect(evento).toBeDefined();
+    expect(evento.medicamentoId).toBeUndefined();
+  });
+});
+
+describe('marcar comunicação ao SNIRA', () => {
+  const venda: Evento = {
+    id: 'e-venda',
+    animalId: 'a1',
+    tipo: 'Venda',
+    data: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+    descricao: 'Animal saiu por venda.',
+    comunicadoSnira: false,
+  };
+
+  beforeEach(() => {
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [],
+      animais: [animal('a1', { estado: 'vendido' })],
+      eventos: [venda],
+      medicamentos: [],
+    };
+  });
+
+  it('marcar tira o alerta da lista', async () => {
+    const { ctx } = await montar();
+    expect(ctx().alertas.some((a) => a.categoria === 'snira')).toBe(true);
+
+    await act(async () => {
+      await ctx().updateEvento('e-venda', { comunicadoSnira: true });
+    });
+
+    expect(ctx().alertas.some((a) => a.categoria === 'snira')).toBe(false);
+    expect(mockServidor.recebidas).toContain('upsert:evento:e-venda');
+  });
+
+  it('uma marcação recusada volta atrás — e o aviso do prazo com ela', async () => {
+    // É o pior desfecho possível nesta lista: o servidor recusa, a app fica a
+    // dizer que está comunicado, e o único aviso que existia sobre um prazo
+    // legal desaparece com a mentira.
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Não tem permissão para alterar este registo.';
+    await falhaCom(() => ctx().updateEvento('e-venda', { comunicadoSnira: true }));
+
+    expect(ctx().eventos.find((e) => e.id === 'e-venda')?.comunicadoSnira).toBe(false);
+    expect(ctx().alertas.some((a) => a.categoria === 'snira')).toBe(true);
   });
 });

@@ -372,6 +372,12 @@ export const rotuloCategoriaAlerta: Record<Alerta['categoria'], string> = {
   identificacao: 'Identificação',
   snira: 'SNIRA',
   parto: 'Partos',
+  reproducao: 'Reprodução',
   medicamento: 'Medicamentos',
   vacinacao: 'Vacinação',
+  // Nunca aparece nos chips: os alertas de existências não têm animal, por isso
+  // não entram no `mapaAlertas` e nenhum animal os traz. Fica aqui porque o
+  // `Record` os pede todos, e porque uma entrada em falta é um erro de
+  // compilação no dia em que alguém os ligar a um animal.
+  existencias: 'Existências',
 };

@@ -135,6 +135,22 @@ export function inicializarBd(): SQLiteDatabase {
     garantirColuna(db, 'exploracao', 'longitude', 'REAL');
   }
 
+  // v8 → v9: comunicação ao SNIRA, resultado do diagnóstico de gestação e a
+  // ligação do tratamento ao lote de onde saiu. A tabela `medicamento` é criada
+  // pelo CREATE_TABLES_SQL acima; aqui ficam só as colunas do `evento`.
+  //
+  // `comunicadoSnira` fica a NULL no histórico, e é isso que se quer: null quer
+  // dizer "não é comunicável" e não "falta comunicar" (ver
+  // `supabase/schema_snira.sql`). Pô-lo a 0 punha todas as pesagens já
+  // registadas na lista de trabalho atrasado.
+  if (versao < 9) {
+    garantirColuna(db, 'evento', 'resultado', 'TEXT');
+    garantirColuna(db, 'evento', 'medicamentoId', 'TEXT');
+    garantirColuna(db, 'evento', 'quantidade', 'REAL');
+    garantirColuna(db, 'evento', 'comunicadoSnira', 'INTEGER');
+    garantirColuna(db, 'evento', 'comunicadoEm', 'TEXT');
+  }
+
   if (versao < SCHEMA_VERSION) {
     db.execSync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   }

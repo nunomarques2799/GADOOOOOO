@@ -44,7 +44,10 @@ Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
 | 25 | `schema_equipa_e_foto.sql` | `superadmin_membros_exploracao()` (quem trabalha em cada exploração) e `perfil.fotografia`. | 3, **15** |
 | 26 | `schema_documento_visibilidade.sql` | `documento.publico`: cada papel nasce à escolha, e o privado é fechado na tabela **e no bucket**. | **24** |
 | 27 | `schema_historico_equipa.sql` | `equipa_historico`: quem saiu da equipa, com que papel, quando entrou e quem o tirou. Escrito por gatilho no `delete` de `membro_exploracao`. | 2, 14, **15** |
-| 28 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. Tem a lista das que ficam FECHADAS mesmo a quem tem sessão. | **todos** |
+| 28 | `schema_snira.sql` | `evento.comunicado_snira`/`comunicado_em`: marcar o que já foi comunicado ao SNIRA (mortes e saídas, a par do nascimento que o animal já tinha). | 1, **20** |
+| 29 | `schema_reproducao.sql` | `evento.resultado` (gestante/vazia/duvidoso). Os tipos `Cobrição` e `Diagnóstico` não precisam de schema — `evento.tipo` é texto livre. | **28** |
+| 30 | `schema_medicamentos.sql` | Tabela `medicamento` (um lote comprado por linha) e `evento.medicamento_id`/`quantidade`. Existências = comprado − aplicado, calculado e não guardado. | 1, 2, **13**, 29 |
+| 31 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. Tem a lista das que ficam FECHADAS mesmo a quem tem sessão. | **todos** |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 

@@ -19,11 +19,13 @@ import {
   carregarUtilizador,
   eliminarAnimal as bdEliminarAnimal,
   eliminarExploracao as bdEliminarExploracao,
+  eliminarMedicamento as bdEliminarMedicamento,
   eliminarMovimento as bdEliminarMovimento,
   eliminarTerreno as bdEliminarTerreno,
   guardarAnimal,
   guardarEvento,
   guardarExploracao,
+  guardarMedicamento,
   guardarMovimento,
   guardarTerreno,
 } from './db/repository';
@@ -50,12 +52,13 @@ import {
   reporDispensa,
   type Dispensas,
 } from './dispensados';
-import { computeAlertas } from './helpers';
+import { computeAlertas } from './alertas';
 import { filtrarAlertas, useNotificacoes } from './notificacoes';
 import {
   animaisSeed,
   eventosSeed,
   exploracoesSeed,
+  medicamentosSeed,
   movimentosSeed,
   terrenosSeed,
   utilizadorSeed,
@@ -68,11 +71,13 @@ import {
   mensagemLegivel,
   eliminarAnimalSupabase,
   eliminarExploracaoSupabase,
+  eliminarMedicamentoSupabase,
   eliminarMovimentoSupabase,
   eliminarTerrenoSupabase,
   upsertAnimalSupabase,
   upsertEventoSupabase,
   upsertExploracaoSupabase,
+  upsertMedicamentoSupabase,
   upsertMovimentoSupabase,
   upsertTerrenoSupabase,
 } from './supabaseRepo';
@@ -82,6 +87,7 @@ import type {
   EstadoAnimal,
   Evento,
   Exploracao,
+  Medicamento,
   Movimento,
   Terreno,
   Utilizador,
@@ -110,6 +116,8 @@ async function enviarOp(op: OpPendente): Promise<string | null> {
         return eliminarAnimalSupabase(op.id);
       case 'movimento':
         return eliminarMovimentoSupabase(op.id);
+      case 'medicamento':
+        return eliminarMedicamentoSupabase(op.id);
       case 'evento':
         return null; // sem eliminação de eventos no domínio atual
     }
@@ -125,6 +133,8 @@ async function enviarOp(op: OpPendente): Promise<string | null> {
       return upsertEventoSupabase(op.dados as Evento);
     case 'movimento':
       return upsertMovimentoSupabase(op.dados as Movimento);
+    case 'medicamento':
+      return upsertMedicamentoSupabase(op.dados as Medicamento);
   }
 }
 
@@ -154,13 +164,14 @@ type Snapshot = {
   animais: Animal[];
   eventos: Evento[];
   movimentos: Movimento[];
+  medicamentos: Medicamento[];
 };
 
 /** Snapshot inicial síncrono (SQLite local ou seed). */
 function snapshotSincrono(): Snapshot {
   if (USA_SQLITE_LOCAL) {
     const db = inicializarBd();
-    const { exploracoes, terrenos, animais, eventos, movimentos } = carregarTudo(db);
+    const { exploracoes, terrenos, animais, eventos, movimentos, medicamentos } = carregarTudo(db);
     return {
       utilizador: carregarUtilizador(db) ?? utilizadorSeed,
       exploracoes,
@@ -168,6 +179,7 @@ function snapshotSincrono(): Snapshot {
       animais,
       eventos,
       movimentos,
+      medicamentos,
     };
   }
   // Web sem Supabase → seed em memória.
@@ -179,6 +191,7 @@ function snapshotSincrono(): Snapshot {
       animais: animaisSeed,
       eventos: eventosSeed,
       movimentos: movimentosSeed,
+      medicamentos: medicamentosSeed,
     };
   }
   // Web/Electron com Supabase → arranca da cache local (funciona offline).
@@ -194,6 +207,7 @@ function snapshotSincrono(): Snapshot {
     animais: [],
     eventos: [],
     movimentos: [],
+    medicamentos: [],
   };
 }
 
@@ -210,6 +224,13 @@ type GadoContext = {
    * que quem está a ver tenha `verFinancas` (ver `permissoes.ts`).
    */
   movimentos: Movimento[];
+  /**
+   * Os lotes que entraram na arrecadação. Toda a equipa os vê — o veterinário
+   * incluído, que precisa deles para escolher o frasco que está a usar. O que
+   * RESTA de cada um não está aqui: calcula-se com os eventos (ver
+   * `medicamentos.ts`).
+   */
+  medicamentos: Medicamento[];
   alertas: Alerta[];
   /** Alertas que o criador mandou calar (ver `dispensados.ts`). */
   alertasDispensados: Alerta[];
@@ -253,6 +274,8 @@ type GadoContext = {
   eventosByAnimal: (id: string) => Evento[];
   movimentosByAnimal: (id: string) => Movimento[];
   movimentosByExploracao: (id: string) => Movimento[];
+  medicamentoById: (id: string) => Medicamento | undefined;
+  medicamentosByExploracao: (id: string) => Medicamento[];
   // ações (async quando batem no Supabase; devolvem o objeto criado)
   addAnimal: (a: Omit<Animal, 'id'>) => Promise<Animal>;
   /**
@@ -295,6 +318,16 @@ type GadoContext = {
   deleteTerreno: (id: string) => Promise<void>;
   addEvento: (e: Omit<Evento, 'id'>) => Promise<Evento>;
   /**
+   * Corrige um evento já registado. Nasceu para a marcação de comunicado ao
+   * SNIRA — que é uma alteração a um registo que já existe, não um registo
+   * novo — e serve qualquer correção pontual.
+   *
+   * `comunicadoEm` NÃO se passa aqui: quem a escreve é o gatilho do servidor
+   * (ver `supabase/schema_snira.sql`). O que se manda daqui é a intenção
+   * (`comunicadoSnira`), e a data vem na sincronização seguinte.
+   */
+  updateEvento: (id: string, patch: Partial<Evento>) => Promise<void>;
+  /**
    * Liga ou desliga a gestão económica em toda a conta. Desligar ESCONDE, não
    * apaga: nenhum movimento é removido e religar devolve as contas intactas.
    */
@@ -302,6 +335,18 @@ type GadoContext = {
   addMovimento: (m: Omit<Movimento, 'id'>) => Promise<Movimento>;
   updateMovimento: (id: string, patch: Partial<Movimento>) => Promise<void>;
   deleteMovimento: (id: string) => Promise<void>;
+  /**
+   * Dá entrada de um lote na arrecadação. Com a gestão económica ligada e
+   * `lancarDespesa`, lança também a despesa correspondente — comprar
+   * medicamento é dinheiro que sai, e obrigar a escrevê-lo duas vezes era a
+   * garantia de que as contas ficariam a faltar-lhe uma parte.
+   */
+  addMedicamento: (
+    m: Omit<Medicamento, 'id'>,
+    opcoes?: { lancarDespesa?: boolean },
+  ) => Promise<Medicamento>;
+  updateMedicamento: (id: string, patch: Partial<Medicamento>) => Promise<void>;
+  deleteMedicamento: (id: string) => Promise<void>;
   /**
    * Envia o que está na fila e volta a ler do servidor.
    *
@@ -335,6 +380,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   const [animais, setAnimais] = useState<Animal[]>(boot.animais);
   const [eventos, setEventos] = useState<Evento[]>(boot.eventos);
   const [movimentos, setMovimentos] = useState<Movimento[]>(boot.movimentos);
+  const [medicamentos, setMedicamentos] = useState<Medicamento[]>(boot.medicamentos);
 
   // Espelho sempre atual do efetivo, para ler dentro das ações sem o incluir nas dependências.
   const animaisRef = useRef(animais);
@@ -347,6 +393,8 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   eventosRef.current = eventos;
   const movimentosRef = useRef(movimentos);
   movimentosRef.current = movimentos;
+  const medicamentosRef = useRef(medicamentos);
+  medicamentosRef.current = medicamentos;
 
   // Todos os alertas possíveis; as preferências do utilizador (ecrã
   // "Notificações e alertas") filtram categorias e antecedência, e o que o
@@ -356,7 +404,10 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     cacheDisponivel ? lerDispensas() : {},
   );
 
-  const alertasBrutos = useMemo(() => computeAlertas(animais, eventos), [animais, eventos]);
+  const alertasBrutos = useMemo(
+    () => computeAlertas(animais, eventos, medicamentos),
+    [animais, eventos, medicamentos],
+  );
 
   const alertas = useMemo(
     () => filtrarDispensados(filtrarAlertas(alertasBrutos, prefsNotif), dispensas),
@@ -430,9 +481,9 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   // offline com os dados atuais. Só com Supabase + armazenamento disponível.
   useEffect(() => {
     if (usaSupabase && cacheDisponivel) {
-      guardarCache({ exploracoes, terrenos, animais, eventos, movimentos });
+      guardarCache({ exploracoes, terrenos, animais, eventos, movimentos, medicamentos });
     }
-  }, [usaSupabase, exploracoes, terrenos, animais, eventos, movimentos]);
+  }, [usaSupabase, exploracoes, terrenos, animais, eventos, movimentos, medicamentos]);
 
   /** Puxa a verdade do servidor. Devolve false (mantendo a cache) se falhar. */
   const puxarDoServidor = useCallback(async (): Promise<boolean> => {
@@ -443,6 +494,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       setAnimais(snap.animais);
       setEventos(snap.eventos);
       setMovimentos(snap.movimentos);
+      setMedicamentos(snap.medicamentos);
       setErroSincronizacao(null);
       return true;
     } catch (e) {
@@ -623,6 +675,14 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     (id: string) => movimentos.filter((m) => m.exploracaoId === id),
     [movimentos],
   );
+  const medicamentoById = useCallback(
+    (id: string) => medicamentos.find((m) => m.id === id),
+    [medicamentos],
+  );
+  const medicamentosByExploracao = useCallback(
+    (id: string) => medicamentos.filter((m) => m.exploracaoId === id),
+    [medicamentos],
+  );
 
   /* ---- Ações ---- */
 
@@ -759,6 +819,13 @@ export function GadoProvider({ children }: { children: ReactNode }) {
         data,
         descricao,
         detalhe: motivo,
+        // A morte e a saída são das quatro coisas que a lei manda comunicar ao
+        // SNIRA em sete dias. Nasce marcado como POR COMUNICAR — o `false` é o
+        // que o põe na lista do ecrã "Comunicar ao SNIRA" e faz o prazo começar
+        // a contar. Deixá-lo indefinido obrigava o criador a lembrar-se sozinho
+        // de que tinha ali uma comunicação a fazer, que é exatamente o trabalho
+        // que esta app existe para lhe tirar da cabeça.
+        comunicadoSnira: false,
       };
 
       /**
@@ -972,6 +1039,31 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     [usaSupabase, gravarSqlite, empurrar],
   );
 
+  const updateEvento = useCallback(
+    async (id: string, patch: Partial<Evento>): Promise<void> => {
+      const atual = eventosRef.current.find((e) => e.id === id);
+      if (!atual) return;
+      const atualizado: Evento = { ...atual, ...patch, id, animalId: atual.animalId };
+      setEventos((prev) => prev.map((e) => (e.id === id ? atualizado : e)));
+      if (usaSupabase) {
+        try {
+          await empurrar({ op: 'upsert', entidade: 'evento', dados: atualizado });
+        } catch (e) {
+          // Repõe o que estava. Sem isto, uma marcação de "comunicado ao SNIRA"
+          // recusada pela RLS ficava a dizer que sim no ecrã, e o alerta que
+          // avisava do prazo desaparecia com ela — que é exatamente o pior
+          // resultado possível numa lista cuja única função é não deixar
+          // esquecer um prazo legal.
+          setEventos((prev) => prev.map((ev) => (ev.id === id ? atual : ev)));
+          throw e;
+        }
+      } else {
+        gravarSqlite((db) => guardarEvento(db, atualizado));
+      }
+    },
+    [usaSupabase, gravarSqlite, empurrar],
+  );
+
   const definirFinancasAtivas = useCallback(
     async (ativas: boolean): Promise<void> => {
       // Otimista, para o interruptor responder no dedo mesmo com rede fraca.
@@ -1046,6 +1138,130 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     [usaSupabase, gravarSqlite, empurrar],
   );
 
+  /* ---- Existências de medicamentos ---- */
+
+  const addMedicamento = useCallback(
+    async (
+      m: Omit<Medicamento, 'id'>,
+      opcoes?: { lancarDespesa?: boolean },
+    ): Promise<Medicamento> => {
+      const novo: Medicamento = { ...m, id: novoId(), criadoPor: m.criadoPor ?? utilizador.id };
+
+      /**
+       * Comprar medicamento é dinheiro que sai. A despesa nasce aqui, com o
+       * lote, em vez de ficar à espera de o criador se lembrar de a lançar
+       * outra vez no ecrã das Finanças — e é `Sanidade` porque é lá que ela
+       * pertence nas contas da exploração.
+       *
+       * Quem decide se ela é lançada é quem chama: só o faz se a gestão
+       * económica estiver ligada E esta pessoa puder registar despesas. O store
+       * não repete essa pergunta (é do `useFinancas`), mas também não inventa a
+       * despesa sozinho — sem `lancarDespesa`, entra só o lote.
+       */
+      const despesa: Movimento | undefined =
+        opcoes?.lancarDespesa && typeof novo.custo === 'number' && novo.custo > 0
+          ? {
+              id: novoId(),
+              exploracaoId: novo.exploracaoId,
+              direcao: 'despesa',
+              categoria: 'Sanidade',
+              valor: novo.custo,
+              data: novo.dataCompra,
+              descricao: novo.lote?.trim()
+                ? `${novo.nome} · lote ${novo.lote.trim()}`
+                : novo.nome,
+              contraparte: novo.fornecedor,
+              criadoPor: utilizador.id,
+            }
+          : undefined;
+
+      setMedicamentos((prev) => [novo, ...prev]);
+      if (despesa) setMovimentos((prev) => [despesa, ...prev]);
+
+      if (!usaSupabase) {
+        gravarSqlite((db) => {
+          guardarMedicamento(db, novo);
+          if (despesa) guardarMovimento(db, despesa);
+        });
+        return novo;
+      }
+
+      try {
+        await empurrar({ op: 'upsert', entidade: 'medicamento', dados: novo });
+      } catch (e) {
+        setMedicamentos((prev) => prev.filter((x) => x.id !== novo.id));
+        if (despesa) setMovimentos((prev) => prev.filter((x) => x.id !== despesa.id));
+        throw e;
+      }
+
+      if (despesa) {
+        try {
+          await empurrar({ op: 'upsert', entidade: 'movimento', dados: despesa });
+        } catch (e) {
+          // O lote FICA — deu entrada e é isso que interessa à arrecadação. O
+          // que se desfaz é só a despesa, e quem chamou mostra a razão: um
+          // lançamento a aparecer nas contas sem existir no servidor era pior
+          // do que não haver lançamento nenhum.
+          setMovimentos((prev) => prev.filter((x) => x.id !== despesa.id));
+          throw e;
+        }
+      }
+      return novo;
+    },
+    [usaSupabase, gravarSqlite, empurrar, utilizador.id],
+  );
+
+  const updateMedicamento = useCallback(
+    async (id: string, patch: Partial<Medicamento>): Promise<void> => {
+      const atual = medicamentosRef.current.find((m) => m.id === id);
+      if (!atual) return;
+      const atualizado: Medicamento = { ...atual, ...patch, id, exploracaoId: atual.exploracaoId };
+      setMedicamentos((prev) => prev.map((m) => (m.id === id ? atualizado : m)));
+      if (usaSupabase) {
+        try {
+          await empurrar({ op: 'upsert', entidade: 'medicamento', dados: atualizado });
+        } catch (e) {
+          setMedicamentos((prev) => prev.map((m) => (m.id === id ? atual : m)));
+          throw e;
+        }
+      } else {
+        gravarSqlite((db) => guardarMedicamento(db, atualizado));
+      }
+    },
+    [usaSupabase, gravarSqlite, empurrar],
+  );
+
+  const deleteMedicamento = useCallback(
+    async (id: string): Promise<void> => {
+      const removido = medicamentosRef.current.find((m) => m.id === id);
+      // Os tratamentos que saíram deste lote FICAM: aconteceram. O que se perde
+      // é a ligação ao frasco — é o `on delete set null` do servidor, feito
+      // também aqui para o ecrã não ficar com registos a apontar para um lote
+      // que já não existe enquanto a sincronização não chega.
+      const desligados = eventosRef.current.filter((e) => e.medicamentoId === id);
+      setEventos((prev) =>
+        prev.map((e) => (e.medicamentoId === id ? { ...e, medicamentoId: undefined } : e)),
+      );
+      setMedicamentos((prev) => prev.filter((m) => m.id !== id));
+
+      if (!usaSupabase) {
+        gravarSqlite((db) => bdEliminarMedicamento(db, id));
+        return;
+      }
+      try {
+        await empurrar({ op: 'delete', entidade: 'medicamento', id });
+      } catch (e) {
+        if (removido) setMedicamentos((prev) => [removido, ...prev]);
+        if (desligados.length > 0) {
+          const repor = new Map(desligados.map((ev) => [ev.id, ev]));
+          setEventos((prev) => prev.map((ev) => repor.get(ev.id) ?? ev));
+        }
+        throw e;
+      }
+    },
+    [usaSupabase, gravarSqlite, empurrar],
+  );
+
   const value = useMemo<GadoContext>(
     () => ({
       utilizador,
@@ -1054,6 +1270,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       animais,
       eventos,
       movimentos,
+      medicamentos,
       alertas,
       alertasDispensados,
       dispensarAlerta,
@@ -1072,6 +1289,8 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       eventosByAnimal,
       movimentosByAnimal,
       movimentosByExploracao,
+      medicamentoById,
+      medicamentosByExploracao,
       addAnimal,
       importarAnimais,
       updateAnimal,
@@ -1085,25 +1304,31 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       updateTerreno,
       deleteTerreno,
       addEvento,
+      updateEvento,
       definirFinancasAtivas,
       addMovimento,
       updateMovimento,
       deleteMovimento,
+      addMedicamento,
+      updateMedicamento,
+      deleteMedicamento,
       recarregar,
     }),
     [
-      utilizador, exploracoes, terrenos, animais, eventos, movimentos, alertas,
+      utilizador, exploracoes, terrenos, animais, eventos, movimentos, medicamentos, alertas,
       alertasDispensados, dispensarAlerta, reativarAlerta,
       online, erroSincronizacao, pendentesSinc, falhadas, limparFalhadas,
       exploracaoById, animalById, terrenoById, animaisByExploracao,
       animaisByExploracaoIncluindoSaidos,
       terrenosByExploracao, eventosByAnimal, movimentosByAnimal,
-      movimentosByExploracao, addAnimal, importarAnimais, updateAnimal,
+      movimentosByExploracao, medicamentoById, medicamentosByExploracao,
+      addAnimal, importarAnimais, updateAnimal,
       deleteAnimal, marcarSaida, reativarAnimal,
       addExploracao, updateExploracao, deleteExploracao,
-      addTerreno, updateTerreno, deleteTerreno, addEvento,
+      addTerreno, updateTerreno, deleteTerreno, addEvento, updateEvento,
       definirFinancasAtivas,
       addMovimento, updateMovimento, deleteMovimento,
+      addMedicamento, updateMedicamento, deleteMedicamento,
       recarregar,
     ],
   );
