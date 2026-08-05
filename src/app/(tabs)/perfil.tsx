@@ -1,16 +1,21 @@
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, View } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Avatar, Badge, Card, Icon, type IconName, Text } from '@/components/ui';
+import { SeletorFoto } from '@/components/SeletorFoto';
+import { Avatar, Badge, Button, Card, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { confirmar } from '@/data/avisos';
 import { saiuDoEfetivo } from '@/data/historicoAnimais';
 import { useMembros } from '@/data/membros';
 import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
+import { mensagemDeErro, useToasts } from '@/data/toasts';
+import { useFotoPerfil } from '@/data/useFotoPerfil';
 import { useDesktop } from '@/hooks/useDesktop';
-import { colors, layout, radii, spacing } from '@/theme';
+import { colors, layout, radii, shadow, spacing } from '@/theme';
 
 /**
  * Quem sou eu nesta app: a conta, os papéis e o que se pode fazer com ela.
@@ -27,6 +32,33 @@ export default function PerfilScreen() {
   const { utilizador, animais, exploracoes, pendentesSinc } = useGado();
   const { utilizador: conta, sair, configurado } = useAuth();
   const { membros, isSuperadmin, estadoPerfil } = useMembros();
+  const { foto, definirFoto } = useFotoPerfil();
+  const toast = useToasts();
+
+  /** A folha de escolher a fotografia. `null` = fechada. */
+  const [aEscolherFoto, setAEscolherFoto] = useState<{ atual?: string } | null>(null);
+  const [aGravarFoto, setAGravarFoto] = useState(false);
+
+  /**
+   * Grava a fotografia escolhida.
+   *
+   * Não fecha a folha antes de o servidor responder: sem ligação isto falha, e
+   * fechar primeiro dava um avatar novo no ecrã que desaparecia no arranque
+   * seguinte — a foto teria ficado só na cache deste aparelho.
+   */
+  async function guardarFoto(dataUri: string | undefined) {
+    if (aGravarFoto) return;
+    setAGravarFoto(true);
+    try {
+      await definirFoto(dataUri);
+      toast.sucesso(dataUri ? 'Fotografia guardada' : 'Fotografia removida');
+      setAEscolherFoto(null);
+    } catch (e) {
+      toast.erro('Não foi possível guardar a fotografia', mensagemDeErro(e));
+    } finally {
+      setAGravarFoto(false);
+    }
+  }
 
   /**
    * Terminar sessão apaga a cache local — incluindo alterações feitas offline
@@ -84,7 +116,51 @@ export default function PerfilScreen() {
           {/* Cartão do utilizador */}
           <Card>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-              <Avatar initials={iniciais} size={64} />
+              {/* A foto é o próprio avatar, e é tocável. Um botão "mudar
+                  fotografia" numa lista mais abaixo não se encontrava: o sítio
+                  onde se muda uma cara é a cara. */}
+              {/* Sem exigir sessão: em modo local (o `.exe` sem chaves) o
+                  `useFotoPerfil` guarda só na cache do aparelho, que é como o
+                  resto da app se comporta aí — `podeEscrever` também devolve
+                  `true` sem Supabase. Fechar isto era a única coisa da app a
+                  pedir conta para funcionar. */}
+              <Pressable
+                onPress={() => setAEscolherFoto({ atual: foto })}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  foto ? 'Mudar a sua fotografia' : 'Escolher uma fotografia para si'
+                }
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
+                <View>
+                  {foto ? (
+                    <Image
+                      source={{ uri: foto }}
+                      style={{ width: 64, height: 64, borderRadius: radii.pill }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <Avatar initials={iniciais} size={64} />
+                  )}
+                  {/* A marca da câmara diz que aquilo se toca. Sem ela, o
+                      avatar parece um desenho e ninguém lhe mexe. */}
+                  <View
+                    style={{
+                      position: 'absolute',
+                      right: -2,
+                      bottom: -2,
+                      width: 24,
+                      height: 24,
+                      borderRadius: radii.pill,
+                      backgroundColor: colors.primary,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 2,
+                      borderColor: colors.surface,
+                    }}>
+                    <Icon name="camera" size={12} color={colors.onPrimary} />
+                  </View>
+                </View>
+              </Pressable>
               <View style={{ flex: 1 }}>
                 <Text variant="h2" numberOfLines={1}>
                   {nome}
@@ -175,6 +251,68 @@ export default function PerfilScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      {/* Escolher a fotografia. Montada só quando está aberta: fora disso não
+          há folha nenhuma a guardar o rascunho de uma escolha abandonada. */}
+      <Modal
+        visible={aEscolherFoto !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setAEscolherFoto(null)}>
+        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={() => setAEscolherFoto(null)}
+            accessibilityLabel="Fechar"
+          />
+          <View
+            style={[
+              {
+                backgroundColor: colors.background,
+                borderTopLeftRadius: radii.xl,
+                borderTopRightRadius: radii.xl,
+                padding: spacing.lg,
+                paddingBottom: insets.bottom + spacing.lg,
+                gap: spacing.md,
+              },
+              shadow.lg,
+            ]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text variant="h3" style={{ flex: 1 }}>
+                A sua fotografia
+              </Text>
+              <Pressable
+                onPress={() => setAEscolherFoto(null)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Fechar">
+                <Icon name="close" size="lg" color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            {/* O mesmo seletor do animal e do terreno — ver `SeletorFoto`. A
+                escolha só mexe no rascunho; quem grava é o botão de baixo. */}
+            <SeletorFoto
+              foto={aEscolherFoto?.atual}
+              onMudar={(dataUri) => setAEscolherFoto({ atual: dataUri })}
+              icone="account"
+              assunto="da sua conta"
+            />
+
+            <Text variant="caption" color={colors.textMuted}>
+              Por agora a fotografia é só sua: aparece aqui no Perfil e mais ninguém a vê.
+            </Text>
+
+            <Button
+              label={aGravarFoto ? 'A guardar…' : 'Guardar'}
+              icon="check"
+              loading={aGravarFoto}
+              disabled={aGravarFoto || aEscolherFoto?.atual === foto}
+              onPress={() => void guardarFoto(aEscolherFoto?.atual)}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

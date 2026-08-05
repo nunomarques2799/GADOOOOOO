@@ -117,13 +117,21 @@ select * from (
     (24, 'schema_documentos.sql',      'tabela documento + bucket documentos',
         (to_regclass('public.documento') is not null
          and exists (select 1 from storage.buckets where id = 'documentos'))),
+    (25, 'schema_equipa_e_foto.sql',   'superadmin_membros_exploracao() + perfil.fotografia',
+        (exists (select 1 from func where nome = 'superadmin_membros_exploracao')
+         and exists (select 1 from col where tabela = 'perfil' and coluna = 'fotografia'))),
     -- O último não cria nada: só mexe em permissões. A marca é o efeito dele. São
     -- DUAS condições porque a primeira, sozinha, mente: a limpeza do anon já
     -- tinha sido feita pelo `schema_seguranca.sql` (4.º), por isso uma base a
     -- que faltava este ficheiro inteiro dava `t` na passagem a produção de
     -- 2026-07-31. A segunda só ele a produz — o 5.º dá o `execute` de
     -- `apagar_a_minha_conta()` a `authenticated` e mais nenhum o tira.
-    (25, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
+    --
+    -- NOTA: esta marca ficou VERDADEIRA nas bases que correram a versão antiga
+    -- do ficheiro, que fechava só o `apagar_a_minha_conta`. Para saber se a
+    -- versão de 2026-08-05 (a que fecha as CINCO) já correu, é a consulta 4 do
+    -- fim do `schema_lint.sql` que responde.
+    (26, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
         (not exists (
            select 1 from pg_proc p
              join pg_namespace n on n.oid = p.pronamespace

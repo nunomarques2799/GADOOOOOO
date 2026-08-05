@@ -41,7 +41,8 @@ Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
 | 22 | `schema_convite_por_papel.sql` | Um código de trabalhador deixa de servir a uma conta de veterinário (e vice-versa): o `resgatar_convite` confere o papel do código com o que a conta disse ser. | **17** |
 | 23 | `schema_agenda.sql` | `evento_agenda`: os eventos que as pessoas marcam (dia, hora opcional, público ou privado). O veterinário não tem agenda. | 1, 2, **20** |
 | 24 | `schema_documentos.sql` | `documento` + o bucket privado `documentos`: guardar faturas e papéis na exploração, por categoria. O veterinário não os vê. | 1, 2, **20** |
-| 25 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. | **todos** |
+| 25 | `schema_equipa_e_foto.sql` | `superadmin_membros_exploracao()` (quem trabalha em cada exploração) e `perfil.fotografia`. | 3, **15** |
+| 26 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. Tem a lista das que ficam FECHADAS mesmo a quem tem sessão. | **todos** |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 
