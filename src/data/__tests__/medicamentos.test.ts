@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
+import { comRelogio } from '../../testUtils/relogio';
 import { diaIso, isoDaysAgo, isoInDays } from '../helpers';
 import {
   estadoDoLote,
@@ -83,6 +84,29 @@ describe('estadoDoLote — validade', () => {
     const e = estadoDoLote(lote({ validade: diaIso(isoDaysAgo(1)) }), []);
     expect(e.expirado).toBe(true);
     expect(e.disponivel).toBe(false);
+  });
+
+  it('e continua a ser o dia seguinte à 00:30 de verão', () => {
+    // O erro que isto fecha durava uma hora por dia, de março a outubro: a
+    // validade é gravada SEM hora (`diaIso`), o JS lia-a como meia-noite UTC e
+    // à 00:30 de Portugal em UTC+1 o frasco de ONTEM ficava a 0,98 dias de
+    // agora — perto o suficiente para passar por HOJE. O lote fora de validade
+    // aparecia como "A expirar" e continuava a poder escolher-se para um
+    // tratamento, que é o oposto do que estas duas linhas existem para garantir.
+    //
+    // O relógio E o fuso são fixados: com a hora real isto passava sozinho 23
+    // horas por dia, e em UTC (a CI) passava as 24.
+    comRelogio('Europe/Lisbon', [2026, 8, 6, 0, 30], () => {
+      const ontem = estadoDoLote(lote({ validade: '2026-08-05' }), []);
+      expect(ontem.diasParaValidade).toBe(-1);
+      expect(ontem.expirado).toBe(true);
+      expect(ontem.disponivel).toBe(false);
+
+      const hoje = estadoDoLote(lote({ validade: '2026-08-06' }), []);
+      expect(hoje.diasParaValidade).toBe(0);
+      expect(hoje.expirado).toBe(false);
+      expect(hoje.disponivel).toBe(true);
+    });
   });
 
   it('sem validade escrita não expira nunca', () => {

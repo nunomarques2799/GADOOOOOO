@@ -169,8 +169,38 @@ export function paraEuro(texto: string): number {
 export function idadeDias(iso: string): number {
   return Math.floor((Date.now() - new Date(iso).getTime()) / MS_DIA);
 }
+/**
+ * Quantos DIAS faltam até `iso`: 0 é hoje, negativo já passou.
+ *
+ * Compara DIA com DIA, e não instante com instante — a conta anterior media a
+ * distância em horas e arredondava para cima, o que dava um dia a mais por dois
+ * caminhos diferentes:
+ *
+ * - Uma data SEM hora (`2026-08-05`, que é o que `diaIso` produz e o que o
+ *   servidor devolve numa coluna `date`) é lida pelo JS como meia-noite UTC.
+ *   Entre a meia-noite e a uma da manhã, com o país em UTC+1, ONTEM fica a 0,98
+ *   dias de agora e o arredondamento para cima dava 0: um lote fora de validade
+ *   aparecia como "A expirar" em vez de "Fora de validade" (ver `estadoDoLote`),
+ *   e os prazos do SNIRA andavam um dia. Uma hora por dia, de março a outubro.
+ * - Um instante ao MEIO-DIA (o que `parseDataPt` e `isoMaisDias` gravam) fica a
+ *   10,1 dias de distância às 9 da manhã: "faltam 10 dias" lia-se 11 até ao
+ *   meio-dia e 10 a partir dele. Este não depende de fuso nenhum — acontecia
+ *   todas as manhãs, em qualquer país, e é o que punha metade dos testes de
+ *   prazos vermelhos das 0h às 12h.
+ *
+ * Os dois lados passam por `diaIso`, que já sabe ler o dia em hora local sem
+ * inventar uma hora para uma data que não a tem. Os dias comparam-se ancorados
+ * ao meio-dia para que as noites de 23 e 25 horas da mudança da hora não valham
+ * um dia a mais nem a menos.
+ */
 export function diasAte(iso: string): number {
-  return Math.ceil((new Date(iso).getTime() - Date.now()) / MS_DIA);
+  return Math.round((meioDiaLocal(diaIso(iso)) - meioDiaLocal(diaIso(new Date()))) / MS_DIA);
+}
+
+/** O meio-dia local de um `aaaa-mm-dd`. A âncora para contar dias entre dias. */
+function meioDiaLocal(dia: string): number {
+  const [ano, mes, d] = dia.split('-').map(Number);
+  return new Date(ano, mes - 1, d, 12, 0, 0, 0).getTime();
 }
 
 export function idadeExtenso(iso: string): string {

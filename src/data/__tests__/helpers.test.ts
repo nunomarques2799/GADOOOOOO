@@ -1,5 +1,6 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
+import { comRelogio } from '../../testUtils/relogio';
 import {
   diaIso,
   diasAte,
@@ -128,20 +129,71 @@ describe('isoMaisDias', () => {
   });
 
   it('daqui a 10 dias continua a ler-se como 10 dias', () => {
-    // O relógio TEM de ser fixado, e ao meio-dia — a hora a que `isoMaisDias`
-    // ancora o alvo. Com a hora real este teste dava 11 de manhã e 10 de
-    // tarde: falhava em metade das execuções da CI, e uma porta de qualidade
-    // que falha ao calhar deixa de ser lida.
-    //
-    // A diferença de manhã não é ruído do teste — é `diasAte` a arredondar
-    // para cima sobre uma fração de dia, o que faz as contagens dos alertas
-    // mostrarem um dia a mais antes do meio-dia. Fica registado à parte.
-    jest.useFakeTimers().setSystemTime(new Date(2026, 6, 19, 12, 0, 0));
+    // O relógio fixa-se na mesma, para o teste não depender da hora a que a CI
+    // corre — mas já não é preciso que seja ao meio-dia. Enquanto `diasAte`
+    // media horas e arredondava para cima, esta conta dava 11 de manhã e 10 de
+    // tarde e o teste só passava se fosse ancorado ao meio-dia; agora compara
+    // dias com dias e dá 10 a qualquer hora (ver `diasAte — conta dias`).
+    jest.useFakeTimers().setSystemTime(new Date(2026, 6, 19, 8, 0, 0));
     try {
       expect(diasAte(isoMaisDias(new Date().toISOString(), 10))).toBe(10);
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+describe('diasAte — conta dias, não horas', () => {
+  it('à 00:30 de verão, ontem é −1 e não 0', () => {
+    // O erro relatado, no instante exato em que aparecia. Uma data SEM hora
+    // (`2026-08-05` — a forma que vem do servidor e a que `diaIso` produz) é
+    // lida como meia-noite UTC; à 00:30 de Portugal em UTC+1 isso punha ONTEM a
+    // 0,98 dias de agora, e arredondar para cima dava 0. Efeito no ecrã: um
+    // lote fora de validade lia-se "A expirar" em vez de "Fora de validade".
+    comRelogio('Europe/Lisbon', [2026, 8, 6, 0, 30], () => {
+      expect(diasAte('2026-08-05')).toBe(-1);
+      expect(diasAte('2026-08-06')).toBe(0);
+      expect(diasAte('2026-08-07')).toBe(1);
+    });
+  });
+
+  // Sem o relógio fixo isto passava 23 horas por dia sem provar nada. Percorrer
+  // o dia inteiro é o que mostra que a resposta deixou de depender da hora: a
+  // meia-noite é o caso relatado, e a manhã inteira é o outro caminho (um alvo
+  // ao meio-dia ficava a 7,4 dias às 00:30 e lia-se 8).
+  it.each([0, 1, 5, 9, 11, 12, 13, 18, 23])('dá o mesmo às %ih', (hora) => {
+    comRelogio('Europe/Lisbon', [2026, 8, 6, hora, 30], () => {
+      expect(diasAte('2026-08-05')).toBe(-1);
+      expect(diasAte('2026-08-06')).toBe(0);
+      expect(diasAte('2026-08-07')).toBe(1);
+      // Um instante completo ao meio-dia, que é o que `isoMaisDias` e
+      // `parseDataPt` gravam: o prazo de sete dias tem de ler-se sete.
+      expect(diasAte(isoMaisDias(new Date().toISOString(), 7))).toBe(7);
+    });
+  });
+
+  it('no inverno, com o país em UTC+0, responde o mesmo', () => {
+    // De novembro a março o desalinhamento desaparece. A conta não pode mudar
+    // de resposta com a estação — é a mesma pergunta.
+    comRelogio('Europe/Lisbon', [2026, 1, 15, 0, 30], () => {
+      expect(diasAte('2026-01-14')).toBe(-1);
+      expect(diasAte('2026-01-15')).toBe(0);
+      expect(diasAte('2026-01-16')).toBe(1);
+    });
+  });
+
+  it('as noites de 23 e 25 horas da mudança da hora valem um dia, como as outras', () => {
+    // Contar dias dividindo milissegundos por 86 400 000 conta 1,04 dias na
+    // noite em que o relógio recua e 0,96 na que avança. Os dias comparam-se
+    // ancorados ao meio-dia justamente para essas duas noites não escaparem.
+    comRelogio('Europe/Lisbon', [2026, 10, 24, 23, 30], () => {
+      expect(diasAte('2026-10-25')).toBe(1); // a noite de 25 horas
+      expect(diasAte('2026-10-26')).toBe(2);
+    });
+    comRelogio('Europe/Lisbon', [2026, 3, 28, 23, 30], () => {
+      expect(diasAte('2026-03-29')).toBe(1); // a noite de 23 horas
+      expect(diasAte('2026-03-30')).toBe(2);
+    });
   });
 });
 

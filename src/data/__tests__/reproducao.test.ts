@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
+import { comRelogio } from '../../testUtils/relogio';
 import { isoDaysAgo, isoInDays } from '../helpers';
 import {
   aguardamDiagnostico,
@@ -141,12 +142,24 @@ describe('estadoReprodutivo — o ciclo lido dos eventos', () => {
 
 describe('preverParto', () => {
   it('usa a gestação média de cada espécie', () => {
-    const base = isoDaysAgo(0);
-    const dias = (iso: string) =>
-      Math.round((new Date(iso).getTime() - new Date(base).getTime()) / 86_400_000);
-    expect(dias(preverParto('Bovino', base))).toBe(283);
-    expect(dias(preverParto('Ovino', base))).toBe(150);
-    expect(dias(preverParto('Suíno', base))).toBe(114);
+    // O relógio é fixo num dia de verão de propósito: 150 e 114 dias depois de
+    // agosto caem depois da mudança da hora de outubro, e é essa travessia que
+    // este teste tem de aguentar. Com a data real, o caso só era exercido em
+    // parte do ano.
+    comRelogio('Europe/Lisbon', [2026, 8, 6, 0, 33], () => {
+      const base = isoDaysAgo(0);
+      // Os dois lados ancorados ao meio-dia antes de subtrair. Dividir a
+      // diferença bruta por 86 400 000 conta 151 dias numa gestação de 150 que
+      // atravesse a noite em que o relógio recua: essa noite tem 25 horas, e a
+      // conta lia a hora a mais como meio dia a mais. É `isoMaisDias` que está
+      // certo — soma dias de calendário —, era a medição que estava a mentir.
+      const aoMeioDia = (iso: string) => new Date(iso).setHours(12, 0, 0, 0);
+      const dias = (iso: string) =>
+        Math.round((aoMeioDia(iso) - aoMeioDia(base)) / 86_400_000);
+      expect(dias(preverParto('Bovino', base))).toBe(283);
+      expect(dias(preverParto('Ovino', base))).toBe(150);
+      expect(dias(preverParto('Suíno', base))).toBe(114);
+    });
   });
 });
 
