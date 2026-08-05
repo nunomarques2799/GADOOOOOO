@@ -16,9 +16,11 @@ import {
   HORIZONTE_DIAS,
   MAX_AGENDADAS,
   MINUTOS_AVISO_ACESSO,
+  orcamentoParaAlertas,
   planear,
   planearFimDeAcesso,
   quandoTocar,
+  TETO_IOS,
 } from '../notificacoesPlano';
 import type { Alerta } from '../types';
 
@@ -117,6 +119,39 @@ describe('planear', () => {
     const datas = plano.map((p) => p.quando.getTime());
     expect([...datas].sort((a, b) => a - b)).toEqual(datas); // por ordem
     expect(plano[0].alerta.id).toBe('a0'); // o mais próximo sobrevive
+  });
+
+  it('respeita o orçamento quando os avisos de acesso ocupam lugar', () => {
+    const muitos = Array.from({ length: MAX_AGENDADAS + 20 }, (_, i) =>
+      alerta(`a${i}`, { diasRestantes: 21 + i }),
+    );
+    const plano = planear(muitos, PREF_OMISSAO, AGORA, 12);
+    expect(plano).toHaveLength(12);
+    expect(plano[0].alerta.id).toBe('a0');
+  });
+});
+
+describe('orcamentoParaAlertas', () => {
+  /**
+   * O caso que motivou isto: cinco vínculos com prazo a correr dão 15 avisos de
+   * acesso, e 15 + 50 = 65 passa o teto de 64. O iOS descarta o excedente em
+   * silêncio — não há erro, nem aviso, nem forma de dar por isso a não ser
+   * reparar que um prazo não tocou.
+   */
+  it('mantém o total dentro do teto do iOS com muitos acessos', () => {
+    const avisosDeAcesso = 5 * MINUTOS_AVISO_ACESSO.length;
+    expect(avisosDeAcesso + MAX_AGENDADAS).toBeGreaterThan(TETO_IOS); // era o erro
+    expect(avisosDeAcesso + orcamentoParaAlertas(avisosDeAcesso)).toBeLessThanOrEqual(TETO_IOS);
+  });
+
+  it('não encolhe os prazos quando há espaço de sobra', () => {
+    expect(orcamentoParaAlertas(0)).toBe(MAX_AGENDADAS);
+    expect(orcamentoParaAlertas(3)).toBe(MAX_AGENDADAS);
+  });
+
+  it('nunca devolve um orçamento negativo', () => {
+    // Um número absurdo de acessos não pode fazer o `slice` cortar pelo fim.
+    expect(orcamentoParaAlertas(500)).toBe(0);
   });
 });
 

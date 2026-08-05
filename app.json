@@ -10,7 +10,23 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.gestaogado.app",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "CFBundleDevelopmentRegion": "pt-PT",
+        "CFBundleLocalizations": ["pt-PT"],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSAllowsLocalNetworking": true,
+          "NSExceptionDomains": {
+            "localhost": {
+              "NSExceptionAllowsInsecureHTTPLoads": true
+            }
+          }
+        }
+      }
     },
     "android": {
       "package": "com.gestaogado.app",
@@ -63,8 +79,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "A Terrabovina precisa de aceder às suas fotografias para ilustrar a ficha do animal.",
-          "cameraPermission": "A Terrabovina precisa da câmara para fotografar o animal."
+          "photosPermission": "A Terrabovina precisa de aceder às suas fotografias para ilustrar a ficha do animal e guardar faturas e guias.",
+          "cameraPermission": "A Terrabovina precisa da câmara para fotografar o animal e os documentos da exploração.",
+          "microphonePermission": false
         }
       ]
     ],

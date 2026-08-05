@@ -20,7 +20,12 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import type { Preferencias } from './notificacoes';
-import { planear, planearFimDeAcesso, type AcessoComPrazo } from './notificacoesPlano';
+import {
+  orcamentoParaAlertas,
+  planear,
+  planearFimDeAcesso,
+  type AcessoComPrazo,
+} from './notificacoesPlano';
 import type { Alerta } from './types';
 
 export const suportaNotificacoes = true;
@@ -136,6 +141,10 @@ export async function agendar(
     // cara de quem está a trabalhar. Agendados à frente, são os últimos a ser
     // cortados por qualquer limite que venha a seguir.
     const acesso = planearFimDeAcesso(acessos);
+    // …e é por isso que são eles a ficar com o lugar: o orçamento dos prazos
+    // encolhe pelo que estes ocuparem, para o total nunca passar dos 64 que o
+    // iOS guarda (acima disso descarta em silêncio, sem erro nenhum).
+    const orcamento = orcamentoParaAlertas(acesso.length);
     for (const a of acesso) {
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -151,7 +160,7 @@ export async function agendar(
       });
     }
 
-    const plano = planear(alertas, p);
+    const plano = planear(alertas, p, new Date(), orcamento);
     for (const { alerta, quando } of plano) {
       await Notifications.scheduleNotificationAsync({
         content: {

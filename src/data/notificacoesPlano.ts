@@ -16,10 +16,33 @@ export const HORA_AVISO = 8;
 
 /**
  * O iOS guarda no máximo 64 notificações pendentes por app e descarta as
- * restantes em silêncio. Com margem, para os avisos mais próximos nunca
- * caírem por causa de um efetivo grande.
+ * restantes em silêncio. Este é o número do sistema, não uma escolha nossa.
+ */
+export const TETO_IOS = 64;
+
+/**
+ * Quantos prazos se agendam, no máximo. Fica abaixo do `TETO_IOS` para sobrar
+ * espaço aos avisos de acesso e para um efetivo grande nunca empurrar os avisos
+ * mais próximos para fora do teto do sistema.
  */
 export const MAX_AGENDADAS = 50;
+
+/**
+ * Quantos avisos de prazo cabem, descontando os do fim de acesso.
+ *
+ * Os 50 do `MAX_AGENDADAS` deixavam 14 de margem por baixo do teto do iOS, e
+ * isso chegava enquanto os avisos de acesso fossem poucos. Só que são TRÊS por
+ * vínculo com prazo a correr (ver `MINUTOS_AVISO_ACESSO`): a partir de cinco
+ * vínculos — um veterinário com cinco visitas marcadas no mesmo dia — o total
+ * passa dos 64 e o iOS deita fora o excedente sem dizer nada.
+ *
+ * Quem cede o lugar são os prazos, e de propósito: estão a dias ou semanas de
+ * distância e voltam a ser agendados na próxima vez que a app abrir, enquanto
+ * o aviso de acesso está a minutos e não tem segunda oportunidade.
+ */
+export function orcamentoParaAlertas(avisosDeAcesso: number): number {
+  return Math.max(0, Math.min(MAX_AGENDADAS, TETO_IOS - avisosDeAcesso));
+}
 
 /** Não vale agendar avisos para daqui a meio ano: os dados mudam antes disso. */
 export const HORIZONTE_DIAS = 60;
@@ -73,6 +96,8 @@ export function planear(
   alertas: Alerta[],
   p: Preferencias,
   agora = new Date(),
+  /** Quantos cabem — ver `orcamentoParaAlertas`. Por omissão, o máximo. */
+  orcamento = MAX_AGENDADAS,
 ): { alerta: Alerta; quando: Date }[] {
   const horizonte = agora.getTime() + HORIZONTE_DIAS * 86_400_000;
   return alertas
@@ -83,7 +108,7 @@ export function planear(
     })
     .filter((x) => x.quando.getTime() <= horizonte)
     .sort((x, y) => x.quando.getTime() - y.quando.getTime())
-    .slice(0, MAX_AGENDADAS);
+    .slice(0, Math.min(orcamento, MAX_AGENDADAS));
 }
 
 /* ==================================================================

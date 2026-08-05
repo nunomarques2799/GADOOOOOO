@@ -1,0 +1,87 @@
+name: Build iOS app
+
+# Constrói a app para iPhone via EAS Build (nuvem da Expo — não é preciso Mac
+# nem Xcode; esta máquina é Windows). Requer o secret EXPO_TOKEN, o mesmo que o
+# workflow do Android já usa.
+#
+# SÓ CORRE À MÃO (Actions → Build iOS app → Run workflow). Não corre em push,
+# pela mesma razão do Android: o plano gratuito do EAS tem teto mensal de builds
+# e construir a cada push gasta-o em versões que ninguém instala. A entrega
+# normal continua a ser `eas update`, que não gasta quota e chega para tudo o
+# que mexe só em `src/`. Ver AGENTS.md e CONSTRUIR_iOS.md.
+#
+# ANTES DA PRIMEIRA VEZ: as credenciais da Apple (certificado de distribuição e
+# perfil de aprovisionamento) têm de existir na conta Expo. Elas criam-se numa
+# corrida INTERATIVA, com o Apple ID à mão:
+#
+#     eas build --platform ios --profile preview
+#
+# O EAS pergunta o Apple ID, trata dos certificados e guarda-os. Só depois disso
+# é que o `--non-interactive` daqui funciona; sem credenciais guardadas, este
+# workflow falha logo no início (não chega a compilar) porque não tem a quem
+# perguntar.
+#
+# AO CONTRÁRIO DO ANDROID, não há Release com um ficheiro para descarregar: um
+# .ipa não se instala abrindo-o no telemóvel. A distribuição faz-se pelo link
+# que o EAS devolve (perfil `preview`, para aparelhos registados com
+# `eas device:create`) ou pelo TestFlight (perfil `production` + `eas submit`).
+
+on:
+  workflow_dispatch:
+    inputs:
+      perfil:
+        description: "Perfil EAS a construir"
+        required: true
+        default: "preview"
+        type: choice
+        options:
+          - preview
+          - production
+
+jobs:
+  build:
+    name: Build iOS (EAS)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Instalar dependências da app
+        run: npm ci
+
+      - name: Construir iOS (espera a conclusão)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # ATENÇÃO: as variáveis EXPO_PUBLIC_SUPABASE_* NÃO podem ficar aqui.
+          # O `eas build` compila na nuvem da Expo, e o worker remoto não recebe
+          # o ambiente deste runner — a app sairia em modo demo (sem login).
+          # Estão em `eas.json` → build.<perfil>.env, que o EAS envia para o
+          # worker. Chave publishable, segura para o cliente (protegida por RLS).
+        run: |
+          eas build \
+            --platform ios \
+            --profile ${{ github.event.inputs.perfil }} \
+            --non-interactive \
+            --wait
+
+      - name: Onde está o build
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          eas build:list \
+            --platform ios \
+            --status finished \
+            --limit 1 \
+            --json \
+            --non-interactive \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{const b=JSON.parse(d)[0];console.log('Página do build:', b.buildDetailsPageUrl||'(sem URL)');console.log('Ficheiro:', b.artifacts?.buildUrl||b.artifacts?.applicationArchiveUrl||'(sem ficheiro)');});"
