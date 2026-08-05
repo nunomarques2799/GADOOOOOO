@@ -103,6 +103,89 @@ export function rotuloDuracao(horas: number): string {
 }
 
 /* ==================================================================
+ * A pergunta antes de mexer no relógio de alguém
+ * ==================================================================
+ * Mudar o tempo de acesso de uma pessoa acontece com UM toque num chip, e não
+ * havia nada entre o dedo e a mudança. Trocar "+4 horas" por "Terminar já" é um
+ * engano de dois centímetros que fecha a app na cara de quem está a trabalhar.
+ *
+ * E há uma segunda razão, que só apareceu ao escrever isto: o servidor NÃO SOMA
+ * as horas — `definir_prazo_de_acesso` faz `expira_em = now() + horas`, sempre.
+ * Um veterinário com 8 horas pela frente a quem se carregue "+4 horas" fica com
+ * 4: o botão ENCURTA-lhe o acesso. A frase de confirmação diz a hora a que o
+ * acesso passa a acabar, e avisa quando ela é mais cedo do que a de agora — é a
+ * única forma de isso deixar de acontecer às escondidas.
+ */
+
+/** O texto de uma confirmação, pronto a entregar ao `confirmar()`. */
+export type PerguntaDePrazo = {
+  titulo: string;
+  mensagem: string;
+  rotuloConfirmar: string;
+  destrutivo: boolean;
+};
+
+/**
+ * O que perguntar antes de mudar o prazo de alguém.
+ *
+ * `horas`: `0` termina já, `null` tira o prazo, `> 0` marca esse tempo A CONTAR
+ * DE AGORA (não soma ao que já lá está — ver o bloco acima).
+ *
+ * `formatarData` entra de fora (é o `formatDataHora` dos helpers) para este
+ * módulo continuar sem dependências e testável com uma data fixa.
+ */
+export function perguntaDePrazo(
+  horas: number | null,
+  quem: { nome: string; expiraEm?: string },
+  formatarData: (iso: string) => string,
+  agora: Date = new Date(),
+): PerguntaDePrazo {
+  if (horas === null) {
+    return {
+      titulo: 'Tirar o prazo',
+      mensagem:
+        `${quem.nome} passa a ter acesso SEM PRAZO a esta exploração: fica com ela até `
+        + 'alguém o remover da equipa à mão. Um veterinário convidado para uma visita não '
+        + 'costuma precisar disto.',
+      rotuloConfirmar: 'Tirar o prazo',
+      destrutivo: false,
+    };
+  }
+
+  if (horas <= 0) {
+    return {
+      titulo: 'Terminar o acesso agora',
+      mensagem:
+        `${quem.nome} deixa de ver esta exploração já. O que ele tiver por gravar `
+        + 'perde-se. A conta dele fica, e pode voltar a dar-lhe acesso quando quiser.',
+      rotuloConfirmar: 'Terminar já',
+      destrutivo: true,
+    };
+  }
+
+  const fim = new Date(agora.getTime() + horas * 3_600_000);
+  const terminou = acessoTerminou(quem.expiraEm, agora);
+  const encurta =
+    !!quem.expiraEm
+    && !terminou
+    && new Date(quem.expiraEm).getTime() > fim.getTime();
+
+  return {
+    titulo: terminou ? 'Reabrir o acesso' : 'Mudar o tempo de acesso',
+    mensagem:
+      `${quem.nome} fica com ${rotuloDuracao(horas)} de acesso a contar de agora. `
+      + `Passa a terminar a ${formatarData(fim.toISOString())}.`
+      // O aviso que impede o engano de encurtar sem dar por isso.
+      + (encurta
+        ? `\n\nATENÇÃO: neste momento ele tem acesso até ${formatarData(quem.expiraEm as string)}. `
+          + 'Isto ENCURTA-LHE o acesso, não o prolonga.'
+        : ''),
+    rotuloConfirmar: terminou ? 'Reabrir' : 'Confirmar',
+    destrutivo: encurta,
+  };
+}
+
+/* ==================================================================
  * Hora marcada — "até quinta às 18h", em vez de "durante 12 horas"
  * ==================================================================
  * A duração responde a "quanto tempo" e conta a partir do resgate. Não escreve

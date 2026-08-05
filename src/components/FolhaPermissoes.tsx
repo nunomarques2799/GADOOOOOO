@@ -9,9 +9,11 @@ import {
   DURACOES_ACESSO,
   HORA_OMISSAO,
   HORAS_SUGERIDAS,
+  perguntaDePrazo,
   problemaComFim,
   rotuloPrazo,
 } from '@/data/acessoTemporario';
+import { confirmar } from '@/data/avisos';
 import { formatDataCurta, formatDataHora, parseDataPt } from '@/data/helpers';
 import {
   exigeFinancasAtivas,
@@ -259,6 +261,7 @@ export function FolhaPermissoes({
                     o servidor recusa-lhe tudo na mesma. */}
                 <SeccaoPrazo
                   vinculo={vinculo}
+                  nome={pessoa.nome}
                   onMudarPrazo={onMudarPrazo}
                   onMarcarFim={onMarcarFim}
                   onErro={setErro}
@@ -381,11 +384,14 @@ export function FolhaPermissoes({
  */
 function SeccaoPrazo({
   vinculo,
+  nome,
   onMudarPrazo,
   onMarcarFim,
   onErro,
 }: {
   vinculo: Vinculo;
+  /** De quem é o prazo — vai na pergunta de confirmação. */
+  nome: string;
   onMudarPrazo: (membroId: string, horas: number | null) => Promise<string | null>;
   onMarcarFim: (membroId: string, fimIso: string) => Promise<string | null>;
   onErro: (razao: string | null) => void;
@@ -407,6 +413,27 @@ function SeccaoPrazo({
     setOcupado(false);
     if (razao) onErro(razao);
     else setAMarcar(false);
+  }
+
+  /**
+   * Mexer no relógio de alguém pergunta primeiro.
+   *
+   * Todos estes controlos são chips do mesmo tamanho, encostados uns aos
+   * outros: "+4 horas" e "Terminar já" ficam a dois centímetros um do outro, e
+   * o segundo fecha a app na cara de quem está a trabalhar. A pergunta diz
+   * SEMPRE a hora a que o acesso passa a acabar — e avisa quando as horas
+   * escolhidas o encurtam, que é o engano que ninguém apanhava (ver
+   * `perguntaDePrazo`).
+   */
+  function pedirEMudar(horas: number | null) {
+    if (ocupado) return;
+    const p = perguntaDePrazo(horas, { nome, expiraEm: vinculo.expiraEm }, formatDataHora);
+    confirmar(
+      p.titulo,
+      p.mensagem,
+      () => void correr(() => onMudarPrazo(vinculo.membroId, horas)),
+      { rotuloConfirmar: p.rotuloConfirmar, destrutivo: p.destrutivo },
+    );
   }
 
   return (
@@ -437,11 +464,15 @@ function SeccaoPrazo({
         {/* Quatro durações e não as seis: as compridas ("1 mês") pertencem ao
             convite, onde se decide o género de acesso. Aqui a pergunta é outra
             — "ele ainda está cá, quanto lhe dou a mais?" */}
+        {/* Sem o "+": o servidor NÃO soma — marca este tempo a contar de agora
+            (ver `perguntaDePrazo`). Um "+4 horas" a quem tem 8 pela frente
+            deixava-o com 4, e o sinal de mais dizia o contrário do que
+            acontecia. */}
         {DURACOES_ACESSO.slice(0, 4).map((d) => (
           <Chip
             key={d.horas}
-            label={terminou ? `Reabrir ${d.label}` : `+${d.label}`}
-            onPress={() => void correr(() => onMudarPrazo(vinculo.membroId, d.horas))}
+            label={terminou ? `Reabrir ${d.label}` : d.label}
+            onPress={() => pedirEMudar(d.horas)}
           />
         ))}
         <Chip
@@ -466,18 +497,10 @@ function SeccaoPrazo({
             dele com ele. Fechar a porta e apagar a fechadura não são a mesma
             coisa. */}
         {!terminou ? (
-          <Chip
-            label="Terminar já"
-            icon="clock-remove-outline"
-            onPress={() => void correr(() => onMudarPrazo(vinculo.membroId, 0))}
-          />
+          <Chip label="Terminar já" icon="clock-remove-outline" onPress={() => pedirEMudar(0)} />
         ) : null}
         {vinculo.expiraEm ? (
-          <Chip
-            label="Tirar o prazo"
-            icon="infinity"
-            onPress={() => void correr(() => onMudarPrazo(vinculo.membroId, null))}
-          />
+          <Chip label="Tirar o prazo" icon="infinity" onPress={() => pedirEMudar(null)} />
         ) : null}
       </View>
 

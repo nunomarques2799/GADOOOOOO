@@ -21,10 +21,12 @@ import {
   DURACOES_ACESSO,
   HORA_OMISSAO,
   HORAS_SUGERIDAS,
+  perguntaDePrazo,
   problemaComFim,
   rotuloDuracao,
   rotuloPrazo,
 } from '@/data/acessoTemporario';
+import { confirmar } from '@/data/avisos';
 import { formatDataCurta as formatarDia, formatDataHora, parseDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
@@ -189,6 +191,22 @@ export default function EquipaExploracaoScreen() {
     }
     toast.sucesso(comoSeChama, membro.nome);
     await carregar();
+  }
+
+  /**
+   * O mesmo, mas a perguntar primeiro.
+   *
+   * Estes chips estão todos encostados uns aos outros e um deles corta o acesso
+   * a alguém que está a trabalhar. A pergunta diz sempre a hora a que o acesso
+   * passa a acabar — e avisa quando a escolha o ENCURTA, porque o servidor marca
+   * o tempo a contar de agora em vez de somar ao que já lá está.
+   */
+  function pedirEMudarPrazo(membro: MembroComNome, horas: number | null, comoSeChama: string) {
+    const p = perguntaDePrazo(horas, { nome: membro.nome, expiraEm: membro.expiraEm }, formatDataHora);
+    confirmar(p.titulo, p.mensagem, () => void mudarPrazo(membro, horas, comoSeChama), {
+      rotuloConfirmar: p.rotuloConfirmar,
+      destrutivo: p.destrutivo,
+    });
   }
 
   /** Marca a hora exata a que o acesso de alguém termina. */
@@ -384,15 +402,18 @@ export default function EquipaExploracaoScreen() {
                           marginTop: spacing.xs,
                           marginLeft: 40 + spacing.sm,
                         }}>
+                        {/* Sem o "+": o servidor marca este tempo A CONTAR DE
+                            AGORA, não o soma ao que lá está. O sinal de mais
+                            dizia o contrário do que acontecia. */}
                         {DURACOES_ACESSO.slice(0, 4).map((d) => (
                           <Chip
                             key={d.horas}
-                            label={terminou ? `Reabrir ${d.label}` : `+${d.label}`}
+                            label={terminou ? `Reabrir ${d.label}` : d.label}
                             onPress={() =>
-                              void mudarPrazo(
+                              pedirEMudarPrazo(
                                 m,
                                 d.horas,
-                                terminou ? 'Acesso reaberto' : 'Acesso prolongado',
+                                terminou ? 'Acesso reaberto' : 'Tempo de acesso alterado',
                               )
                             }
                           />
@@ -415,7 +436,7 @@ export default function EquipaExploracaoScreen() {
                           <Chip
                             label="Terminar já"
                             icon="clock-remove-outline"
-                            onPress={() => void mudarPrazo(m, 0, 'Acesso terminado')}
+                            onPress={() => pedirEMudarPrazo(m, 0, 'Acesso terminado')}
                           />
                         ) : null}
                         {m.expiraEm ? null : (
