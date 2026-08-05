@@ -99,12 +99,15 @@ export const CHAVES = {
   outbox: `gado.${PROJETO}.outbox.v1`,
   falhadas: `gado.${PROJETO}.falhadas.v1`,
   acesso: `gado.${PROJETO}.acesso.v1`,
+  /** De QUEM são os dados que estão aqui guardados (ver `garantirDono`). */
+  dono: `gado.${PROJETO}.dono.v1`,
 } as const;
 
 const CHAVE_CACHE = CHAVES.cache;
 const CHAVE_OUTBOX = CHAVES.outbox;
 const CHAVE_FALHADAS = CHAVES.falhadas;
 const CHAVE_ACESSO = CHAVES.acesso;
+const CHAVE_DONO = CHAVES.dono;
 
 /**
  * As chaves de antes de existirem ambientes. Só se herdam em PRODUÇÃO, e só
@@ -295,6 +298,56 @@ export function limparCache(): void {
   // O acesso pertence à conta que saiu. Deixá-lo cá daria ao próximo a entrar
   // os papéis do anterior durante o arranque, antes de o servidor responder.
   remover(CHAVE_ACESSO);
+  // Já não há dados de ninguém aqui — a marca de dono seguia-os.
+  remover(CHAVE_DONO);
+}
+
+/**
+ * A conta que os dados guardados denunciam, quando ainda não têm marca de dono
+ * — o caso de quem já tinha a app instalada antes de a marca existir.
+ *
+ * Os vínculos que ficam em `acesso` são sempre de UMA conta: o `membros.tsx`
+ * lê-os com `.eq('user_id', …)` da sessão. Por isso o dono do primeiro chega
+ * para saber de quem é isto tudo.
+ *
+ * `userId` e não `user_id`: o que fica guardado é a forma da app (o `toMembro`
+ * do `membros.tsx` já traduziu a linha do servidor), e não a linha crua.
+ */
+function donoImplicito(): string | null {
+  for (const m of lerAcesso()?.membros ?? []) {
+    const uid = (m as { userId?: unknown }).userId;
+    if (typeof uid === 'string' && uid !== '') return uid;
+  }
+  return null;
+}
+
+/**
+ * Confere se os dados guardados neste aparelho são mesmo de quem está a entrar
+ * e, se forem de outra conta, apaga-os. Devolve true se apagou.
+ *
+ * PORQUE É QUE NÃO CHEGA O `limparCache()` DO `sair()`: uma sessão que expira
+ * sozinha nunca passa por lá. O aparelho fica com a cache inteira do anterior,
+ * e a app ARRANCA da cache — antes de o servidor responder, quem entrar a
+ * seguir vê o efetivo, as explorações e, pior, o `acesso` do outro, que é o que
+ * decide se se mostra o painel de superadmin ou o ecrã de espera.
+ *
+ * Chama-se assim que a sessão é conhecida e ANTES de os providers de dados
+ * montarem (ver `auth.tsx`): a partir daí é tarde, eles já leram.
+ *
+ * Sem marca nenhuma e sem vínculos por onde adivinhar, os dados são adotados em
+ * vez de apagados. É deliberado e vale UMA vez, na primeira sessão depois desta
+ * atualização: apagar às cegas levava com eles a fila de escritas por enviar de
+ * quem estava a trabalhar offline, que é trabalho feito e não há como repor.
+ */
+export function garantirDono(uid: string): boolean {
+  if (!armazenamentoDisponivel) return false;
+  herdarLegado();
+  const dono = ler(CHAVE_DONO) ?? donoImplicito();
+  if (dono === uid) return false;
+  const eraDeOutra = dono !== null;
+  if (eraDeOutra) limparCache();
+  guardar(CHAVE_DONO, uid);
+  return eraDeOutra;
 }
 
 /**

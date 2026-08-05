@@ -134,6 +134,26 @@ select * from (
     (30, 'schema_medicamentos.sql',    'tabela medicamento + evento.medicamento_id',
         (to_regclass('public.medicamento') is not null
          and exists (select 1 from col where tabela = 'evento' and coluna = 'medicamento_id'))),
+    -- Também não cria nada: só tira privilégios. A marca é o efeito — o
+    -- `truncate` que o `authenticated` deixa de ter no `animal`. Uma tabela
+    -- qualquer não servia: as que nasceram DEPOIS dele numa base que ainda não
+    -- o correu... nascem todas iguais, com tudo. O `animal` existe desde o 1.º
+    -- e está em todas as bases, por isso a resposta é sempre sobre o mesmo.
+    -- `case` e não `and`: o `has_table_privilege` REBENTA se a tabela não
+    -- existir, e o `and` não garante que a condição da esquerda é avaliada
+    -- primeiro. Numa base vazia, isso derrubava a consulta inteira — logo a
+    -- que serve para saber o que falta a uma base.
+    (31, 'schema_privilegios.sql',   'authenticated sem truncate no animal',
+        (case
+           when to_regclass('public.animal') is null then false
+           else not has_table_privilege('authenticated', to_regclass('public.animal')::oid, 'TRUNCATE')
+         end)),
+    -- A marca é a TABELA e não o gerador dos códigos: o que o `criar_convite`
+    -- tem lá dentro não se vê de fora sem ler o `prosrc`, e o travão sem a
+    -- tabela não conta nada. Uma base com a tabela e com a função antiga não
+    -- existe — os dois nascem do mesmo ficheiro.
+    (32, 'schema_convite_seguro.sql','tabela convite_tentativa',
+        (to_regclass('public.convite_tentativa') is not null)),
     -- O último não cria nada: só mexe em permissões. A marca é o efeito dele. São
     -- DUAS condições porque a primeira, sozinha, mente: a limpeza do anon já
     -- tinha sido feita pelo `schema_seguranca.sql` (4.º), por isso uma base a
@@ -145,7 +165,7 @@ select * from (
     -- do ficheiro, que fechava só o `apagar_a_minha_conta`. Para saber se a
     -- versão de 2026-08-05 (a que fecha as CINCO) já correu, é a consulta 4 do
     -- fim do `schema_lint.sql` que responde.
-    (31, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
+    (33, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
         (not exists (
            select 1 from pg_proc p
              join pg_namespace n on n.oid = p.pronamespace

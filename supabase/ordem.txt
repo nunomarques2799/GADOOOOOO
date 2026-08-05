@@ -35,4 +35,6 @@ schema_historico_equipa.sql
 schema_snira.sql
 schema_reproducao.sql
 schema_medicamentos.sql
+schema_privilegios.sql
+schema_convite_seguro.sql
 schema_lint.sql

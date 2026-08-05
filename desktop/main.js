@@ -123,8 +123,17 @@ function createServer() {
       if (urlPath === '/') urlPath = '/index.html';
 
       // Resolve safely inside WEB_DIR (prevent path traversal).
+      //
+      // O separador no fim do prefixo não é enfeite. `startsWith(WEB_DIR)`
+      // sozinho aceita qualquer PASTA IRMÃ cujo nome comece pelas mesmas
+      // letras: com o bundle em `...\resources\web`, um pedido a `/../web2` ou
+      // a `/../web-antigo` normaliza para `...\resources\web2`, passa no teste
+      // e é servido — está fora do bundle e não devia sair daqui. Com o `\` à
+      // frente, só passa o que está mesmo DENTRO da pasta (e ela própria).
       const resolved = path.normalize(path.join(WEB_DIR, urlPath));
-      if (!resolved.startsWith(WEB_DIR)) return send(res, 403, 'Proibido');
+      if (resolved !== WEB_DIR && !resolved.startsWith(WEB_DIR + path.sep)) {
+        return send(res, 403, 'Proibido');
+      }
 
       fs.stat(resolved, (err, stat) => {
         if (!err && stat.isFile()) return serveFile(res, resolved);
@@ -202,11 +211,22 @@ async function createWindow() {
 
   // Open external links (http/https) in the system browser, not new windows.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//.test(url)) {
+    if (/^https?:\/\//i.test(url)) {
       shell.openExternal(url);
       return { action: 'deny' };
     }
-    return { action: 'allow' };
+    // A ÚNICA janela que a app abre por dentro é a do relatório imprimível:
+    // `data/exportar.ts` faz `window.open('', '_blank')` e escreve-lhe o HTML
+    // lá dentro. O Chromium chama a isso `about:blank`.
+    //
+    // Tudo o resto passa a ser recusado, em vez de autorizado por omissão. O
+    // `allow` que estava aqui valia para `file://`, `data:` e para qualquer
+    // esquema que outro programa tenha registado nesta máquina — e a janela
+    // que se abria era NOSSA, com o nosso `preload` e a nossa origem, não uma
+    // janela do browser do sistema. Uma app que só serve o próprio bundle não
+    // tem nada que abrir janelas para fora dele.
+    if (url === '' || url === 'about:blank') return { action: 'allow' };
+    return { action: 'deny' };
   });
 
   mainWindow.on('closed', () => {

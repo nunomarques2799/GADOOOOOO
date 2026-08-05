@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { limparCache } from './cacheLocal';
+import { garantirDono, limparCache } from './cacheLocal';
 import type { Intencao } from './intencao';
 import { supabase, supabaseConfigurado } from './supabase';
 
@@ -77,12 +77,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setACarregar(false);
       return;
     }
+    /**
+     * Toda a sessão entra por aqui, e o dono da cache é conferido ANTES de ela
+     * ser publicada. A ordem é a coisa toda: é este `setSessao` que faz o
+     * `PortaoAuth` montar o `MembrosProvider` e o `GadoProvider`, e os dois
+     * arrancam a ler a cache local. Conferir depois — num efeito, por exemplo —
+     * seria conferir com os dados do anterior já no ecrã.
+     */
+    const aceitarSessao = (nova: Session | null) => {
+      if (nova) garantirDono(nova.user.id);
+      setSessao(nova);
+    };
     supabase.auth.getSession().then(({ data }) => {
-      setSessao(data.session);
+      aceitarSessao(data.session);
       setACarregar(false);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((evento, novaSessao) => {
-      setSessao(novaSessao);
+      aceitarSessao(novaSessao);
       // O link de recuperação abre uma sessão especial: mostra o ecrã de nova
       // palavra-passe em vez de entrar direto na app.
       if (evento === 'PASSWORD_RECOVERY') setEmRecuperacao(true);

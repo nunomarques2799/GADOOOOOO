@@ -27,6 +27,7 @@ import {
   adicionarOutbox,
   CHAVES,
   descreverOp,
+  garantirDono,
   guardarAcesso,
   lerAcesso,
   guardarCache,
@@ -151,6 +152,88 @@ describe('limparCache — ao terminar sessão', () => {
     expect(lerCache()).toBeNull();
     expect(lerOutbox()).toEqual([]);
     expect(lerFalhadas()).toEqual([]);
+  });
+});
+
+describe('garantirDono — os dados locais são de uma conta só', () => {
+  // O `limparCache()` do `sair()` não chega: uma sessão que expira sozinha
+  // nunca passa por lá, e a app arranca da cache antes de o servidor
+  // responder. Quem entrasse a seguir via o efetivo — e os PAPÉIS — do
+  // anterior.
+  function cacheDe(id: string) {
+    guardarCache({
+      exploracoes: [],
+      terrenos: [],
+      animais: [animal(id)],
+      eventos: [],
+      movimentos: [],
+      medicamentos: [],
+    });
+  }
+
+  it('apaga tudo quando quem entra não é quem gravou', () => {
+    cacheDe('a1');
+    adicionarOutbox(upsert('a1'));
+    guardarAcesso({ estadoPerfil: 'ativo', isSuperadmin: true, membros: [] });
+    garantirDono('utilizador-1');
+
+    expect(garantirDono('utilizador-2')).toBe(true);
+
+    expect(lerCache()).toBeNull();
+    expect(lerOutbox()).toEqual([]);
+    // O acesso é o que mais custa deixar cá: é ele que decide, no arranque, se
+    // se mostra o painel de superadmin ou o ecrã de espera.
+    expect(lerAcesso()).toBeNull();
+  });
+
+  it('deixa em paz os dados de quem volta a entrar', () => {
+    cacheDe('a1');
+    adicionarOutbox(upsert('a1'));
+    garantirDono('utilizador-1');
+
+    expect(garantirDono('utilizador-1')).toBe(false);
+
+    expect(lerCache()?.animais).toHaveLength(1);
+    // A fila de escritas por enviar é trabalho feito offline que não há como
+    // repor — apagá-la a quem volta a entrar seria perdê-lo.
+    expect(lerOutbox()).toHaveLength(1);
+  });
+
+  it('conhece o dono pelos vínculos guardados, quando ainda não há marca', () => {
+    // O caso de quem já tinha a app instalada antes desta marca existir: sem
+    // ninguém a adivinhar, a cache do anterior era adotada por quem entrasse.
+    cacheDe('a1');
+    guardarAcesso({
+      estadoPerfil: 'ativo',
+      isSuperadmin: false,
+      membros: [{ id: 'm1', userId: 'utilizador-1', exploracaoId: 'exp-1', role: 'admin' }],
+    });
+
+    expect(garantirDono('utilizador-2')).toBe(true);
+    expect(lerCache()).toBeNull();
+  });
+
+  it('adota a cache sem marca e sem vínculos, em vez de a deitar fora', () => {
+    // Deliberado, e vale uma vez: apagar às cegas levava atrás a fila de
+    // escritas por enviar de quem estava a trabalhar offline.
+    cacheDe('a1');
+    adicionarOutbox(upsert('a1'));
+
+    expect(garantirDono('utilizador-1')).toBe(false);
+
+    expect(lerCache()?.animais).toHaveLength(1);
+    expect(lerOutbox()).toHaveLength(1);
+    // E fica marcada: a partir daqui já se sabe de quem é.
+    expect(garantirDono('utilizador-2')).toBe(true);
+  });
+
+  it('deixa de saber de quem era a cache depois de terminar sessão', () => {
+    cacheDe('a1');
+    garantirDono('utilizador-1');
+
+    limparCache();
+
+    expect(mockMapa.get(CHAVES.dono)).toBeUndefined();
   });
 });
 
@@ -325,9 +408,13 @@ describe('pareceErroDeRede — decide entre reenviar e descartar', () => {
  */
 describe('as chaves separam os ambientes', () => {
   it('o nome do projeto vai no meio da chave, não é um prefixo fixo', () => {
+    // A lista de nomes é a de todas as chaves, e não só a das quatro do
+    // princípio: uma chave nova que passasse ao lado desta regra (a marca de
+    // dono, por exemplo) separava os ambientes em todas menos nela — e é
+    // sempre a que fica de fora que dá o engano.
     for (const chave of Object.values(CHAVES)) {
-      expect(chave).not.toMatch(/^gado\.(cache|outbox|falhadas|acesso)\.v1$/);
-      expect(chave).toMatch(/^gado\.[^.]+\.(cache|outbox|falhadas|acesso)\.v1$/);
+      expect(chave).not.toMatch(/^gado\.(cache|outbox|falhadas|acesso|dono)\.v1$/);
+      expect(chave).toMatch(/^gado\.[^.]+\.(cache|outbox|falhadas|acesso|dono)\.v1$/);
     }
   });
 

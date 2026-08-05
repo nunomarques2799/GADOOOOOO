@@ -144,8 +144,28 @@
         el(e).classList.toggle('hidden', e !== id));
     };
 
+    /**
+     * Tira o token da barra do endereço, depois de ele já ter sido usado.
+     *
+     * Com `flowType: 'implicit'` (escolha deliberada — faz o link abrir em
+     * qualquer browser, ver `data/auth.tsx`), o link do email traz o
+     * `access_token` no `#` do endereço. Ele abre mesmo a sessão de
+     * recuperação, e enquanto lá estiver fica no histórico do browser, no que
+     * se copia da barra para pedir ajuda a alguém, e à vista de quem passar
+     * pelo lado. Nada disto o `signOut()` do fim apaga.
+     *
+     * Só se chama DEPOIS de o supabase-js ter lido o endereço: limpá-lo antes
+     * era tirar-lhe o token que ele precisa de ler.
+     */
+    function limparEndereco() {
+      if (!window.location.hash && !window.location.search) return;
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+
     let pronto = false;
-    function ativarForm() { if (!pronto) { pronto = true; mostrar('estado-form'); } }
+    function ativarForm() {
+      if (!pronto) { pronto = true; limparEndereco(); mostrar('estado-form'); }
+    }
 
     // O link de recuperação abre a sessão de recuperação → evento PASSWORD_RECOVERY.
     supabase.auth.onAuthStateChange((evento, sessao) => {
@@ -154,16 +174,18 @@
 
     // Fallback: se o token já foi processado antes do listener, confirma a sessão.
     (async () => {
-      const temToken = window.location.hash.includes('access_token') ||
-                       window.location.search.includes('code=');
       const { data } = await supabase.auth.getSession();
       if (data.session) { ativarForm(); return; }
       // Dá um instante ao detectSessionInUrl; se não houver token nenhum, é inválido.
       setTimeout(async () => {
         if (pronto) return;
         const { data: d2 } = await supabase.auth.getSession();
-        if (d2.session) ativarForm();
-        else mostrar(temToken ? 'estado-invalido' : 'estado-invalido');
+        if (d2.session) { ativarForm(); return; }
+        // Também aqui: um token que não abriu sessão continua a ser um token à
+        // vista no endereço, e esta página fica aberta enquanto a pessoa lê a
+        // explicação e vai pedir outro link.
+        limparEndereco();
+        mostrar('estado-invalido');
       }, 1600);
     })();
 

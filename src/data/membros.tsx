@@ -695,8 +695,19 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
 
   const resgatarConvite = useCallback(async (codigo: string): Promise<string | null> => {
     if (!supabase) return 'Supabase não configurado.';
-    const { error } = await supabase.rpc('resgatar_convite', { codigo_txt: codigo.trim() });
+    const { data, error } = await supabase.rpc('resgatar_convite', { codigo_txt: codigo.trim() });
     if (error) return error.message;
+    // Desde o `schema_convite_seguro.sql`, o que corre mal vem DENTRO da
+    // resposta em vez de vir como exceção. A razão está no cabeçalho desse
+    // ficheiro: a exceção levava atrás (rollback) o registo da tentativa
+    // falhada que a acabava de contar, e sem esse registo não há travão nenhum
+    // a quem experimenta códigos a eito.
+    //
+    // Os dois caminhos ficam lidos porque as duas bases existem — uma que já
+    // correu o ficheiro e outra que ainda não. Ler só um deles dava, na que
+    // faltasse, um "entrou" a quem não entrou.
+    const erro = (data as { erro?: string } | null)?.erro;
+    if (erro) return erro;
     esquecerNomesEquipa(); // entrou gente nova na equipa
     await recarregar();
     return null;
