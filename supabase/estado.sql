@@ -120,6 +120,20 @@ select * from (
     (25, 'schema_equipa_e_foto.sql',   'superadmin_membros_exploracao() + perfil.fotografia',
         (exists (select 1 from func where nome = 'superadmin_membros_exploracao')
          and exists (select 1 from col where tabela = 'perfil' and coluna = 'fotografia'))),
+    (26, 'schema_documento_visibilidade.sql', 'documento.publico',
+        (exists (select 1 from col where tabela = 'documento' and coluna = 'publico'))),
+    (27, 'schema_historico_equipa.sql', 'tabela equipa_historico',
+        (to_regclass('public.equipa_historico') is not null)),
+    (28, 'schema_snira.sql',           'evento.comunicado_snira',
+        (exists (select 1 from col where tabela = 'evento' and coluna = 'comunicado_snira'))),
+    (29, 'schema_reproducao.sql',      'evento.resultado',
+        (exists (select 1 from col where tabela = 'evento' and coluna = 'resultado'))),
+    -- Duas marcas porque o ficheiro escreve em dois sítios: a tabela dos lotes e
+    -- as colunas do `evento` que os gastam. Só a tabela dava `t` a uma base onde
+    -- o desconto das existências não tem por onde acontecer.
+    (30, 'schema_medicamentos.sql',    'tabela medicamento + evento.medicamento_id',
+        (to_regclass('public.medicamento') is not null
+         and exists (select 1 from col where tabela = 'evento' and coluna = 'medicamento_id'))),
     -- O último não cria nada: só mexe em permissões. A marca é o efeito dele. São
     -- DUAS condições porque a primeira, sozinha, mente: a limpeza do anon já
     -- tinha sido feita pelo `schema_seguranca.sql` (4.º), por isso uma base a
@@ -131,9 +145,7 @@ select * from (
     -- do ficheiro, que fechava só o `apagar_a_minha_conta`. Para saber se a
     -- versão de 2026-08-05 (a que fecha as CINCO) já correu, é a consulta 4 do
     -- fim do `schema_lint.sql` que responde.
-    (26, 'schema_documento_visibilidade.sql', 'documento.publico',
-        (exists (select 1 from col where tabela = 'documento' and coluna = 'publico'))),
-    (27, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
+    (31, 'schema_lint.sql',            'nenhum security definer ao anon + apagar_a_minha_conta() fechada',
         (not exists (
            select 1 from pg_proc p
              join pg_namespace n on n.oid = p.pronamespace
