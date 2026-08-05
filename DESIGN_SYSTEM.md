@@ -138,7 +138,8 @@ Um só set garante consistência de traço e estilo.
 Badge · Chip · IconBadge · SectionHeader · FAB · Avatar · EmptyState · Header`.
 
 `src/components/` (domínio): `WeatherCard · AlertItem · AnimalRow ·
-ExploracaoRow · StatCard · QuickAction · AnfitriaoToasts · FolhaPermissoes`.
+ExploracaoRow · StatCard · QuickAction · AnfitriaoToasts · AnfitriaoAvisos ·
+FolhaPermissoes`.
 
 ### Dizer que correu bem (ou mal)
 
@@ -147,13 +148,22 @@ Três registos, e a escolha entre eles não é de gosto:
 | O quê | Quando | Como |
 | --- | --- | --- |
 | **Toast** (`useToasts()`) | Confirmar o que o criador acabou de fazer, e as falhas de que ele se pode simplesmente esquecer. | Aparece em baixo, some sozinho, não pede nada. |
-| **`avisar()`** (`data/avisos.ts`) | O que ele **tem** de ler antes de continuar: uma lista de animais que ficaram por gravar, um texto que se perde sem ligação. | Interrompe e exige "OK". |
+| **`avisar()`** (`data/avisos.ts`) | O que ele **tem** de ler antes de continuar: uma lista de animais que ficaram por gravar, um texto que se perde sem ligação. | Interrompe e exige "Entendido". |
+| **`confirmar()`** (`data/avisos.ts`) | Perguntar antes de uma ação sem volta: eliminar um animal, terminar sessão com alterações por enviar. | Interrompe, com o botão destrutivo a vermelho e o "Cancelar" primeiro. |
 | **Linha no formulário** | A razão de uma gravação recusada, enquanto ele corrige os campos. | Fica no ecrã até mudar algo. |
 
 Um erro de gravação num formulário leva os dois últimos: o toast chama a atenção
 de quem já ia a sair, a linha fica para se ler com calma. Confirmações que
 interrompem ensinam a tocar em "OK" sem ler — e isso estraga também os avisos a
 sério.
+
+Os dois do meio são desenhados pela app (`components/AnfitriaoAvisos.tsx`,
+montado uma vez na raiz), e não pelo sistema. Os diálogos do sistema —
+`window.confirm` no computador — apareciam numa barra agarrada ao topo da
+janela, com o tipo de letra do navegador e um "localhost diz" por cima da
+pergunta: a coisa mais destrutiva da app pedia confirmação num balão com ar de
+erro. Os do sistema ficam como recurso, para quando `confirmar()` é chamado
+fora da árvore da app (testes, arranque).
 
 ---
 

@@ -1,7 +1,14 @@
 import { colors } from '@/theme';
 import type { IconName } from '@/components/ui';
 
-import type { Especie, Finalidade, Sexo, TipoTerreno } from './types';
+import type {
+  Especie,
+  Finalidade,
+  ResultadoDiagnostico,
+  Sexo,
+  TipoMedicamento,
+  TipoTerreno,
+} from './types';
 
 /** Prazos legais (dias) — DGAV/IFAP, ver README secção 3.3. */
 export const PrazosLegais = {
@@ -34,6 +41,65 @@ export const GestacaoDias: Record<Especie, number> = {
  * a lista de avisos que nunca mais saem.
  */
 export const PartoPrevisaoCaducaDias = 30;
+
+/**
+ * Prazos de maneio reprodutivo (dias). Orientação zootécnica, não lei: são as
+ * réguas com que se decide que uma vaca precisa de atenção, e cada uma tem um
+ * motivo prático por trás.
+ */
+export const PrazosReproducao = {
+  /**
+   * A partir de quantos dias depois da cobrição vale a pena diagnosticar. Aos
+   * 30 dias a ecografia já vê; abaixo disso o veterinário responde "duvidoso" e
+   * a deslocação foi ao lado. 35 dá margem.
+   */
+  diagnosticoAPartirDe: 35,
+  /**
+   * Passados estes dias sem diagnóstico, o alerta fica URGENTE. Uma vaca que
+   * ficou vazia e ninguém deu por isso é um ciclo inteiro perdido — cada dia a
+   * mais é leite ou um vitelo que não vai haver.
+   */
+  diagnosticoUrgenteAPartirDe: 60,
+  /**
+   * Um diagnóstico `duvidoso` repete-se, não se arquiva. É o prazo a partir do
+   * qual a repetição volta a aparecer na lista.
+   */
+  repetirDuvidosoApos: 21,
+  /**
+   * Quantos dias depois do parto uma vaca devia estar coberta outra vez. O
+   * intervalo entre partos que se procura é de ~365 dias e a gestação leva 283:
+   * sobram uns 80 para voltar a conceber, e por volta dos 60 já se pode cobrir.
+   * Aos 90 sem cobrição, o ano seguinte já está a escorregar.
+   */
+  cobrirApos: 90,
+  /**
+   * E a partir daqui deixou de escorregar e perdeu-se. Passa a urgente.
+   */
+  cobrirUrgenteApos: 150,
+  /**
+   * Idade mínima, em meses, a partir da qual uma fêmea entra nas listas de
+   * reprodução. Abaixo disto é recria e não tem nada que estar lá.
+   */
+  idadeMinFemeaMeses: 15,
+  /** Intervalo entre partos que se considera bom, em dias (para os números). */
+  intervaloPartosAlvo: 400,
+} as const;
+
+/**
+ * Avisos das existências (dias). O medicamento fora de validade não se
+ * administra — e descobri-lo com o animal já preso no tronco é o pior sítio
+ * para o descobrir.
+ */
+export const PrazosExistencias = {
+  /** Antecedência com que se avisa que um lote está a chegar à validade. */
+  avisoValidadeDias: 30,
+  /**
+   * Abaixo desta fração do que o frasco trazia, avisa-se que está a acabar.
+   * Fração e não valor fixo: 20 ml num frasco de 1000 é o fim, num de 50 é
+   * quase metade.
+   */
+  fracaoQuaseVazio: 0.15,
+} as const;
 
 /** Prazos sanitários (dias) — orientação prática, não prazo legal rígido. */
 export const PrazosSanitarios = {
@@ -95,6 +161,36 @@ export const finalidadeMeta: Record<Finalidade, { icon: IconName; descricao: str
   Recria: { icon: 'sprout', descricao: 'Jovem, ainda a crescer' },
   Trabalho: { icon: 'tractor', descricao: 'Boi de trabalho' },
 };
+
+/* ---- Reprodução e existências ---- */
+
+export const resultadosDiagnostico: ResultadoDiagnostico[] = ['gestante', 'vazia', 'duvidoso'];
+
+export const resultadoMeta: Record<
+  ResultadoDiagnostico,
+  { label: string; icon: IconName; explicacao: string }
+> = {
+  gestante: {
+    label: 'Gestante',
+    icon: 'check-circle-outline',
+    explicacao: 'Confirmada prenhe. A app calcula a data prevista do parto.',
+  },
+  vazia: {
+    label: 'Vazia',
+    icon: 'close-circle-outline',
+    explicacao: 'Não está prenhe. Volta à lista de quem precisa de cobrição.',
+  },
+  duvidoso: {
+    label: 'Duvidoso',
+    icon: 'help-circle-outline',
+    explicacao: 'Cedo de mais para se ver. Repetir daqui a três semanas.',
+  },
+};
+
+export const tiposMedicamento: TipoMedicamento[] = ['Medicamento', 'Vacina'];
+
+/** Unidades em que se mede o que está na arrecadação. */
+export const unidadesMedicamento = ['ml', 'l', 'g', 'kg', 'doses', 'comprimidos'] as const;
 
 /**
  * `Misto` e `Outro` seguem a paleta escolhida, por isso são GETTERS: esta

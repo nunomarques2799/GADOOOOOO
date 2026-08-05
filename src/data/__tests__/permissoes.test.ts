@@ -102,6 +102,23 @@ describe('rolePode', () => {
     }
   });
 
+  it('o veterinário não marca eventos na agenda de outra pessoa', () => {
+    // A agenda diz quando é a feira e a que horas se carrega o camião — o
+    // movimento da casa de quem o convidou, não trabalho dele.
+    expect(rolePode('admin', 'marcarEventos')).toBe(true);
+    expect(rolePode('trabalhador', 'marcarEventos')).toBe(true);
+    expect(rolePode('veterinario', 'marcarEventos')).toBe(false);
+  });
+
+  it('marcar eventos não se ajusta pessoa a pessoa', () => {
+    // Fora das `CAPACIDADES_GERIVEIS` de propósito (ver `permissoes.ts`): um
+    // ajuste na coluna não pode abrir a agenda a quem o papel a fecha, ou o
+    // interruptor existiria sem nada do lado do servidor a lê-lo.
+    expect(capacidadeGerivel('marcarEventos')).toBe(false);
+    const forcado = { marcarEventos: true } as never;
+    expect(rolePode('veterinario', 'marcarEventos', forcado)).toBe(false);
+  });
+
   it('o veterinário regista o que fez e não toca na ficha', () => {
     // A separação que dá sentido ao papel: registar SIM, alterar a ficha NÃO.
     // Com as duas na mesma capacidade não havia como ter uma sem a outra.
@@ -209,6 +226,14 @@ describe('podeConsultar — quem vê as contas', () => {
     ['trabalhador', 'verDocumentos', true],
     ['veterinario', 'verDocumentos', false],
     [undefined, 'verDocumentos', false],
+
+    // O calendário é de quem lá trabalha todos os dias. Ao veterinário fecha-se
+    // — e esta, ao contrário dos Documentos, tem RLS por trás
+    // (`tem_agenda()` em `supabase/schema_agenda.sql`).
+    ['admin', 'verAgenda', true],
+    ['trabalhador', 'verAgenda', true],
+    ['veterinario', 'verAgenda', false],
+    [undefined, 'verAgenda', false],
   ];
 
   it.each(casos)('papel %s + %s → %s', (papel, capacidade, esperado) => {
@@ -370,6 +395,9 @@ describe('legendas das capacidades', () => {
       'editarExploracao',
       'eliminarExploracao',
       'gerirEquipa',
+      // Fora das ajustáveis (não se dá nem se tira pessoa a pessoa), mas com
+      // legenda na mesma: o `switch` é exaustivo e isto guarda-o.
+      'marcarEventos',
       ...CAPACIDADES_GERIVEIS,
     ];
     for (const c of todas) {

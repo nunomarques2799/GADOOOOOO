@@ -20,12 +20,26 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import type { Preferencias } from './notificacoes';
-import { planear } from './notificacoesPlano';
+import {
+  orcamentoParaAlertas,
+  planear,
+  planearFimDeAcesso,
+  type AcessoComPrazo,
+} from './notificacoesPlano';
 import type { Alerta } from './types';
 
 export const suportaNotificacoes = true;
 
 const CANAL_ANDROID = 'alertas';
+/**
+ * Canal próprio para o fim do acesso.
+ *
+ * Não é arrumação: no Android o utilizador silencia canais um a um, e um
+ * criador que desligue o canal dos prazos do gado (que são diários) não pode
+ * ficar sem o aviso de que a app lhe vai fechar a porta dentro de cinco
+ * minutos. São urgências de natureza diferente.
+ */
+const CANAL_ACESSO = 'acesso';
 
 /** Mostra o aviso mesmo com a app aberta — senão passa despercebido. */
 Notifications.setNotificationHandler({
@@ -43,6 +57,12 @@ async function garantirCanal(): Promise<void> {
     name: 'Prazos e alertas',
     description: 'Avisos de prazos legais e tarefas do efetivo.',
     importance: Notifications.AndroidImportance.HIGH,
+    sound: 'default',
+  });
+  await Notifications.setNotificationChannelAsync(CANAL_ACESSO, {
+    name: 'Fim de acesso',
+    description: 'Aviso de que o seu acesso a uma exploração está a terminar.',
+    importance: Notifications.AndroidImportance.MAX,
     sound: 'default',
   });
 }
@@ -104,13 +124,43 @@ function enfileirar<T>(trabalho: () => Promise<T>, seDesistir: T): Promise<T> {
  * Devolve quantos ficaram agendados (0 se foi ultrapassada por um plano mais
  * recente antes de chegar a sua vez).
  */
-export async function agendar(alertas: Alerta[], p: Preferencias): Promise<number> {
+export async function agendar(
+  alertas: Alerta[],
+  p: Preferencias,
+  /** Os vínculos com prazo de quem está com sessão — ver `planearFimDeAcesso`. */
+  acessos: AcessoComPrazo[] = [],
+): Promise<number> {
   return enfileirar(async () => {
     if (!(await temPermissao())) return 0;
     await garantirCanal();
     await Notifications.cancelAllScheduledNotificationsAsync();
 
-    const plano = planear(alertas, p);
+    // O fim do acesso vai PRIMEIRO, e de propósito. O `planear` corta nos 50
+    // por causa do teto de 64 do iOS, e esses 50 são prazos a dias ou semanas
+    // de distância; estes são a minutos, e perder um deles é a app fechar-se na
+    // cara de quem está a trabalhar. Agendados à frente, são os últimos a ser
+    // cortados por qualquer limite que venha a seguir.
+    const acesso = planearFimDeAcesso(acessos);
+    // …e é por isso que são eles a ficar com o lugar: o orçamento dos prazos
+    // encolhe pelo que estes ocuparem, para o total nunca passar dos 64 que o
+    // iOS guarda (acima disso descarta em silêncio, sem erro nenhum).
+    const orcamento = orcamentoParaAlertas(acesso.length);
+    for (const a of acesso) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: a.titulo,
+          body: a.corpo,
+          data: { membroId: a.membroId },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: a.quando,
+          channelId: CANAL_ACESSO,
+        },
+      });
+    }
+
+    const plano = planear(alertas, p, new Date(), orcamento);
     for (const { alerta, quando } of plano) {
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -125,7 +175,7 @@ export async function agendar(alertas: Alerta[], p: Preferencias): Promise<numbe
         },
       });
     }
-    return plano.length;
+    return acesso.length + plano.length;
   }, 0);
 }
 

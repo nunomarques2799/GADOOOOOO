@@ -113,6 +113,7 @@ describe('cache local — dados visíveis sem rede', () => {
     animais: [animal('a1')],
     eventos: [],
     movimentos: [],
+    medicamentos: [],
   };
 
   it('devolve null enquanto não houver nada guardado', () => {
@@ -140,6 +141,7 @@ describe('limparCache — ao terminar sessão', () => {
       animais: [animal('a1')],
       eventos: [],
       movimentos: [],
+      medicamentos: [],
     });
     adicionarOutbox(upsert('a1'));
     registarFalhada(upsert('a1'), 'permission denied');

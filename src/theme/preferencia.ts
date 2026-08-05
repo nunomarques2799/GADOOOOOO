@@ -22,13 +22,39 @@
 import { Platform } from 'react-native';
 
 import { guardar, ler } from '@/data/armazenamento';
+import { supabase } from '@/data/supabase';
 
-import { PALETA_OMISSAO, paletaPorId, type PaletaId } from './paletas';
+import { PALETA_OMISSAO, PALETAS, paletaPorId, type PaletaId } from './paletas';
 import { aplicarPaletaNasCores } from './tokens';
 
 const CHAVE = 'tema.paleta';
 
-/** A paleta gravada neste aparelho (preferência do aparelho, não da conta). */
+/**
+ * O INSTANTE da escolha que este aparelho já conhece.
+ *
+ * Sem isto não há como distinguir duas coisas que chegam iguais: "a conta traz
+ * outra paleta porque o telemóvel a mudou" — e então este aparelho segue-a — e
+ * "a conta traz a paleta ANTIGA porque a sessão em memória ainda não apanhou a
+ * escolha que se acabou de fazer aqui" — e então não se toca em nada.
+ *
+ * Confundir as duas dava o pior resultado possível: a app a desfazer a escolha
+ * do criador e a recarregar-se para isso, talvez mais do que uma vez. Com a
+ * hora, só uma escolha MAIS RECENTE do que a que já se conhece manda.
+ */
+const CHAVE_EM = 'tema.paleta.em';
+
+/** Os campos do `user_metadata` onde a escolha vive. */
+const CAMPO_META = 'paleta';
+const CAMPO_META_EM = 'paletaEm';
+
+/** A escolha tal como a conta a traz. */
+export type EscolhaDaConta = {
+  id: PaletaId;
+  /** Quando foi feita (ms). `0` numa escolha gravada antes de haver hora. */
+  em: number;
+};
+
+/** A paleta gravada neste aparelho. */
 export function paletaGuardada(): PaletaId {
   try {
     return paletaPorId(ler(CHAVE)).id;
@@ -59,18 +85,8 @@ export function arrancarTema(): void {
   aplicarPaletaNasCores(paletaGuardada());
 }
 
-/**
- * Grava a paleta e recarrega a app para ela ficar aplicada por inteiro.
- *
- * Devolve `false` se não conseguiu recarregar (acontece em ambientes de
- * desenvolvimento onde `Updates` não está ativo): aí a escolha ficou gravada e
- * entra no próximo arranque, e é isso que o ecrã diz ao criador — em vez de
- * ficar a olhar para uma app que não mudou de cor.
- */
-export async function mudarPaleta(id: PaletaId): Promise<boolean> {
-  guardar(CHAVE, id);
-  aplicarPaletaNasCores(id);
-
+/** Recarrega a app para as cores novas ficarem aplicadas por inteiro. */
+async function recarregarApp(): Promise<boolean> {
   try {
     if (Platform.OS === 'web') {
       if (typeof window === 'undefined') return false;
@@ -85,4 +101,99 @@ export async function mudarPaleta(id: PaletaId): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * A escolha que a conta traz, ou `null` se não trouxer nenhuma que exista.
+ *
+ * Recebe o `user_metadata` da sessão Supabase — dados que vêm de fora e podem
+ * ter lá dentro qualquer coisa, incluindo o id de uma paleta que já não existe
+ * (uma que tenha sido retirada da app). Um id desconhecido é `null` e não a
+ * paleta de origem: "a conta não diz nada" e "a conta diz verde" são coisas
+ * diferentes, e confundi-las punha o aparelho a mudar para verde sozinho.
+ */
+export function paletaDaConta(metadata: unknown): EscolhaDaConta | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const dados = metadata as Record<string, unknown>;
+  const valor = dados[CAMPO_META];
+  if (typeof valor !== 'string' || !PALETAS.some((p) => p.id === valor)) return null;
+  const em = dados[CAMPO_META_EM];
+  return { id: valor as PaletaId, em: typeof em === 'number' && em > 0 ? em : 0 };
+}
+
+/**
+ * Grava a escolha na conta, para os outros aparelhos a apanharem.
+ *
+ * Vive no `user_metadata` da conta Supabase e não numa tabela: é uma
+ * preferência de aspeto, não são dados da exploração — não precisa de RLS, de
+ * migração nem de entrar na sincronização offline. Chega com a sessão, que é
+ * exatamente quando faz falta.
+ *
+ * Silencioso quando falha, e de propósito: sem rede, ou sem sessão (a app
+ * também funciona offline puro), a escolha fica gravada NESTE aparelho e é isso
+ * que interessa. Interromper alguém que acabou de escolher uma cor com um erro
+ * de rede seria trocar uma coisa pequena por um susto.
+ */
+async function guardarNaConta(id: PaletaId, em: number): Promise<void> {
+  try {
+    if (!supabase) return;
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return;
+    const { error } = await supabase.auth.updateUser({
+      data: { [CAMPO_META]: id, [CAMPO_META_EM]: em },
+    });
+    // A hora só fica marcada se a gravação passou. Falhou (sem rede)? Então a
+    // conta continua com a escolha antiga, e é justo que uma mudança feita
+    // noutro aparelho ganhe a esta — que nunca chegou a sair daqui.
+    if (!error) guardar(CHAVE_EM, String(em));
+  } catch {
+    /* sem rede — fica só neste aparelho */
+  }
+}
+
+/**
+ * Grava a paleta (aqui e na conta) e recarrega a app.
+ *
+ * Devolve `false` se não conseguiu recarregar (acontece em ambientes de
+ * desenvolvimento onde `Updates` não está ativo): aí a escolha ficou gravada e
+ * entra no próximo arranque, e é isso que o ecrã diz ao criador — em vez de
+ * ficar a olhar para uma app que não mudou de cor.
+ */
+export async function mudarPaleta(id: PaletaId): Promise<boolean> {
+  guardar(CHAVE, id);
+  aplicarPaletaNasCores(id);
+
+  // ANTES de recarregar: um recarregamento a meio de um pedido deixava-o pelo
+  // caminho, e a escolha nunca chegava aos outros aparelhos.
+  await guardarNaConta(id, Date.now());
+
+  return recarregarApp();
+}
+
+/**
+ * Segue a escolha que a conta traz, se for mais recente do que a que este
+ * aparelho já conhece.
+ *
+ * É isto que faz a cor escolhida no telemóvel aparecer no computador. Devolve
+ * `true` se a app vai recarregar.
+ *
+ * A comparação é pela HORA e não pelo valor: uma sessão em memória pode trazer
+ * a escolha ANTERIOR durante uns instantes depois de se mudar de cor aqui, e
+ * pelo valor isso era indistinguível de outro aparelho ter mudado — a app
+ * desfazia a escolha que o criador acabou de fazer e recarregava-se para isso.
+ */
+export async function seguirPaletaDaConta(escolha: EscolhaDaConta): Promise<boolean> {
+  try {
+    const conhecida = Number(ler(CHAVE_EM) ?? 0);
+    if (escolha.em <= conhecida) return false; // nada de novo do outro lado
+    guardar(CHAVE_EM, String(escolha.em));
+  } catch {
+    // Sem armazenamento não há como saber o que já se viu, e sem isso qualquer
+    // arranque parecia uma mudança nova — a app recarregava em ciclo.
+    return false;
+  }
+  if (escolha.id === paletaGuardada()) return false; // já é a que está a ser usada
+  guardar(CHAVE, escolha.id);
+  aplicarPaletaNasCores(escolha.id);
+  return recarregarApp();
 }

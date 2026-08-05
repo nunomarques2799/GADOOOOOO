@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Chip, EcraComTeclado, Header, Icon, type IconName, Text } from '@/components/ui';
+import { Button, Chip, EcraComTeclado, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
 import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
+import { SeletorFoto } from '@/components/SeletorFoto';
 import { avisar, confirmar } from '@/data/avisos';
 import { tiposTerreno, tipoTerrenoMeta } from '@/data/constants';
 import { useMembros } from '@/data/membros';
@@ -23,18 +24,20 @@ export function FormularioTerreno({
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { addTerreno, updateTerreno, deleteTerreno, exploracaoById } = useGado();
+  const { addTerreno, updateTerreno, deleteTerreno, exploracaoById, animais } = useGado();
   const { pode } = useMembros();
   const toast = useToasts();
 
   const editar = !!terreno;
-  const podeEliminar = pode(exploracaoId, 'gerirTerrenos');
+  const podeGerir = pode(exploracaoId, 'gerirTerrenos');
+  const podeEliminar = podeGerir;
   const [nome, setNome] = useState(terreno?.nome ?? '');
   const [tipo, setTipo] = useState<TipoTerreno>(terreno?.tipo ?? 'Pastagem');
   const [area, setArea] = useState(terreno?.area != null ? String(terreno.area) : '');
   const [descricao, setDescricao] = useState(terreno?.descricao ?? '');
   const [latitude, setLatitude] = useState(terreno?.latitude != null ? String(terreno.latitude) : '');
   const [longitude, setLongitude] = useState(terreno?.longitude != null ? String(terreno.longitude) : '');
+  const [foto, setFoto] = useState<string | undefined>(terreno?.fotografia);
   const [manual, setManual] = useState(false);
   const [erroGuardar, setErroGuardar] = useState<string | null>(null);
   const [aGravar, setAGravar] = useState(false);
@@ -73,6 +76,7 @@ export function FormularioTerreno({
       descricao: descricao.trim() || undefined,
       latitude: latNum,
       longitude: lngNum,
+      fotografia: foto,
     };
     try {
       if (editar && terreno) {
@@ -109,11 +113,44 @@ export function FormularioTerreno({
         avisar('Não foi possível eliminar', mensagemDeErro(e));
       }
     };
+    // Ao contrário da exploração, apagar um terreno NÃO apaga nada em cascata:
+    // os animais e as despesas que lhe estavam imputadas ficam todos, só deixam
+    // de apontar para aqui. Vale a pena dizê-lo — o receio de perder o efetivo é
+    // o que faz alguém deixar terrenos velhos na lista para sempre.
+    const quantos = animais.filter((a) => a.terrenoId === terreno.id).length;
     confirmar(
       'Eliminar terreno',
-      `Vai eliminar "${terreno.nome}". Os animais lá afetos ficarão sem terreno.`,
+      `Vai eliminar "${terreno.nome}". `
+        + (quantos > 0
+          ? `Os ${quantos} ${quantos === 1 ? 'animal fica' : 'animais ficam'} sem terreno — `
+          : 'Nenhum animal se perde — ')
+        + 'nada é apagado além do próprio terreno. As despesas que lhe estavam '
+        + 'imputadas continuam nas contas da exploração.',
       () => void executar(),
       { rotuloConfirmar: 'Eliminar', destrutivo: true },
+    );
+  }
+
+  // Os terrenos são de quem gere a exploração. Ao veterinário — que não os
+  // gere — os botões que trazem aqui já não aparecem, mas a rota existe: um
+  // link guardado, o botão de voltar do navegador ou a barra lateral do
+  // computador chegam cá na mesma. Sem isto, ele preenchia o formulário todo e
+  // só descobria no Guardar — ou, estando sem rede, nunca: a escrita entrava na
+  // fila e era o servidor a deitá-la fora muito depois, sem ninguém a ver.
+  if (!podeGerir) {
+    return (
+      <EcraComTeclado>
+        <Header title={editar ? 'Editar terreno' : 'Novo terreno'} />
+        <EmptyState
+          icon="lock-outline"
+          title="Os terrenos são de quem gere a exploração"
+          message={
+            editar
+              ? 'Pode ver este terreno e os animais que lá andam, mas alterá-lo é de quem tem a exploração a cargo.'
+              : 'Registar terrenos novos é de quem tem a exploração a cargo.'
+          }
+        />
+      </EcraComTeclado>
     );
   }
 
@@ -127,6 +164,14 @@ export function FormularioTerreno({
         <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
           Exploração: {exploracao?.nome ?? 'Sem exploração'}
         </Text>
+
+        <SeletorFoto
+          foto={foto}
+          onMudar={setFoto}
+          icone={tipoTerrenoMeta[tipo].icon}
+          assunto="do terreno"
+          forma="cartao"
+        />
 
         <Field label="Nome" obrigatorio>
           <TextField
@@ -180,7 +225,7 @@ export function FormularioTerreno({
           latitude={latNum}
           longitude={lngNum}
           selecionavel
-          altura={240}
+          altura={320}
           onEscolher={(lat, lng) => {
             setLatitude(lat.toFixed(6));
             setLongitude(lng.toFixed(6));

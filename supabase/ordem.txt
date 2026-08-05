@@ -25,4 +25,14 @@ schema_acesso_ate.sql
 schema_atividade.sql
 schema_apoio.sql
 schema_papel_veterinario.sql
+schema_fotos_localizacao.sql
+schema_convite_por_papel.sql
+schema_agenda.sql
+schema_documentos.sql
+schema_equipa_e_foto.sql
+schema_documento_visibilidade.sql
+schema_historico_equipa.sql
+schema_snira.sql
+schema_reproducao.sql
+schema_medicamentos.sql
 schema_lint.sql

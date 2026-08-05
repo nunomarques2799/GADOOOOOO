@@ -35,8 +35,10 @@ export const CATEGORIAS = [
   'identificacao',
   'snira',
   'parto',
+  'reproducao',
   'medicamento',
   'vacinacao',
+  'existencias',
 ] as const;
 export type Categoria = (typeof CATEGORIAS)[number];
 
@@ -44,16 +46,20 @@ export const rotuloCategoria: Record<Categoria, string> = {
   identificacao: 'Identificação (brinco)',
   snira: 'Comunicação ao SNIRA',
   parto: 'Partos previstos',
+  reproducao: 'Diagnósticos e cobrições em falta',
   medicamento: 'Fim de tratamentos e intervalos de segurança',
   vacinacao: 'Vacinações',
+  existencias: 'Validade e stock de medicamentos',
 };
 
 export const iconeCategoria: Record<Categoria, string> = {
   identificacao: 'tag-outline',
   snira: 'cloud-upload-outline',
   parto: 'baby-bottle-outline',
+  reproducao: 'heart-pulse',
   medicamento: 'medical-bag',
   vacinacao: 'needle',
+  existencias: 'package-variant-closed',
 };
 
 /* ---- Preferências ---- */
@@ -68,10 +74,31 @@ export type Preferencias = {
 };
 
 export const PREF_OMISSAO: Preferencias = {
-  ativa: { identificacao: true, snira: true, parto: true, medicamento: true, vacinacao: true },
+  ativa: {
+    identificacao: true,
+    snira: true,
+    parto: true,
+    reproducao: true,
+    medicamento: true,
+    vacinacao: true,
+    existencias: true,
+  },
   // Faz sentido receber mais cedo o que tem prazo legal; o resto pode ficar
   // mais próximo do prazo para não encher a lista.
-  antecedenciaDias: { identificacao: 20, snira: 10, parto: 14, medicamento: 5, vacinacao: 30 },
+  //
+  // `reproducao` fica a zero e a razão é outra: os seus alertas trazem
+  // `diasRestantes` NEGATIVO (o atraso, não um prazo a correr), e o filtro
+  // deixa passar sempre o que é <= 0. A antecedência não os alcança — o número
+  // está aqui só porque a tabela pede um por categoria.
+  antecedenciaDias: {
+    identificacao: 20,
+    snira: 10,
+    parto: 14,
+    reproducao: 0,
+    medicamento: 5,
+    vacinacao: 30,
+    existencias: 30,
+  },
   // Ligado por omissão, mas sem efeito nenhum até o sistema dar autorização —
   // o diálogo de permissão só aparece quando o criador o pede no ecrã.
   noTelemovel: true,

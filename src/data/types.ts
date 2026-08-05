@@ -115,10 +115,34 @@ export type EventoTipo =
   | 'Vacinação'
   | 'Medicamento'
   | 'Pesagem'
+  /**
+   * A fêmea foi coberta — por touro ou por inseminação artificial. É o começo
+   * do ciclo: é daqui que se contam os dias até valer a pena diagnosticar, e é
+   * a falta dele depois de um parto que põe a vaca na lista de quem está
+   * parada. O touro (ou o sémen) vai no `detalhe`, como o veterinário numa
+   * vacina — muitas vezes é um animal que não está na app.
+   */
+  | 'Cobrição'
+  /**
+   * Diagnóstico de gestação. O que interessa dele é o `resultado`, não o texto.
+   * `gestante` é o que põe a data prevista de parto no animal.
+   */
+  | 'Diagnóstico'
   | 'Movimentação'
   | 'Compra'
   | 'Venda'
   | 'Morte';
+
+/**
+ * O que o diagnóstico de gestação disse. `duvidoso` não é um meio-termo
+ * inventado: é o que o veterinário responde quando a gestação é demasiado
+ * recente para se ver, e trata-se de outra maneira — repete-se daí a umas
+ * semanas, em vez de se voltar a cobrir (que é o que se faz a uma vazia).
+ */
+export type ResultadoDiagnostico = 'gestante' | 'vazia' | 'duvidoso';
+
+/** Vacina ou medicamento. Decide em que formulário o lote aparece. */
+export type TipoMedicamento = 'Vacina' | 'Medicamento';
 
 export interface Utilizador {
   id: string;
@@ -150,6 +174,17 @@ export interface Exploracao extends ComVersao {
   marcaExploracao: string;
   nifDetentor: string;
   localizacao?: string;
+  /**
+   * Onde fica a sede da exploração, marcada no mapa. Opcional: escrever o nome
+   * da terra continua a chegar (é o `localizacao`), e é o que a maioria faz.
+   *
+   * Quando existe, manda na meteorologia — ver `useMeteorologia`. Antes disto o
+   * tempo saía das coordenadas do PRIMEIRO terreno com GPS, ou de uma
+   * geocodificação do texto; quem tem os cercados espalhados por vinte
+   * quilómetros via a previsão de um sítio que não escolheu.
+   */
+  latitude?: number;
+  longitude?: number;
   fotografia?: string;
   /**
    * A gestão económica está ligada nesta exploração? Desligada (o valor por
@@ -165,17 +200,14 @@ export interface Exploracao extends ComVersao {
    */
   financasAtivas?: boolean;
   /**
-   * O registo por casa e número está ligado nesta exploração? Desligado (o
-   * valor por omissão) esconde os dois campos do formulário do animal.
+   * HERANÇA. O interruptor do "registo por casa e número" já não existe na app:
+   * o número do animal passou a um campo opcional sempre visível na ficha (ver
+   * `FormularioAnimal`), porque um interruptor para mostrar um campo de texto
+   * que quem não usa deixa vazio era uma decisão a pedir por nada.
    *
-   * Vive aqui, e não no perfil, pela mesma razão que `financasAtivas`: a RLS de
-   * `perfil` só deixa cada um ver o seu, e o trabalhador precisa de a ler para
-   * saber que campos preencher. Escrita só pelo RPC `definir_casa_ativa`.
-   *
-   * Ao contrário das finanças, isto não fecha nenhuma porta no servidor: são
-   * duas colunas de texto sem regra de permissão própria. O interruptor existe
-   * para não encher o formulário a quem nunca registou gado por casa — não é
-   * uma medida de segurança, e não se deve passar a tratá-lo como tal.
+   * A coluna continua no servidor e a leitura continua a mapeá-la — apagar
+   * colunas de uma base em uso não se faz por causa de um ecrã que saiu —, mas
+   * nada na app a lê nem a escreve. Não voltar a pendurar comportamento aqui.
    */
   casaAtiva?: boolean;
 }
@@ -189,6 +221,12 @@ export interface Terreno extends ComVersao {
   longitude?: number;
   area?: number; // hectares
   tipo?: TipoTerreno;
+  /**
+   * Fotografia do sítio, como a do animal: data URI JPEG reduzido, guardado na
+   * própria coluna (ver `data/foto.ts`). Um lameiro reconhece-se de vista muito
+   * antes de se ler o nome que alguém lhe deu na app.
+   */
+  fotografia?: string;
 }
 
 export interface Animal extends ComVersao {
@@ -204,15 +242,17 @@ export interface Animal extends ComVersao {
   raca?: string;
   corPelagem?: string;
   /**
-   * Registo tradicional por casa: o nome da casa e o número do animal dentro
-   * dela ("Casa do Monte, 12"). Muitos criadores identificam assim os animais
-   * há gerações, ao lado (ou em vez) do brinco.
-   *
-   * Os campos só aparecem no formulário com `Exploracao.casaAtiva` ligada, mas
-   * um animal que já os tenha preenchido mostra-os SEMPRE — desligar a opção
-   * esconde o que ainda não foi escrito, nunca o que já lá está.
+   * HERANÇA: o nome da casa ("Casa do Monte"), do tempo em que o registo
+   * tradicional eram dois campos. A app já não o pede nem o mostra — ficou só o
+   * número, que é o que se diz de facto ("a 12"). A coluna fica no servidor com
+   * o que lá estiver escrito; nada na app a lê.
    */
   casa?: string;
+  /**
+   * O número por que o animal é conhecido na exploração, a par do brinco.
+   * Muitos criadores numeram o gado de um a duzentos há gerações e é assim que
+   * o chamam. Opcional e sempre presente na ficha; entra na pesquisa.
+   */
   numeroCasa?: string;
   /** Só para bovinos. Ver `Finalidade`. */
   finalidade?: Finalidade;
@@ -269,6 +309,86 @@ export interface Evento extends ComVersao {
    * `Movimento` (tabela própria, com RLS por papel).
    */
   valor?: number;
+  /**
+   * O resultado de um `Diagnóstico`. Ausente em todos os outros tipos — uma
+   * pesagem não tem resultado nenhum.
+   *
+   * Está numa coluna e não dentro do `descricao` porque é a resposta de que
+   * depende o resto do ciclo. Lê-lo do texto com uma expressão regular é o que
+   * se faz ao peso ("520 kg"), e ali o pior que acontece é um ganho médio
+   * diário não aparecer; aqui o pior que acontece é uma vaca dada por prenhe
+   * quando não está.
+   */
+  resultado?: ResultadoDiagnostico;
+  /**
+   * O lote de onde saiu o que se administrou (ver `Medicamento`). Ausente
+   * quando o tratamento não veio da arrecadação — o veterinário que traz o
+   * seu — e é isso que faz o desconto das existências ignorar esta linha em
+   * vez de a contar como zero.
+   */
+  medicamentoId?: string;
+  /** Quanto se gastou, na unidade do lote. Só faz sentido com `medicamentoId`. */
+  quantidade?: number;
+  /**
+   * Este evento já foi comunicado ao SNIRA? Os três estados querem dizer
+   * coisas diferentes (ver `supabase/schema_snira.sql`):
+   *
+   *   `undefined` — não é comunicável, ou é anterior a esta funcionalidade.
+   *   `false`     — falta comunicar. É o que gera o alerta.
+   *   `true`      — já foi.
+   *
+   * O nascimento não passa por aqui: esse vive em `Animal.comunicadoSnira`,
+   * onde já estava.
+   */
+  comunicadoSnira?: boolean;
+  /**
+   * Quando foi comunicado (ISO com hora). Nunca é escrito pelo cliente: quem o
+   * mantém é o gatilho `evento_comunicacao`, pela mesma razão que `saidaEm` —
+   * uma data que prova o cumprimento de um prazo legal não pode sair do
+   * relógio de um telemóvel mal acertado.
+   */
+  comunicadoEm?: string;
+}
+
+/* ---- Existências de medicamentos e vacinas ---- */
+
+/**
+ * Um lote que entrou na exploração — não um produto.
+ *
+ * A distinção manda em tudo o resto: dois frascos do mesmo antibiótico
+ * comprados com três meses de diferença têm lotes e validades diferentes, e num
+ * surto é o lote que se rastreia. Uma linha por frasco, com a quantidade que
+ * trazia; acabou, fica a zero com o histórico do que saiu dele.
+ *
+ * O que RESTA não está aqui: calcula-se (ver `medicamentos.ts`) subtraindo à
+ * `quantidade` o que os eventos gastaram. Uma coluna a descontar teria de ser
+ * mantida certa a partir de dois aparelhos que podem estar offline, e a
+ * primeira gravação perdida deixava-a errada para sempre.
+ */
+export interface Medicamento extends ComVersao {
+  id: string;
+  exploracaoId: string;
+  nome: string;
+  tipo: TipoMedicamento;
+  lote?: string;
+  /** ISO aaaa-mm-dd. */
+  validade?: string;
+  /** O que o frasco trazia. Sempre positivo. */
+  quantidade: number;
+  unidade: string;
+  /**
+   * Dias a aguardar antes de o animal poder ir para abate. Vem da bula, por
+   * isso pertence ao produto e não a quem o administra — o formulário do
+   * tratamento propõe-o preenchido e deixa corrigir.
+   */
+  intervaloSegurancaDias: number;
+  fornecedor?: string;
+  /** Custo TOTAL do que entrou (não por unidade), em euros. */
+  custo?: number;
+  /** ISO aaaa-mm-dd. */
+  dataCompra: string;
+  notas?: string;
+  criadoPor?: string;
 }
 
 /* ---- Movimentos financeiros (o que não cabe num evento de animal) ---- */
@@ -357,7 +477,40 @@ export interface Alerta {
   data?: string;
   /** A exploração do animal, para se poderem ver os alertas de uma só. */
   exploracaoId?: string;
-  categoria: 'snira' | 'identificacao' | 'parto' | 'medicamento' | 'vacinacao';
+  /**
+   * `existencias` é a única categoria que não fala de um animal: fala da
+   * arrecadação (um lote fora de validade, um frasco a acabar). Por isso os
+   * seus alertas não trazem `animalId` — e quem os agrupa por animal tem de
+   * contar com isso.
+   */
+  categoria:
+    | 'snira'
+    | 'identificacao'
+    | 'parto'
+    | 'medicamento'
+    | 'vacinacao'
+    | 'reproducao'
+    | 'existencias';
+  /** O lote a que o alerta diz respeito (só em `existencias`). */
+  medicamentoId?: string;
+}
+
+/**
+ * Um dia da previsão. Sem hora, sem humidade e sem vento de propósito: a
+ * pergunta que se faz a uma previsão a três dias é "chove?" e "que frio faz de
+ * manhã", e o resto é ruído com ar de precisão.
+ */
+export interface DiaMeteo {
+  /** O dia (ISO aaaa-mm-dd). */
+  data: string;
+  maxima: number;
+  minima: number;
+  condicao: string;
+  icone: string; // nome de ícone MaterialCommunityIcons
+  /** Chuva prevista para o dia inteiro, em mm. */
+  precipitacao: number;
+  /** Probabilidade de precipitação (%), quando a API a dá. */
+  probabilidadeChuva?: number;
 }
 
 export interface Meteorologia {
@@ -371,4 +524,13 @@ export interface Meteorologia {
   maxima: number;
   minima: number;
   conselho: string;
+  /**
+   * Hoje e os dias seguintes, por ordem. O primeiro é sempre hoje — é o que
+   * deixa os cartões da previsão e os números de cima virem da mesma resposta,
+   * em vez de discordarem um do outro por causa de dois pedidos.
+   *
+   * Pode vir vazio: uma resposta sem bloco diário ainda serve para mostrar o
+   * tempo que está agora, e é melhor do que um ecrã de erro.
+   */
+  dias: DiaMeteo[];
 }

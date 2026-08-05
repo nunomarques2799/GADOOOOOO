@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CartaoIntroducao } from '@/components/CartaoIntroducao';
 import { ModalRelatorioPrazos } from '@/components/ModalRelatorioPrazos';
+import { SeccaoDocumentos } from '@/components/SeccaoDocumentos';
 import { Button, Card, EmptyState, FolhaComTeclado, Icon, type IconName, Text } from '@/components/ui';
 import { exportarAnimaisExcel } from '@/data/animalExcelFicheiro';
 import { avisar, confirmar } from '@/data/avisos';
@@ -13,8 +14,10 @@ import { hojeISO, tabelaEventos } from '@/data/exportar';
 import { formatDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useNotas, type Nota } from '@/data/notas';
+import { comunicacoesPendentes } from '@/data/snira';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
+import { useDocumentos } from '@/data/useDocumentos';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, sizes, spacing } from '@/theme';
 
@@ -33,6 +36,10 @@ export default function DocumentosScreen() {
   const { animais, eventos, exploracoes, terrenos, alertas } = useGado();
   const { contaSuspensa, podeVer } = useMembros();
   const notasApi = useNotas();
+  // Acima do desvio de "sem permissão" mais abaixo, como os outros hooks: um
+  // `return` condicional pelo meio mudava a contagem de hooks entre renders (o
+  // papel chega da cache e é corrigido pelo servidor logo a seguir).
+  const documentosApi = useDocumentos();
   const toast = useToasts();
 
   const [relatorioAberto, setRelatorioAberto] = useState(false);
@@ -46,6 +53,11 @@ export default function DocumentosScreen() {
   const exportaveis = useMemo(
     () => animais.filter((a) => a.estado !== 'eliminado'),
     [animais],
+  );
+
+  const porComunicar = useMemo(
+    () => comunicacoesPendentes(animais, eventos).length,
+    [animais, eventos],
   );
 
   /**
@@ -109,7 +121,7 @@ export default function DocumentosScreen() {
         <View style={{ ...coluna, paddingTop: insets.top + spacing.md, paddingBottom: spacing.lg }}>
           <Text variant="display">Documentos</Text>
           <Text variant="body" color={colors.textSecondary}>
-            Importar, exportar e as suas notas
+            Guardar papéis, importar, exportar e as suas notas
           </Text>
         </View>
 
@@ -123,12 +135,34 @@ export default function DocumentosScreen() {
             icon="file-document-multiple-outline"
             titulo="Para que serve este separador"
             pontos={[
+              'Guarde aqui os papéis que recebe: fotografe a fatura da ração, a guia de circulação ou o recibo do veterinário e ficam arrumados por gaveta, na exploração e não no telemóvel.',
               'Se já tem os animais escritos num ficheiro Excel, pode trazê-los todos de uma vez em vez de os escrever um a um.',
               'Daqui também leva os seus dados para fora: a lista de animais em Excel, e relatórios de prazos para imprimir ou entregar.',
               'As notas são suas e só suas: servem para o que não cabe na ficha de um animal — combinações, telefones, o que ficou por fazer.',
-              'Importar e exportar ficheiros só funciona no computador. No telemóvel o resto do separador funciona na mesma.',
+              'Importar e exportar ficheiros só funciona no computador. Guardar documentos e as notas funcionam também no telemóvel.',
             ]}
           />
+
+
+          {/* O SNIRA vem PRIMEIRO, e fora do grupo das exportações: não é um
+              ficheiro que se leva, é trabalho que tem prazo legal a correr. O
+              número ao lado é o que falta comunicar — quando é zero, a linha
+              continua lá a dizer que está tudo em dia.
+
+              Funciona no telemóvel, ao contrário de tudo o resto deste ecrã: a
+              lista lê-se e marca-se sem precisar de disco. Só levar a folha em
+              Excel ou em papel é que é do computador. */}
+          <Grupo titulo="OBRIGAÇÕES">
+            <Linha
+              icon="cloud-upload-outline"
+              label="Comunicar ao SNIRA"
+              trailing={
+                porComunicar === 0 ? 'em dia' : String(porComunicar)
+              }
+              onPress={() => router.push('/snira')}
+              last
+            />
+          </Grupo>
 
           {/* Importar — só web/Electron (o telemóvel não escolhe ficheiros sem build nativo) */}
           {comFicheiros && !contaSuspensa ? (
@@ -154,7 +188,12 @@ export default function DocumentosScreen() {
                     descarregar(
                       `animais-${hojeISO()}.xlsx`,
                       `${exportaveis.length} ${exportaveis.length === 1 ? 'animal' : 'animais'}`,
-                      () => exportarAnimaisExcel(exportaveis, exploracoes, terrenos),
+                      // `animais` (o efetivo TODO) no fim, e não só os
+                      // exportáveis: é de lá que saem os nomes da mãe e do pai,
+                      // e um progenitor já vendido não está na lista que sai na
+                      // folha — sem isto, a coluna vinha vazia justamente nos
+                      // animais mais antigos.
+                      () => exportarAnimaisExcel(exportaveis, exploracoes, terrenos, animais),
                     )
                   }
                 />
@@ -182,18 +221,6 @@ export default function DocumentosScreen() {
                   trailing={String(alertas.length)}
                   onPress={() => setRelatorioAberto(true)}
                 />
-                <Linha
-                  icon="file-export-outline"
-                  label="Exportar para o iDigital"
-                  trailing="Fase 2"
-                  onPress={() =>
-                    avisar(
-                      'Ainda em desenvolvimento',
-                      'A exportação para o iDigital chega numa próxima versão. Entretanto pode usar o "Relatório de prazos" ou o "Exportar animais".',
-                    )
-                  }
-                  last
-                />
               </>
             ) : (
               <View style={{ flexDirection: 'row', gap: spacing.sm, padding: spacing.md }}>
@@ -208,6 +235,12 @@ export default function DocumentosScreen() {
               </View>
             )}
           </Grupo>
+
+          {/* As gavetas dos papéis guardados, a seguir às exportações. Só as
+              pastas: os documentos vivem dentro delas, em `/gaveta/[categoria]`
+              — com meia dúzia de faturas, a lista aberta aqui era mais comprida
+              do que tudo o resto do separador junto. */}
+          <SeccaoDocumentos api={documentosApi} />
 
           {/* Notas */}
           <SeccaoNotas notas={notasApi} />

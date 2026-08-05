@@ -43,9 +43,14 @@ export default function AnimaisScreen() {
   const desktop = useDesktop();
   const { animais, alertas, terrenos, terrenoById, exploracoes } = useGado();
   // Com a conta suspensa nada se grava — o formulário só levaria a um erro no
-  // fim. O papel não se verifica aqui porque a exploração ainda não está
-  // escolhida (é o formulário que a pede); isso fica para o `guardar`.
-  const { contaSuspensa } = useMembros();
+  // fim. O PAPEL pergunta-se por `podeEmAlguma` e não por uma exploração
+  // concreta: neste ecrã ela ainda não está escolhida (é o formulário que a
+  // pede), mas quem não pode registar animais em NENHUMA das suas não tem que
+  // ver o botão. Enquanto isto olhava só para a suspensão, o veterinário via o
+  // "Registar" flutuante, carregava, e caía no ecrã de "a ficha é de quem gere
+  // o efetivo" — um botão que existe para não levar a lado nenhum.
+  const { contaSuspensa, podeEmAlguma } = useMembros();
+  const podeRegistar = !contaSuspensa && podeEmAlguma('editarAnimais');
   const { controlo: controloAtualizar } = useAtualizarPuxando();
 
   const [filtros, setFiltros] = useState<Filtros>({});
@@ -82,7 +87,7 @@ export default function AnimaisScreen() {
     () =>
       animais.filter(
         (a) =>
-          (!a.estado || a.estado === 'ativo')
+          !saiuDoEfetivo(a)
           && (!filtros.exploracaoId || a.exploracaoId === filtros.exploracaoId),
       ),
     [animais, filtros.exploracaoId],
@@ -139,7 +144,6 @@ export default function AnimaisScreen() {
     if (filtros.raca) out.push({ chave: 'raca', label: filtros.raca, limpar: tirar('raca') });
     if (filtros.cor) out.push({ chave: 'cor', label: filtros.cor, limpar: tirar('cor') });
     if (filtros.finalidade) out.push({ chave: 'finalidade', label: filtros.finalidade, limpar: tirar('finalidade') });
-    if (filtros.casa) out.push({ chave: 'casa', label: `Casa ${filtros.casa}`, limpar: tirar('casa') });
     if (filtros.terrenoId) {
       const nome = filtros.terrenoId === SEM_TERRENO ? 'Sem terreno' : (terrenoById(filtros.terrenoId)?.nome ?? 'Terreno');
       out.push({ chave: 'terreno', label: nome, limpar: tirar('terrenoId') });
@@ -251,7 +255,7 @@ export default function AnimaisScreen() {
                 <TextInput
                   value={filtros.texto ?? ''}
                   onChangeText={(t) => setFiltros((f) => ({ ...f, texto: t }))}
-                  placeholder="Nome, brinco, raça ou casa"
+                  placeholder="Nome, brinco, raça ou número"
                   placeholderTextColor={colors.textMuted}
                   style={{
                     flex: 1,
@@ -385,7 +389,7 @@ export default function AnimaisScreen() {
                 : 'Ainda não há animais registados. Comece por adicionar o primeiro.'
             }
             actionLabel={
-              estreitada ? 'Limpar filtros' : contaSuspensa ? undefined : 'Registar animal'
+              estreitada ? 'Limpar filtros' : podeRegistar ? 'Registar animal' : undefined
             }
             onAction={estreitada ? () => setFiltros({}) : () => router.push('/animal/novo')}
           />
@@ -403,9 +407,9 @@ export default function AnimaisScreen() {
         onLimpar={() => setFiltros({ texto: filtros.texto, exploracaoId: filtros.exploracaoId })}
       />
 
-      {contaSuspensa ? null : (
+      {podeRegistar ? (
         <FAB label="Registar" onPress={() => router.push('/animal/novo')} />
-      )}
+      ) : null}
     </View>
   );
 }

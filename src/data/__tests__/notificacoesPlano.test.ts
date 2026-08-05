@@ -15,8 +15,12 @@ import {
   HORA_AVISO,
   HORIZONTE_DIAS,
   MAX_AGENDADAS,
+  MINUTOS_AVISO_ACESSO,
+  orcamentoParaAlertas,
   planear,
+  planearFimDeAcesso,
   quandoTocar,
+  TETO_IOS,
 } from '../notificacoesPlano';
 import type { Alerta } from '../types';
 
@@ -116,6 +120,39 @@ describe('planear', () => {
     expect([...datas].sort((a, b) => a - b)).toEqual(datas); // por ordem
     expect(plano[0].alerta.id).toBe('a0'); // o mais próximo sobrevive
   });
+
+  it('respeita o orçamento quando os avisos de acesso ocupam lugar', () => {
+    const muitos = Array.from({ length: MAX_AGENDADAS + 20 }, (_, i) =>
+      alerta(`a${i}`, { diasRestantes: 21 + i }),
+    );
+    const plano = planear(muitos, PREF_OMISSAO, AGORA, 12);
+    expect(plano).toHaveLength(12);
+    expect(plano[0].alerta.id).toBe('a0');
+  });
+});
+
+describe('orcamentoParaAlertas', () => {
+  /**
+   * O caso que motivou isto: cinco vínculos com prazo a correr dão 15 avisos de
+   * acesso, e 15 + 50 = 65 passa o teto de 64. O iOS descarta o excedente em
+   * silêncio — não há erro, nem aviso, nem forma de dar por isso a não ser
+   * reparar que um prazo não tocou.
+   */
+  it('mantém o total dentro do teto do iOS com muitos acessos', () => {
+    const avisosDeAcesso = 5 * MINUTOS_AVISO_ACESSO.length;
+    expect(avisosDeAcesso + MAX_AGENDADAS).toBeGreaterThan(TETO_IOS); // era o erro
+    expect(avisosDeAcesso + orcamentoParaAlertas(avisosDeAcesso)).toBeLessThanOrEqual(TETO_IOS);
+  });
+
+  it('não encolhe os prazos quando há espaço de sobra', () => {
+    expect(orcamentoParaAlertas(0)).toBe(MAX_AGENDADAS);
+    expect(orcamentoParaAlertas(3)).toBe(MAX_AGENDADAS);
+  });
+
+  it('nunca devolve um orçamento negativo', () => {
+    // Um número absurdo de acessos não pode fazer o `slice` cortar pelo fim.
+    expect(orcamentoParaAlertas(500)).toBe(0);
+  });
 });
 
 describe('destinoDoAviso', () => {
@@ -134,5 +171,81 @@ describe('destinoDoAviso', () => {
     // anterior. Sem esta guarda o toque abria uma ficha "Animal não
     // encontrado" — e quem só queria saber o que fazer hoje ficava sem nada.
     expect(destinoDoAviso({ animalId: 'desaparecido' }, existe)).toBe('/alertas');
+  });
+});
+
+/* ================================================================== *
+ *  O acesso a acabar
+ * ================================================================== */
+
+describe('planearFimDeAcesso', () => {
+  /** Um vínculo que acaba daqui a `minutos`. */
+  function acesso(minutos: number, nome = 'Monte do Avô') {
+    return {
+      membroId: 'm1',
+      nomeExploracao: nome,
+      expiraEm: new Date(AGORA.getTime() + minutos * 60_000).toISOString(),
+    };
+  }
+
+  it('marca os três avisos, do mais distante para o mais próximo', () => {
+    const avisos = planearFimDeAcesso([acesso(120)], AGORA);
+    expect(avisos.map((a) => a.minutosAntes)).toEqual([30, 15, 5]);
+    // E cada um à hora certa: 120 min de prazo menos os minutos de antecedência.
+    for (const a of avisos) {
+      const faltam = Math.round((a.quando.getTime() - AGORA.getTime()) / 60_000);
+      expect(faltam).toBe(120 - a.minutosAntes);
+    }
+  });
+
+  it('não agenda no passado', () => {
+    // A 10 minutos do fim, os avisos de 30 e de 15 já passaram. Agendá-los
+    // fazia o sistema dispará-los de imediato — a app a apitar duas vezes mal
+    // se abre, a dizer que falta meia hora para uma coisa daqui a dez minutos.
+    const avisos = planearFimDeAcesso([acesso(10)], AGORA);
+    expect(avisos.map((a) => a.minutosAntes)).toEqual([5]);
+  });
+
+  it('um acesso já terminado não gera aviso nenhum', () => {
+    expect(planearFimDeAcesso([acesso(-30)], AGORA)).toEqual([]);
+  });
+
+  it('um vínculo sem prazo não gera aviso nenhum', () => {
+    // É o caso do dono e do trabalhador: nunca expiram, e um aviso de fim de
+    // acesso para quem não tem fim seria mentira.
+    expect(
+      planearFimDeAcesso([{ membroId: 'm1', nomeExploracao: 'X', expiraEm: undefined }], AGORA),
+    ).toEqual([]);
+  });
+
+  it('uma data que não se lê é ignorada em vez de rebentar', () => {
+    // Mesmo lado seguro do `acessoTerminou`: perante lixo, não se inventa um
+    // aviso nem se deita o agendamento todo abaixo.
+    expect(
+      planearFimDeAcesso([{ membroId: 'm1', nomeExploracao: 'X', expiraEm: 'ontem' }], AGORA),
+    ).toEqual([]);
+  });
+
+  it('com duas explorações, ordena pelo que acaba primeiro', () => {
+    const avisos = planearFimDeAcesso(
+      [
+        { ...acesso(600, 'Longe'), membroId: 'longe' },
+        { ...acesso(60, 'Perto'), membroId: 'perto' },
+      ],
+      AGORA,
+    );
+    // O primeiro a tocar tem de ser o da exploração que fecha primeiro: é ele
+    // que ainda dá para salvar.
+    expect(avisos[0].membroId).toBe('perto');
+    expect(avisos).toHaveLength(MINUTOS_AVISO_ACESSO.length * 2);
+  });
+
+  it('diz o nome da exploração e o que fazer', () => {
+    const [primeiro] = planearFimDeAcesso([acesso(120, 'Herdade das Corgas')], AGORA);
+    expect(primeiro.titulo).toContain('Herdade das Corgas');
+    expect(primeiro.titulo).toContain('30 minutos');
+    // O de 5 minutos manda GRAVAR; os outros explicam o que se perde.
+    const ultimo = planearFimDeAcesso([acesso(120)], AGORA).at(-1)!;
+    expect(ultimo.corpo).toMatch(/[Gg]rave/);
   });
 });

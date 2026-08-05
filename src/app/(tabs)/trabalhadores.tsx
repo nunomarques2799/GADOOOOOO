@@ -48,6 +48,8 @@ export default function TrabalhadoresScreen() {
     listarMembrosDe,
     listarConvites,
     definirPermissoes,
+    definirPrazoDeAcesso,
+    definirFimDeAcesso,
     aCarregar: aCarregarAcesso,
   } = useMembros();
   const toast = useToasts();
@@ -166,6 +168,38 @@ export default function TrabalhadoresScreen() {
     return null;
   }
 
+  /**
+   * Mais tempo, sem prazo, ou acabou aqui.
+   *
+   * Recarrega a lista a seguir pela mesma razão das permissões: é dela que sai o
+   * `expiraEm` que a folha mostra, e sem isto o prazo escrito continuava a ser o
+   * antigo enquanto a folha estivesse aberta — logo a seguir a ter sido mudado.
+   */
+  async function mudarPrazo(membroId: string, horas: number | null): Promise<string | null> {
+    const razao = await definirPrazoDeAcesso(membroId, horas);
+    if (razao) {
+      toast.erro('O tempo de acesso não mudou', razao);
+      return razao;
+    }
+    toast.sucesso(
+      horas === null ? 'Acesso sem prazo' : horas === 0 ? 'Acesso terminado' : 'Acesso prolongado',
+      pessoaAAjustar?.nome,
+    );
+    await carregar();
+    return null;
+  }
+
+  async function marcarFim(membroId: string, fimIso: string): Promise<string | null> {
+    const razao = await definirFimDeAcesso(membroId, fimIso);
+    if (razao) {
+      toast.erro('O tempo de acesso não mudou', razao);
+      return razao;
+    }
+    toast.sucesso('Acesso marcado', `${pessoaAAjustar?.nome ?? ''} · até ${formatDataHora(fimIso)}`);
+    await carregar();
+    return null;
+  }
+
   // A mesma coluna dos outros separadores de lista (Animais, Terrenos,
   // Explorações). Este ecrã usava a coluna ESTREITA, que é a dos ecrãs de
   // leitura: no computador dava um bloco mais apertado do que os vizinhos, com
@@ -255,6 +289,18 @@ export default function TrabalhadoresScreen() {
               icon="history"
               variant="secondary"
               onPress={() => router.push('/atividade')}
+            />
+          ) : null}
+
+          {/* E quem já cá NÃO anda. A lista de cima mostra a equipa de hoje; a
+              pergunta que ela não responde — «e o veterinário do mês passado?»
+              — é a que leva aqui. */}
+          {minhas.length > 0 ? (
+            <Button
+              label="Ver quem já cá esteve"
+              icon="account-clock-outline"
+              variant="secondary"
+              onPress={() => router.push('/equipa/historico')}
             />
           ) : null}
 
@@ -459,6 +505,8 @@ export default function TrabalhadoresScreen() {
           pessoa={pessoaAAjustar}
           onFechar={() => setAAjustar(undefined)}
           onGuardar={guardarPermissoes}
+          onMudarPrazo={mudarPrazo}
+          onMarcarFim={marcarFim}
           financasAtivasEm={(id) => !!exploracoes.find((e) => e.id === id)?.financasAtivas}
           onAbrirEquipa={(id) => {
             setAAjustar(undefined);

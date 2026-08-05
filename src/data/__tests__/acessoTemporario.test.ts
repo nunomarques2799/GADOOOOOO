@@ -22,6 +22,7 @@ import {
   faltaParaExpirar,
   mascaraHora,
   minutosDaHora,
+  perguntaDePrazo,
   problemaComFim,
   rotuloDuracao,
   rotuloPrazo,
@@ -203,5 +204,65 @@ describe('problemaComFim', () => {
     // Sem isto, o código nascia morto e só se descobria quando o veterinário o
     // tentasse usar, do outro lado do telefone.
     expect(problemaComFim(daquiADias(-1), '18:00', AGORA)).toMatch(/já passou/i);
+  });
+});
+
+describe('perguntaDePrazo — o que se lê antes de mexer no relógio de alguém', () => {
+  /** Formatador estável, para o teste falar de horas e não de fusos. */
+  const fmt = (iso: string) => `[${new Date(iso).toISOString()}]`;
+  const quem = { nome: 'Dr. Silva' };
+
+  it('terminar já é destrutivo e diz o que se perde', () => {
+    const p = perguntaDePrazo(0, quem, fmt, AGORA);
+    expect(p.destrutivo).toBe(true);
+    expect(p.rotuloConfirmar).toBe('Terminar já');
+    expect(p.mensagem).toContain('Dr. Silva');
+    expect(p.mensagem).toMatch(/perde-se/);
+    // E diz que dá para voltar atrás — senão ninguém carrega.
+    expect(p.mensagem).toMatch(/voltar a dar-lhe acesso/);
+  });
+
+  it('tirar o prazo explica que passa a ser para sempre', () => {
+    const p = perguntaDePrazo(null, quem, fmt, AGORA);
+    expect(p.destrutivo).toBe(false);
+    expect(p.mensagem).toMatch(/SEM PRAZO/);
+  });
+
+  it('dar horas diz a hora exata a que passa a acabar', () => {
+    const p = perguntaDePrazo(4, quem, fmt, AGORA);
+    expect(p.mensagem).toContain('4 horas');
+    // 18:00 + 4h = 22:00 do mesmo dia.
+    expect(p.mensagem).toContain('[2026-07-27T22:00:00.000Z]');
+    expect(p.destrutivo).toBe(false);
+  });
+
+  it('AVISA quando as horas escolhidas ENCURTAM o acesso', () => {
+    // O caso que motivou isto: o servidor faz `expira_em = now() + horas`, não
+    // soma. Quem tem 8 horas pela frente e leva "+4 horas" fica com 4 — o botão
+    // corta-lhe o acesso, e sem este aviso ninguém dava por isso.
+    const p = perguntaDePrazo(4, { nome: 'Dr. Silva', expiraEm: emHoras(8) }, fmt, AGORA);
+    expect(p.mensagem).toMatch(/ENCURTA-LHE o acesso/);
+    expect(p.mensagem).toContain('[2026-07-28T02:00:00.000Z]'); // o prazo atual
+    // Marcado a vermelho: é uma perda, e tem de se ler como tal.
+    expect(p.destrutivo).toBe(true);
+  });
+
+  it('não avisa quando as horas PROLONGAM de facto', () => {
+    const p = perguntaDePrazo(12, { nome: 'Dr. Silva', expiraEm: emHoras(2) }, fmt, AGORA);
+    expect(p.mensagem).not.toMatch(/ENCURTA/);
+    expect(p.destrutivo).toBe(false);
+  });
+
+  it('não avisa quando o acesso JÁ TINHA terminado', () => {
+    // Aqui não se encurta nada: dar 4 horas a quem está fechado fora é abrir.
+    const p = perguntaDePrazo(4, { nome: 'Dr. Silva', expiraEm: emHoras(-3) }, fmt, AGORA);
+    expect(p.mensagem).not.toMatch(/ENCURTA/);
+    expect(p.titulo).toBe('Reabrir o acesso');
+    expect(p.rotuloConfirmar).toBe('Reabrir');
+  });
+
+  it('quem não tem prazo nenhum não gera aviso de encurtar', () => {
+    const p = perguntaDePrazo(4, quem, fmt, AGORA);
+    expect(p.mensagem).not.toMatch(/ENCURTA/);
   });
 });

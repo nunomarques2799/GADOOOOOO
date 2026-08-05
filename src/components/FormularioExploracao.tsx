@@ -1,9 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CampoLocalidade } from '@/components/CampoLocalidade';
+import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
+import { SeletorFoto } from '@/components/SeletorFoto';
 import { Button, EcraComTeclado, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
 import { useMembros } from '@/data/membros';
@@ -16,7 +18,10 @@ import { colors, radii, shadow, sizes, spacing } from '@/theme';
 export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { addExploracao, updateExploracao, deleteExploracao } = useGado();
+  const {
+    addExploracao, updateExploracao, deleteExploracao,
+    terrenos, animais, eventos, movimentos,
+  } = useGado();
   const { pode, podeCriarExploracoes } = useMembros();
   const toast = useToasts();
 
@@ -26,6 +31,15 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
   const [marca, setMarca] = useState(exploracao?.marcaExploracao ?? '');
   const [nifDetentor, setNif] = useState(exploracao?.nifDetentor ?? '');
   const [localizacao, setLocalizacao] = useState(exploracao?.localizacao ?? '');
+  const [foto, setFoto] = useState<string | undefined>(exploracao?.fotografia);
+  const [latitude, setLatitude] = useState<number | undefined>(exploracao?.latitude);
+  const [longitude, setLongitude] = useState<number | undefined>(exploracao?.longitude);
+  // O mapa fica fechado até se pedir: é um WebView com tiles de satélite, e
+  // abrir sempre punha-o a descarregar imagens a quem só quer mudar o NIF.
+  // Já marcado, abre de raiz — é o que confirma que o pino está no sítio certo.
+  const [mapaAberto, setMapaAberto] = useState(exploracao?.latitude != null);
+
+  const temCoords = latitude != null && longitude != null;
 
   const valido = nome.trim().length > 0 && marca.trim().length > 0 && nifDetentor.trim().length > 0;
 
@@ -37,22 +51,21 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
     setErroGuardar(null);
     setAGravar(true);
     try {
+      const dados = {
+        nome: nome.trim(),
+        marcaExploracao: marca.trim(),
+        nifDetentor: nifDetentor.trim(),
+        localizacao: localizacao.trim() || undefined,
+        latitude,
+        longitude,
+        fotografia: foto,
+      };
       if (editar && exploracao) {
-        await updateExploracao(exploracao.id, {
-          nome: nome.trim(),
-          marcaExploracao: marca.trim(),
-          nifDetentor: nifDetentor.trim(),
-          localizacao: localizacao.trim() || undefined,
-        });
+        await updateExploracao(exploracao.id, dados);
         toast.sucesso('Exploração guardada', nome.trim());
         router.back();
       } else {
-        const nova = await addExploracao({
-          nome: nome.trim(),
-          marcaExploracao: marca.trim(),
-          nifDetentor: nifDetentor.trim(),
-          localizacao: localizacao.trim() || undefined,
-        });
+        const nova = await addExploracao(dados);
         toast.sucesso('Exploração criada', nova.nome);
         router.replace(`/exploracao/${nova.id}`);
       }
@@ -63,6 +76,38 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
     } finally {
       setAGravar(false);
     }
+  }
+
+  /**
+   * "3 terrenos, 11 animais, 47 registos e 13 movimentos" — os números do que a
+   * cascata vai levar.
+   *
+   * Contados aqui e não escritos à mão: uma frase genérica ("e o histórico")
+   * não dá a dimensão do que se perde, e é a dimensão que faz alguém parar.
+   */
+  function resumoDoQueSeVai(): string {
+    if (!exploracao) return 'nada';
+    const meusTerrenos = terrenos.filter((t) => t.exploracaoId === exploracao.id);
+    const meusAnimais = animais.filter((a) => a.exploracaoId === exploracao.id);
+    const ids = new Set(meusAnimais.map((a) => a.id));
+    const meusEventos = eventos.filter((e) => ids.has(e.animalId));
+    const meusMovimentos = movimentos.filter((m) => m.exploracaoId === exploracao.id);
+
+    const partes = [
+      `${meusTerrenos.length} ${meusTerrenos.length === 1 ? 'terreno' : 'terrenos'}`,
+      `${meusAnimais.length} ${meusAnimais.length === 1 ? 'animal' : 'animais'}`,
+      `${meusEventos.length} ${meusEventos.length === 1 ? 'registo' : 'registos'}`,
+    ];
+    // O dinheiro só se nomeia se existir: numa conta sem gestão económica
+    // ligada, falar de despesas era assustar com uma coisa que não há.
+    if (meusMovimentos.length > 0) {
+      partes.push(
+        `${meusMovimentos.length} ${
+          meusMovimentos.length === 1 ? 'despesa ou receita' : 'despesas e receitas'
+        }`,
+      );
+    }
+    return partes.join(', ');
   }
 
   function confirmarEliminar() {
@@ -81,9 +126,15 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
         avisar('Não foi possível eliminar', mensagemDeErro(e));
       }
     };
+    // O aviso conta o que a cascata leva DE FACTO. Dizia "terrenos, animais e
+    // histórico" e ficavam de fora o dinheiro e a equipa — que é precisamente o
+    // que ninguém espera perder ao apagar uma exploração.
     confirmar(
       'Eliminar exploração',
-      `Vai eliminar "${exploracao.nome}", os seus terrenos, animais e histórico. Esta ação não pode ser desfeita.`,
+      `Vai eliminar "${exploracao.nome}" e tudo o que está lá dentro: `
+        + `${resumoDoQueSeVai()}. `
+        + 'Leva também os animais que já tinham saído do efetivo, e com eles a '
+        + 'genealogia. Esta ação não pode ser desfeita.',
       () => void executar(),
       { rotuloConfirmar: 'Eliminar', destrutivo: true },
     );
@@ -106,6 +157,23 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
     );
   }
 
+  // E o mesmo para EDITAR. Faltava: o ramo acima só cobria a criação, portanto
+  // um trabalhador ou um veterinário que chegasse a `/exploracao/editar/[id]`
+  // encontrava o nome, a marca e o NIF da exploração de outra pessoa num
+  // formulário aberto, pronto a gravar contra uma RLS que o ia recusar.
+  if (editar && !pode(exploracao?.id, 'editarExploracao')) {
+    return (
+      <EcraComTeclado>
+        <Header title="Editar exploração" />
+        <EmptyState
+          icon="lock-outline"
+          title="A exploração é de quem a tem a cargo"
+          message="O nome, a marca de exploração, o NIF e a localização são alterados por quem responde por ela. Continua a poder trabalhar nos animais e no que lhe compete."
+        />
+      </EcraComTeclado>
+    );
+  }
+
   return (
     <EcraComTeclado>
       <Header title={editar ? 'Editar exploração' : 'Nova exploração'} />
@@ -116,6 +184,8 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
         <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
           Dados oficiais da exploração pecuária. Todos os campos com * são obrigatórios.
         </Text>
+
+        <SeletorFoto foto={foto} onMudar={setFoto} icone="barn" assunto="da exploração" forma="cartao" />
 
         <Field label="Nome" obrigatorio>
           <TextField
@@ -154,8 +224,82 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
             placeholder="Ex: Idanha-a-Nova"
           />
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-            Escreva o nome da terra e escolha da lista. É daqui que sai a meteorologia local.
+            Escreva o nome da terra e escolha da lista. Chega para a meteorologia local.
           </Text>
+
+          {/* As duas maneiras de dizer onde é, e nenhuma obrigatória: o nome da
+              terra, ou o sítio exato no mapa. Marcado o pino, é ele que manda na
+              meteorologia — o nome de um concelho pode dar uma previsão a trinta
+              quilómetros da quinta. */}
+          <Pressable
+            onPress={() => setMapaAberto((m) => !m)}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: mapaAberto }}
+            style={({ pressed }) => [
+              { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.sm },
+              pressed && { opacity: 0.6 },
+            ]}>
+            <Icon
+              name={mapaAberto ? 'chevron-up' : 'map-marker-radius-outline'}
+              size="md"
+              color={colors.primary}
+            />
+            <Text variant="bodyStrong" color={colors.primary}>
+              {mapaAberto
+                ? 'Fechar o mapa'
+                : temCoords
+                  ? 'Ver no mapa'
+                  : 'Ou marque no mapa onde fica'}
+            </Text>
+          </Pressable>
+
+          {mapaAberto ? (
+            <View style={{ marginTop: spacing.sm }}>
+              <MapaLocalizacao
+                latitude={latitude}
+                longitude={longitude}
+                selecionavel
+                altura={280}
+                onEscolher={(lat, lng) => {
+                  setLatitude(Number(lat.toFixed(6)));
+                  setLongitude(Number(lng.toFixed(6)));
+                }}
+              />
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  marginTop: spacing.xs,
+                }}>
+                <Icon
+                  name={temCoords ? 'map-marker-check' : 'map-marker-question'}
+                  size="sm"
+                  color={temCoords ? colors.primary : colors.textMuted}
+                />
+                <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
+                  {temCoords
+                    ? `Marcado: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+                    : 'Toque no mapa para marcar a exploração.'}
+                </Text>
+                {temCoords ? (
+                  <Pressable
+                    onPress={() => {
+                      setLatitude(undefined);
+                      setLongitude(undefined);
+                    }}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Limpar a marca no mapa">
+                    <Text variant="bodyStrong" color={colors.danger}>
+                      Limpar
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
         </Field>
 
         {erroGuardar ? (

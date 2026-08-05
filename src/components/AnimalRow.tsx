@@ -29,6 +29,16 @@ export const AnimalRow = memo(function AnimalRow({
   const meta = especieMeta[animal.especie];
   const semBrinco = animal.especie === 'Bovino' && !animal.numeroIdentificacao;
   const saiu = !!animal.estado && animal.estado !== 'ativo';
+  /**
+   * Um registo que ainda não tem por onde se lhe pegar: nem nome nem brinco.
+   *
+   * É o estado em que nasce a cria criada automaticamente ao registar um parto
+   * (ver `evento/novo.tsx`) — existe, conta para o efetivo e já tem o prazo de
+   * identificação a correr, mas na lista aparecia como mais um "Sem nome / Sem
+   * brinco" entre iguais. A etiqueta diz que falta ali alguma coisa, e é o que
+   * leva alguém a abrir a ficha e a completá-la.
+   */
+  const porCompletar = !saiu && !animal.nome && !animal.numeroIdentificacao;
 
   const femea = animal.sexo === 'Fêmea';
   const sexoCor = femea ? colors.femea : colors.macho;
@@ -42,7 +52,7 @@ export const AnimalRow = memo(function AnimalRow({
       // um problema legal — por isso vai também na etiqueta falada.
       accessibilityLabel={`${animal.nome ?? 'Animal'}, ${animal.especie}, ${idadeExtenso(
         animal.dataNascimento,
-      )}${semBrinco ? ', por identificar: sem brinco' : ''}`}
+      )}${porCompletar ? ', por completar: sem nome nem brinco' : semBrinco ? ', por identificar: sem brinco' : ''}`}
       style={{ marginBottom: spacing.sm, opacity: saiu ? 0.7 : 1 }}
       padded={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.sm }}>
@@ -109,6 +119,9 @@ export const AnimalRow = memo(function AnimalRow({
             ) : null}
             {animal.estado === 'eliminado' ? (
               <Badge tone="danger" icon="trash-can-outline" label="Eliminado" />
+            ) : null}
+            {porCompletar ? (
+              <Badge tone="warning" icon="pencil-outline" label="Por completar" />
             ) : null}
           </View>
           <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>

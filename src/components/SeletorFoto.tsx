@@ -8,26 +8,42 @@ import { escolherDaGaleria, suportaCamera, tirarFoto, type ResultadoFoto } from 
 import { colors, radii, spacing } from '@/theme';
 
 /**
- * Escolher/tirar a fotografia de um animal, no formulário.
+ * Escolher/tirar uma fotografia, num formulário.
  * ------------------------------------------------------------------
- * Mostra a foto atual (ou uma silhueta) num círculo grande e dá dois botões
- * grandes — câmara e galeria — mais "remover" quando já há foto. Sem folhas de
- * ação escondidas: alvos grandes e à vista, para o utilizador-alvo.
+ * Mostra a foto atual (ou uma silhueta) e dá dois botões grandes — câmara e
+ * galeria — mais "remover" quando já há foto. Sem folhas de ação escondidas:
+ * alvos grandes e à vista, para o utilizador-alvo.
  *
  * Só mexe numa string (o data URI); quem guarda é o formulário. A redução da
  * imagem e as permissões ficam em `data/foto.ts`.
+ *
+ * Serve o animal, a exploração e o terreno. Era só do animal (chamava-se
+ * `FotoAnimal`) e ficou geral quando o criador pediu o mesmo para os outros
+ * dois: um segundo componente quase igual seria um sítio a mais para a
+ * permissão de câmara ficar por tratar.
  */
-export function FotoAnimal({
+export function SeletorFoto({
   foto,
   onMudar,
   icone,
+  assunto,
+  forma = 'circulo',
 }: {
   foto?: string;
   onMudar: (dataUri: string | undefined) => void;
-  /** Silhueta por espécie, para o vazio não ser um genérico. */
+  /** Silhueta para o vazio (a espécie do animal, o celeiro, a pastagem). */
   icone: IconName;
+  /** Como referir isto nas mensagens: "do animal", "da exploração", "do terreno". */
+  assunto: string;
+  /**
+   * `circulo` para o animal (é assim que aparece na lista e na ficha);
+   * `cartao` para a exploração e o terreno, que são paisagens — num círculo de
+   * 120px um lameiro fica um recorte verde sem nada que se reconheça.
+   */
+  forma?: 'circulo' | 'cartao';
 }) {
   const [aProcessar, setAProcessar] = useState(false);
+  const cartao = forma === 'cartao';
 
   async function correr(acao: () => Promise<ResultadoFoto>) {
     if (aProcessar) return;
@@ -55,12 +71,14 @@ export function FotoAnimal({
         onPress={() => void correr(suportaCamera ? tirarFoto : escolherDaGaleria)}
         disabled={aProcessar}
         accessibilityRole="button"
-        accessibilityLabel={foto ? 'Mudar a fotografia do animal' : 'Adicionar uma fotografia do animal'}
+        accessibilityLabel={
+          foto ? `Mudar a fotografia ${assunto}` : `Adicionar uma fotografia ${assunto}`
+        }
         style={({ pressed }) => [
           {
-            width: 120,
-            height: 120,
-            borderRadius: radii.pill,
+            width: cartao ? '100%' : 120,
+            height: cartao ? 168 : 120,
+            borderRadius: cartao ? radii.lg : radii.pill,
             backgroundColor: colors.primaryTint,
             alignItems: 'center',
             justifyContent: 'center',
@@ -87,7 +105,7 @@ export function FotoAnimal({
             <ActivityIndicator color={colors.white} />
           </View>
         ) : null}
-        {/* Emblema de câmara, para se perceber que o círculo se toca. */}
+        {/* Emblema de câmara, para se perceber que se toca. */}
         <View
           style={{
             position: 'absolute',

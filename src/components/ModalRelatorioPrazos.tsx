@@ -31,8 +31,10 @@ const CATEGORIAS: Alerta['categoria'][] = [
   'snira',
   'identificacao',
   'parto',
+  'reproducao',
   'medicamento',
   'vacinacao',
+  'existencias',
 ];
 const JANELAS: JanelaPrazo[] = ['todos', 'atraso', 7, 30];
 

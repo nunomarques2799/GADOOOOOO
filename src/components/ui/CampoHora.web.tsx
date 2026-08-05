@@ -4,6 +4,7 @@ import { Platform, Pressable, TextInput, View } from 'react-native';
 import { mascaraHora, minutosDaHora } from '@/data/acessoTemporario';
 import { colors, radii, sizes, spacing } from '@/theme';
 
+import { estiloBotaoCalendario } from './campoDataEstilo';
 import type { CampoHoraProps } from './CampoHora';
 import { Icon } from './Icon';
 
@@ -51,7 +52,8 @@ export function CampoHora({
         borderWidth: 1.5,
         borderColor: colors.border,
         backgroundColor: colors.surface,
-        paddingHorizontal: spacing.md,
+        paddingLeft: spacing.md,
+        paddingRight: 5, // o botão do relógio traz o seu próprio fundo
       }}>
       <Icon name={icon} size="md" color={colors.textMuted} />
       <TextInput
@@ -68,8 +70,8 @@ export function CampoHora({
           accessibilityRole="button"
           accessibilityLabel={rotuloRelogio}
           hitSlop={8}
-          style={({ pressed }) => [{ padding: 4 }, pressed && { opacity: 0.6 }]}>
-          <Icon name="clock-edit-outline" size="md" color={colors.primary} />
+          style={({ pressed }) => [estiloBotaoCalendario(), pressed && { opacity: 0.6 }]}>
+          <Icon name="clock-edit-outline" size="md" color={colors.primaryDark} />
           <input
             ref={inputRef}
             type="time"

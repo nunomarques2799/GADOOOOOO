@@ -21,6 +21,7 @@ import {
 import { acessoTerminou } from './acessoTemporario';
 import { useAuth } from './auth';
 import { cacheDisponivel, guardarAcesso, lerAcesso } from './cacheLocal';
+import type { MotivoSaida, SaidaEquipa } from './historicoEquipa';
 import { carregarNomesEquipa, esquecerNomesEquipa } from './nomesEquipa';
 import {
   CAPACIDADES_GERIVEIS,
@@ -140,6 +141,15 @@ type MembrosContext = {
   listarMembrosDe: (exploracaoId: string) => Promise<
     (MembroExploracao & { nome: string })[]
   >;
+  /**
+   * Quem já saiu da equipa destas explorações, do mais recente para trás.
+   *
+   * Leva a lista de explorações e não uma só: o ecrã que a mostra é sobre as
+   * PESSOAS que passaram por aqui, e com duas quintas eram dois pedidos e duas
+   * listas para juntar de cabeça. Sem ligação à conta devolve vazio — isto é
+   * uma tabela do servidor, não há cópia local dela.
+   */
+  listarSaidasDaEquipa: (exploracaoIds: string[]) => Promise<SaidaEquipa[]>;
   removerMembro: (membroId: string) => Promise<string | null>;
   /**
    * Grava o que esta pessoa pode alterar nesta exploração. Substitui os ajustes
@@ -199,6 +209,35 @@ function limparPermissoes(bruto: unknown): PermissoesMembro | undefined {
     if (typeof v === 'boolean') limpo[c] = v;
   }
   return Object.keys(limpo).length > 0 ? limpo : undefined;
+}
+
+type RowSaida = {
+  id: number | string;
+  exploracao_id: string;
+  user_id?: string | null;
+  nome?: string | null;
+  role: RoleMembro;
+  entrou_em?: string | null;
+  saiu_em: string;
+  saiu_por?: string | null;
+  motivo?: string | null;
+};
+
+function toSaida(r: RowSaida): SaidaEquipa {
+  return {
+    id: String(r.id),
+    exploracaoId: r.exploracao_id,
+    userId: r.user_id ?? undefined,
+    nome: r.nome?.trim() || SEM_NOME,
+    role: r.role,
+    entrouEm: r.entrou_em ?? undefined,
+    saiuEm: r.saiu_em,
+    saiuPor: r.saiu_por ?? undefined,
+    // A coluna tem uma restrição que só aceita estes dois valores, mas quem lê
+    // da rede não deve confiar nisso: um valor estranho vira "removido", que é
+    // a frase mais neutra das duas.
+    motivo: (r.motivo === 'saiu' ? 'saiu' : 'removido') satisfies MotivoSaida,
+  };
 }
 
 type RowConvite = {
@@ -598,6 +637,23 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const listarSaidasDaEquipa = useCallback(
+    async (exploracaoIds: string[]): Promise<SaidaEquipa[]> => {
+      if (!supabase || exploracaoIds.length === 0) return [];
+      const { data } = await supabase
+        .from('equipa_historico')
+        .select('id, exploracao_id, user_id, nome, role, entrou_em, saiu_em, saiu_por, motivo')
+        .in('exploracao_id', exploracaoIds)
+        .order('saiu_em', { ascending: false })
+        // Um teto, porque isto não tem paginação nem faz falta: uma exploração
+        // que já viu 300 pessoas sair não precisa da 301.ª para responder à
+        // pergunta que se faz aqui.
+        .limit(300);
+      return ((data ?? []) as RowSaida[]).map(toSaida);
+    },
+    [],
+  );
+
   const removerMembro = useCallback(async (membroId: string): Promise<string | null> => {
     if (!supabase) return 'Supabase não configurado.';
     const { error } = await supabase.from('membro_exploracao').delete().eq('id', membroId);
@@ -670,6 +726,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       criarConvite,
       removerConvite,
       listarMembrosDe,
+      listarSaidasDaEquipa,
       removerMembro,
       definirPermissoes,
       definirPrazoDeAcesso,
@@ -683,6 +740,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       contaSuspensa, isAdminEmAlguma, podeCriarExploracoes,
       recarregar, listarPendentes, aprovarCliente, bloquearCliente,
       listarConvites, criarConvite, removerConvite, listarMembrosDe,
+      listarSaidasDaEquipa,
       removerMembro, definirPermissoes, definirPrazoDeAcesso, definirFimDeAcesso,
       resgatarConvite,
     ],

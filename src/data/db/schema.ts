@@ -12,7 +12,7 @@
 export const DB_NAME = 'gado.db';
 
 /** Versão do schema (PRAGMA user_version). Incrementar ao migrar. */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 9;
 
 export const CREATE_TABLES_SQL = `
 PRAGMA journal_mode = WAL;
@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS exploracao (
   marcaExploracao TEXT NOT NULL,
   nifDetentor TEXT NOT NULL,
   localizacao TEXT,
+  latitude REAL,
+  longitude REAL,
   fotografia TEXT,
   financasAtivas INTEGER,
   casaAtiva INTEGER,
@@ -49,6 +51,7 @@ CREATE TABLE IF NOT EXISTS terreno (
   longitude REAL,
   area REAL,
   tipo TEXT,
+  fotografia TEXT,
   updatedAt TEXT
 );
 
@@ -90,6 +93,29 @@ CREATE TABLE IF NOT EXISTS evento (
   descricao TEXT NOT NULL,
   detalhe TEXT,
   valor REAL,
+  resultado TEXT,
+  medicamentoId TEXT,
+  quantidade REAL,
+  comunicadoSnira INTEGER,
+  comunicadoEm TEXT,
+  updatedAt TEXT
+);
+
+CREATE TABLE IF NOT EXISTS medicamento (
+  id TEXT PRIMARY KEY NOT NULL,
+  exploracaoId TEXT NOT NULL,
+  nome TEXT NOT NULL,
+  tipo TEXT NOT NULL,
+  lote TEXT,
+  validade TEXT,
+  quantidade REAL NOT NULL,
+  unidade TEXT NOT NULL,
+  intervaloSegurancaDias INTEGER NOT NULL,
+  fornecedor TEXT,
+  custo REAL,
+  dataCompra TEXT NOT NULL,
+  notas TEXT,
+  criadoPor TEXT,
   updatedAt TEXT
 );
 
@@ -114,4 +140,6 @@ CREATE INDEX IF NOT EXISTS idx_terreno_exploracao ON terreno(exploracaoId);
 CREATE INDEX IF NOT EXISTS idx_evento_animal ON evento(animalId);
 CREATE INDEX IF NOT EXISTS idx_movimento_exploracao ON movimento(exploracaoId);
 CREATE INDEX IF NOT EXISTS idx_movimento_animal ON movimento(animalId);
+CREATE INDEX IF NOT EXISTS idx_medicamento_exploracao ON medicamento(exploracaoId);
+CREATE INDEX IF NOT EXISTS idx_evento_medicamento ON evento(medicamentoId);
 `;

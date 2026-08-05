@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
-import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
 import { VERSAO_APP } from '@/data/versao';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -23,14 +22,11 @@ export default function DefinicoesScreen() {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
   const router = useRouter();
-  const { exploracoes } = useGado();
   const { configurado } = useAuth();
   const {
     ativas: financasAtivas,
     podeLigarDesligar: podeLigarFinancas,
   } = useFinancas();
-
-  const casaAtiva = exploracoes.some((e) => e.casaAtiva);
 
   const coluna = {
     width: '100%',
@@ -65,14 +61,10 @@ export default function DefinicoesScreen() {
                 onPress={() => router.push('/conta/financas')}
               />
             ) : null}
-            {podeLigarFinancas ? (
-              <Linha
-                icon="home-outline"
-                label="Registo por casa e número"
-                trailing={casaAtiva ? 'Ligado' : 'Desligado'}
-                onPress={() => router.push('/conta/casa')}
-              />
-            ) : null}
+            {/* O "Registo por casa e número" era aqui. Passou a um campo
+                "Número" sempre presente na ficha do animal, opcional: um
+                interruptor para mostrar um campo de texto que quem não usa
+                deixa vazio era uma decisão a pedir por nada. */}
             <Linha
               icon="bell-outline"
               label="Notificações e alertas"

@@ -39,7 +39,6 @@ export type CampoImportado =
   | 'numeroIdentificacao'
   | 'dataIdentificacao'
   | 'finalidade'
-  | 'casa'
   | 'numeroCasa'
   | 'comunicadoSnira'
   | 'dataPrevistaParto'
@@ -174,19 +173,15 @@ export const COLUNAS: ColunaTemplate[] = [
     opcoes: { valores: finalidades, estrita: true },
   },
   {
-    campo: 'casa',
-    rotulo: 'Casa',
-    obrigatorio: false,
-    exemplo: 'Casa do Alto',
-    ajuda: 'Registo tradicional por casa.',
-  },
-  {
     campo: 'numeroCasa',
-    rotulo: 'Nº na casa',
+    // A coluna "Casa" (o nome da casa) saiu com o campo: a app ficou só com o
+    // número. Os aliases antigos ficam para uma folha exportada antes disso
+    // continuar a importar-se sem "coluna desconhecida".
+    rotulo: 'Número',
     obrigatorio: false,
     exemplo: '3',
-    ajuda: 'Número do animal dentro da casa.',
-    aliases: ['numero da casa', 'n casa', 'numero na casa'],
+    ajuda: 'O número por que o animal é conhecido na exploração.',
+    aliases: ['numero da casa', 'n casa', 'numero na casa', 'no na casa', 'numero do animal'],
   },
   {
     campo: 'comunicadoSnira',
@@ -223,8 +218,15 @@ export const COLUNAS: ColunaTemplate[] = [
  * escolhem na app (a exploração de destino escolhe-se no ecrã de importação) ou
  * estado que ela própria calcula. Ficam aqui reconhecidas para não aparecerem
  * como "coluna desconhecida" a quem exporta, edita e reimporta o mesmo ficheiro.
+ *
+ * A MÃE E O PAI saem por NOME, e por isso não voltam a entrar. A genealogia
+ * liga-se por identificador, e um nome não chega para a reconstruir: "Malhada"
+ * pode ser três vacas, e escrever à mão uma mãe que não existe criaria um
+ * parentesco inventado — que é o pior erro possível numa árvore genealógica.
+ * Quem quer mudar a mãe de um animal fá-lo na ficha dele, onde escolhe de uma
+ * lista de animais que existem mesmo.
  */
-export const COLUNAS_INFORMATIVAS = ['Exploração', 'Terreno', 'Estado'] as const;
+export const COLUNAS_INFORMATIVAS = ['Exploração', 'Terreno', 'Mãe', 'Pai', 'Estado'] as const;
 
 /** Linhas de exemplo, para a folha de instruções do template. */
 export const EXEMPLOS: Record<CampoImportado, string>[] = [
@@ -238,7 +240,6 @@ export const EXEMPLOS: Record<CampoImportado, string>[] = [
     numeroIdentificacao: 'PT 6120 0011 2201',
     dataIdentificacao: '30/03/2021',
     finalidade: 'Leite',
-    casa: 'Casa do Alto',
     numeroCasa: '3',
     comunicadoSnira: 'Sim',
     dataPrevistaParto: '',
@@ -254,7 +255,6 @@ export const EXEMPLOS: Record<CampoImportado, string>[] = [
     numeroIdentificacao: 'PT 6120 0011 2207',
     dataIdentificacao: '20/05/2022',
     finalidade: 'Carne',
-    casa: 'Casa do Souto',
     numeroCasa: '2',
     comunicadoSnira: 'Sim',
     dataPrevistaParto: '',
@@ -424,7 +424,6 @@ export function linhaParaAnimal(
   const brinco = texto(valores.numeroIdentificacao);
   const raca = texto(valores.raca);
   const cor = texto(valores.corPelagem);
-  const casa = texto(valores.casa);
   const numeroCasa = texto(valores.numeroCasa);
   const idOrigem = texto(valores.id) || undefined;
 
@@ -506,7 +505,6 @@ export function linhaParaAnimal(
     raca: raca || undefined,
     corPelagem: cor || undefined,
     finalidade: especie === 'Bovino' ? finalidade : undefined,
-    casa: casa || undefined,
     numeroCasa: numeroCasa || undefined,
     // Espelha o formulário: com brinco, assume-se já comunicado a menos que a
     // coluna diga o contrário — importar um efetivo que já existe não deve

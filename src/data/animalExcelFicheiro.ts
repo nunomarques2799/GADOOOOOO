@@ -86,8 +86,6 @@ function valorDaColuna(a: Animal, campo: CampoImportado): string {
       return a.dataIdentificacao ? formatDataCurta(a.dataIdentificacao) : '';
     case 'finalidade':
       return a.finalidade ?? '';
-    case 'casa':
-      return a.casa ?? '';
     case 'numeroCasa':
       return a.numeroCasa ?? '';
     case 'comunicadoSnira':
@@ -107,22 +105,43 @@ const ESTADO_ROTULO: Record<NonNullable<Animal['estado']>, string> = {
   eliminado: 'Eliminado',
 };
 
-/** Nomes para as colunas que a app escreve mas não importa (`COLUNAS_INFORMATIVAS`). */
+/**
+ * Nomes para as colunas que a app escreve mas não importa
+ * (`COLUNAS_INFORMATIVAS`). A ordem TEM de ser a mesma dessa lista.
+ */
 function valoresInformativos(a: Animal, nomes: NomesRelacionados): string[] {
   return [
     nomes.exploracao.get(a.exploracaoId) ?? '',
     a.terrenoId ? (nomes.terreno.get(a.terrenoId) ?? '') : '',
+    a.maeId ? (nomes.animal.get(a.maeId) ?? '') : '',
+    a.paiId ? (nomes.animal.get(a.paiId) ?? '') : '',
     ESTADO_ROTULO[a.estado ?? 'ativo'],
   ];
 }
 
 /** Mapas id → nome, para a exportação escrever nomes em vez de identificadores. */
-type NomesRelacionados = { exploracao: Map<string, string>; terreno: Map<string, string> };
+type NomesRelacionados = {
+  exploracao: Map<string, string>;
+  terreno: Map<string, string>;
+  animal: Map<string, string>;
+};
 
-function nomesRelacionados(exploracoes: Exploracao[], terrenos: Terreno[]): NomesRelacionados {
+function nomesRelacionados(
+  exploracoes: Exploracao[],
+  terrenos: Terreno[],
+  animais: Animal[],
+): NomesRelacionados {
   return {
     exploracao: new Map(exploracoes.map((e) => [e.id, e.nome])),
     terreno: new Map(terrenos.map((t) => [t.id, t.nome])),
+    // Nome, senão brinco: um progenitor sem nome é conhecido pelo número do
+    // brinco, e uma célula em branco na coluna "Mãe" leria-se como "não se
+    // sabe" quando a mãe está lá registada.
+    //
+    // O mapa é de TODOS os animais que a app tem, não só dos exportados: a mãe
+    // de um animal ativo pode ser uma vaca já vendida, e ela continua na
+    // genealogia. Com o mapa só do que sai na folha, essas mães desapareciam.
+    animal: new Map(animais.map((a) => [a.id, a.nome ?? a.numeroIdentificacao ?? ''])),
   };
 }
 
@@ -144,6 +163,12 @@ export function construirWorkbookAnimais(
   animais: Animal[],
   exploracoes: Exploracao[] = [],
   terrenos: Terreno[] = [],
+  /**
+   * Todos os animais da app, para dar nome à mãe e ao pai. Por omissão são os
+   * que se estão a exportar — que chega no caso normal, e não obriga quem já
+   * chamava esta função com três argumentos a mudar nada.
+   */
+  todosOsAnimais: Animal[] = animais,
 ): XLSX.WorkBook {
   const wb = XLSXStyle.utils.book_new();
   const comInformativas = animais.length > 0;
@@ -151,7 +176,7 @@ export function construirWorkbookAnimais(
     ...COLUNAS.map((c) => c.rotulo),
     ...(comInformativas ? COLUNAS_INFORMATIVAS : []),
   ];
-  const nomes = nomesRelacionados(exploracoes, terrenos);
+  const nomes = nomesRelacionados(exploracoes, terrenos, todosOsAnimais);
   const linhas = animais.map((a) => [
     ...COLUNAS.map((c) => valorDaColuna(a, c.campo)),
     ...(comInformativas ? valoresInformativos(a, nomes) : []),
@@ -335,9 +360,10 @@ export function exportarAnimaisExcel(
   animais: Animal[],
   exploracoes: Exploracao[] = [],
   terrenos: Terreno[] = [],
+  todosOsAnimais: Animal[] = animais,
 ): void {
   descarregarWorkbook(
-    construirWorkbookAnimais(animais, exploracoes, terrenos),
+    construirWorkbookAnimais(animais, exploracoes, terrenos, todosOsAnimais),
     `animais-${hojeISO()}.xlsx`,
     animais.length,
   );

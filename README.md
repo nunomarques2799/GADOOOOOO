@@ -32,15 +32,22 @@ No telemóvel: instala a app **Expo Go** e lê o QR code que aparece no `expo st
 - **Registar animal** — formulário rápido (chips + data "Hoje" por omissão) desenhado para poucos toques.
 - **Explorações** — lista e detalhe (dados oficiais, terrenos, marcador de mapa, animais).
 - **Alertas** — prazos legais calculados automaticamente e agrupados por urgência.
+- **Comunicar ao SNIRA** — o que falta comunicar (nascimentos, mortes, saídas), com o prazo a contar, pronto a levar para o iDigital em Excel ou em papel. A app não submete: marca-se aqui o que já foi feito, e é isso que cala o aviso.
+- **Reprodução** — cobrição → diagnóstico de gestação → parto, com as três listas que decidem a semana: prestes a parir, à espera de diagnóstico e sem cobrição desde o parto. Mais a taxa de gestação e o intervalo entre partos.
+- **Existências** — medicamentos e vacinas por lote, com validade e stock. Escolher o lote ao registar um tratamento desconta-o e preenche o intervalo de segurança.
 - **Perfil** — utilizador, estado offline-first, definições.
-- **Registar eventos** — formulários de parto, vacinação, medicamento e pesagem (cálculo de GMD e efeitos nos alertas).
+- **Registar eventos** — formulários de parto, cobrição, diagnóstico, vacinação, medicamento e pesagem (cálculo de GMD e efeitos nos alertas).
 - **Meteorologia real** — Open-Meteo por coordenadas GPS do terreno, com conselho pecuário.
 - **Persistência offline** — SQLite (`expo-sqlite`) por trás do `useGado()`; os dados sobrevivem ao fecho da app.
 - **Design system** completo — ver [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md).
 
 Os **alertas legais** são calculados a partir dos dados (identificação até 20
 dias, comunicação SNIRA em 7 dias, parto previsto, intervalo de segurança de
-medicamento) — ver [`src/data/helpers.ts`](src/data/helpers.ts).
+medicamento, diagnóstico em falta, validade de lotes) — ver
+[`src/data/alertas.ts`](src/data/alertas.ts), que junta os módulos de domínio
+([`snira.ts`](src/data/snira.ts), [`reproducao.ts`](src/data/reproducao.ts),
+[`medicamentos.ts`](src/data/medicamentos.ts)) por cima das contas de datas do
+[`helpers.ts`](src/data/helpers.ts).
 
 ## Estrutura
 

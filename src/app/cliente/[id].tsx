@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { EquipaDaExploracao } from '@/components/EquipaDaExploracao';
 import { Badge, Button, Card, Chip, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
 import { formatDataHora } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
@@ -181,8 +182,8 @@ export default function ClienteDetalheScreen() {
           <Card><Text variant="body" color={colors.textSecondary}>Este cliente ainda não criou explorações.</Text></Card>
         ) : (
           exploracoes.map((e) => (
+            <View key={e.id}>
             <Card
-              key={e.id}
               style={{ marginBottom: spacing.sm }}
               onPress={() => router.push({ pathname: '/inspecionar/exploracao/[id]', params: { id: e.id } })}
               accessibilityLabel={`Ver dados de ${e.nome}`}>
@@ -211,6 +212,11 @@ export default function ClienteDetalheScreen() {
                 <Icon name="chevron-right" size="md" color={colors.textMuted} />
               </View>
             </Card>
+            {/* Quem lá trabalha, por baixo da exploração a que pertence. Numa
+                secção própria mais abaixo, com duas ou três explorações,
+                obrigava a fazer a correspondência de cabeça. */}
+            <EquipaDaExploracao exploracaoId={e.id} nomeExploracao={e.nome} />
+            </View>
           ))
         )}
 

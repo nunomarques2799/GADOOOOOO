@@ -14,6 +14,7 @@ import { Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AberturaPorAviso } from '@/components/AberturaPorAviso';
+import { AnfitriaoAvisos } from '@/components/AnfitriaoAvisos';
 import { AnfitriaoToasts } from '@/components/AnfitriaoToasts';
 import { EcraACarregar } from '@/components/EcraACarregar';
 import { EcraLogin } from '@/components/EcraLogin';
@@ -21,9 +22,11 @@ import { FaixaAmbiente } from '@/components/FaixaAmbiente';
 import { LimiteDeErro } from '@/components/LimiteDeErro';
 import { EcraNovaPalavra } from '@/components/EcraNovaPalavra';
 import { EcraPendente } from '@/components/EcraPendente';
+import { AgendadorAvisos } from '@/components/AgendadorAvisos';
 import { AuthProvider, useAuth } from '@/data/auth';
 import { MembrosProvider, useMembros } from '@/data/membros';
 import { NotificacoesProvider } from '@/data/notificacoes';
+import { usePaletaDaConta } from '@/data/paletaConta';
 import { GadoProvider } from '@/data/store';
 import { ToastsProvider } from '@/data/toasts';
 import { supabaseConfigurado } from '@/data/supabase';
@@ -81,6 +84,10 @@ function ComToasts({ children }: { children: ReactNode }) {
     <View style={{ flex: 1 }}>
       {children}
       <AnfitriaoToasts />
+      {/* As perguntas e os avisos que interrompem. Aqui pela mesma razão dos
+          toasts — quem os manda quase sempre fecha o ecrã a seguir — e por
+          cima de tudo, que é onde uma pergunta sem volta tem de estar. */}
+      <AnfitriaoAvisos />
     </View>
   );
 }
@@ -124,6 +131,11 @@ function ColunaEstreita({
  */
 function PortaoAuth({ children }: { children: ReactNode }) {
   const { aCarregar, sessao, emRecuperacao } = useAuth();
+  // A paleta escolhida noutro aparelho chega com a sessão. Aqui porque é o
+  // primeiro sítio dentro do `AuthProvider` que está sempre montado — e antes
+  // de qualquer ecrã da app, para as cores não trocarem à frente de quem já
+  // está a trabalhar.
+  usePaletaDaConta();
   // O `EcraACarregar` só aparece passado quase um segundo, por isso um arranque
   // normal continua a ser o splash a dar lugar à app, sem nada pelo meio.
   if (aCarregar)
@@ -140,9 +152,12 @@ function PortaoAuth({ children }: { children: ReactNode }) {
         <EcraNovaPalavra />
       </ColunaEstreita>
     );
+  // O login pede mais largura do que os 560 de um telemóvel: num monitor, uma
+  // tira estreita encostada ao topo com dois campos lá dentro parece a app
+  // aberta com a janela mal esticada. `EcraLogin` centra-se dentro dela.
   if (supabaseConfigurado && !sessao)
     return (
-      <ColunaEstreita>
+      <ColunaEstreita largura={layout.conteudoEstreito}>
         <EcraLogin />
       </ColunaEstreita>
     );
@@ -217,6 +232,10 @@ export default function RootLayout() {
                     aviso ainda existe) e ao lado da navegação (é ela que ele
                     manda para a ficha). Não desenha nada. */}
                 <AberturaPorAviso />
+                {/* Quem agenda os avisos no telemóvel: prazos do efetivo e o
+                    fim do acesso. Aqui dentro porque precisa dos três
+                    contextos ao mesmo tempo — ver o cabeçalho dele. */}
+                <AgendadorAvisos />
                 <Stack
                   screenOptions={{
                     headerShown: false,
@@ -244,13 +263,13 @@ export default function RootLayout() {
                   <Stack.Screen name="terreno/editar/[id]" />
                   <Stack.Screen name="terreno/animais/[id]" options={{ animation: 'slide_from_bottom' }} />
                   <Stack.Screen name="exploracao/equipa/[id]" />
+                  <Stack.Screen name="equipa/historico" />
                   <Stack.Screen name="atividade" />
                   <Stack.Screen name="cliente/[id]" />
                   <Stack.Screen name="conta/editar" />
                   <Stack.Screen name="conta/sincronizacao" />
                   <Stack.Screen name="conta/notificacoes" />
                   <Stack.Screen name="conta/financas" />
-                  <Stack.Screen name="conta/casa" />
                   <Stack.Screen name="conta/aparencia" />
                   <Stack.Screen name="conta/ajuda" />
                   <Stack.Screen name="inspecionar/exploracao/[id]" />

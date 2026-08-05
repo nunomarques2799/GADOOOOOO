@@ -37,7 +37,17 @@ Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
 | 18 | `schema_atividade.sql` | `registo_atividade`: quem alterou o quê e quando, por trigger em animal/evento/terreno/movimento. | 1, 2, 13, 14, **15** |
 | 19 | `schema_apoio.sql` | Escrever ao apoio e reportar problemas de dentro da app; o motor de envio muda para o schema `interno`. | **16** |
 | 20 | `schema_papel_veterinario.sql` | `registarTratamentos` separada de `editarAnimais`; o veterinário deixa de mexer em fichas, terrenos e saídas; contas convidadas não criam explorações. | 2, **13**, 15 |
-| 21 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. | **todos** |
+| 21 | `schema_fotos_localizacao.sql` | `terreno.fotografia` e `exploracao.latitude`/`longitude`: foto do sítio e sede marcada no mapa. | 1 |
+| 22 | `schema_convite_por_papel.sql` | Um código de trabalhador deixa de servir a uma conta de veterinário (e vice-versa): o `resgatar_convite` confere o papel do código com o que a conta disse ser. | **17** |
+| 23 | `schema_agenda.sql` | `evento_agenda`: os eventos que as pessoas marcam (dia, hora opcional, público ou privado). O veterinário não tem agenda. | 1, 2, **20** |
+| 24 | `schema_documentos.sql` | `documento` + o bucket privado `documentos`: guardar faturas e papéis na exploração, por categoria. O veterinário não os vê. | 1, 2, **20** |
+| 25 | `schema_equipa_e_foto.sql` | `superadmin_membros_exploracao()` (quem trabalha em cada exploração) e `perfil.fotografia`. | 3, **15** |
+| 26 | `schema_documento_visibilidade.sql` | `documento.publico`: cada papel nasce à escolha, e o privado é fechado na tabela **e no bucket**. | **24** |
+| 27 | `schema_historico_equipa.sql` | `equipa_historico`: quem saiu da equipa, com que papel, quando entrou e quem o tirou. Escrito por gatilho no `delete` de `membro_exploracao`. | 2, 14, **15** |
+| 28 | `schema_snira.sql` | `evento.comunicado_snira`/`comunicado_em`: marcar o que já foi comunicado ao SNIRA (mortes e saídas, a par do nascimento que o animal já tinha). | 1, **20** |
+| 29 | `schema_reproducao.sql` | `evento.resultado` (gestante/vazia/duvidoso). Os tipos `Cobrição` e `Diagnóstico` não precisam de schema — `evento.tipo` é texto livre. | **28** |
+| 30 | `schema_medicamentos.sql` | Tabela `medicamento` (um lote comprado por linha) e `evento.medicamento_id`/`quantidade`. Existências = comprado − aplicado, calculado e não guardado. | 1, 2, **13**, 29 |
+| 31 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. Tem a lista das que ficam FECHADAS mesmo a quem tem sessão. | **todos** |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 
@@ -87,14 +97,14 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
   devolve `false` para ela, e o veterinário — que já perdeu o `editarAnimais` no
   lado da app — fica sem conseguir registar tratamento nenhum. A app mostra os
   botões (a tabela dela diz que pode) e cada gravação bate contra a RLS.
-- **21 depende de todos, e é por isso que é o último.** O que ele faz é decidir
+- **28 depende de todos, e é por isso que é o último.** O que ele faz é decidir
   quem pode executar cada função `security definer` da base. Se correr a meio,
   as funções que os ficheiros seguintes criarem nascem com o `EXECUTE` que o
   Postgres dá ao PUBLIC — que inclui o `anon`, ou seja, gente sem sessão
   iniciada. Foi exatamente isso que aconteceu com o 4.º (que fazia esta mesma
   limpeza) e deixou cinco funções dos ficheiros 10, 11 e 14 abertas ao `anon`
   em produção durante meses, sem um único erro à vista. **Um ficheiro novo
-  entra sempre antes deste, e o 21 volta a correr a seguir.**
+  entra sempre antes deste, e o `schema_lint.sql` volta a correr a seguir.**
 - **16 não é só SQL.** O envio de email precisa da extensão `pg_net` ligada e
   da chave da API guardada no Vault — os dois passos estão no cabeçalho do
   ficheiro. Sem eles o schema aplica-se na mesma e o trigger cria-se: o que
@@ -102,8 +112,14 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
   `public.notificacao_envio` e email nenhum. Confirmar sempre com
   `select public.testar_notificacao_registo();` depois de aplicar.
   Reparar também que a função de envio **não** se defende por permissões, e sim
-  por uma verificação lá dentro — precisamente porque o 21 lhe devolveria o
+  por uma verificação lá dentro — precisamente porque o 22 lhe devolveria o
   `execute` a `authenticated` a seguir.
+- **27 depende de 15, e é por isso que fica no fim (tirando o linter).** A
+  política de leitura do histórico usa o `role_em()` com a condição do prazo (do
+  15). Com o `role_em()` do 2, um veterinário cujo acesso já caiu continuava a
+  poder ver quem entrou e saiu da equipa daquela exploração. Ele guarda também
+  o NOME de quem sai, e é o único sítio da base onde um nome fica copiado fora
+  do `perfil` — daí trazer o gatilho que o limpa quando a conta é apagada.
 - **11 depende de 10.** Ambos substituem o trigger `handle_new_exploracao`. O
   11 reescreve-o a herdar as DUAS opções (finanças e casa); aplicá-lo antes do
   10 fazia o 10 sobrepor-se-lhe e as explorações novas nasciam sem a casa
@@ -121,7 +137,7 @@ powershell scripts/gerar-schema-completo.ps1
 ```
 
 Isso gera `supabase/_completo.sql` com os ficheiros do `ordem.txt` pela ordem
-certa (são 21 à data desta linha, mas quem manda é o `ordem.txt`). Colar
+certa (são 28 à data desta linha, mas quem manda é o `ordem.txt`). Colar
 **tudo de uma vez** no *SQL Editor* → *Run*.
 
 Colar tudo junto é mais seguro do que ficheiro a ficheiro, ao contrário do que

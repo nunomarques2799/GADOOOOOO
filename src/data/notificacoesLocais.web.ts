@@ -8,6 +8,7 @@
  */
 
 import type { Preferencias } from './notificacoes';
+import type { AcessoComPrazo } from './notificacoesPlano';
 import type { Alerta } from './types';
 
 export const suportaNotificacoes = false;
@@ -20,7 +21,11 @@ export async function pedirPermissao(): Promise<boolean> {
   return false;
 }
 
-export async function agendar(_alertas: Alerta[], _p: Preferencias): Promise<number> {
+export async function agendar(
+  _alertas: Alerta[],
+  _p: Preferencias,
+  _acessos: AcessoComPrazo[] = [],
+): Promise<number> {
   return 0;
 }
 

@@ -16,8 +16,10 @@ const categoriaIcone: Record<Alerta['categoria'], IconName> = {
   identificacao: 'tag-outline',
   snira: 'cloud-upload-outline',
   parto: 'baby-bottle-outline',
+  reproducao: 'heart-pulse',
   medicamento: 'medical-bag',
   vacinacao: 'needle',
+  existencias: 'package-variant-closed',
 };
 
 function prazoLabel(dias?: number): string {

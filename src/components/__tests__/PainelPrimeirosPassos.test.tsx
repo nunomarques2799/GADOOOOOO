@@ -137,7 +137,6 @@ describe('painel de primeiros passos', () => {
     const t = textos(r);
     expect(t).toContain('SE QUISER — NÃO É PRECISO');
     expect(t).toContain('Ligar a gestão do dinheiro');
-    expect(t).toContain('Numerar os animais por casa');
     // Continua a contar 3: os feitios à escolha não fazem o guia crescer.
     // O número vem num nó de texto próprio, daí os espaços.
     expect(t).toMatch(/0\s+de\s+3\s+feito/);

@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, SectionList, View } from 'react-native';
@@ -11,7 +12,7 @@ import { agruparTerrenosPorExploracao, emLinhas } from '@/data/terrenos';
 import type { Terreno } from '@/data/types';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
-import { colors, layout, spacing } from '@/theme';
+import { colors, layout, radii, spacing } from '@/theme';
 
 /**
  * Todos os terrenos, de todas as explorações, num sítio só — mas separados por
@@ -268,7 +269,15 @@ function TerrenoRow({
           padding: spacing.md,
           gap: spacing.sm,
         }}>
-        <IconBadge name={meta.icon} color={meta.cor} background={colors.primaryTint} size={52} iconSize={28} />
+        {terreno.fotografia ? (
+          <Image
+            source={{ uri: terreno.fotografia }}
+            style={{ width: 52, height: 52, borderRadius: radii.md }}
+            contentFit="cover"
+          />
+        ) : (
+          <IconBadge name={meta.icon} color={meta.cor} background={colors.primaryTint} size={52} iconSize={28} />
+        )}
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <Text variant="h3" numberOfLines={1} style={{ flexShrink: 1 }}>

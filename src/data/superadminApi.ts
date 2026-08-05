@@ -5,8 +5,18 @@
  *   (b) evitamos permissões complexas nas policies das views.
  */
 
+import type { PermissoesMembro } from './permissoes';
 import { supabase } from './supabase';
-import type { Animal, Especie, Evento, EventoTipo, Sexo, Terreno, TipoTerreno } from './types';
+import type {
+  Animal,
+  Especie,
+  Evento,
+  EventoTipo,
+  RoleMembro,
+  Sexo,
+  Terreno,
+  TipoTerreno,
+} from './types';
 
 export type EstadoSubscricao = 'trial' | 'ativa' | 'atrasada' | 'cancelada';
 export type EstadoCliente = 'pendente' | 'ativo';
@@ -36,6 +46,25 @@ export interface ExploracaoResumo {
   localizacao?: string;
   nTerrenos: number;
   nAnimais: number;
+}
+
+/**
+ * Uma pessoa da equipa de uma exploração, à vista do superadmin.
+ *
+ * Traz o email, que a app não mostra em mais lado nenhum: é por ele que o
+ * superadmin identifica a conta quando o criador telefona a dizer que alguém
+ * não consegue entrar.
+ */
+export interface MembroDaExploracao {
+  membroId: string;
+  userId: string;
+  nome: string;
+  email: string;
+  role: RoleMembro;
+  criadoEm?: string;
+  /** Ausente = sem prazo. Já passado = o acesso terminou. */
+  expiraEm?: string;
+  permissoes?: PermissoesMembro;
 }
 
 export interface EventoHistorico {
@@ -134,6 +163,42 @@ export async function listarExploracoesDoCliente(userId: string): Promise<Explor
     localizacao: r.localizacao ?? undefined,
     nTerrenos: num(r.n_terrenos),
     nAnimais: num(r.n_animais),
+  }));
+}
+
+/**
+ * Quem trabalha numa exploração. Traz TAMBÉM os vínculos com o prazo esgotado —
+ * o painel esbate-os. É a informação que responde à pergunta que se faz de
+ * facto ("porque é que ele não consegue registar nada?"), e filtrá-los aqui
+ * dava uma lista onde o veterinário de ontem simplesmente não existe.
+ */
+export async function listarMembrosDaExploracao(
+  expId: string,
+): Promise<MembroDaExploracao[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc('superadmin_membros_exploracao', {
+    exp_id: expId,
+  });
+  if (error) throw new Error(error.message);
+  type Row = {
+    membro_id: string;
+    user_id: string;
+    nome: string;
+    email: string;
+    role: RoleMembro;
+    criado_em?: string | null;
+    expira_em?: string | null;
+    permissoes?: Record<string, unknown> | null;
+  };
+  return ((data ?? []) as Row[]).map((r) => ({
+    membroId: r.membro_id,
+    userId: r.user_id,
+    nome: r.nome,
+    email: r.email,
+    role: r.role,
+    criadoEm: r.criado_em ?? undefined,
+    expiraEm: r.expira_em ?? undefined,
+    permissoes: (r.permissoes as PermissoesMembro | null) ?? undefined,
   }));
 }
 

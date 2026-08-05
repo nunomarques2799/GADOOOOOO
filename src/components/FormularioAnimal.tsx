@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { FotoAnimal } from '@/components/FotoAnimal';
+import { SeletorFoto } from '@/components/SeletorFoto';
 import {
   Button,
   CampoData,
@@ -106,7 +106,6 @@ export function FormularioAnimal({
   const [raca, setRaca] = useState<string | undefined>(animal?.raca);
   const [corPelagem, setCorPelagem] = useState<string | undefined>(animal?.corPelagem);
   const [finalidade, setFinalidade] = useState<Finalidade | undefined>(animal?.finalidade);
-  const [casa, setCasa] = useState<string | undefined>(animal?.casa);
   const [numeroCasa, setNumeroCasa] = useState(animal?.numeroCasa ?? '');
   const [exploracaoId, setExploracaoId] = useState(
     animal?.exploracaoId ?? exploracaoInicial ?? exploracoes[0]?.id ?? '',
@@ -153,19 +152,6 @@ export function FormularioAnimal({
     () => opcoesComUsadas(coresDe(especie), animais.filter((a) => a.especie === especie).map((a) => a.corPelagem)),
     [especie, animais],
   );
-  // As casas não têm lista curada — nascem todas do que o criador escreveu.
-  const opcoesCasa = useMemo(
-    () => opcoesComUsadas([], animais.map((a) => a.casa)),
-    [animais],
-  );
-
-  // O interruptor vive na conta (ver `casaAtiva`), mas um animal que já tenha
-  // casa preenchida mostra sempre os campos: desligar a opção não pode fazer
-  // desaparecer do formulário um dado que está gravado — pareceria perdido, e
-  // ao guardar de novo perdia-se mesmo.
-  const casaLigada = exploracoes.some((e) => e.casaAtiva);
-  const mostrarCasa = casaLigada || !!animal?.casa || !!animal?.numeroCasa;
-
   const dataManualIso = dataManual.trim() ? parseDataPt(dataManual) : null;
   const dataManualInvalida = dataManual.trim().length > 0 && !dataManualIso;
   const dataNascimento = dataManualIso ?? isoDaysAgo(diasNasc ?? 0);
@@ -267,7 +253,6 @@ export function FormularioAnimal({
         // A finalidade é só de bovinos: mudar a espécie depois de a escolher
         // não pode deixar para trás um valor que a ficha já não mostra.
         finalidade: especie === 'Bovino' ? finalidade : undefined,
-        casa: casa?.trim() || undefined,
         numeroCasa: numeroCasa.trim() || undefined,
         comunicadoSnira: temBrinco ? sniraComunicado : undefined,
         dataIdentificacao: temBrinco
@@ -326,6 +311,32 @@ export function FormularioAnimal({
     );
   }
 
+  /**
+   * Um registo eliminado não se altera.
+   *
+   * Eliminar quer dizer "isto foi criado por engano": o registo fica guardado
+   * com o dia e o nome de quem o tirou da lista, e é isso que o torna uma
+   * auditoria. Deixá-lo editar-se depois disso fazia da auditoria uma folha
+   * em branco — e devolvia à árvore genealógica e aos alertas um animal que
+   * alguém já disse não existir. Falecidos e vendidos continuam a editar-se:
+   * esses existiram, e corrigir-lhes a ficha é trabalho normal.
+   *
+   * O botão que trazia aqui já não aparece na ficha, mas a rota existe e um
+   * link guardado chega cá.
+   */
+  if (animal?.estado === 'eliminado') {
+    return (
+      <EcraComTeclado>
+        <Header title="Animal eliminado" />
+        <EmptyState
+          icon="trash-can-outline"
+          title="Este registo já não se altera"
+          message="O animal foi eliminado da lista, e o registo fica como está — com o dia e o nome de quem o eliminou. Pode vê-lo no Histórico do efetivo."
+        />
+      </EcraComTeclado>
+    );
+  }
+
   // A ficha do animal é de quem tem o efetivo a cargo. Ao veterinário, que
   // regista tratamentos e não corrige fichas, os botões que trazem aqui já não
   // aparecem — mas a rota existe, e um link guardado ou o botão de voltar do
@@ -363,7 +374,12 @@ export function FormularioAnimal({
 
         {/* Fotografia — o rosto do animal, para se reconhecer de relance na
             lista. A silhueta segue a espécie escolhida. */}
-        <FotoAnimal foto={foto} onMudar={setFoto} icone={especieMeta[especie].icon} />
+        <SeletorFoto
+          foto={foto}
+          onMudar={setFoto}
+          icone={especieMeta[especie].icon}
+          assunto="do animal"
+        />
 
         {/* Espécie */}
         <Field label="Espécie" obrigatorio>
@@ -601,38 +617,23 @@ export function FormularioAnimal({
           />
         </Field>
 
-        {/* Casa e número — só com o registo por casa ligado nas Definições, ou
-            se este animal já os tiver (desligar esconde o que falta preencher,
-            nunca o que já está escrito). */}
-        {mostrarCasa ? (
-          <Field label="Casa e número" opcional>
-            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-              <View style={{ flex: 2 }}>
-                <SeletorOpcao
-                  titulo="Casa"
-                  valor={casa}
-                  opcoes={opcoesCasa}
-                  onEscolher={setCasa}
-                  placeholder="Casa"
-                  icon="home-outline"
-                  rotuloAdicionar="Usar a casa"
-                  normalizar={normalizar}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <TextField
-                  value={numeroCasa}
-                  onChangeText={setNumeroCasa}
-                  placeholder="Nº"
-                  icon="numeric"
-                />
-              </View>
-            </View>
-            <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-              O registo tradicional por casa, a par do brinco.
-            </Text>
-          </Field>
-        ) : null}
+        {/* Número do animal na exploração. Está sempre aqui e é sempre
+            opcional: era um par de campos ("casa" e "número") atrás de um
+            interruptor nas Definições, e o nome da casa não acrescentava nada
+            a quem numera o gado de um a duzentos. Quem não numera deixa o
+            campo vazio e não perde nada por ele estar à vista. */}
+        <Field label="Número" opcional>
+          <TextField
+            value={numeroCasa}
+            onChangeText={setNumeroCasa}
+            placeholder="Ex: 12"
+            icon="numeric"
+          />
+          <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
+            O número por que o animal é conhecido na exploração. Anda a par do
+            brinco, não em vez dele.
+          </Text>
+        </Field>
 
         {/* Exploração. Com uma só, o campo era um chip aceso que não se podia
             apagar nem trocar: um passo a mais num formulário já comprido, a

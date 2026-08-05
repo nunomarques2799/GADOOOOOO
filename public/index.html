@@ -57,6 +57,26 @@
         height: 100%;
         flex: 1;
       }
+      /*
+        O retângulo à volta do campo em que se acabou de tocar.
+
+        Não é da app: é o anel de foco do Chromium (`-webkit-focus-ring-color`,
+        que no Windows segue a cor de destaque do sistema — daí aparecer laranja
+        numa app roxa). Nos campos de texto o Chromium desenha-o mesmo quando o
+        foco veio do RATO, porque a seguir espera-se que se escreva — por isso
+        aparece a cada clique, e ficava um retângulo estranho por dentro da
+        moldura que o campo já tem.
+
+        Só nos campos de escrita: os botões e as ligações mantêm o anel, que é o
+        que permite navegar a app pelo teclado sem se perder onde se está. Os
+        campos não precisam dele — têm moldura própria, e o cursor a piscar diz
+        onde está o foco.
+      */
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none;
+      }
     </style>
 
     <script>

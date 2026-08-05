@@ -22,6 +22,7 @@ export {
 export type { Familia, Paleta, PaletaId, TokensPaleta } from './paletas';
 
 // `./preferencia` fica DE FORA a propósito: puxa o armazenamento (expo-sqlite)
-// atrás de si, e `@/theme` é importado por praticamente todos os módulos,
-// incluindo os que correm nos testes. Quem precisa de gravar a escolha importa
-// `@/theme/preferencia` diretamente — são dois ficheiros ao todo.
+// e o cliente Supabase (a escolha viaja na conta) atrás de si, e `@/theme` é
+// importado por praticamente todos os módulos, incluindo os que correm nos
+// testes. Quem precisa de gravar a escolha importa `@/theme/preferencia`
+// diretamente — são dois ficheiros ao todo.

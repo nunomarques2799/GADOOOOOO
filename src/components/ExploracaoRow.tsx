@@ -1,10 +1,11 @@
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 
 import { Card, Icon, IconBadge, Text } from '@/components/ui';
 import { useGado } from '@/data/store';
 import type { Exploracao } from '@/data/types';
-import { colors, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 
 export function ExploracaoRow({ exploracao }: { exploracao: Exploracao }) {
   const router = useRouter();
@@ -20,7 +21,15 @@ export function ExploracaoRow({ exploracao }: { exploracao: Exploracao }) {
       padded={false}>
       <View style={{ padding: spacing.md, gap: spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <IconBadge name="barn" color={colors.primary} background={colors.primaryTint} size={52} iconSize={30} />
+          {exploracao.fotografia ? (
+            <Image
+              source={{ uri: exploracao.fotografia }}
+              style={{ width: 52, height: 52, borderRadius: radii.md }}
+              contentFit="cover"
+            />
+          ) : (
+            <IconBadge name="barn" color={colors.primary} background={colors.primaryTint} size={52} iconSize={30} />
+          )}
           <View style={{ flex: 1 }}>
             <Text variant="h3" numberOfLines={1}>
               {exploracao.nome}

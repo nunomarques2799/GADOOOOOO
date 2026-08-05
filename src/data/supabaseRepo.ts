@@ -22,9 +22,12 @@ import type {
   EventoTipo,
   Finalidade,
   Exploracao,
+  Medicamento,
   Movimento,
+  ResultadoDiagnostico,
   Sexo,
   Terreno,
+  TipoMedicamento,
   TipoTerreno,
 } from './types';
 
@@ -58,6 +61,8 @@ type ExploracaoRow = ComUpdatedAt & {
   marca_exploracao: string;
   nif_detentor: string;
   localizacao?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   fotografia?: string | null;
   financas_ativas?: boolean | null;
   casa_ativa?: boolean | null;
@@ -72,6 +77,7 @@ type TerrenoRow = ComUpdatedAt & {
   longitude?: number | null;
   area?: number | null;
   tipo?: string | null;
+  fotografia?: string | null;
 };
 
 type AnimalRow = ComUpdatedAt & {
@@ -111,6 +117,28 @@ type EventoRow = ComUpdatedAt & {
   descricao: string;
   detalhe?: string | null;
   valor?: number | null;
+  resultado?: string | null;
+  medicamento_id?: string | null;
+  quantidade?: number | null;
+  comunicado_snira?: boolean | null;
+  comunicado_em?: string | null;
+};
+
+type MedicamentoRow = ComUpdatedAt & {
+  id: string;
+  exploracao_id: string;
+  nome: string;
+  tipo: string;
+  lote?: string | null;
+  validade?: string | null;
+  quantidade: number;
+  unidade: string;
+  intervalo_seguranca_dias: number;
+  fornecedor?: string | null;
+  custo?: number | null;
+  data_compra: string;
+  notas?: string | null;
+  criado_por?: string | null;
 };
 
 type MovimentoRow = ComUpdatedAt & {
@@ -138,6 +166,8 @@ const toExploracao = (r: ExploracaoRow): Exploracao => ({
   marcaExploracao: r.marca_exploracao,
   nifDetentor: r.nif_detentor,
   localizacao: r.localizacao ?? undefined,
+  latitude: r.latitude ?? undefined,
+  longitude: r.longitude ?? undefined,
   fotografia: r.fotografia ?? undefined,
   financasAtivas: r.financas_ativas ?? false,
   casaAtiva: r.casa_ativa ?? false,
@@ -153,6 +183,7 @@ const toTerreno = (r: TerrenoRow): Terreno => ({
   longitude: r.longitude ?? undefined,
   area: r.area ?? undefined,
   tipo: (r.tipo as TipoTerreno) ?? undefined,
+  fotografia: r.fotografia ?? undefined,
 });
 
 const toAnimal = (r: AnimalRow): Animal => ({
@@ -194,6 +225,31 @@ const toEvento = (r: EventoRow): Evento => ({
   descricao: r.descricao,
   detalhe: r.detalhe ?? undefined,
   valor: r.valor ?? undefined,
+  resultado: (r.resultado as ResultadoDiagnostico | null) ?? undefined,
+  medicamentoId: r.medicamento_id ?? undefined,
+  quantidade: r.quantidade == null ? undefined : Number(r.quantidade),
+  // `?? undefined` e não `?? false`: o nulo quer dizer "não é comunicável",
+  // que é outra coisa que não "falta comunicar" (ver `schema_snira.sql`).
+  comunicadoSnira: r.comunicado_snira ?? undefined,
+  comunicadoEm: r.comunicado_em ?? undefined,
+});
+
+const toMedicamento = (r: MedicamentoRow): Medicamento => ({
+  atualizadoEm: r.updated_at ?? undefined,
+  id: r.id,
+  exploracaoId: r.exploracao_id,
+  nome: r.nome,
+  tipo: r.tipo as TipoMedicamento,
+  lote: r.lote ?? undefined,
+  validade: r.validade ?? undefined,
+  quantidade: Number(r.quantidade),
+  unidade: r.unidade,
+  intervaloSegurancaDias: Number(r.intervalo_seguranca_dias),
+  fornecedor: r.fornecedor ?? undefined,
+  custo: r.custo == null ? undefined : Number(r.custo),
+  dataCompra: r.data_compra,
+  notas: r.notas ?? undefined,
+  criadoPor: r.criado_por ?? undefined,
 });
 
 const toMovimento = (r: MovimentoRow): Movimento => ({
@@ -220,6 +276,8 @@ const exploracaoPayload = (e: Exploracao) => ({
   marca_exploracao: e.marcaExploracao,
   nif_detentor: e.nifDetentor,
   localizacao: e.localizacao ?? null,
+  latitude: e.latitude ?? null,
+  longitude: e.longitude ?? null,
   fotografia: e.fotografia ?? null,
   // `financas_ativas` e `casa_ativa` não vão no payload de propósito: são do
   // servidor, escritas só pelos RPC respetivos. Incluí-las aqui fazia com que
@@ -234,12 +292,11 @@ export async function definirFinancasAtivas(ativas: boolean): Promise<string | n
   return error ? traduzErroServidor(error.message) : null;
 }
 
-/** Liga ou desliga o registo por casa/número em toda a conta. Erro ou null. */
-export async function definirCasaAtiva(ativa: boolean): Promise<string | null> {
-  if (!supabase) return null;
-  const { error } = await supabase.rpc('definir_casa_ativa', { ativa });
-  return error ? traduzErroServidor(error.message) : null;
-}
+// O `definir_casa_ativa` era aqui. O interruptor do registo por casa deixou de
+// existir na app: o número do animal é agora um campo opcional sempre visível
+// (ver `FormularioAnimal`). O RPC e a coluna `casa_ativa` ficam no servidor,
+// intocados — apagar colunas de uma base em uso não se faz por causa de um
+// ecrã que saiu.
 
 const terrenoPayload = (t: Terreno) => ({
   id: t.id,
@@ -250,6 +307,7 @@ const terrenoPayload = (t: Terreno) => ({
   longitude: t.longitude ?? null,
   area: t.area ?? null,
   tipo: t.tipo ?? null,
+  fotografia: t.fotografia ?? null,
 });
 
 const animalPayload = (a: Animal) => ({
@@ -287,6 +345,32 @@ const eventoPayload = (e: Evento) => ({
   descricao: e.descricao,
   detalhe: e.detalhe ?? null,
   valor: e.valor ?? null,
+  resultado: e.resultado ?? null,
+  medicamento_id: e.medicamentoId ?? null,
+  quantidade: e.quantidade ?? null,
+  comunicado_snira: e.comunicadoSnira ?? null,
+  // `comunicado_em` não vai no payload: é do servidor, escrito pelo gatilho
+  // `evento_comunicacao`. Mandá-lo daqui deixava a prova de cumprimento de um
+  // prazo legal à mercê do relógio do telemóvel.
+});
+
+const medicamentoPayload = (m: Medicamento) => ({
+  id: m.id,
+  exploracao_id: m.exploracaoId,
+  nome: m.nome,
+  tipo: m.tipo,
+  lote: m.lote ?? null,
+  validade: m.validade ?? null,
+  quantidade: m.quantidade,
+  unidade: m.unidade,
+  intervalo_seguranca_dias: m.intervaloSegurancaDias,
+  fornecedor: m.fornecedor ?? null,
+  custo: m.custo ?? null,
+  data_compra: diaIso(m.dataCompra),
+  notas: m.notas ?? null,
+  // `criado_por` fica ao servidor (default `auth.uid()`), como no `movimento`:
+  // a política de insert exige que seja o próprio, e deixá-lo ao cliente abria
+  // a porta a um aparelho desatualizado dar entrada de stock em nome de outro.
 });
 
 const movimentoPayload = (m: Movimento) => ({
@@ -329,13 +413,21 @@ export type Snapshot = {
   animais: Animal[];
   eventos: Evento[];
   movimentos: Movimento[];
+  medicamentos: Medicamento[];
 };
 
 export async function carregarTudoSupabase(): Promise<Snapshot> {
   if (!supabase) {
-    return { exploracoes: [], terrenos: [], animais: [], eventos: [], movimentos: [] };
+    return {
+      exploracoes: [],
+      terrenos: [],
+      animais: [],
+      eventos: [],
+      movimentos: [],
+      medicamentos: [],
+    };
   }
-  const [expRes, terRes, aniRes, evtRes, movRes] = await Promise.all([
+  const [expRes, terRes, aniRes, evtRes, movRes, medRes] = await Promise.all([
     supabase.from('exploracao').select('*').order('nome'),
     supabase.from('terreno').select('*').order('nome'),
     supabase.from('animal').select('*'),
@@ -343,6 +435,7 @@ export async function carregarTudoSupabase(): Promise<Snapshot> {
     // A RLS decide o que vem: o dono recebe a exploração toda, o trabalhador só
     // o que ele próprio lançou, o veterinário nada. Não é preciso filtrar aqui.
     supabase.from('movimento').select('*').order('data', { ascending: false }),
+    supabase.from('medicamento').select('*').order('data_compra', { ascending: false }),
   ]);
   // Falhar em vez de devolver listas vazias: sem esta guarda, um erro de rede
   // (estar offline) devolveria tudo vazio e apagaria a cache local. Quem chama
@@ -362,12 +455,26 @@ export async function carregarTudoSupabase(): Promise<Snapshot> {
   const movimentos = movRes.error
     ? []
     : ((movRes.data ?? []) as MovimentoRow[]).map(toMovimento);
+
+  // Mesma exceção, mesma razão: a `medicamento` nasce no
+  // `supabase/schema_medicamentos.sql`, aplicado à mão. Entre a app nova chegar
+  // ao telemóvel e o SQL ser corrido há uma janela em que a tabela não existe,
+  // e sem isto o erro derrubava a leitura TODA — a app ficava com ar de estar
+  // offline a toda a gente até alguém se lembrar do script.
+  if (medRes.error && !tabelaInexistente(medRes.error)) {
+    throw new Error(medRes.error.message);
+  }
+  const medicamentos = medRes.error
+    ? []
+    : ((medRes.data ?? []) as MedicamentoRow[]).map(toMedicamento);
+
   return {
     exploracoes: ((expRes.data ?? []) as ExploracaoRow[]).map(toExploracao),
     terrenos: ((terRes.data ?? []) as TerrenoRow[]).map(toTerreno),
     animais: ((aniRes.data ?? []) as AnimalRow[]).map(toAnimal),
     eventos: ((evtRes.data ?? []) as EventoRow[]).map(toEvento),
     movimentos,
+    medicamentos,
   };
 }
 
@@ -408,7 +515,7 @@ export async function explicarRecusa(msg: string): Promise<string> {
 }
 
 async function gravarComVersao(
-  tabela: 'exploracao' | 'terreno' | 'animal' | 'evento' | 'movimento',
+  tabela: 'exploracao' | 'terreno' | 'animal' | 'evento' | 'movimento' | 'medicamento',
   id: string,
   versaoConhecida: string | undefined,
   payload: Record<string, unknown>,
@@ -543,5 +650,15 @@ export async function upsertMovimentoSupabase(m: Movimento): Promise<string | nu
 export async function eliminarMovimentoSupabase(id: string): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.from('movimento').delete().eq('id', id);
+  return error ? traduzErroServidor(error.message) : null;
+}
+
+export async function upsertMedicamentoSupabase(m: Medicamento): Promise<string | null> {
+  return gravarComVersao('medicamento', m.id, m.atualizadoEm, medicamentoPayload(m));
+}
+
+export async function eliminarMedicamentoSupabase(id: string): Promise<string | null> {
+  if (!supabase) return null;
+  const { error } = await supabase.from('medicamento').delete().eq('id', id);
   return error ? traduzErroServidor(error.message) : null;
 }

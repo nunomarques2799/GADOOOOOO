@@ -504,6 +504,18 @@ export default function FinancasScreen() {
                     lancamento={l}
                     nome={l.animalId ? nomeAnimal(l.animalId) : l.categoria}
                     divider={i < visiveis.length - 1}
+                    // Um lançamento de Finanças abre para corrigir; o custo de
+                    // uma vacina não — esse pertence ao tratamento, e mexe-se
+                    // na ficha do animal, onde está o resto do registo. Sem
+                    // esta distinção, tocar num levava a um ecrã que não sabe
+                    // editar eventos.
+                    onPress={
+                      l.origem === 'movimento'
+                        ? () => router.push(`/movimento/editar/${l.id}`)
+                        : l.animalId
+                          ? () => router.push(`/animal/${l.animalId}`)
+                          : undefined
+                    }
                   />
                 ))}
               </View>
@@ -909,13 +921,15 @@ function MovimentoRow({
   lancamento,
   nome,
   divider,
+  onPress,
 }: {
   lancamento: Lancamento;
   nome: string;
   divider: boolean;
+  onPress?: () => void;
 }) {
   const receita = lancamento.direcao === 'receita';
-  return (
+  const conteudo = (
     <View
       style={{
         flexDirection: 'row',
@@ -951,6 +965,18 @@ function MovimentoRow({
       <Text variant="bodyStrong" color={receita ? colors.success : colors.danger}>
         {rotuloMovimento(lancamento)}
       </Text>
+      {onPress ? <Icon name="chevron-right" size="sm" color={colors.textMuted} /> : null}
     </View>
+  );
+
+  if (!onPress) return conteudo;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${lancamento.descricao || nome}, ${rotuloMovimento(lancamento)}. Abrir para corrigir.`}
+      style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
+      {conteudo}
+    </Pressable>
   );
 }

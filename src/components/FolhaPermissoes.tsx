@@ -2,7 +2,19 @@ import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Card, Chip, Icon, type IconName, Text } from '@/components/ui';
+import { Button, CampoData, CampoHora, Card, Chip, Icon, type IconName, Text } from '@/components/ui';
+import {
+  acessoTerminou,
+  combinarDataHora,
+  DURACOES_ACESSO,
+  HORA_OMISSAO,
+  HORAS_SUGERIDAS,
+  perguntaDePrazo,
+  problemaComFim,
+  rotuloPrazo,
+} from '@/data/acessoTemporario';
+import { confirmar } from '@/data/avisos';
+import { formatDataCurta, formatDataHora, parseDataPt } from '@/data/helpers';
 import {
   exigeFinancasAtivas,
   explicacaoCapacidade,
@@ -29,6 +41,11 @@ const ICONE_CAPACIDADE: Record<Capacidade, IconName> = {
   registarTratamentos: 'medical-bag',
   eliminarAnimais: 'delete-outline',
   registarSaida: 'exit-run',
+  // Nunca chega a aparecer nesta folha (o `marcarEventos` está fora das
+  // `CAPACIDADES_GERIVEIS`), mas a tabela é exaustiva de propósito: é ela que
+  // obriga a decidir um ícone para cada capacidade nova em vez de a deixar
+  // aparecer um dia sem nenhum.
+  marcarEventos: 'calendar-plus',
   registarDespesa: 'cash-minus',
   registarReceita: 'cash-plus',
   registarCustoTratamento: 'needle',
@@ -53,6 +70,8 @@ export function FolhaPermissoes({
   aberto,
   onFechar,
   onGuardar,
+  onMudarPrazo,
+  onMarcarFim,
   financasAtivasEm,
   onAbrirEquipa,
   onVerAtividade,
@@ -62,6 +81,13 @@ export function FolhaPermissoes({
   onFechar: () => void;
   /** Grava e devolve a razão da recusa, ou `null` se ficou gravado. */
   onGuardar: (membroId: string, permissoes: PermissoesMembro) => Promise<string | null>;
+  /**
+   * Dá mais tempo, tira o prazo ou termina o acesso já. `horas` a `null` tira o
+   * prazo; `0` termina-o de imediato. Devolve a razão da recusa, ou `null`.
+   */
+  onMudarPrazo: (membroId: string, horas: number | null) => Promise<string | null>;
+  /** Marca a hora exata a que o acesso termina. Devolve a razão da recusa, ou `null`. */
+  onMarcarFim: (membroId: string, fimIso: string) => Promise<string | null>;
   /** A gestão económica está ligada nesta exploração? */
   financasAtivasEm: (exploracaoId: string) => boolean;
   /** Levar ao ecrã da equipa desta exploração (convidar, remover). */
@@ -229,6 +255,18 @@ export function FolhaPermissoes({
               <>
                 <ResumoPapel role={vinculo.role} />
 
+                {/* Quanto tempo esta pessoa ainda cá está. Fica ANTES dos
+                    interruptores de propósito: com o acesso terminado, o que
+                    ela pode alterar é uma pergunta sem consequência nenhuma —
+                    o servidor recusa-lhe tudo na mesma. */}
+                <SeccaoPrazo
+                  vinculo={vinculo}
+                  nome={pessoa.nome}
+                  onMudarPrazo={onMudarPrazo}
+                  onMarcarFim={onMarcarFim}
+                  onErro={setErro}
+                />
+
                 {visiveis.map((l) => (
                   <LinhaCapacidade
                     key={l.capacidade}
@@ -328,6 +366,180 @@ export function FolhaPermissoes({
         </View>
       </View>
     </Modal>
+  );
+}
+
+/**
+ * Até quando esta pessoa tem acesso — e os botões que o mudam.
+ * ------------------------------------------------------------------
+ * Isto vivia só no ecrã da equipa de cada exploração. Para dar mais duas horas
+ * ao veterinário que ainda estava na manga do curral era preciso: abrir a aba
+ * Trabalhadores, ver que ele estava lá, tocar-lhe, ler que o acesso acabava às
+ * 18h, fechar a folha, seguir a ligação para a equipa, encontrá-lo outra vez na
+ * lista e só então carregar num chip. O sítio onde se lê o prazo passa a ser o
+ * sítio onde se lhe mexe.
+ *
+ * Quem manda continua a ser o servidor (`definir_prazo_de_acesso` e
+ * `definir_fim_de_acesso`, ambos a confirmar que quem pede é o dono).
+ */
+function SeccaoPrazo({
+  vinculo,
+  nome,
+  onMudarPrazo,
+  onMarcarFim,
+  onErro,
+}: {
+  vinculo: Vinculo;
+  /** De quem é o prazo — vai na pergunta de confirmação. */
+  nome: string;
+  onMudarPrazo: (membroId: string, horas: number | null) => Promise<string | null>;
+  onMarcarFim: (membroId: string, fimIso: string) => Promise<string | null>;
+  onErro: (razao: string | null) => void;
+}) {
+  const [aMarcar, setAMarcar] = useState(false);
+  const [dia, setDia] = useState(() => formatDataCurta(new Date().toISOString()));
+  const [hora, setHora] = useState(HORA_OMISSAO);
+  const [ocupado, setOcupado] = useState(false);
+
+  const terminou = acessoTerminou(vinculo.expiraEm);
+  const fimEscolhido = combinarDataHora(parseDataPt(dia, { permitirFuturo: true }), hora);
+  const problema = problemaComFim(parseDataPt(dia, { permitirFuturo: true }), hora);
+
+  async function correr(acao: () => Promise<string | null>) {
+    if (ocupado) return;
+    setOcupado(true);
+    onErro(null);
+    const razao = await acao();
+    setOcupado(false);
+    if (razao) onErro(razao);
+    else setAMarcar(false);
+  }
+
+  /**
+   * Mexer no relógio de alguém pergunta primeiro.
+   *
+   * Todos estes controlos são chips do mesmo tamanho, encostados uns aos
+   * outros: "+4 horas" e "Terminar já" ficam a dois centímetros um do outro, e
+   * o segundo fecha a app na cara de quem está a trabalhar. A pergunta diz
+   * SEMPRE a hora a que o acesso passa a acabar — e avisa quando as horas
+   * escolhidas o encurtam, que é o engano que ninguém apanhava (ver
+   * `perguntaDePrazo`).
+   */
+  function pedirEMudar(horas: number | null) {
+    if (ocupado) return;
+    const p = perguntaDePrazo(horas, { nome, expiraEm: vinculo.expiraEm }, formatDataHora);
+    confirmar(
+      p.titulo,
+      p.mensagem,
+      () => void correr(() => onMudarPrazo(vinculo.membroId, horas)),
+      { rotuloConfirmar: p.rotuloConfirmar, destrutivo: p.destrutivo },
+    );
+  }
+
+  return (
+    <Card style={{ marginBottom: spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <Icon
+          name={terminou ? 'clock-alert-outline' : vinculo.expiraEm ? 'clock-outline' : 'infinity'}
+          size="md"
+          color={terminou ? colors.danger : vinculo.expiraEm ? colors.warning : colors.textSecondary}
+        />
+        <View style={{ flex: 1 }}>
+          <Text variant="bodyStrong">Tempo de acesso</Text>
+          <Text
+            variant="secondary"
+            color={terminou ? colors.danger : colors.textSecondary}>
+            {rotuloPrazo(vinculo.expiraEm, formatDataHora)}
+          </Text>
+        </View>
+      </View>
+
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: spacing.xs,
+          marginTop: spacing.sm,
+        }}>
+        {/* Quatro durações e não as seis: as compridas ("1 mês") pertencem ao
+            convite, onde se decide o género de acesso. Aqui a pergunta é outra
+            — "ele ainda está cá, quanto lhe dou a mais?" */}
+        {/* Sem o "+": o servidor NÃO soma — marca este tempo a contar de agora
+            (ver `perguntaDePrazo`). Um "+4 horas" a quem tem 8 pela frente
+            deixava-o com 4, e o sinal de mais dizia o contrário do que
+            acontecia. */}
+        {DURACOES_ACESSO.slice(0, 4).map((d) => (
+          <Chip
+            key={d.horas}
+            label={terminou ? `Reabrir ${d.label}` : d.label}
+            onPress={() => pedirEMudar(d.horas)}
+          />
+        ))}
+        <Chip
+          label="Até dia e hora"
+          icon="calendar-clock"
+          selected={aMarcar}
+          onPress={() => {
+            onErro(null);
+            setAMarcar((v) => !v);
+          }}
+        />
+        {/* "Terminar já" e "Tirar o prazo" são o contrário uma da outra e são
+            fáceis de trocar — daí os rótulos dizerem o que acontece e não o que
+            se mexe. A primeira fecha a porta agora; a segunda deixa-a aberta
+            para sempre.
+
+            "Terminar já" aparece a QUALQUER pessoa que não seja dona, tenha ela
+            prazo ou não. Enquanto só aparecia a quem já tinha um, o veterinário
+            convidado sem prazo — que é o que acontece quando se escolhe "sem
+            prazo" no convite — não se conseguia cortar de todo: era preciso
+            removê-lo da equipa, o que apaga o vínculo e a folha de permissões
+            dele com ele. Fechar a porta e apagar a fechadura não são a mesma
+            coisa. */}
+        {!terminou ? (
+          <Chip label="Terminar já" icon="clock-remove-outline" onPress={() => pedirEMudar(0)} />
+        ) : null}
+        {vinculo.expiraEm ? (
+          <Chip label="Tirar o prazo" icon="infinity" onPress={() => pedirEMudar(null)} />
+        ) : null}
+      </View>
+
+      {aMarcar ? (
+        <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
+          <CampoData
+            value={dia}
+            onChangeText={setDia}
+            placeholder="dd/mm/aaaa"
+            permitirFuturo
+            rotuloCalendario="Dia em que o acesso termina"
+          />
+          <CampoHora value={hora} onChangeText={setHora} rotuloRelogio="Hora a que o acesso termina" />
+          <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
+            {HORAS_SUGERIDAS.map((h) => (
+              <Chip key={h} label={h} selected={hora === h} onPress={() => setHora(h)} />
+            ))}
+          </View>
+          {/* O que ficou escolhido, por extenso: reler os dígitos que se acabou
+              de escrever é ler o mesmo engano duas vezes. */}
+          <Text variant="secondary" color={problema ? colors.danger : colors.primaryDark}>
+            {problema ?? `Termina a ${formatDataHora(fimEscolhido as string)}.`}
+          </Text>
+          <Button
+            label="Marcar esta hora"
+            icon="calendar-clock"
+            variant="secondary"
+            disabled={!!problema || ocupado}
+            onPress={() => {
+              if (problema || !fimEscolhido) {
+                onErro(problema);
+                return;
+              }
+              void correr(() => onMarcarFim(vinculo.membroId, fimEscolhido));
+            }}
+          />
+        </View>
+      ) : null}
+    </Card>
   );
 }
 

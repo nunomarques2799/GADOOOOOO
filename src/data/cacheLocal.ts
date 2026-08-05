@@ -14,7 +14,7 @@
  */
 
 import { armazenamentoDisponivel, guardar, ler, remover } from './armazenamento';
-import type { Animal, Evento, Exploracao, Movimento, Terreno } from './types';
+import type { Animal, Evento, Exploracao, Medicamento, Movimento, Terreno } from './types';
 
 /** Instantâneo dos dados guardados localmente (mesma forma que o Snapshot). */
 export type DadosGado = {
@@ -23,16 +23,23 @@ export type DadosGado = {
   animais: Animal[];
   eventos: Evento[];
   movimentos: Movimento[];
+  medicamentos: Medicamento[];
 };
 
-export type Entidade = 'exploracao' | 'terreno' | 'animal' | 'evento' | 'movimento';
+export type Entidade =
+  | 'exploracao'
+  | 'terreno'
+  | 'animal'
+  | 'evento'
+  | 'movimento'
+  | 'medicamento';
 
 /** Operação por sincronizar: gravar (upsert) ou eliminar uma entidade. */
 export type OpPendente =
   | {
       op: 'upsert';
       entidade: Entidade;
-      dados: Exploracao | Terreno | Animal | Evento | Movimento;
+      dados: Exploracao | Terreno | Animal | Evento | Movimento | Medicamento;
     }
   | { op: 'delete'; entidade: Entidade; id: string };
 
@@ -145,15 +152,17 @@ export function lerCache(): DadosGado | null {
   try {
     const d = JSON.parse(bruto) as Partial<DadosGado>;
     // Uma cache gravada por uma versão anterior da app não traz as listas que
-    // entretanto nasceram (`movimentos`). Sem estas omissões, o primeiro
-    // arranque depois de atualizar rebentava a ler `.length` de undefined —
-    // e é justamente o arranque em que ainda não houve resposta do servidor.
+    // entretanto nasceram (`movimentos`, `medicamentos`). Sem estas omissões, o
+    // primeiro arranque depois de atualizar rebentava a ler `.length` de
+    // undefined — e é justamente o arranque em que ainda não houve resposta do
+    // servidor.
     return {
       exploracoes: d.exploracoes ?? [],
       terrenos: d.terrenos ?? [],
       animais: d.animais ?? [],
       eventos: d.eventos ?? [],
       movimentos: d.movimentos ?? [],
+      medicamentos: d.medicamentos ?? [],
     };
   } catch {
     return null;
@@ -264,6 +273,7 @@ export function descreverOp(op: OpPendente): string {
     animal: 'Animal',
     evento: 'Evento',
     movimento: 'Movimento',
+    medicamento: 'Medicamento',
   };
   const entidade = nomes[op.entidade];
   if (op.op === 'delete') return `Eliminar ${entidade.toLowerCase()}`;

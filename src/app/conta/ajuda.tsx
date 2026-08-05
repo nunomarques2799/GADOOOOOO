@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ModalMensagemApoio } from '@/components/ModalMensagemApoio';
@@ -168,8 +168,40 @@ export default function AjudaScreen() {
   );
 }
 
+/**
+ * Uma pergunta que se abre.
+ * ------------------------------------------------------------------
+ * A resposta aparecia e desaparecia de um fotograma para o outro, e o ecrã
+ * saltava: quem tinha três perguntas à vista perdia o sítio onde estava a ler.
+ * Agora a resposta CRESCE, com o mesmo movimento de mola do acordeão do
+ * motion.dev — arranca depressa e assenta com um resto de balanço, em vez de
+ * travar a direito. O balanço é o que faz o movimento parecer uma coisa a
+ * abrir-se e não uma caixa a ser esticada.
+ *
+ * A altura da resposta não se sabe de antemão (o texto quebra em mais ou menos
+ * linhas conforme o ecrã e o tamanho da letra do sistema), por isso mede-se no
+ * `onLayout` e anima-se até ela. É também por isso que a animação não pode
+ * passar pelo driver nativo: a altura é uma propriedade de LAYOUT, e o driver
+ * nativo só anima o que não obriga a remedir nada.
+ */
 function Pergunta({ titulo, resposta }: { titulo: string; resposta: string }) {
   const [aberto, setAberto] = useState(false);
+  /** A altura natural da resposta, medida com ela já desenhada. */
+  const [altura, setAltura] = useState(0);
+  const abertura = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(abertura, {
+      toValue: aberto ? 1 : 0,
+      // Uma mola pouco amortecida (ζ ≈ 0,8): passa um nadinha do sítio e volta.
+      // Números maiores no `damping` matam o balanço e dão o "esticar" de antes.
+      stiffness: 250,
+      damping: 26,
+      mass: 1,
+      useNativeDriver: false,
+    }).start();
+  }, [aberto, abertura]);
+
   return (
     <Card style={{ marginBottom: spacing.sm }} padded={false}>
       <Pressable
@@ -190,10 +222,56 @@ function Pergunta({ titulo, resposta }: { titulo: string; resposta: string }) {
         <Text variant="bodyStrong" style={{ flex: 1 }}>
           {titulo}
         </Text>
-        <Icon name={aberto ? 'chevron-up' : 'chevron-down'} size="md" color={colors.textMuted} />
+        {/* Uma seta só, a rodar. Trocar `chevron-down` por `chevron-up` a meio
+            era um salto no meio de um movimento contínuo. */}
+        <Animated.View
+          style={{
+            transform: [
+              {
+                rotate: abertura.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '180deg'],
+                }),
+              },
+            ],
+          }}>
+          <Icon name="chevron-down" size="md" color={colors.textMuted} />
+        </Animated.View>
       </Pressable>
-      {aberto ? (
+
+      <Animated.View
+        style={{
+          overflow: 'hidden',
+          // `extrapolateLeft: 'clamp'` para o balanço do fecho não passar de
+          // zero: uma altura negativa não existe, e o Yoga trata-a como se a
+          // resposta ainda lá estivesse. À direita deixa-se passar de propósito
+          // — é esse excesso que é o balanço.
+          height: abertura.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, altura],
+            extrapolateLeft: 'clamp',
+          }),
+          opacity: abertura.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 1],
+            extrapolate: 'clamp',
+          }),
+          // Fechada, a resposta continua desenhada (é assim que se lhe sabe a
+          // altura) mas está fora do alcance de toda a gente: o leitor de ecrã
+          // não a lê e o dedo não lhe toca. Sem isto, o TalkBack lia as seis
+          // respostas seguidas a quem só abriu uma.
+          //
+          // No `style` e não como propriedade solta: a propriedade está
+          // desaconselhada e enche a consola de avisos.
+          pointerEvents: aberto ? 'auto' : 'none',
+        }}
+        // `aria-hidden` e não os dois primos nativos: é o único dos três que o
+        // React Native traduz para as três plataformas (na web vira mesmo
+        // `aria-hidden`, e no telemóvel o RN converte-o em
+        // `accessibilityElementsHidden` e `importantForAccessibility`).
+        aria-hidden={!aberto}>
         <View
+          onLayout={(e) => setAltura(e.nativeEvent.layout.height)}
           style={{
             paddingHorizontal: spacing.md,
             paddingBottom: spacing.md,
@@ -203,7 +281,7 @@ function Pergunta({ titulo, resposta }: { titulo: string; resposta: string }) {
             {resposta}
           </Text>
         </View>
-      ) : null}
+      </Animated.View>
     </Card>
   );
 }

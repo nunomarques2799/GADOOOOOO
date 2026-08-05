@@ -3,6 +3,7 @@ import { Platform, Pressable, TextInput, View } from 'react-native';
 
 import { colors, radii, sizes, spacing } from '@/theme';
 
+import { estiloBotaoCalendario } from './campoDataEstilo';
 import { Icon } from './Icon';
 import type { CampoDataProps } from './CampoData';
 import { diaIso, formatDataCurta, mascaraDataPt, parseDataPt } from '@/data/helpers';
@@ -59,7 +60,10 @@ export function CampoData({
         borderWidth: 1.5,
         borderColor: colors.border,
         backgroundColor: colors.surface,
-        paddingHorizontal: spacing.md,
+        paddingLeft: spacing.md,
+        // Ver a versão nativa: o botão do calendário encosta aqui e traz o seu
+        // próprio fundo.
+        paddingRight: 5,
       }}>
       <Icon name={icon} size="md" color={colors.textMuted} />
       <TextInput
@@ -76,8 +80,8 @@ export function CampoData({
           accessibilityRole="button"
           accessibilityLabel={rotuloCalendario}
           hitSlop={8}
-          style={({ pressed }) => [{ padding: 4 }, pressed && { opacity: 0.6 }]}>
-          <Icon name="calendar-month" size="md" color={colors.primary} />
+          style={({ pressed }) => [estiloBotaoCalendario(), pressed && { opacity: 0.6 }]}>
+          <Icon name="calendar-month" size="md" color={colors.primaryDark} />
           {/* O input real, encostado ao botão e invisível: é ele que abre o
               calendário do navegador e recebe a escolha. */}
           <input
