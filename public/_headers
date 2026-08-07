@@ -1,0 +1,36 @@
+# Cloudflare Pages — cabeçalhos da APP
+# ---------------------------------------------------------------------------
+# Equivalente aos blocos [[headers]] do `netlify.toml` da raiz. Vive em
+# `public/` porque o `expo export` copia essa pasta tal e qual para o `dist/`,
+# que é o que o Cloudflare publica.
+#
+# NÃO HÁ AQUI UM `_redirects` COM `/* /index.html 200`, ao contrário do que o
+# Netlify obriga a escrever. É de propósito, por duas razões:
+#
+#   1. Partia a app por inteiro. No Cloudflare "os redirecionamentos são sempre
+#      seguidos, exista ou não um ficheiro que corresponda ao pedido" — ao
+#      contrário do Netlify, onde um ficheiro real ganha ao redirecionamento.
+#      Um `/*` devolvia o index.html também para o bundle, para o `sw.js` e para
+#      as fontes: HTML onde o navegador espera JavaScript, e nada arrancava.
+#
+#   2. Não é preciso. Quando o build não tem um `404.html` no topo, o Cloudflare
+#      assume que é uma aplicação de página única e serve o `index.html` em
+#      qualquer caminho — exatamente o que o redirecionamento do Netlify fazia.
+#
+# ⚠️ Daqui sai uma regra que não se pode esquecer: NUNCA acrescentar um
+# `404.html` ao `dist/` da app. No dia em que existir, o encaminhamento morre em
+# silêncio e abrir `/animais` diretamente — ou recarregar lá dentro — passa a
+# dar erro.
+
+# O service worker é o ficheiro que anuncia que existe versão nova. Guardado em
+# cache, a app ficava presa numa versão antiga e nada no ecrã explicaria porquê.
+/sw.js
+  Cache-Control: no-cache
+
+/manifest.json
+  Cache-Control: no-cache
+
+# Estes têm o conteúdo no próprio nome (`...-<hash>.js`): quando o build muda, o
+# nome muda. Por isso podem ficar em cache para sempre.
+/_expo/*
+  Cache-Control: public, max-age=31536000, immutable

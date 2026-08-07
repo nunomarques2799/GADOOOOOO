@@ -1,5 +1,12 @@
 # Publicar e atualizar — como funciona
 
+> ⚠️ **Em migração.** O plano grátis do Netlify passou a créditos (300/mês, 15
+> por publicação) e suspende os sites quando acabam. A mudança para o Cloudflare
+> Pages, com o domínio `terrabovina.pt`, está preparada e descrita em
+> [`../MIGRAR_CLOUDFLARE.md`](../MIGRAR_CLOUDFLARE.md). **Este documento
+> descreve o que está no ar hoje** e continua válido até a migração estar
+> feita — é também o caminho de recuo se ela correr mal.
+
 São **dois sites Netlify** (ambos no plano grátis), a partir deste mesmo
 repositório:
 

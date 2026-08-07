@@ -1,0 +1,23 @@
+# Cloudflare Pages — cabeçalhos da página de apresentação
+# ---------------------------------------------------------------------------
+# Equivalente ao bloco [[headers]] do `website/netlify.toml`. Esta pasta é
+# publicada tal como está (não há build), por isso o ficheiro fica aqui mesmo.
+#
+# NÃO HÁ AQUI UM `_redirects`, ao contrário do `netlify.toml`, que precisava de
+# três regras para servir `/recuperar`, `/privacidade` e `/termos` a partir dos
+# respetivos `.html`. O Cloudflare já faz isso sozinho: serve cada ficheiro no
+# endereço sem extensão e reencaminha `/recuperar.html` para `/recuperar`.
+#
+# ⚠️ `/recuperar` é o endereço para onde o Supabase manda quem pede uma
+# palavra-passe nova (ver `src/data/auth.tsx`). É o primeiro a confirmar depois
+# de mudar de alojamento — parte em silêncio e só se dá por isso quando alguém
+# precisa mesmo dele.
+#
+# Falta aqui um `404.html`, e isso tem consequência: sem ele o Cloudflare assume
+# que o site é uma aplicação de página única e devolve o `index.html` em
+# qualquer endereço errado, com código 200. Na app é exatamente o que se quer;
+# aqui é um "404 disfarçado". Não parte nada, mas quando houver folga vale a
+# pena criar `website/404.html` — passa a haver página de erro a sério.
+
+/assets/*
+  Cache-Control: public, max-age=86400
