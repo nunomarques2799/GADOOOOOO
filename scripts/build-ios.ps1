@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Constrói a app iOS no EAS autenticando-se com a App Store Connect API Key.
 
@@ -15,11 +15,23 @@
     Key ID sai do próprio nome do ficheiro (a Apple chama-lhe AuthKey_<ID>.p8)
     — assim há um valor a menos para copiar à mão e enganar.
 
-.EXAMPLE
-    powershell scripts/build-ios.ps1 -IssuerId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    Trabalha sobre a pasta ONDE É CORRIDO, não sobre onde o ficheiro está. É de
+    propósito: o script exige o branch `main`, e enquanto ele só existir no
+    `dev` o `git checkout main` apagava-o a meio da execução. Guarda-se uma
+    cópia fora do repositório e corre-se essa, de dentro do repositório:
+
+        Copy-Item scripts/build-ios.ps1 $env:USERPROFILE\.appstoreconnect\
+        git checkout main
+        powershell $env:USERPROFILE\.appstoreconnect\build-ios.ps1 -IssuerId "..." -Enviar
+
+    Quando este ficheiro chegar ao `main` por um merge normal, passa a poder
+    correr-se de `scripts/` como os outros.
 
 .EXAMPLE
-    powershell scripts/build-ios.ps1 -IssuerId "..." -Enviar
+    powershell $env:USERPROFILE\.appstoreconnect\build-ios.ps1 -IssuerId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+.EXAMPLE
+    powershell $env:USERPROFILE\.appstoreconnect\build-ios.ps1 -IssuerId "..." -Enviar
     Constrói e, no fim, envia para o TestFlight.
 #>
 
@@ -32,8 +44,13 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$raizRepo = Split-Path -Parent $PSScriptRoot
+# A pasta onde ESTAMOS, nao a pasta do ficheiro — ver .DESCRIPTION.
+$raizRepo = (Get-Location).Path
 $pastaChaves = Join-Path $env:USERPROFILE '.appstoreconnect\private_keys'
+
+if (-not (Test-Path (Join-Path $raizRepo 'eas.json'))) {
+    throw "Corre isto de dentro do repositorio (a pasta que tem o eas.json). Estas em $raizRepo."
+}
 
 # A equipa e o registo da app no App Store Connect nao mudam.
 $idEquipa = '8785V5WL8W'
