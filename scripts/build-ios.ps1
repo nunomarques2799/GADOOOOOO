@@ -39,7 +39,10 @@
 param(
     [string]$IssuerId = $env:EXPO_ASC_ISSUER_ID,
     [switch]$Enviar,
-    [switch]$IgnorarBranch
+    [switch]$IgnorarBranch,
+    # Sem terminal a responder (agente, CI). O EAS falha em vez de perguntar —
+    # que e o que se quer: uma pergunta sem ninguem para a responder fica pendurada.
+    [switch]$NaoInterativo
 )
 
 $ErrorActionPreference = 'Stop'
@@ -111,15 +114,18 @@ Write-Host "  Equipa  $idEquipa ($tipoEquipa)"
 Write-Host "  Branch  $branch"
 Write-Host ""
 
+$extra = @()
+if ($NaoInterativo) { $extra += '--non-interactive' }
+
 Push-Location $raizRepo
 try {
-    npx eas build --platform ios --profile production
+    npx eas build --platform ios --profile production @extra
     if ($LASTEXITCODE -ne 0) {
         throw "O build falhou (codigo $LASTEXITCODE). Se caiu em poucos segundos, e autenticacao ou quota — nao chegou a compilar e nao gastou build."
     }
 
     if ($Enviar) {
-        npx eas submit --platform ios --profile production
+        npx eas submit --platform ios --profile production @extra
         if ($LASTEXITCODE -ne 0) {
             throw "O envio falhou (codigo $LASTEXITCODE). O build esta feito — podes repetir so o submit."
         }
