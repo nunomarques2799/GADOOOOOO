@@ -7,6 +7,12 @@ Esta máquina é **Windows**, onde não existe o Xcode. A app iOS é compilada n
 > A conta **Apple Developer** (99 USD/ano) já está paga. Era o que faltava: a
 > Apple só deixa instalar uma app num iPhone real se ela for assinada por uma
 > conta de programador.
+>
+> **A conta não é nossa — é da equipa `8785V5WL8W`** (João Carlos), onde o Nuno
+> entrou como **Admin**. Faz-se login com o Apple ID próprio; o papel Admin é o
+> que permite criar o certificado de distribuição, e um papel abaixo disso faz o
+> build falhar a meio. A app já existe no App Store Connect com o
+> `ascAppId` 6799063195 — o `eas submit` não a vai criar.
 
 ---
 
