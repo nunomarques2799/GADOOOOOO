@@ -42,7 +42,17 @@ param(
     [switch]$IgnorarBranch,
     # Sem terminal a responder (agente, CI). O EAS falha em vez de perguntar —
     # que e o que se quer: uma pergunta sem ninguem para a responder fica pendurada.
-    [switch]$NaoInterativo
+    [switch]$NaoInterativo,
+    # O EAS tenta ligar sozinho as capacidades do Bundle ID e a Apple rejeita-lhe
+    # o pedido ("not a valid request document object") — fala uma versao antiga
+    # da API. Com isto salta esse passo.
+    #
+    # So e seguro quando as capacidades JA estao certas no portal. A app pede
+    # `aps-environment` nos entitlements (vem do plugin expo-notifications), por
+    # isso o Bundle ID TEM de ter Push Notifications ligada: se nao tiver, o
+    # perfil sai sem ela e a assinatura rebenta no fim de compilar — aí ja com
+    # quota gasta. Confirma antes com o script asc.js.
+    [switch]$SemSincronizarCapacidades
 )
 
 $ErrorActionPreference = 'Stop'
@@ -116,6 +126,7 @@ Write-Host ""
 
 $extra = @()
 if ($NaoInterativo) { $extra += '--non-interactive' }
+if ($SemSincronizarCapacidades) { $env:EXPO_NO_CAPABILITY_SYNC = '1' }
 
 Push-Location $raizRepo
 try {
