@@ -86,11 +86,18 @@ assets/*
 app.json
 package.json
 package-lock.json
+tsconfig.json
+.node-version
 ```
 
 Substitui o `ignore` do `netlify.toml`: sem isto, mexer só na documentação ou
 nos schemas reconstruía a app. O `*` do Cloudflare **atravessa barras**, por
 isso `src/*` chega para toda a árvore.
+
+As duas últimas linhas são as que não se adivinham: o `tsconfig.json` é onde
+vive o atalho `@/` que o Metro lê, e o `.node-version` é o que fixa o Node 22.
+Fora da lista, mudá-los não dava build nenhum — e ficava a parecer que a
+alteração não tinha feito nada.
 
 > ⚠️ A documentação não diz textualmente se estes caminhos são relativos à raiz
 > do repositório ou à *root directory* — os exemplos de monorepo indicam que é à
@@ -105,7 +112,7 @@ Segundo projeto Pages, **mesmo repositório**:
 
 | Definição | Valor |
 | --- | --- |
-| Nome do projeto | `terrabovina-site` |
+| Nome do projeto | `terrabovina` |
 | Branch de produção | `main` |
 | Framework preset | *None* |
 | Build command | *(vazio — não há build)* |
@@ -154,13 +161,40 @@ toda a gente descarrega: não há aqui segredo a proteger.
 
 O projeto da apresentação não leva variáveis nenhumas.
 
+## Passo 3.5 — o primeiro build prova-se no `dev`, não no `main`
+
+**A preparação desta migração está no `dev` e o `main` ainda não a tem.** No dia
+em que isto foi escrito o `main` estava 40 commits atrás e não tinha
+`.node-version`, `public/_headers` nem `website/_headers`.
+
+Consequência: um build de produção agora sairia **sem os cabeçalhos de cache** —
+o `sw.js` ficaria em cache e a app instalada presa numa versão antiga, que é
+exatamente a avaria que o `_headers` existe para evitar — e com o Node que o
+Cloudflare escolher, em vez do 22.
+
+Por isso o primeiro build a olhar **é o preview do `dev`**, em
+`dev.terrabovina-app.pages.dev`:
+
+- tem os três ficheiros da preparação;
+- corre no ambiente *Preview*, ou seja, contra o Supabase de **testes** — não
+  toca nos dados do criador;
+- serve para confirmar os cabeçalhos, o encaminhamento e as variáveis antes de
+  existir domínio nenhum.
+
+Só depois de o preview estar provado é que se publica `dev` → `main` e a
+produção passa a ter os cabeçalhos.
+
+> ⚠️ Não há atalho pela definição de *branch de produção*. Pôr o `dev` como
+> branch de produção para "testar mais depressa" dá-lhe as variáveis de
+> **Production** — ou seja, código de testes ligado aos dados reais.
+
 ## Passo 4 — o domínio
 
 Com `terrabovina.pt` já na conta Cloudflare (nameservers mudados na Lusoaloja):
 
 | Endereço | Projeto |
 | --- | --- |
-| `terrabovina.pt` | `terrabovina-site` |
+| `terrabovina.pt` | `terrabovina` |
 | `www.terrabovina.pt` | redirecionar para o anterior |
 | `app.terrabovina.pt` | `terrabovina-app` |
 
