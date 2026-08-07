@@ -65,8 +65,25 @@ a paleta de cores, que é guardada na conta.
 
 ## Passo 1 — projeto da app
 
-*Workers & Pages* → *Create* → *Pages* → *Connect to Git* → repositório
-`GADOOOOOO`.
+*Workers & Pages* → *Create* → separador **Pages** → *Connect to Git* →
+repositório `GADOOOOOO`.
+
+> ⚠️ **O separador Pages é o que interessa, e não é o caminho por omissão.** O
+> botão grande de importar repositório da página principal cria um **Worker com
+> assets estáticos**, não um projeto Pages. À primeira vista parece o mesmo —
+> liga ao Git, constrói a cada push, serve ficheiros — mas:
+>
+> - o endereço não é `*.pages.dev`; é um `*.workers.dev` que **nasce desligado**
+>   ("No URLs enabled"), por isso nada responde mesmo com o build a passar;
+> - não há o par de ambientes *Production* / *Preview* em que assenta o passo 3.
+>   Como o Metro **cozinha as `EXPO_PUBLIC_*` dentro do bundle**, essa separação
+>   é o que impede um build do `dev` de sair a falar com os dados reais do
+>   criador. Sem ela, o erro não é um build partido — é um build que funciona
+>   perfeitamente contra a base errada.
+>
+> Como reconhecer que ficou Worker: o endereço do painel tem `/workers/services/`
+> em vez de `/pages/`, e as métricas dizem *"Metrics is unavailable for Workers
+> with only static assets"*.
 
 | Definição | Valor |
 | --- | --- |
