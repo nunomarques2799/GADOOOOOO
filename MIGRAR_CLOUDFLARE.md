@@ -94,6 +94,16 @@ repositório `GADOOOOOO`.
 | Build output directory | `dist` |
 | Root directory | *(vazio — a raiz)* |
 
+O nome do projeto não é etiqueta: é o endereço. Dá `terrabovina-app.pages.dev`
+para produção e `<branch>.terrabovina-app.pages.dev` para cada preview — é daí
+que sai o `dev.terrabovina-app.pages.dev` do passo 3.5. Os dois nomes acabam em
+`-app` e `-site` de propósito, para que a lista do painel e os endereços de
+teste digam qual é qual sem ter de abrir nada.
+
+Se a Cloudflare recusar o nome por estar a ser reutilizado logo a seguir a um
+projeto apagado, é a reserva a expirar — espera uns minutos em vez de inventar
+um nome novo, senão os endereços deixam de bater certo com este guia.
+
 *Settings* → *Build* → **Build watch paths** → *Include paths*:
 
 ```
@@ -129,7 +139,7 @@ Segundo projeto Pages, **mesmo repositório**:
 
 | Definição | Valor |
 | --- | --- |
-| Nome do projeto | `terrabovina` |
+| Nome do projeto | `terrabovina-site` |
 | Branch de produção | `main` |
 | Framework preset | *None* |
 | Build command | *(vazio — não há build)* |
@@ -211,7 +221,7 @@ Com `terrabovina.pt` já na conta Cloudflare (nameservers mudados na Lusoaloja):
 
 | Endereço | Projeto |
 | --- | --- |
-| `terrabovina.pt` | `terrabovina` |
+| `terrabovina.pt` | `terrabovina-site` |
 | `www.terrabovina.pt` | redirecionar para o anterior |
 | `app.terrabovina.pt` | `terrabovina-app` |
 
