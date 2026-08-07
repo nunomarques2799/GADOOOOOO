@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { garantirDono, limparCache } from './cacheLocal';
+import { traduzErroServidor } from './errosServidor';
 import type { Intencao } from './intencao';
 import { supabase, supabaseConfigurado } from './supabase';
 
@@ -58,10 +59,19 @@ type AuthContext = {
   definirNovaPalavra: (palavra: string) => Promise<string | null>;
   /** Muda nome/email da conta. Se mudou o email, o Supabase pede confirmação. */
   atualizarPerfil: (nome: string, email: string) => Promise<ResultadoPerfil>;
-  // Apagar a conta não se faz por aqui: a app não expõe o
-  // `apagar_a_minha_conta()` do `schema_rgpd.sql`. O botão existiu no Perfil,
-  // colado ao "Terminar sessão", e um toque a mais apagava a exploração inteira
-  // sem volta. O pedido de apagamento passa pelo administrador.
+  /**
+   * Apaga a conta e tudo o que depende dela, sem volta. Devolve a razão da
+   * recusa, ou `null` se ficou apagada.
+   *
+   * Quem faz o trabalho é a `apagar_a_minha_conta()` do `schema_rgpd.sql` — só
+   * ela sabe a ordem certa (libertar os convites resgatados antes de apagar o
+   * utilizador) e só ela corre com privilégios para lá chegar. Daqui não se
+   * decide nada: o alcance do apagamento está no servidor, não neste ficheiro.
+   *
+   * Isto NÃO é um `sair()` com mais passos. Quem chama tem de ter perguntado
+   * primeiro — ver `data/apagarConta.ts` e o ecrã `conta/apagar`.
+   */
+  apagarConta: () => Promise<string | null>;
   sair: () => Promise<void>;
 };
 
@@ -172,6 +182,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [sessao],
   );
 
+  const apagarConta = useCallback(async (): Promise<string | null> => {
+    if (!supabase) return 'Supabase não configurado.';
+    const { error } = await supabase.rpc('apagar_a_minha_conta');
+    if (error) return traduzErroServidor(error.message);
+
+    // Daqui para baixo já não há conta nenhuma do outro lado, e nada disto pode
+    // impedir a app de voltar ao ecrã de entrada.
+    //
+    // `scope: 'local'` porque o `signOut()` normal pede ao servidor para
+    // revogar o token — e o servidor já não tem a quem o revogar. Esse erro
+    // deixava a app com a sessão de uma conta apagada no ecrã, que é o pior
+    // dos dois mundos: os dados desapareceram e a app continua a agir como se
+    // ainda lá estivessem.
+    await supabase.auth.signOut({ scope: 'local' });
+    // A cache é a cópia local dos dados que acabaram de ser apagados. Ficar cá
+    // era deixar o efetivo de uma exploração que já não existe a servir de
+    // primeiro ecrã a quem entrasse a seguir neste aparelho.
+    limparCache();
+    return null;
+  }, []);
+
   const sair = useCallback(async () => {
     await supabase?.auth.signOut();
     // A cache local pertence à conta que saiu. Sem a apagar, o criador seguinte
@@ -192,11 +223,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       recuperarPalavra,
       definirNovaPalavra,
       atualizarPerfil,
+      apagarConta,
       sair,
     }),
     [
       sessao, aCarregar, emRecuperacao, entrar, registar,
-      recuperarPalavra, definirNovaPalavra, atualizarPerfil, sair,
+      recuperarPalavra, definirNovaPalavra, atualizarPerfil, apagarConta, sair,
     ],
   );
 

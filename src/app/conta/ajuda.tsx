@@ -315,6 +315,6 @@ const PERGUNTAS = [
   {
     titulo: 'Como termino a sessão ou apago a conta?',
     resposta:
-      'Em Perfil, na secção "Conta". Terminar sessão volta ao ecrã de entrada. Apagar a conta remove os seus dados de forma definitiva: não é possível voltar atrás.',
+      'Ambos em Perfil, no fim do ecrã. Terminar sessão volta ao ecrã de entrada e não apaga nada do servidor. Apagar a minha conta abre um ecrã à parte que mostra o que vai desaparecer — se for dono, a exploração vai com a conta, com os animais e o histórico lá dentro — e só avança depois de escrever APAGAR. É definitivo: nem quem gere a aplicação consegue recuperar.',
   },
 ];

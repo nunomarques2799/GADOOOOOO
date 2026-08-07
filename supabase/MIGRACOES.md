@@ -59,7 +59,7 @@ seguro.
 | 30 | `schema_medicamentos.sql` | Tabela `medicamento` (um lote comprado por linha) e `evento.medicamento_id`/`quantidade`. Existências = comprado − aplicado, calculado e não guardado. | 1, 2, **13**, 29 |
 | 31 | `schema_privilegios.sql` | Tira ao `anon`/`authenticated` o `TRUNCATE`, `TRIGGER` e `REFERENCES` que as omissões do Supabase dão a cada tabela nova. O `truncate` **não passa por RLS**. Mexe também nas omissões, para as tabelas seguintes. | **todos os que criam tabelas** |
 | 32 | `schema_convite_seguro.sql` | Códigos de convite de `gen_random_bytes` (o `random()` não é criptográfico) e travão de 10 tentativas falhadas por conta em 15 min. O `resgatar_convite` passa a devolver `{"erro": …}` em vez de rebentar — ver abaixo. | **17**, **22** |
-| 33 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. Tem a lista das que ficam FECHADAS mesmo a quem tem sessão. | **todos** |
+| 33 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. Tem a lista das que ficam FECHADAS mesmo a quem tem sessão. **Reescrito a 2026-08-07**: o `apagar_a_minha_conta()` saiu dessa lista, porque a app passou a ter o botão de apagar a conta. Nas bases que já correram a versão anterior é preciso **correr o ficheiro outra vez** — senão o botão dá «permission denied for function» a quem o tocar, e nada no resto do `estado.sql` avisa. | **todos** |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 

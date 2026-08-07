@@ -272,6 +272,7 @@ export default function RootLayout() {
                   <Stack.Screen name="conta/financas" />
                   <Stack.Screen name="conta/aparencia" />
                   <Stack.Screen name="conta/ajuda" />
+                  <Stack.Screen name="conta/apagar" />
                   <Stack.Screen name="inspecionar/exploracao/[id]" />
                   <Stack.Screen name="inspecionar/animal/[id]" />
                 </Stack>
