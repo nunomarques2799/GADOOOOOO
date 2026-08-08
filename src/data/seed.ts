@@ -18,15 +18,17 @@ export const utilizadorSeed: Utilizador = {
 };
 
 /**
- * Explorações de exemplo. Vêm com a gestão económica LIGADA — ao contrário do
- * que acontece numa conta a sério, onde é opt-in — porque este é o modo demo:
- * se viessem desligadas, quem experimenta a app não veria a funcionalidade
- * existir, e os movimentos de exemplo não apareceriam em lado nenhum.
+ * Explorações de exemplo. Vêm com a gestão económica e o registo de
+ * medicamentos LIGADOS — ao contrário do que acontece numa conta a sério, onde
+ * são opt-in — porque este é o modo demo: se viessem desligados, quem
+ * experimenta a app não veria as funcionalidades existir, e os movimentos e os
+ * lotes de exemplo não apareceriam em lado nenhum.
  */
 export const exploracoesSeed: Exploracao[] = [
   {
     id: 'exp-1',
     financasAtivas: true,
+    existenciasAtivas: true,
     utilizadorId: 'dev-user-001',
     nome: 'Monte do Avô',
     marcaExploracao: 'PT 61 234 5678',
@@ -36,6 +38,7 @@ export const exploracoesSeed: Exploracao[] = [
   {
     id: 'exp-2',
     financasAtivas: true,
+    existenciasAtivas: true,
     utilizadorId: 'dev-user-001',
     nome: 'Herdade das Corgas',
     marcaExploracao: 'PT 61 987 1234',

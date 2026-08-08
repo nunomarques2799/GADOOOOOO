@@ -66,6 +66,7 @@ type ExploracaoRow = ComUpdatedAt & {
   fotografia?: string | null;
   financas_ativas?: boolean | null;
   casa_ativa?: boolean | null;
+  existencias_ativas?: boolean | null;
 };
 
 type TerrenoRow = ComUpdatedAt & {
@@ -171,6 +172,7 @@ const toExploracao = (r: ExploracaoRow): Exploracao => ({
   fotografia: r.fotografia ?? undefined,
   financasAtivas: r.financas_ativas ?? false,
   casaAtiva: r.casa_ativa ?? false,
+  existenciasAtivas: r.existencias_ativas ?? false,
 });
 
 const toTerreno = (r: TerrenoRow): Terreno => ({
@@ -279,16 +281,23 @@ const exploracaoPayload = (e: Exploracao) => ({
   latitude: e.latitude ?? null,
   longitude: e.longitude ?? null,
   fotografia: e.fotografia ?? null,
-  // `financas_ativas` e `casa_ativa` não vão no payload de propósito: são do
-  // servidor, escritas só pelos RPC respetivos. Incluí-las aqui fazia com que
-  // renomear a exploração num aparelho com a cache antiga voltasse a desligar
-  // (ou a ligar) a opção sem ninguém ter pedido nada.
+  // `financas_ativas`, `casa_ativa` e `existencias_ativas` não vão no payload de
+  // propósito: são do servidor, escritas só pelos RPC respetivos. Incluí-las
+  // aqui fazia com que renomear a exploração num aparelho com a cache antiga
+  // voltasse a desligar (ou a ligar) a opção sem ninguém ter pedido nada.
 });
 
 /** Liga ou desliga a gestão económica em toda a conta. Devolve erro ou null. */
 export async function definirFinancasAtivas(ativas: boolean): Promise<string | null> {
   if (!supabase) return null;
   const { error } = await supabase.rpc('definir_financas_ativas', { ativas });
+  return error ? traduzErroServidor(error.message) : null;
+}
+
+/** Liga ou desliga o registo de medicamentos em toda a conta. */
+export async function definirExistenciasAtivas(ativas: boolean): Promise<string | null> {
+  if (!supabase) return null;
+  const { error } = await supabase.rpc('definir_existencias_ativas', { ativas });
   return error ? traduzErroServidor(error.message) : null;
 }
 

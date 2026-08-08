@@ -6,7 +6,14 @@
  * precisa das contas de datas deste ficheiro. Ficavam os dois a importar-se um
  * ao outro. Este módulo é a camada de baixo e não deve conhecer nenhum dos que
  * falam do domínio.
+ *
+ * O `@/i18n` é a exceção a essa regra, e não a contradiz: é uma camada AINDA
+ * MAIS BAIXA do que esta (só sabe ler uma preferência e devolver uma string) e
+ * não conhece nem o domínio nem este ficheiro. Serve as duas funções que
+ * produzem texto para os olhos — a saudação e a data por extenso.
  */
+
+import { idiomaAtual, t } from '@/i18n';
 
 const MESES_PT = [
   'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
@@ -15,19 +22,38 @@ const MESES_PT = [
 
 const DIAS_PT = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
+const MESES_EN = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+const DIAS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 const MS_DIA = 86_400_000;
 
 /** Saudação conforme a hora do dia. */
 export function saudacao(d = new Date()): string {
   const h = d.getHours();
-  if (h < 12) return 'Bom dia';
-  if (h < 20) return 'Boa tarde';
-  return 'Boa noite';
+  if (h < 12) return t('saudacao.manha');
+  if (h < 20) return t('saudacao.tarde');
+  return t('saudacao.noite');
 }
 
-/** Data de hoje por extenso, ex: "Segunda, 13 jul 2026". */
+/**
+ * Data de hoje por extenso, ex: "Segunda, 13 jul 2026" / "Monday, 13 Jul 2026".
+ *
+ * As tabelas de meses e dias ficam AQUI e não no dicionário do `i18n`: são
+ * catorze linhas por língua que nada mais lê, e diluí-las entre os textos de
+ * ecrã só fazia o dicionário maior. A ORDEM também não muda — dia antes do mês
+ * nas duas — porque é assim que se escreve em Portugal e no Reino Unido, e esta
+ * app é usada em Portugal.
+ *
+ * `formatDataPt` e as outras continuam em português nas duas línguas: são
+ * datas curtas em dígitos (13/07/2026), que se leem igual em qualquer sítio.
+ */
 export function dataExtensa(d = new Date()): string {
-  return `${DIAS_PT[d.getDay()]}, ${d.getDate()} ${MESES_PT[d.getMonth()]} ${d.getFullYear()}`;
+  const [dias, meses] = idiomaAtual() === 'en' ? [DIAS_EN, MESES_EN] : [DIAS_PT, MESES_PT];
+  return `${dias[d.getDay()]}, ${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 /* ---- Datas relativas (para seed sempre "vivo") ---- */
@@ -275,12 +301,18 @@ export function diasAte(iso: string): number {
 
 export function idadeExtenso(iso: string): string {
   const dias = idadeDias(iso);
-  if (dias < 0) return 'por nascer';
-  if (dias < 31) return `${dias} ${dias === 1 ? 'dia' : 'dias'}`;
+  if (dias < 0) return t('idade.porNascer');
+  if (dias < 31) return t('idade.dias', { n: dias });
   const meses = Math.floor(dias / 30.44);
-  if (meses < 24) return `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
+  if (meses < 24) return t('idade.meses', { n: meses });
   const anos = Math.floor(dias / 365.25);
   const mesesRest = Math.floor((dias - anos * 365.25) / 30.44);
-  if (mesesRest === 0) return `${anos} anos`;
-  return `${anos} ${anos === 1 ? 'ano' : 'anos'} e ${mesesRest} ${mesesRest === 1 ? 'mês' : 'meses'}`;
+  if (mesesRest === 0) return t('idade.anos', { n: anos });
+  // As duas partes vão já formatadas para o `|` do plural funcionar em cada
+  // uma: "1 ano e 6 meses" tem singular à esquerda e plural à direita, e uma
+  // frase só não conseguia escolher os dois.
+  return t('idade.anosEMeses', {
+    anos: t('idade.anos', { n: anos }),
+    meses: t('idade.meses', { n: mesesRest }),
+  });
 }

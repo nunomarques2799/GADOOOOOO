@@ -176,29 +176,6 @@ export default function ExploracaoDetalheScreen() {
           <InfoField icon="card-account-details-outline" label="NIF do detentor" value={exploracao.nifDetentor} last />
         </Card>
 
-        {/* Editar — além do lápis no cabeçalho, que passa despercebido a quem
-            não anda em apps todos os dias. */}
-        {podeEditar ? (
-          <Button
-            label="Editar dados da exploração"
-            icon="pencil-outline"
-            variant="secondary"
-            onPress={() => router.push(`/exploracao/editar/${exploracao.id}`)}
-            style={{ marginTop: spacing.md }}
-          />
-        ) : null}
-
-        {/* Equipa (só admin desta exploração) */}
-        {podeGerirEquipa ? (
-          <Button
-            label="Gerir equipa e convites"
-            icon="account-multiple-plus"
-            variant="secondary"
-            onPress={() => router.push(`/exploracao/equipa/${exploracao.id}`)}
-            style={{ marginTop: spacing.sm }}
-          />
-        ) : null}
-
         {/* Terrenos */}
         <TituloSeccao
           titulo={`Terrenos (${terrenos.length})`}
@@ -313,6 +290,42 @@ export default function ExploracaoDetalheScreen() {
             onPress={() => router.push('/animais')}
             style={{ marginTop: spacing.xs }}
           />
+        ) : null}
+
+        {/* ---- Gerir a exploração ----
+         *
+         * No FIM da página, e já não a meio dela. Estavam entre os dados
+         * oficiais e a lista de terrenos, o que punha duas ações de
+         * configuração — coisas que se fazem uma vez e depois raramente — a
+         * cortar ao meio o que se vem aqui ver todos os dias: os terrenos e o
+         * gado que anda em cada um. Aqui em baixo continuam a apanhar-se a
+         * rolar, e quem só quer editar tem o lápis no cabeçalho.
+         */}
+        {podeEditar || podeGerirEquipa ? (
+          <View style={{ marginTop: spacing.xl, gap: spacing.sm }}>
+            <Text variant="label" color={colors.textSecondary} style={{ marginLeft: spacing.xs }}>
+              GERIR
+            </Text>
+            {/* Editar — além do lápis no cabeçalho, que passa despercebido a
+                quem não anda em apps todos os dias. */}
+            {podeEditar ? (
+              <Button
+                label="Editar dados da exploração"
+                icon="pencil-outline"
+                variant="secondary"
+                onPress={() => router.push(`/exploracao/editar/${exploracao.id}`)}
+              />
+            ) : null}
+            {/* Equipa (só admin desta exploração) */}
+            {podeGerirEquipa ? (
+              <Button
+                label="Gerir equipa e convites"
+                icon="account-multiple-plus"
+                variant="secondary"
+                onPress={() => router.push(`/exploracao/equipa/${exploracao.id}`)}
+              />
+            ) : null}
+          </View>
         ) : null}
       </Screen>
     </View>

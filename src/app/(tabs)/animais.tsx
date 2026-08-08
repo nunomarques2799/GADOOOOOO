@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useDeferredValue, useMemo, useState } from 'react';
-import { FlatList, Pressable, TextInput, View } from 'react-native';
+import { useDeferredValue, useMemo, useState, type ReactNode } from 'react';
+import { FlatList, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimalRow } from '@/components/AnimalRow';
@@ -16,7 +16,7 @@ import {
   mapaGravidade,
   ordenarAnimais,
   ORDENACAO_OMISSAO,
-  ORDENACOES,
+  ordenacoes,
   rotuloCategoriaAlerta,
   SEM_TERRENO,
   type Filtros,
@@ -25,9 +25,70 @@ import {
 import { saiuDoEfetivo } from '@/data/historicoAnimais';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
+
+/**
+ * Uma fila de chips que NÃO se empilha no telemóvel.
+ *
+ * Em `flexWrap` — que é como estas duas filas estavam — cada chip que não cabe
+ * salta para a linha de baixo. Com quatro explorações de nomes compridos
+ * ("Herdade do Vale Escuro") dava uma linha por exploração, mais três linhas de
+ * ordenação por baixo: seis linhas de botões entre o título e o primeiro
+ * animal, num ecrã onde cabem cinco. Era o "encavalitado" — não estava nada
+ * sobreposto, estava tudo empilhado.
+ *
+ * A rolar na horizontal, ocupa uma linha e só uma, custe o que custar o nome da
+ * quinta. Em desktop mantém-se o `flexWrap`: lá há largura para tudo caber, e
+ * uma fila que rola quando não precisa esconde opções sem razão.
+ */
+function LinhaChips({
+  children,
+  desktop,
+  antes,
+}: {
+  children: ReactNode;
+  desktop: boolean;
+  /** Fica colado ao início da fila e rola com ela (o rótulo "Ordenar:"). */
+  antes?: ReactNode;
+}) {
+  if (desktop) {
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: spacing.xs,
+          marginBottom: spacing.sm,
+        }}>
+        {antes}
+        {children}
+      </View>
+    );
+  }
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      // Sem isto, tocar num chip a meio de um arrasto escolhia-o.
+      keyboardShouldPersistTaps="handled"
+      style={{ marginBottom: spacing.sm }}
+      contentContainerStyle={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+        // Folga no fim para o último chip não ficar colado à margem e para se
+        // perceber que a fila continua.
+        paddingRight: spacing.lg,
+      }}>
+      {antes}
+      {children}
+    </ScrollView>
+  );
+}
 
 /** Ícone de cada ordem, à parte da lista pura (que não conhece ícones). */
 const ICONE_ORDEM: Record<Ordenacao, IconName> = {
@@ -195,11 +256,13 @@ export default function AnimaisScreen() {
         ListHeaderComponent={
           <View style={{ paddingTop: insets.top + spacing.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: spacing.md }}>
-              <Text variant="display">Animais</Text>
+              <Text variant="display">{t('nav.animais')}</Text>
               <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 6 }}>
                 {/* Quando há filtros, o que interessa é quantos deles se está a
                     ver — o total do efetivo passa a ser a segunda pergunta. */}
-                {estreitada ? `${lista.length} de ${ativos.length}` : `${ativos.length} no efetivo`}
+                {estreitada
+                  ? t('animais.deTotal', { n: lista.length, total: ativos.length })
+                  : t('animais.noEfetivo', { n: ativos.length })}
               </Text>
             </View>
 
@@ -207,15 +270,9 @@ export default function AnimaisScreen() {
                 mais explorações, "de que quinta são estes animais?" é a
                 primeira pergunta de quem abre esta lista. */}
             {podeEscolherExploracao ? (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  flexWrap: 'wrap',
-                  gap: spacing.xs,
-                  marginBottom: spacing.sm,
-                }}>
+              <LinhaChips desktop={desktop}>
                 <Chip
-                  label="Todas"
+                  label={t('comum.todas')}
                   icon="barn"
                   selected={filtros.exploracaoId === undefined}
                   onPress={() => setFiltros((f) => ({ ...f, exploracaoId: undefined }))}
@@ -233,7 +290,7 @@ export default function AnimaisScreen() {
                     }
                   />
                 ))}
-              </View>
+              </LinhaChips>
             ) : null}
 
             {/* Pesquisa + botão de filtros */}
@@ -255,7 +312,7 @@ export default function AnimaisScreen() {
                 <TextInput
                   value={filtros.texto ?? ''}
                   onChangeText={(t) => setFiltros((f) => ({ ...f, texto: t }))}
-                  placeholder="Nome, brinco, raça ou número"
+                  placeholder={t('animais.procurar')}
                   placeholderTextColor={colors.textMuted}
                   style={{
                     flex: 1,
@@ -271,7 +328,7 @@ export default function AnimaisScreen() {
                 onPress={() => setFolhaAberta(true)}
                 accessibilityRole="button"
                 accessibilityLabel={
-                  nAtivos > 0 ? `Filtros, ${nAtivos} ativos` : 'Filtros'
+                  nAtivos > 0 ? t('animais.filtrosAtivos', { n: nAtivos }) : t('animais.filtros')
                 }
                 style={({ pressed }) => [
                   {
@@ -305,21 +362,17 @@ export default function AnimaisScreen() {
                 não uma configuração. Só aparece com animais que cheguem para a
                 ordem fazer diferença. */}
             {ativos.length > 1 ? (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  marginBottom: spacing.sm,
-                }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 2 }}>
-                  <Icon name="sort" size="sm" color={colors.textMuted} />
-                  <Text variant="caption" color={colors.textMuted}>
-                    Ordenar:
-                  </Text>
-                </View>
-                {ORDENACOES.map((o) => (
+              <LinhaChips
+                desktop={desktop}
+                antes={
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 2 }}>
+                    <Icon name="sort" size="sm" color={colors.textMuted} />
+                    <Text variant="caption" color={colors.textMuted}>
+                      {t('animais.ordenar')}
+                    </Text>
+                  </View>
+                }>
+                {ordenacoes().map((o) => (
                   <Chip
                     key={o.valor}
                     label={o.label}
@@ -328,25 +381,7 @@ export default function AnimaisScreen() {
                     onPress={() => setOrdenacao(o.valor)}
                   />
                 ))}
-              </View>
-            ) : null}
-
-            {/* Histórico do efetivo: quem saiu, porquê, quando e por ordem de
-                quem. Só aparece quando há alguém lá dentro — num efetivo onde
-                ainda ninguém saiu, é um botão que abre um ecrã vazio.
-
-                O "Importar de Excel" esteve aqui e mudou-se para Documentos,
-                que é onde vive tudo o que entra e sai da app em ficheiro. */}
-            {saidos.length > 0 ? (
-              <View style={{ alignItems: 'flex-start', marginBottom: spacing.sm }}>
-                <Button
-                  label={`Histórico do efetivo (${saidos.length})`}
-                  icon="history"
-                  variant="secondary"
-                  fullWidth={false}
-                  onPress={() => router.push('/animal/historico')}
-                />
-              </View>
+              </LinhaChips>
             ) : null}
 
             {/* O que está a filtrar, para se tirar sem reabrir a folha */}
@@ -365,13 +400,13 @@ export default function AnimaisScreen() {
                   <Pressable
                     onPress={() => setFiltros({ texto: filtros.texto, exploracaoId: filtros.exploracaoId })}
                     accessibilityRole="button"
-                    accessibilityLabel="Limpar todos os filtros"
+                    accessibilityLabel={t('animais.limparTodos')}
                     style={({ pressed }) => [
                       { justifyContent: 'center', paddingHorizontal: spacing.xs },
                       pressed && { opacity: 0.6 },
                     ]}>
                     <Text variant="bodyStrong" color={colors.danger}>
-                      Limpar
+                      {t('comum.limpar')}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -379,17 +414,45 @@ export default function AnimaisScreen() {
             ) : null}
           </View>
         }
+        ListFooterComponent={
+          /* Histórico do efetivo: quem saiu, porquê, quando e por ordem de
+             quem. Só aparece quando há alguém lá dentro — num efetivo onde
+             ainda ninguém saiu, é um botão que abre um ecrã vazio.
+
+             NO FIM da lista, e já não no cabeçalho. É uma pergunta sobre o
+             passado, e estava entre os filtros e o primeiro animal: num
+             telemóvel, quem abria os Animais tinha de passar por ele — mais as
+             duas filas de chips — antes de ver uma única cabeça de gado. Aqui
+             encontra-se ao chegar ao fundo, que é quando a pergunta "e os que
+             saíram?" faz sentido.
+
+             O "Importar de Excel" esteve aqui e mudou-se para Documentos, que é
+             onde vive tudo o que entra e sai da app em ficheiro. */
+          saidos.length > 0 ? (
+            <View style={{ alignItems: 'flex-start', marginTop: spacing.md }}>
+              <Button
+                label={t('animais.historico', { n: saidos.length })}
+                icon="history"
+                variant="secondary"
+                fullWidth={false}
+                onPress={() => router.push('/animal/historico')}
+              />
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
           <EmptyState
             icon="cow-off"
-            title="Nenhum animal encontrado"
+            title={t('animais.vazioTitulo')}
             message={
-              estreitada
-                ? 'Experimente ajustar a pesquisa ou os filtros.'
-                : 'Ainda não há animais registados. Comece por adicionar o primeiro.'
+              estreitada ? t('animais.vazioFiltrado') : t('animais.vazioSemNada')
             }
             actionLabel={
-              estreitada ? 'Limpar filtros' : podeRegistar ? 'Registar animal' : undefined
+              estreitada
+                ? t('animais.limparFiltros')
+                : podeRegistar
+                  ? t('animais.registarAnimal')
+                  : undefined
             }
             onAction={estreitada ? () => setFiltros({}) : () => router.push('/animal/novo')}
           />
@@ -408,7 +471,7 @@ export default function AnimaisScreen() {
       />
 
       {podeRegistar ? (
-        <FAB label="Registar" onPress={() => router.push('/animal/novo')} />
+        <FAB label={t('animais.fab')} onPress={() => router.push('/animal/novo')} />
       ) : null}
     </View>
   );

@@ -22,14 +22,15 @@
  * recusar.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 
 import { agruparEventosPorDia, type EntradaEvento, type EventoAgenda } from './agenda';
 import { armazenamentoDisponivel, guardar, ler } from './armazenamento';
 import { useAuth } from './auth';
+import { CHAVES } from './cacheLocal';
 import { supabase, supabaseConfigurado } from './supabase';
 
-const CHAVE_CACHE = 'gado.agenda.v1';
+const CHAVE_CACHE = CHAVES.agenda;
 
 /** UUID v4 — o formato que a coluna `id` do Postgres espera. */
 function novoId(): string {
@@ -104,26 +105,80 @@ export type UseAgenda = {
   porDia: Map<string, EventoAgenda[]>;
 };
 
-/**
- * Estado e ações da agenda. Como as notas, o estado vive no próprio hook: são
- * poucos consumidores e nenhum precisa de o partilhar com outro ramo da árvore.
+/* ------------------------------------------------------------------ *
+ *  Estado PARTILHADO por todos os `useAgenda()`
+ * ------------------------------------------------------------------ *
+ *
+ * Vivia dentro do hook, com o argumento de que eram poucos consumidores e
+ * nenhum precisava de o partilhar. Não era verdade, e dava um erro que se via:
+ * marcar um evento em `/agenda/novo` gravava no `useAgenda()` DAQUELE ecrã, e o
+ * Início — que tem o seu, montado desde o arranque e que não volta a montar
+ * quando o formulário se fecha por cima dele — ficava com a lista antiga. O
+ * evento novo só aparecia no calendário depois de puxar o ecrã para baixo.
+ *
+ * Uma loja de módulo com `useSyncExternalStore` resolve-o sem Provider nenhum:
+ * a assinatura do hook não muda, e quem já o usa não sabe que mudou alguma
+ * coisa — só passa a ver as gravações dos outros.
  */
+
+type Instantaneo = {
+  eventos: EventoAgenda[];
+  aCarregar: boolean;
+  erro: string | null;
+};
+
+let instantaneo: Instantaneo = {
+  // Lido no arranque, como o resto das caches: o calendário abre já preenchido,
+  // sem rede e sem esperar pelo servidor.
+  eventos: armazenamentoDisponivel ? lerCache() : [],
+  aCarregar: false,
+  erro: null,
+};
+
+const ouvintes = new Set<() => void>();
+
+/**
+ * O instantâneo TEM de manter a mesma referência entre alterações — é assim que
+ * o `useSyncExternalStore` sabe que nada mudou. Por isso trocamos o objeto
+ * inteiro de uma vez, em vez de mexer nos campos.
+ */
+function definir(parcial: Partial<Instantaneo>): void {
+  instantaneo = { ...instantaneo, ...parcial };
+  for (const ouvinte of ouvintes) ouvinte();
+}
+
+function subscrever(ouvinte: () => void): () => void {
+  ouvintes.add(ouvinte);
+  return () => {
+    ouvintes.delete(ouvinte);
+  };
+}
+
+const instantaneoAtual = () => instantaneo;
+
+/** Estado e ações da agenda, partilhados por todos os ecrãs que o usam. */
 export function useAgenda(): UseAgenda {
   const { sessao } = useAuth();
   const usaSupabase = supabaseConfigurado && !!sessao;
   const userId = sessao?.user?.id ?? '';
 
-  const [eventos, setEventos] = useState<EventoAgenda[]>(() =>
-    armazenamentoDisponivel ? lerCache() : [],
+  const { eventos, aCarregar, erro } = useSyncExternalStore(
+    subscrever,
+    instantaneoAtual,
+    // No servidor (a web pré-renderizada) não há cache nenhuma para ler: serve
+    // o mesmo instantâneo, que aí é o inicial.
+    instantaneoAtual,
   );
-  const [aCarregar, setACarregar] = useState<boolean>(usaSupabase);
-  const [erro, setErro] = useState<string | null>(null);
 
   const puxar = useCallback(async () => {
     if (!usaSupabase || !supabase) {
-      setACarregar(false);
+      definir({ aCarregar: false });
       return;
     }
+    // A marca de "a carregar" é posta AQUI e não no arranque do módulo: o
+    // instantâneo inicial é criado ao importar, muito antes de se saber se há
+    // sessão, e nascer em `true` deixava a app sem sessão à espera para sempre.
+    definir({ aCarregar: true });
     try {
       const { data, error } = await supabase
         .from('evento_agenda')
@@ -131,14 +186,11 @@ export function useAgenda(): UseAgenda {
         .order('dia', { ascending: true });
       if (error) throw new Error(error.message);
       const lista = ((data ?? []) as LinhaAgenda[]).map(toEvento);
-      setEventos(lista);
       guardarCache(lista);
-      setErro(null);
+      definir({ eventos: lista, erro: null, aCarregar: false });
     } catch (e) {
       // Fica o que está em cache — o calendário continua a abrir sem rede.
-      setErro(e instanceof Error ? e.message : String(e));
-    } finally {
-      setACarregar(false);
+      definir({ erro: e instanceof Error ? e.message : String(e), aCarregar: false });
     }
   }, [usaSupabase]);
 
@@ -148,7 +200,12 @@ export function useAgenda(): UseAgenda {
 
   const guardarEvento = useCallback(
     async (entrada: EntradaEvento): Promise<EventoAgenda> => {
-      const existente = entrada.id ? eventos.find((e) => e.id === entrada.id) : undefined;
+      // Lido da loja e não do `eventos` do render: entre este ecrã abrir e o
+      // botão ser tocado, outro pode ter gravado — e a versão do render estava
+      // congelada no que havia à entrada.
+      const existente = entrada.id
+        ? instantaneo.eventos.find((e) => e.id === entrada.id)
+        : undefined;
       const evento: EventoAgenda = {
         id: entrada.id ?? novoId(),
         exploracaoId: entrada.exploracaoId,
@@ -181,16 +238,16 @@ export function useAgenda(): UseAgenda {
         if (error) throw new Error(error.message);
       }
 
-      setEventos((prev) => {
-        const novos = existente
-          ? prev.map((e) => (e.id === evento.id ? evento : e))
-          : [...prev, evento];
-        guardarCache(novos);
-        return novos;
-      });
+      const novos = existente
+        ? instantaneo.eventos.map((e) => (e.id === evento.id ? evento : e))
+        : [...instantaneo.eventos, evento];
+      guardarCache(novos);
+      // É esta linha que faz o evento aparecer no calendário do Início sem ter
+      // de refrescar: todos os `useAgenda()` montados são avisados.
+      definir({ eventos: novos });
       return evento;
     },
-    [eventos, usaSupabase, userId],
+    [usaSupabase, userId],
   );
 
   const eliminarEvento = useCallback(
@@ -199,11 +256,9 @@ export function useAgenda(): UseAgenda {
         const { error } = await supabase.from('evento_agenda').delete().eq('id', id);
         if (error) throw new Error(error.message);
       }
-      setEventos((prev) => {
-        const novos = prev.filter((e) => e.id !== id);
-        guardarCache(novos);
-        return novos;
-      });
+      const novos = instantaneo.eventos.filter((e) => e.id !== id);
+      guardarCache(novos);
+      definir({ eventos: novos });
     },
     [usaSupabase],
   );

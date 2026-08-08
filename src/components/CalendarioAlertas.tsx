@@ -7,7 +7,7 @@ import {
   agruparPorDia,
   celulasDoMes,
   chaveDia,
-  DIAS_SEMANA,
+  diasDaSemana,
   mesVizinho,
   piorGravidade,
   rotuloMes,
@@ -110,7 +110,7 @@ export function CalendarioAlertas({
       <Card padded={false} style={{ padding: spacing.xs, marginBottom: spacing.md }}>
         {/* Iniciais dos dias, de segunda a domingo */}
         <View style={{ flexDirection: 'row' }}>
-          {DIAS_SEMANA.map((d, i) => (
+          {diasDaSemana().map((d, i) => (
             <View key={i} style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }}>
               <Text variant="caption" color={colors.textMuted}>
                 {d}

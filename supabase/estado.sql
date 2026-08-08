@@ -188,7 +188,13 @@ select * from (
            select 1 from pg_proc p
              join pg_namespace n on n.oid = p.pronamespace
             where n.nspname = 'public' and p.proname = 'apagar_a_minha_conta'
-              and has_function_privilege('authenticated', p.oid, 'execute'))))
+              and has_function_privilege('authenticated', p.oid, 'execute')))),
+    -- Depois do lint, e não antes, porque fecha as suas próprias funções (ver a
+    -- secção 6 do ficheiro). Duas marcas: a coluna e o RPC. Só a coluna dava
+    -- `t` a uma base onde o criador não tem por onde ligar o interruptor.
+    (34, 'schema_existencias_opcional.sql', 'perfil.existencias_ativas + definir_existencias_ativas()',
+        (exists (select 1 from col where tabela = 'perfil' and coluna = 'existencias_ativas')
+         and exists (select 1 from func where nome = 'definir_existencias_ativas')))
 ) as t(ordem, ficheiro, marca, aplicado)
 order by ordem;
 -- Ler a coluna `aplicado`: true = já correu, false = FALTA aplicar.

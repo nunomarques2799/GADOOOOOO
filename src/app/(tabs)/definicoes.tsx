@@ -4,8 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
+import { useExistencias } from '@/data/useExistencias';
 import { useFinancas } from '@/data/useFinancas';
 import { VERSAO_APP } from '@/data/versao';
+import { idiomaAtual, NOME_DO_IDIOMA, t } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, paletaPorId, spacing } from '@/theme';
 import { paletaGuardada } from '@/theme/preferencia';
@@ -27,6 +29,10 @@ export default function DefinicoesScreen() {
     ativas: financasAtivas,
     podeLigarDesligar: podeLigarFinancas,
   } = useFinancas();
+  const {
+    ativas: existenciasAtivas,
+    podeLigarDesligar: podeLigarExistencias,
+  } = useExistencias();
 
   const coluna = {
     width: '100%',
@@ -44,21 +50,29 @@ export default function DefinicoesScreen() {
           paddingBottom: insets.bottom + spacing.xxl,
         }}>
         <View style={{ ...coluna, paddingTop: insets.top + spacing.md, paddingBottom: spacing.lg }}>
-          <Text variant="display">Definições</Text>
+          <Text variant="display">{t('nav.definicoes')}</Text>
           <Text variant="body" color={colors.textSecondary}>
-            Como a app funciona para si
+            {t('definicoes.subtitulo')}
           </Text>
         </View>
 
         <View style={{ ...coluna, gap: spacing.md }}>
           {/* O que a app regista */}
-          <Grupo titulo="O QUE A APP REGISTA">
+          <Grupo titulo={t('definicoes.grupoRegista')}>
             {podeLigarFinancas ? (
               <Linha
                 icon="cash-multiple"
-                label="Gestão financeira"
-                trailing={financasAtivas ? 'Ligada' : 'Desligada'}
+                label={t('definicoes.financas')}
+                trailing={financasAtivas ? t('comum.ligada') : t('comum.desligada')}
                 onPress={() => router.push('/conta/financas')}
+              />
+            ) : null}
+            {podeLigarExistencias ? (
+              <Linha
+                icon="package-variant-closed"
+                label={t('definicoes.existencias')}
+                trailing={existenciasAtivas ? t('comum.ligado') : t('comum.desligado')}
+                onPress={() => router.push('/conta/existencias')}
               />
             ) : null}
             {/* O "Registo por casa e número" era aqui. Passou a um campo
@@ -67,29 +81,38 @@ export default function DefinicoesScreen() {
                 deixa vazio era uma decisão a pedir por nada. */}
             <Linha
               icon="bell-outline"
-              label="Notificações e alertas"
+              label={t('definicoes.notificacoes')}
               onPress={() => router.push('/conta/notificacoes')}
               last
             />
           </Grupo>
 
           {/* Como a app se apresenta */}
-          <Grupo titulo="ASPETO">
+          <Grupo titulo={t('definicoes.grupoAspeto')}>
             <Linha
               icon="palette-outline"
-              label="Cores da app"
+              label={t('definicoes.cores')}
               trailing={paletaPorId(paletaGuardada()).nome}
               onPress={() => router.push('/conta/aparencia')}
+            />
+            {/* O idioma vive no ASPETO e não num grupo só dele: é uma escolha
+                sobre como a app se apresenta, como as cores, e um grupo com uma
+                linha só era um título a mais para ler. */}
+            <Linha
+              icon="translate"
+              label={t('definicoes.idioma')}
+              trailing={NOME_DO_IDIOMA[idiomaAtual()]}
+              onPress={() => router.push('/conta/idioma')}
               last
             />
           </Grupo>
 
           {/* Dados e cópias */}
           {configurado ? (
-            <Grupo titulo="DADOS">
+            <Grupo titulo={t('definicoes.grupoDados')}>
               <Linha
                 icon="cloud-sync-outline"
-                label="Sincronização e cópia de segurança"
+                label={t('definicoes.sincronizacao')}
                 onPress={() => router.push('/conta/sincronizacao')}
                 last
               />
@@ -97,22 +120,22 @@ export default function DefinicoesScreen() {
           ) : null}
 
           {/* Sobre */}
-          <Grupo titulo="SOBRE">
+          <Grupo titulo={t('definicoes.grupoSobre')}>
             <Linha
               icon="help-circle-outline"
-              label="Ajuda e apoio"
+              label={t('definicoes.ajuda')}
               onPress={() => router.push('/conta/ajuda')}
             />
             <Linha
               icon="shield-account-outline"
-              label="Privacidade e termos"
+              label={t('definicoes.privacidade')}
               onPress={() => void Linking.openURL('https://gestaogado.netlify.app/privacidade')}
               last
             />
           </Grupo>
 
           <Text variant="caption" color={colors.textMuted} center style={{ marginTop: spacing.xs }}>
-            Terrabovina · versão {VERSAO_APP}
+            {t('definicoes.versao', { v: VERSAO_APP })}
           </Text>
         </View>
       </ScrollView>

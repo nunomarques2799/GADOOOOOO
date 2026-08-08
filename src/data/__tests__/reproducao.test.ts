@@ -6,10 +6,13 @@ import {
   aguardamDiagnostico,
   elegivelParaReproducao,
   estadoReprodutivo,
+  nomeNaCobricao,
+  porFase,
   prestesAParir,
   preverParto,
   resumoReproducao,
   semCobricaoAposParto,
+  sugestoesDeCobricao,
 } from '../reproducao';
 import type { Animal, Evento } from '../types';
 
@@ -287,5 +290,96 @@ describe('resumoReproducao', () => {
     // Com um ano de registos ainda não há segundo parto em quase nenhuma vaca.
     // Uma média tirada de uma só é um número que parece medida e não é.
     expect(resumoReproducao([vaca()], [ev('Parto', 100)]).intervaloMedioPartos).toBeUndefined();
+  });
+});
+
+describe('sugestoesDeCobricao — o que se pode escolher sem escrever', () => {
+  const touro = (over: Partial<Animal> = {}): Animal =>
+    vaca({
+      id: `m-${over.nome ?? over.numeroIdentificacao ?? 'x'}`,
+      sexo: 'Macho',
+      dataNascimento: isoDaysAgo(365 * 4),
+      ...over,
+    });
+
+  it('oferece os machos adultos do efetivo, com os sementais à frente', () => {
+    const machos = [
+      touro({ nome: 'Boieiro', finalidade: 'Carne' }),
+      touro({ nome: 'Marquês', finalidade: 'Semental' }),
+    ];
+    expect(sugestoesDeCobricao(machos, [], 'exp-1', 'Touro')).toEqual(['Marquês', 'Boieiro']);
+  });
+
+  it('deixa de fora as fêmeas, os vitelos e quem já saiu do efetivo', () => {
+    const lista = [
+      vaca({ id: 'f', nome: 'Amora' }),
+      touro({ nome: 'Vitelo', dataNascimento: isoDaysAgo(60) }),
+      touro({ nome: 'Vendido', estado: 'vendido' }),
+      touro({ nome: 'Marquês' }),
+    ];
+    expect(sugestoesDeCobricao(lista, [], 'exp-1', 'Touro')).toEqual(['Marquês']);
+  });
+
+  it('e os machos de outra exploração — o touro está fisicamente numa quinta só', () => {
+    const machos = [touro({ nome: 'Daqui' }), touro({ nome: 'Dali', exploracaoId: 'exp-2' })];
+    expect(sugestoesDeCobricao(machos, [], 'exp-1', 'Touro')).toEqual(['Daqui']);
+  });
+
+  /**
+   * É esta a metade que apanha o touro do vizinho: ele nunca esteve no efetivo,
+   * e sem isto quem o usa todos os anos escreve-lhe o nome à mão todos os anos.
+   */
+  it('junta os nomes já escritos em cobrições anteriores, do mais recente primeiro', () => {
+    const eventos = [
+      ev('Cobrição', 200, { detalhe: 'Touro: Velho' }),
+      ev('Cobrição', 10, { detalhe: 'Touro: Recente' }),
+    ];
+    expect(sugestoesDeCobricao([], eventos, 'exp-1', 'Touro')).toEqual(['Recente', 'Velho']);
+  });
+
+  it('não repete o mesmo touro por causa de uma maiúscula', () => {
+    // "Marquês" e "marquês" são o mesmo animal. Oferecer os dois é oferecer a
+    // maneira de ficar com dois touros no histórico onde só há um.
+    const eventos = [ev('Cobrição', 10, { detalhe: 'Touro: marquês' })];
+    const sugestoes = sugestoesDeCobricao([touro({ nome: 'Marquês' })], eventos, 'exp-1', 'Touro');
+    expect(sugestoes).toEqual(['Marquês']);
+  });
+
+  it('na inseminação oferece as palhetas e nenhum macho do curral', () => {
+    // O que se escreve numa inseminação é a palheta. Um macho do efetivo ali é
+    // uma sugestão errada — e uma que fica a mentir na genealogia da cria.
+    const eventos = [ev('Cobrição', 10, { detalhe: 'Sémen: Alentejano 4471' })];
+    const sugestoes = sugestoesDeCobricao([touro({ nome: 'Marquês' })], eventos, 'exp-1', 'Sémen');
+    expect(sugestoes).toEqual(['Alentejano 4471']);
+  });
+
+  it('lê o nome no meio dos outros pedaços do detalhe', () => {
+    // O `detalhe` é um punhado de pedaços colados por " · ".
+    const e = ev('Cobrição', 5, { detalhe: 'Touro: Marquês · nota qualquer' });
+    expect(nomeNaCobricao(e, 'Touro')).toBe('Marquês');
+    expect(nomeNaCobricao(ev('Cobrição', 5), 'Touro')).toBeUndefined();
+  });
+});
+
+describe('porFase — quem são os números do resumo', () => {
+  it('traz as cobertas e as duvidosas juntas, a mais recente primeiro', () => {
+    const coberta = vaca({ id: 'nova', nome: 'Nova' });
+    const antiga = vaca({ id: 'antiga', nome: 'Antiga' });
+    const linhas = porFase(
+      [coberta, antiga],
+      [
+        { ...ev('Cobrição', 3), animalId: 'nova' },
+        { ...ev('Cobrição', 40), animalId: 'antiga' },
+      ],
+      ['coberta', 'duvidosa'],
+    );
+    expect(linhas.map((l) => l.animal.nome)).toEqual(['Nova', 'Antiga']);
+  });
+
+  it('e não traz quem está noutra fase', () => {
+    // Uma vaca que pariu está vazia, não coberta. Misturá-las dava uma lista de
+    // "cobertas" com metade do efetivo lá dentro.
+    const linhas = porFase([vaca()], [ev('Parto', 10)], ['coberta', 'duvidosa']);
+    expect(linhas).toEqual([]);
   });
 });

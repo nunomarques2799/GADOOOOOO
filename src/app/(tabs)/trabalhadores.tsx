@@ -280,30 +280,6 @@ export default function TrabalhadoresScreen() {
             ]}
           />
 
-          {/* O registo de alterações. Fica em cima e não escondido no fim: é a
-              pergunta que se faz sobre a equipa logo a seguir a "quem é que cá
-              anda?", e mandar procurá-la no fundo do ecrã era escondê-la. */}
-          {minhas.length > 0 ? (
-            <Button
-              label="Ver o registo de alterações"
-              icon="history"
-              variant="secondary"
-              onPress={() => router.push('/atividade')}
-            />
-          ) : null}
-
-          {/* E quem já cá NÃO anda. A lista de cima mostra a equipa de hoje; a
-              pergunta que ela não responde — «e o veterinário do mês passado?»
-              — é a que leva aqui. */}
-          {minhas.length > 0 ? (
-            <Button
-              label="Ver quem já cá esteve"
-              icon="account-clock-outline"
-              variant="secondary"
-              onPress={() => router.push('/equipa/historico')}
-            />
-          ) : null}
-
           {/* Por exploração, à vista e não escondido, como nos Animais */}
           {minhas.length > 1 ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
@@ -487,6 +463,34 @@ export default function TrabalhadoresScreen() {
                 ? ' Para convidar ou remover numa exploração à escolha, toque nela em cima.'
                 : ''}
             </Text>
+          ) : null}
+
+          {/* ---- Consultar ----
+           *
+           * No FIM da página, e já não por cima da lista. Estes dois botões
+           * respondem a perguntas de trás — "quem mexeu nisto?", "e o
+           * veterinário do mês passado?" — e estavam à frente da pergunta de
+           * hoje, que é quem cá anda AGORA. Num telemóvel isso obrigava a rolar
+           * por duas ações de arquivo antes de ver o primeiro nome da equipa.
+           */}
+          {minhas.length > 0 ? (
+            <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
+              <Text variant="label" color={colors.textSecondary} style={{ marginLeft: spacing.xs }}>
+                CONSULTAR
+              </Text>
+              <Button
+                label="Ver o registo de alterações"
+                icon="history"
+                variant="secondary"
+                onPress={() => router.push('/atividade')}
+              />
+              <Button
+                label="Ver quem já cá esteve"
+                icon="account-clock-outline"
+                variant="secondary"
+                onPress={() => router.push('/equipa/historico')}
+              />
+            </View>
           ) : null}
 
           {aCarregarAcesso ? (

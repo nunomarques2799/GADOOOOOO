@@ -83,6 +83,7 @@ function toExploracao(r: Row): Exploracao {
     fotografia: asStr(r.fotografia),
     financasAtivas: asBool(r.financasAtivas) ?? false,
     casaAtiva: asBool(r.casaAtiva) ?? false,
+    existenciasAtivas: asBool(r.existenciasAtivas) ?? false,
   };
 }
 
@@ -227,13 +228,13 @@ export function guardarUtilizador(db: SQLiteDatabase, u: Utilizador): void {
 
 export function guardarExploracao(db: SQLiteDatabase, e: Exploracao): void {
   db.runSync(
-    `INSERT OR REPLACE INTO exploracao (id, utilizadorId, nome, marcaExploracao, nifDetentor, localizacao, latitude, longitude, fotografia, financasAtivas, casaAtiva, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO exploracao (id, utilizadorId, nome, marcaExploracao, nifDetentor, localizacao, latitude, longitude, fotografia, financasAtivas, casaAtiva, existenciasAtivas, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       e.id, e.utilizadorId, e.nome, e.marcaExploracao, e.nifDetentor,
       txt(e.localizacao), num(e.latitude), num(e.longitude),
       txt(e.fotografia), bool(e.financasAtivas ?? false),
-      bool(e.casaAtiva ?? false), agora(),
+      bool(e.casaAtiva ?? false), bool(e.existenciasAtivas ?? false), agora(),
     ],
   );
 }

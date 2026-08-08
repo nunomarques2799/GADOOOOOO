@@ -32,9 +32,10 @@ import {
   parseDataPt,
 } from '@/data/helpers';
 import { formatQuantidade, lotesUtilizaveis, rotuloLote } from '@/data/medicamentos';
-import { preverParto } from '@/data/reproducao';
+import { preverParto, sugestoesDeCobricao } from '@/data/reproducao';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
+import { useExistencias } from '@/data/useExistencias';
 import { useFinancas } from '@/data/useFinancas';
 import type { Animal, EventoTipo, ResultadoDiagnostico, Sexo } from '@/data/types';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
@@ -249,9 +250,14 @@ export default function NovoEventoScreen() {
    * que um frasco está fisicamente numa arrecadação só.
    */
   const exploracaoEscolhida = animalById(animalIds[0] ?? '')?.exploracaoId;
+  // Com o registo de medicamentos desligado nas Definições não há arrecadação
+  // nenhuma para descontar: a lista fica vazia e o campo "Sai do stock" não
+  // chega a aparecer (ver `useExistencias`). O registo sanitário do tratamento
+  // não muda — o animal, a data, o produto e o intervalo de segurança ficam.
+  const { ativas: existenciasAtivas } = useExistencias(exploracaoEscolhida);
   const lotesDisponiveis = useMemo(
     () =>
-      COM_LOTE.includes(tipo)
+      COM_LOTE.includes(tipo) && existenciasAtivas
         ? lotesUtilizaveis(
             medicamentos,
             eventos,
@@ -259,7 +265,7 @@ export default function NovoEventoScreen() {
             tipo === 'Vacinação' ? 'Vacina' : 'Medicamento',
           )
         : [],
-    [medicamentos, eventos, exploracaoEscolhida, tipo],
+    [medicamentos, eventos, exploracaoEscolhida, tipo, existenciasAtivas],
   );
   const loteEscolhido = lotesDisponiveis.find((l) => l.medicamento.id === loteId);
 
@@ -299,6 +305,28 @@ export default function NovoEventoScreen() {
     resultado === 'gestante' && animal && cobricaoDoDiagnostico
       ? preverParto(animal.especie, cobricaoDoDiagnostico.data)
       : undefined;
+
+  /**
+   * Os touros (ou as palhetas) que se podem escolher sem escrever.
+   *
+   * A exploração é a do primeiro animal escolhido — a mesma regra do lote da
+   * arrecadação, e pela mesma razão: é a que está à frente de quem regista. Sem
+   * animal escolhido ainda, `exploracaoEscolhida` é `undefined` e a função
+   * devolve os machos de todas, que é melhor do que uma lista vazia num
+   * formulário onde a fêmea se escolhe depois.
+   */
+  const sugestoesTouro = useMemo(
+    () =>
+      tipo === 'Cobrição'
+        ? sugestoesDeCobricao(
+            animais,
+            eventos,
+            exploracaoEscolhida,
+            modoCobricao === 'Touro' ? 'Touro' : 'Sémen',
+          )
+        : [],
+    [tipo, animais, eventos, exploracaoEscolhida, modoCobricao],
+  );
 
   /**
    * Trocar para um tipo que não é de massa com vinte animais escolhidos não
@@ -743,6 +771,40 @@ export default function NovoEventoScreen() {
               </View>
             </Field>
             <Field label={modoCobricao === 'Touro' ? 'Touro' : 'Sémen'} opcional>
+              {/* Sugestões, e não uma lista fechada. O touro é muitas vezes
+                  emprestado, alugado ou uma palheta de sémen, e nenhum deles
+                  está no efetivo — uma lista fechada obrigaria a inventar um
+                  animal para poder registar a cobrição. Mas escrever à mão o
+                  nome do próprio semental, vinte vezes por época, era o caminho
+                  curto para ficar com "Marquês" e "Marques" no histórico como se
+                  fossem dois touros. Ver `sugestoesDeCobricao`. */}
+              {sugestoesTouro.length > 0 ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: spacing.xs,
+                    marginBottom: spacing.xs,
+                  }}>
+                  {sugestoesTouro.map((s) => (
+                    <Chip
+                      key={s}
+                      label={s}
+                      icon={modoCobricao === 'Touro' ? 'cow' : 'flask-outline'}
+                      selected={touro.trim().toLocaleLowerCase('pt') === s.toLocaleLowerCase('pt')}
+                      // Tocar no que já está escolhido limpa — é como se
+                      // desfaz sem apagar letra a letra.
+                      onPress={() =>
+                        setTouro((atual) =>
+                          atual.trim().toLocaleLowerCase('pt') === s.toLocaleLowerCase('pt')
+                            ? ''
+                            : s,
+                        )
+                      }
+                    />
+                  ))}
+                </View>
+              ) : null}
               <TextField
                 value={touro}
                 onChangeText={setTouro}
@@ -750,12 +812,10 @@ export default function NovoEventoScreen() {
                 icon={modoCobricao === 'Touro' ? 'cow' : 'flask-outline'}
                 autoCapitalize="words"
               />
-              {/* Campo de texto e não uma lista dos sementais da exploração: o
-                  touro é muitas vezes emprestado, alugado ou uma palheta de
-                  sémen, e nenhum deles está no efetivo. Uma lista fechada
-                  obrigaria a inventar um animal para poder registar a cobrição. */}
               <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-                Se não souber qual foi (manada com o touro à solta), deixe em branco.
+                {sugestoesTouro.length > 0
+                  ? 'Escolha um acima ou escreva outro. Se não souber qual foi (manada com o touro à solta), deixe em branco.'
+                  : 'Se não souber qual foi (manada com o touro à solta), deixe em branco.'}
               </Text>
             </Field>
             <Aviso

@@ -38,3 +38,4 @@ schema_medicamentos.sql
 schema_privilegios.sql
 schema_convite_seguro.sql
 schema_lint.sql
+schema_existencias_opcional.sql

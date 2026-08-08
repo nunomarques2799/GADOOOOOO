@@ -67,6 +67,7 @@ import { supabaseConfigurado } from './supabase';
 import {
   carregarTudoSupabase,
   definirFinancasAtivas as definirFinancasAtivasSupabase,
+  definirExistenciasAtivas as definirExistenciasAtivasSupabase,
   eConflito,
   mensagemLegivel,
   eliminarAnimalSupabase,
@@ -332,6 +333,8 @@ type GadoContext = {
    * apaga: nenhum movimento é removido e religar devolve as contas intactas.
    */
   definirFinancasAtivas: (ativas: boolean) => Promise<void>;
+  /** Liga/desliga o registo de medicamentos (a aba Existências) em toda a conta. */
+  definirExistenciasAtivas: (ativas: boolean) => Promise<void>;
   addMovimento: (m: Omit<Movimento, 'id'>) => Promise<Movimento>;
   updateMovimento: (id: string, patch: Partial<Movimento>) => Promise<void>;
   deleteMovimento: (id: string) => Promise<void>;
@@ -404,10 +407,24 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     cacheDisponivel ? lerDispensas() : {},
   );
 
-  const alertasBrutos = useMemo(
-    () => computeAlertas(animais, eventos, medicamentos),
-    [animais, eventos, medicamentos],
-  );
+  const alertasBrutos = useMemo(() => {
+    // Os lotes das explorações com o registo de medicamentos DESLIGADO não
+    // geram avisos de validade nem de "está a acabar". Filtra-se aqui, e não
+    // dentro do `computeAlertas`, para o cálculo dos alertas continuar a ser
+    // lógica pura que não sabe o que é um interruptor de conta.
+    //
+    // Por exploração e não por conta: o interruptor é de conta, mas espelha-se
+    // em cada exploração, e um trabalhador pode andar numa quinta que o tem
+    // ligado e noutra que não.
+    const comExistencias = new Set(
+      exploracoes.filter((e) => e.existenciasAtivas).map((e) => e.id),
+    );
+    return computeAlertas(
+      animais,
+      eventos,
+      medicamentos.filter((m) => comExistencias.has(m.exploracaoId)),
+    );
+  }, [animais, eventos, medicamentos, exploracoes]);
 
   const alertas = useMemo(
     () => filtrarDispensados(filtrarAlertas(alertasBrutos, prefsNotif), dispensas),
@@ -1092,6 +1109,29 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     [usaSupabase, gravarSqlite, puxarDoServidor],
   );
 
+  /** O mesmo, para o registo de medicamentos. Ver `definirFinancasAtivas`. */
+  const definirExistenciasAtivas = useCallback(
+    async (ativas: boolean): Promise<void> => {
+      setExploracoes((prev) => prev.map((e) => ({ ...e, existenciasAtivas: ativas })));
+
+      if (usaSupabase) {
+        const erro = await definirExistenciasAtivasSupabase(ativas);
+        if (erro) {
+          setExploracoes((prev) => prev.map((e) => ({ ...e, existenciasAtivas: !ativas })));
+          throw new Error(mensagemLegivel(erro));
+        }
+        await puxarDoServidor();
+        return;
+      }
+      gravarSqlite((db) => {
+        exploracoesRef.current.forEach((e) =>
+          guardarExploracao(db, { ...e, existenciasAtivas: ativas }),
+        );
+      });
+    },
+    [usaSupabase, gravarSqlite, puxarDoServidor],
+  );
+
   const addMovimento = useCallback(
     async (m: Omit<Movimento, 'id'>): Promise<Movimento> => {
       // `criadoPor` fica com o utilizador atual para a UI o poder mostrar já;
@@ -1306,6 +1346,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       addEvento,
       updateEvento,
       definirFinancasAtivas,
+      definirExistenciasAtivas,
       addMovimento,
       updateMovimento,
       deleteMovimento,
@@ -1327,6 +1368,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       addExploracao, updateExploracao, deleteExploracao,
       addTerreno, updateTerreno, deleteTerreno, addEvento, updateEvento,
       definirFinancasAtivas,
+      definirExistenciasAtivas,
       addMovimento, updateMovimento, deleteMovimento,
       addMedicamento, updateMedicamento, deleteMedicamento,
       recarregar,

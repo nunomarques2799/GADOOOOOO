@@ -408,13 +408,20 @@ describe('pareceErroDeRede — decide entre reenviar e descartar', () => {
  */
 describe('as chaves separam os ambientes', () => {
   it('o nome do projeto vai no meio da chave, não é um prefixo fixo', () => {
-    // A lista de nomes é a de todas as chaves, e não só a das quatro do
-    // princípio: uma chave nova que passasse ao lado desta regra (a marca de
-    // dono, por exemplo) separava os ambientes em todas menos nela — e é
-    // sempre a que fica de fora que dá o engano.
+    // Vale para TODAS as chaves, e não só para as quatro do princípio: uma
+    // chave nova que passasse ao lado desta regra (a marca de dono, a agenda)
+    // separava os ambientes em todas menos nela — e é sempre a que fica de fora
+    // que dá o engano.
+    //
+    // A regra é escrita pela FORMA e não por uma lista de nomes. Com a lista, a
+    // chave nova só era coberta se alguém se lembrasse de a acrescentar aqui
+    // também — e quem se esquece de pôr o projeto na chave esquece-se das duas
+    // coisas pela mesma razão.
     for (const chave of Object.values(CHAVES)) {
-      expect(chave).not.toMatch(/^gado\.(cache|outbox|falhadas|acesso|dono)\.v1$/);
-      expect(chave).toMatch(/^gado\.[^.]+\.(cache|outbox|falhadas|acesso|dono)\.v1$/);
+      // Quatro segmentos: gado . <projeto> . <o que é> . v1
+      expect(chave).toMatch(/^gado\.[^.]+\.[^.]+\.v1$/);
+      // E a forma antiga, sem projeto (`gado.cache.v1`), não pode voltar.
+      expect(chave).not.toMatch(/^gado\.[^.]+\.v1$/);
     }
   });
 

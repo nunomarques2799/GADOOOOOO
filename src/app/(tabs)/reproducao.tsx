@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { Pressable, SectionList, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, SectionList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StatCard } from '@/components/StatCard';
@@ -11,15 +11,17 @@ import { useMembros } from '@/data/membros';
 import {
   aguardamDiagnostico,
   faseMeta,
+  porFase,
   prestesAParir,
   resumoReproducao,
   semCobricaoAposParto,
+  type FaseReprodutiva,
   type LinhaReproducao,
 } from '@/data/reproducao';
 import { useGado } from '@/data/store';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
-import { colors, layout, spacing } from '@/theme';
+import { colors, layout, radii, shadow, spacing } from '@/theme';
 
 /**
  * Reprodução — as três perguntas que um criador de bovinos faz todas as
@@ -38,6 +40,19 @@ import { colors, layout, spacing } from '@/theme';
  * REBANHO — quantas estão prenhes, quantas paradas, como vai o intervalo entre
  * partos. É a diferença entre uma lista de recados e saber como corre o ano.
  */
+/**
+ * O que cada número do resumo abre. "Cobertas" leva as duvidosas com ela —
+ * é o que o cartão conta, e é a mesma situação vista do curral: foi ao touro e
+ * ainda não se sabe.
+ */
+type GrupoFases = { titulo: string; fases: FaseReprodutiva[] };
+
+const GRUPOS = {
+  gestantes: { titulo: 'Gestantes', fases: ['gestante'] },
+  cobertas: { titulo: 'Cobertas', fases: ['coberta', 'duvidosa'] },
+  vazias: { titulo: 'Vazias', fases: ['vazia'] },
+} satisfies Record<string, GrupoFases>;
+
 export default function ReproducaoScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -47,6 +62,12 @@ export default function ReproducaoScreen() {
   const { controlo: controloAtualizar } = useAtualizarPuxando();
 
   const podeRegistar = podeEmAlguma('registarTratamentos');
+  /** O grupo que a folha está a mostrar, ou `undefined` se está fechada. */
+  const [grupoAberto, setGrupoAberto] = useState<GrupoFases | undefined>(undefined);
+  const linhasDoGrupo = useMemo(
+    () => (grupoAberto ? porFase(animais, eventos, grupoAberto.fases) : []),
+    [grupoAberto, animais, eventos],
+  );
 
   const resumo = useMemo(() => resumoReproducao(animais, eventos), [animais, eventos]);
 
@@ -156,7 +177,7 @@ export default function ReproducaoScreen() {
                 ? 'O ciclo das fêmeas do efetivo'
                 : `${resumo.elegiveis} ${resumo.elegiveis === 1 ? 'fêmea' : 'fêmeas'} em idade de reprodução`}
             </Text>
-            {nadaARegistar ? null : <Resumo resumo={resumo} />}
+            {nadaARegistar ? null : <Resumo resumo={resumo} onAbrirFase={setGrupoAberto} />}
           </View>
         }
         ListEmptyComponent={
@@ -175,7 +196,83 @@ export default function ReproducaoScreen() {
           onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Cobrição' } })}
         />
       ) : null}
+
+      {/* Quem são as do número em que se tocou. Montada só quando está aberta:
+          fora disso não há folha nenhuma a guardar a fase de uma consulta
+          anterior. */}
+      <FolhaFase
+        grupo={grupoAberto}
+        linhas={linhasDoGrupo}
+        onFechar={() => setGrupoAberto(undefined)}
+        onAbrirAnimal={(id) => {
+          setGrupoAberto(undefined);
+          router.push(`/animal/${id}`);
+        }}
+      />
     </View>
+  );
+}
+
+/** A lista de quem está numa fase — o que os números do resumo abrem. */
+function FolhaFase({
+  grupo,
+  linhas,
+  onFechar,
+  onAbrirAnimal,
+}: {
+  grupo?: GrupoFases;
+  linhas: LinhaReproducao[];
+  onFechar: () => void;
+  onAbrirAnimal: (id: string) => void;
+}) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Modal visible={!!grupo} animationType="slide" transparent onRequestClose={onFechar}>
+      <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
+        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel="Fechar" />
+        <View
+          style={[
+            {
+              backgroundColor: colors.background,
+              borderTopLeftRadius: radii.xl,
+              borderTopRightRadius: radii.xl,
+              paddingTop: spacing.md,
+              paddingBottom: insets.bottom + spacing.md,
+              paddingHorizontal: spacing.lg,
+              maxHeight: '80%',
+            },
+            shadow.lg,
+          ]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+            <Text variant="h3" style={{ flex: 1 }}>
+              {grupo?.titulo} ({linhas.length})
+            </Text>
+            <Pressable
+              onPress={onFechar}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Fechar">
+              <Icon name="close" size="lg" color={colors.textSecondary} />
+            </Pressable>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {linhas.map((l) => (
+              // Sem `acao`: aqui está-se a CONSULTAR quem são, não a despachar
+              // trabalho. O que há para fazer está nas listas do ecrã de trás,
+              // cada uma com o seu botão.
+              <LinhaFemea
+                key={l.animal.id}
+                linha={l}
+                podeRegistar={false}
+                onAbrir={() => onAbrirAnimal(l.animal.id)}
+              />
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -184,27 +281,43 @@ export default function ReproducaoScreen() {
  * duas contas que dizem se a reprodução vai bem — e nenhuma delas se via em
  * lado nenhum da app antes disto.
  */
-function Resumo({ resumo }: { resumo: ReturnType<typeof resumoReproducao> }) {
+function Resumo({
+  resumo,
+  onAbrirFase,
+}: {
+  resumo: ReturnType<typeof resumoReproducao>;
+  onAbrirFase: (grupo: GrupoFases) => void;
+}) {
   return (
     <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
+      {/* Os três números abrem a lista de QUEM são. Antes eram só números: via-se
+          "14 cobertas" e não havia por onde saber quais — a pergunta seguinte,
+          sempre, e a app não a respondia em lado nenhum. As três listas de baixo
+          respondem a "o que é preciso fazer", que é outra coisa: uma vaca coberta
+          na semana passada não está em nenhuma delas, e ainda assim está coberta. */}
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         <StatCard
           icon="check-circle-outline"
           label="Gestantes"
           value={resumo.gestantes}
           tint={colors.success}
+          onPress={resumo.gestantes > 0 ? () => onAbrirFase(GRUPOS.gestantes) : undefined}
         />
         <StatCard
           icon="gender-male-female"
           label="Cobertas"
           value={resumo.cobertas + resumo.duvidosas}
           tint={colors.info}
+          onPress={
+            resumo.cobertas + resumo.duvidosas > 0 ? () => onAbrirFase(GRUPOS.cobertas) : undefined
+          }
         />
         <StatCard
           icon="circle-outline"
           label="Vazias"
           value={resumo.vazias}
           tint={colors.textSecondary}
+          onPress={resumo.vazias > 0 ? () => onAbrirFase(GRUPOS.vazias) : undefined}
         />
       </View>
       <Card>

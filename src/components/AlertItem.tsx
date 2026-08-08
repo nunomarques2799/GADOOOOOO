@@ -4,6 +4,7 @@ import { Pressable, View } from 'react-native';
 import { Icon, type IconName, IconBadge, Text } from '@/components/ui';
 import { podeDispensar } from '@/data/dispensados';
 import type { Alerta, AlertaGravidade } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 const gravidadeMeta: Record<AlertaGravidade, { cor: string; tinte: string }> = {
@@ -24,10 +25,9 @@ const categoriaIcone: Record<Alerta['categoria'], IconName> = {
 
 function prazoLabel(dias?: number): string {
   if (dias === undefined) return '';
-  if (dias < 0) return 'Em atraso';
-  if (dias === 0) return 'Hoje';
-  if (dias === 1) return '1 dia';
-  return `${dias} dias`;
+  if (dias < 0) return t('alerta.emAtraso');
+  if (dias === 0) return t('alerta.hoje');
+  return t('alerta.dias', { n: dias });
 }
 
 export function AlertItem({

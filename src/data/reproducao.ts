@@ -350,6 +350,115 @@ export function semCobricaoAposParto(animais: Animal[], eventos: Evento[]): Linh
     .sort(porUrgencia((l) => -(l.estado.diasDesdeUltimoParto ?? 0)));
 }
 
+/**
+ * As fêmeas que estão numa destas fases, para se poderem VER.
+ *
+ * As três listas acima respondem a "o que é preciso fazer". Esta responde a
+ * "quem são" — a pergunta que os números do resumo levantavam e não sabiam
+ * responder: via-se «14 cobertas» e não havia por onde saber quais eram.
+ *
+ * Ordena pela mais recente primeiro: numa lista de quem foi coberta, a que
+ * interessa é a última, não a mais antiga (essa já está nas de trabalho).
+ */
+export function porFase(
+  animais: Animal[],
+  eventos: Evento[],
+  fases: FaseReprodutiva[],
+): LinhaReproducao[] {
+  const estados = estadosPorAnimal(animais, eventos);
+  return animais
+    .flatMap((animal) => {
+      const estado = estados.get(animal.id);
+      if (!estado || !fases.includes(estado.fase)) return [];
+      return [{ animal, estado }];
+    })
+    .sort(porUrgencia((l) => l.estado.diasNaFase));
+}
+
+/* ------------------------------------------------------------------ *
+ *  Quem cobriu
+ * ------------------------------------------------------------------ */
+
+/**
+ * O nome escrito numa cobrição, se lá estiver.
+ *
+ * O `detalhe` de um evento é um punhado de pedaços colados por " · " (ver
+ * `evento/novo.tsx`), e a cobrição põe lá `Touro: Marquês` ou `Sémen: Alentejano
+ * 4471`. Ler o pedaço certo é o que permite oferecer amanhã o que se escreveu
+ * ontem, sem guardar nada de novo na base de dados.
+ */
+export function nomeNaCobricao(
+  evento: Evento,
+  modo: 'Touro' | 'Sémen',
+): string | undefined {
+  const prefixo = `${modo}: `;
+  const parte = (evento.detalhe ?? '')
+    .split(' · ')
+    .find((p) => p.startsWith(prefixo));
+  return parte?.slice(prefixo.length).trim() || undefined;
+}
+
+/**
+ * O que se pode escolher no campo "Touro" (ou "Sémen") de uma cobrição.
+ *
+ * Era um campo de texto e mais nada, com o argumento — verdadeiro — de que o
+ * touro é muitas vezes emprestado, alugado ou uma palheta de sémen, e portanto
+ * não está no efetivo. O que esse argumento não justificava era obrigar a
+ * ESCREVER o nome do próprio semental, à mão, de cada vez, a quem o tem no
+ * curral: são vinte cobrições por época com o mesmo nome, e basta um "Marques"
+ * sem acento para o histórico passar a ter dois touros onde há um.
+ *
+ * Por isso: sugestões, não uma lista fechada. Entram
+ *   1. os machos adultos do efetivo desta exploração (sementais à frente);
+ *   2. os nomes já escritos em cobrições anteriores — que é o que apanha o
+ *      touro do vizinho e a palheta que se costuma comprar.
+ * E o campo de texto fica, para o que não está em nenhuma das duas.
+ */
+export function sugestoesDeCobricao(
+  animais: Animal[],
+  eventos: Evento[],
+  exploracaoId: string | undefined,
+  modo: 'Touro' | 'Sémen',
+  limite = 12,
+): string[] {
+  const out: string[] = [];
+  /** Para não repetir "Marquês" e "marquês" como se fossem dois. */
+  const vistos = new Set<string>();
+  const juntar = (nome: string | undefined) => {
+    const limpo = nome?.trim();
+    if (!limpo) return;
+    const chave = limpo.toLocaleLowerCase('pt');
+    if (vistos.has(chave)) return;
+    vistos.add(chave);
+    out.push(limpo);
+  };
+
+  // 1. Os machos da casa. Só no modo "Touro": numa inseminação o que se escreve
+  // é a palheta, e um macho do curral ali é uma sugestão errada.
+  if (modo === 'Touro') {
+    const machos = animais.filter(
+      (a) =>
+        a.sexo === 'Macho'
+        && (!a.estado || a.estado === 'ativo')
+        && (!exploracaoId || a.exploracaoId === exploracaoId)
+        && idadeDias(a.dataNascimento) >= PrazosReproducao.idadeMinMachoMeses * 30.44,
+    );
+    // Os sementais primeiro: num efetivo com trinta machos de engorda e dois
+    // reprodutores, são os dois que se procuram.
+    const sementais = machos.filter((a) => a.finalidade === 'Semental');
+    const outros = machos.filter((a) => a.finalidade !== 'Semental');
+    for (const a of [...sementais, ...outros]) juntar(a.nome ?? a.numeroIdentificacao);
+  }
+
+  // 2. O que já se escreveu antes, do mais recente para o mais antigo.
+  const anteriores = eventos
+    .filter((e) => e.tipo === 'Cobrição')
+    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  for (const e of anteriores) juntar(nomeNaCobricao(e, modo));
+
+  return out.slice(0, limite);
+}
+
 /* ------------------------------------------------------------------ *
  *  Números do efetivo
  * ------------------------------------------------------------------ */

@@ -101,6 +101,13 @@ export const CHAVES = {
   acesso: `gado.${PROJETO}.acesso.v1`,
   /** De QUEM são os dados que estão aqui guardados (ver `garantirDono`). */
   dono: `gado.${PROJETO}.dono.v1`,
+  /**
+   * A agenda (`useAgenda.ts`). Vive aqui, e não lá, para levar o prefixo do
+   * projeto como todas as outras — estava em `gado.agenda.v1` e ficou de fora
+   * quando os ambientes foram criados, que é o mesmo engano descrito acima: a
+   * app de testes abria a mostrar os compromissos marcados em PRODUÇÃO.
+   */
+  agenda: `gado.${PROJETO}.agenda.v1`,
 } as const;
 
 const CHAVE_CACHE = CHAVES.cache;
@@ -300,6 +307,8 @@ export function limparCache(): void {
   remover(CHAVE_ACESSO);
   // Já não há dados de ninguém aqui — a marca de dono seguia-os.
   remover(CHAVE_DONO);
+  // A agenda é da exploração de quem saiu, como tudo o resto.
+  remover(CHAVES.agenda);
 }
 
 /**
