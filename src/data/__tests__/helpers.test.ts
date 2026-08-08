@@ -4,6 +4,7 @@ import { comRelogio } from '../../testUtils/relogio';
 import {
   diaIso,
   diasAte,
+  formatDataHora,
   idadeDias,
   idadeExtenso,
   isoDaysAgo,
@@ -119,6 +120,26 @@ describe('diaIso', () => {
     // dia de cada vez que o mesmo movimento fosse gravado outra vez.
     expect(diaIso('2026-07-25')).toBe('2026-07-25');
     expect(diaIso('2026-01-01')).toBe('2026-01-01');
+  });
+});
+
+describe('formatDataHora', () => {
+  it('escreve o dia e a hora de um instante', () => {
+    // O caso normal, e o único que a app produz hoje: um `timestamptz` do
+    // servidor (quem alterou o quê e quando, o fim do acesso do veterinário).
+    expect(formatDataHora(new Date(2026, 2, 14, 9, 25).toISOString())).toBe('14/03 09:25');
+    expect(formatDataHora(new Date(2026, 2, 14, 0, 5).toISOString())).toBe('14/03 00:05');
+  });
+
+  it('não inventa uma hora para uma data que não a tem', () => {
+    // `2026-03-14` não é "14 de março à meia-noite" — é 14 de março, e mais
+    // nada. Escrever "14/03 00:00" punha no ecrã um momento que ninguém
+    // registou, e a meia-noite é justamente a hora que muda de dia com o fuso.
+    expect(formatDataHora('2026-03-14')).toBe('14/03');
+  });
+
+  it('devolve o texto original quando não consegue ler a data', () => {
+    expect(formatDataHora('lixo')).toBe('lixo');
   });
 });
 

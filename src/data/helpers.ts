@@ -95,6 +95,14 @@ export function mascaraDataPt(texto: string): string {
 }
 
 /**
+ * Um texto que é SÓ um dia, `aaaa-mm-dd` — a forma que o servidor devolve numa
+ * coluna `date` e a que `diaIso` produz. Um valor destes não tem hora nenhuma,
+ * e quem o receber não deve inventar uma: é a diferença entre "dia 2" e "dia 2
+ * à meia-noite", e a segunda leitura muda de dia conforme o fuso.
+ */
+const SO_DIA = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
  * O DIA a que um instante pertence, em hora local: `2026-07-25`.
  *
  * Local e não UTC, e a diferença não é teórica. Portugal está em UTC+1 de
@@ -111,7 +119,7 @@ export function diaIso(d: Date | string): string {
   // faria o JS lê-lo como meia-noite UTC, e um dia sem hora não tem fuso para
   // converter: seria inventar uma hora para depois a interpretar. A ida e volta
   // ao servidor (que devolve `date` sem hora) tem de ser inofensiva.
-  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.trim())) return d.trim();
+  if (typeof d === 'string' && SO_DIA.test(d.trim())) return d.trim();
   const data = typeof d === 'string' ? new Date(d) : d;
   const p = (n: number) => String(n).padStart(2, '0');
   return `${data.getFullYear()}-${p(data.getMonth() + 1)}-${p(data.getDate())}`;
@@ -148,12 +156,27 @@ export function formatDataCurta(iso: string): string {
   const [ano, mes, dia] = diaIso(iso).split('-');
   return `${dia}/${mes}/${ano}`;
 }
-/** Dia e hora, para registos com momento exato (ex.: `14/03 09:25`). */
+/**
+ * Dia e hora, para registos com momento exato (ex.: `14/03 09:25`).
+ *
+ * Ao contrário das duas de cima, esta PRECISA do instante — é a hora que vem
+ * mostrar. Para tudo o que recebe hoje (`registadoEm`, `criadoEm`, `acessoAte`,
+ * todos `timestamptz`) já estava certa: os componentes locais de um instante dão
+ * o dia local certo em qualquer fuso.
+ *
+ * O que se fecha aqui é a entrada que nunca acontece mas não estava travada: uma
+ * data SEM hora. Passada por `new Date` virava meia-noite UTC, o que a oeste de
+ * Greenwich a punha no dia anterior — e, em qualquer fuso, fazia aparecer uma
+ * hora que ninguém registou. O dia passa a sair de `diaIso`, e onde não há hora
+ * não se escreve nenhuma: `14/03` em vez de `14/03 00:00`.
+ */
 export function formatDataHora(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
+  const [, mes, dia] = diaIso(iso).split('-');
+  if (SO_DIA.test(iso.trim())) return `${dia}/${mes}`;
   const p = (n: number) => String(n).padStart(2, '0');
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return `${dia}/${mes} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 /* ---- Dinheiro (euros, formato PT) ---- */

@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from '@jest/globals';
 
-import { diaIso, formatDataCurta, formatDataPt } from '../helpers';
+import { diaIso, formatDataCurta, formatDataHora, formatDataPt } from '../helpers';
 
 describe('a oeste de Greenwich', () => {
   it('está mesmo num fuso a oeste (senão isto não prova nada)', () => {
@@ -44,6 +44,23 @@ describe('a oeste de Greenwich', () => {
     const noite = new Date(2026, 2, 2, 20, 30).toISOString();
     expect(formatDataCurta(noite)).toBe('02/03/2026');
     expect(diaIso(noite)).toBe('2026-03-02');
+  });
+
+  it('o formatDataHora também não deixa o dia recuar', () => {
+    // Esta precisa do instante — é a hora que vem mostrar — e para o que recebe
+    // hoje (`registadoEm`, `acessoAte`, todos `timestamptz`) já estava certa. O
+    // que se fecha é a entrada sem hora: virava meia-noite UTC, que aqui é o dia
+    // anterior, e ainda inventava um "19:00" que ninguém registou.
+    expect(formatDataHora('2026-03-02')).toBe('02/03');
+    expect(formatDataHora('2026-01-01')).toBe('01/01');
+  });
+
+  it('mas com hora a dentro continua a mostrar a hora LOCAL', () => {
+    // O contrato da outra metade: um instante escreve-se na hora de quem o lê.
+    // Às 20:30 daqui já é dia 3 em Londres, e o que aparece tem de ser o dia e a
+    // hora locais — não os de UTC.
+    const noite = new Date(2026, 2, 2, 20, 30).toISOString();
+    expect(formatDataHora(noite)).toBe('02/03 20:30');
   });
 
   it('as três leituras do mesmo dia concordam entre si', () => {

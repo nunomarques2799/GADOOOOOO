@@ -127,6 +127,14 @@ describe('horaDe', () => {
   it('dá só as horas e os minutos (o dia já está no grupo)', () => {
     expect(horaDe(local(2026, 7, 30, 9, 5))).toBe('09:05');
   });
+
+  it('e devolve vazio quando o valor não traz hora nenhuma', () => {
+    // Isto lê o fim do que o `formatDataHora` escreve, e esse deixou de inventar
+    // uma hora para uma data que não a tem (`2026-07-30` é um dia, não é esse
+    // dia à meia-noite). Sem esta guarda, o que sobrava era o DIA — e ficava
+    // "30/07" na coluna onde o ecrã da atividade mostra "09:05".
+    expect(horaDe('2026-07-30')).toBe('');
+  });
 });
 
 describe('autores', () => {
