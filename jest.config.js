@@ -20,8 +20,14 @@
  * ambiente. Um `process.env.TZ = ...` dentro de um teste não faz nada: o
  * `process.env` que o teste vê é o do sandbox e nunca chega ao Node que decide o
  * fuso — pedia-se Lisboa e os `getTimezoneOffset()` continuavam todos a zero.
+ *
+ * O `TZ_TESTE` é a única porta para outro fuso, e existe para um punhado de
+ * testes que provam o CONTRÁRIO: que uma função não depende do fuso nenhum.
+ * Esses vivem em ficheiros `*.oeste.test.ts`, correm por `jest.config.oeste.js`
+ * e ficam de fora desta corrida — a suite normal não pode sair de Portugal,
+ * porque o `comRelogio` rebenta de propósito se sair.
  */
-process.env.TZ = 'Europe/Lisbon';
+process.env.TZ = process.env.TZ_TESTE ?? 'Europe/Lisbon';
 
 module.exports = {
   preset: 'jest-expo',
@@ -39,6 +45,6 @@ module.exports = {
    * `modulePathIgnorePatterns` é o que impede também a colisão de módulos com
    * o mesmo nome entre as cópias.
    */
-  testPathIgnorePatterns: ['/node_modules/', '/\\.claude/'],
+  testPathIgnorePatterns: ['/node_modules/', '/\\.claude/', '\\.oeste\\.test\\.ts$'],
   modulePathIgnorePatterns: ['/\\.claude/'],
 };

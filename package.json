@@ -58,7 +58,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "jest"
+    "test": "jest",
+    "test:fuso-oeste": "jest --config jest.config.oeste.js"
   },
   "private": true
 }

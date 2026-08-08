@@ -44,3 +44,11 @@ jobs:
 
       - name: Correr os testes
         run: npm test -- --ci
+
+      # A suite normal corre fixada em hora de Portugal (`jest.config.js`), que é
+      # onde a app é usada — e é preciso, porque metade dos erros de datas só se
+      # vê fora de UTC. O reverso é que as funções que NÃO podem depender do fuso
+      # ficavam sem quem as pusesse à prova: em Portugal acertam mesmo estando
+      # erradas. Estes correm a oeste de Greenwich, onde o erro aparece.
+      - name: Datas a oeste de Greenwich
+        run: npm run test:fuso-oeste -- --ci

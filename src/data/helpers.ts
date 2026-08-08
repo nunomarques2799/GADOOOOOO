@@ -125,15 +125,28 @@ export function isoMaisDias(iso: string, dias: number): string {
   return d.toISOString();
 }
 
-/* ---- Formatação PT ---- */
+/* ---- Formatação PT ----
+ *
+ * As duas escrevem um DIA, e por isso começam por reduzir o que recebem a um
+ * dia com `diaIso` em vez de o passarem por `new Date` e lerem os componentes
+ * locais. Parece o mesmo e não é: uma data sem hora (`2026-03-02`, o que o
+ * servidor devolve numa coluna `date`) é lida como meia-noite UTC, e num fuso a
+ * OESTE de Greenwich essa meia-noite ainda pertence ao dia anterior — a folha
+ * exportada escrevia 01/03 onde a app mostrava 02/03.
+ *
+ * Em Portugal (UTC+0/+1) isto nunca se viu, e não se vê: a meia-noite UTC cai
+ * sempre no mesmo dia local. A correção não muda nada do que o criador lê — tira
+ * é a dependência de o país estar a leste, que não era uma decisão de ninguém.
+ * É também a razão de o teste que a prova ter de correr noutro fuso, à parte
+ * (`npm run test:fuso-oeste`).
+ */
 export function formatDataPt(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getDate()} ${MESES_PT[d.getMonth()]} ${d.getFullYear()}`;
+  const [ano, mes, dia] = diaIso(iso).split('-');
+  return `${Number(dia)} ${MESES_PT[Number(mes) - 1]} ${ano}`;
 }
 export function formatDataCurta(iso: string): string {
-  const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+  const [ano, mes, dia] = diaIso(iso).split('-');
+  return `${dia}/${mes}/${ano}`;
 }
 /** Dia e hora, para registos com momento exato (ex.: `14/03 09:25`). */
 export function formatDataHora(iso: string): string {
