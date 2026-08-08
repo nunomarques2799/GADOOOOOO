@@ -65,8 +65,9 @@
 --   notificacoes_recentes      o registo de envios: destinos e assuntos.
 --   limpar_atividade_antiga    APAGA linhas do registo de atividade. É a
 --                              auditoria de quem mexeu em quê.
---   apagar_a_minha_conta       apaga a conta e tudo o que lhe pende. A app não
---                              a expõe de propósito (ver `src/data/auth.tsx`).
+--
+-- O `apagar_a_minha_conta` ESTEVE nesta lista e saiu em 2026-08-07 — a razão
+-- está na secção 3.
 --
 -- Todas verificam `eh_superadmin()` por dentro, portanto isto é a segunda
 -- tranca e não a única. Vale a pena na mesma: a primeira depende de cada corpo
@@ -128,8 +129,7 @@ declare
     'enviar_email_notificacao',
     'testar_notificacao_registo',
     'notificacoes_recentes',
-    'limpar_atividade_antiga',
-    'apagar_a_minha_conta'
+    'limpar_atividade_antiga'
   ];
 begin
   for r in
@@ -153,25 +153,37 @@ end $$;
 
 
 -- ------------------------------------------------------------------
--- 3. `apagar_a_minha_conta()` — a nota que explica porque está na lista
+-- 3. `apagar_a_minha_conta()` — porque VOLTOU a estar aberta (2026-08-07)
 -- ------------------------------------------------------------------
--- O `revoke` desta função estava AQUI, solto a seguir ao ciclo, e era a única
--- exceção à varredura. Passou para a lista da secção 2 com as outras quatro:
--- uma exceção escrita fora do sítio onde a regra corre é uma exceção que a
--- próxima alteração à regra atropela — foi assim que o `revoke` do
--- `enviar_email_notificacao` andou meses a ser desfeito sem ninguém ver.
+-- Esta função esteve fechada a `authenticated`, e a razão escrita aqui era:
+-- «a app NÃO a expõe de propósito» — o botão tinha estado no Perfil, colado ao
+-- "Terminar sessão", e um toque a mais apagava a exploração inteira sem volta.
 --
--- Porque está fechada: a app NÃO a expõe (a decisão está escrita em
--- `src/data/auth.tsx` — o botão existiu no Perfil, colado ao "Terminar sessão",
--- e um toque a mais apagava a exploração inteira sem volta). Mas a app não a
--- expor não a torna inalcançável: qualquer pessoa com o token da sua sessão a
--- podia chamar em `/rest/v1/rpc/`.
+-- A app passou a expô-la. Não foi por a decisão antiga ser má: foi porque a
+-- App Store obriga quem deixa criar conta a deixar apagá-la de DENTRO da app
+-- (diretriz 5.1.1(v)), e uma app que só apaga contas por pedido ao
+-- administrador é uma app que a Apple recusa. O acidente que fechou o botão
+-- está resolvido do lado da app e não do lado do `grant`: a entrada mudou de
+-- cartão, leva a um ecrã só para o assunto (`src/app/conta/apagar.tsx`) que
+-- mostra as explorações e os animais que vão cair, e o botão só acorda depois
+-- de a pessoa escrever «APAGAR» à mão.
 --
--- O direito ao apagamento (RGPD) continua garantido: apagar o utilizador em
--- Authentication → Users faz cair tudo por cascata das foreign keys do
--- `schema_seguranca.sql`, que é exatamente o que a função fazia.
+-- O `grant` a `authenticated` é o certo para o que ela faz: só apaga QUEM
+-- CHAMA (`uid := auth.uid()`, e o `delete` é `where id = uid`). Não há
+-- parâmetro nenhum por onde apontar a outra conta, e por isso ter `EXECUTE`
+-- não dá a ninguém nada que essa pessoa já não pudesse fazer a si própria.
+-- Fechá-la também nunca protegeu grande coisa: quem tivesse o token da sessão
+-- chamava-a à mesma em `/rest/v1/rpc/` — é o que dizia a nota anterior.
 --
--- Se o botão voltar à app, tira-se o nome da lista da secção 2.
+-- O que se perde, e é bom estar escrito: NÃO há segunda autenticação. Um
+-- telemóvel desbloqueado com a sessão aberta apaga a conta sem pedir a
+-- palavra-passe. Aceita-se porque o mesmo telemóvel já dava para apagar os
+-- animais um a um, e porque pedir a palavra-passe a criadores idosos num ecrã
+-- destes trocava um risco por outro. Se um dia deixar de se aceitar, o sítio
+-- de o corrigir é o ecrã da app, não este ficheiro.
+--
+-- Se o botão sair outra vez da app, o nome volta à lista da secção 2 — e a
+-- marca 33 do `estado.sql` volta a ter de mudar com ele.
 
 
 -- ==================================================================
@@ -253,7 +265,14 @@ end $$;
 --                      'ajuste_permissao','permissoes_membro_validas',
 --                      'toca_updated_at');
 --
--- 4. As cinco da lista ficaram fechadas a quem tem sessão (5 linhas, todas `f`):
+-- 4. As quatro da lista ficaram fechadas a quem tem sessão — e a quinta, que
+--    saiu da lista em 2026-08-07, ficou ABERTA. São 5 linhas: as quatro
+--    primeiras a `f` e o `apagar_a_minha_conta` a `t`.
+--
+--    Vale a pena pedir as cinco e não as quatro: é este `t` que prova que o
+--    ficheiro que correu é a versão nova. Com a versão anterior o botão de
+--    apagar a conta rebenta na app com «permission denied for function», que
+--    é um erro que não se descobre a ler SQL nenhum.
 --
 --   select p.proname, has_function_privilege('authenticated', p.oid, 'execute') as aberta
 --     from pg_proc p join pg_namespace n on n.oid = p.pronamespace

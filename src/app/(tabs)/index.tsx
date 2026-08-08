@@ -14,7 +14,7 @@ import { CalendarioAgenda } from '@/components/CalendarioAgenda';
 import { ModalDiaAgenda } from '@/components/ModalDiaAgenda';
 import { PainelPrimeirosPassos } from '@/components/PainelPrimeirosPassos';
 import { ExploracaoRow } from '@/components/ExploracaoRow';
-import { QuickAction } from '@/components/QuickAction';
+import { GrelhaAcoesRapidas } from '@/components/AcoesRapidas';
 import { StatCard } from '@/components/StatCard';
 import { Avatar, Badge, Card, Icon, SectionHeader, Text } from '@/components/ui';
 import { useAgenda } from '@/data/useAgenda';
@@ -25,6 +25,7 @@ import { saiuDoEfetivo } from '@/data/historicoAnimais';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
+import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
@@ -113,8 +114,8 @@ export default function InicioScreen() {
   const secaoCalendario = temAgenda ? (
     <>
       <SectionHeader
-        title="O que aí vem"
-        actionLabel={podeMarcarEventos ? 'Marcar' : undefined}
+        title={t('inicio.calendario')}
+        actionLabel={podeMarcarEventos ? t('inicio.marcar') : undefined}
         onAction={podeMarcarEventos ? () => router.push('/agenda/novo') : undefined}
       />
       <CalendarioAgenda
@@ -128,8 +129,8 @@ export default function InicioScreen() {
   const secaoAlertas = (
     <>
       <SectionHeader
-        title="Precisa da sua atenção"
-        actionLabel="Ver todos"
+        title={t('inicio.atencao')}
+        actionLabel={t('comum.verTodos')}
         onAction={() => router.push('/alertas')}
       />
       {alertas.length === 0 ? (
@@ -137,7 +138,7 @@ export default function InicioScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <Icon name="check-circle" size="lg" color={colors.success} />
             <Text variant="body" style={{ flex: 1 }}>
-              Tudo em dia. Não há prazos a cumprir.
+              {t('inicio.tudoEmDia')}
             </Text>
           </View>
         </Card>
@@ -148,7 +149,7 @@ export default function InicioScreen() {
               <Badge
                 tone="danger"
                 icon="alert"
-                label={`${urgentes} urgente${urgentes > 1 ? 's' : ''}`}
+                label={t('inicio.urgentes', { n: urgentes })}
                 style={{ marginVertical: spacing.xs }}
               />
             ) : null}
@@ -163,22 +164,22 @@ export default function InicioScreen() {
 
   const secaoResumo = (
     <>
-      <SectionHeader title="Resumo" />
+      <SectionHeader title={t('inicio.resumo')} />
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         <StatCard
           icon="cow"
           value={efetivo.length}
-          label="Animais"
+          label={t('nav.animais')}
           onPress={() => router.push('/animais')}
         />
         <StatCard
           icon="barn"
           value={exploracoes.length}
-          label="Explorações"
+          label={t('nav.exploracoes')}
           tint={colors.caprino}
           onPress={() => router.push('/exploracoes')}
         />
-        <StatCard icon="grass" value={terrenos.length} label="Terrenos" tint={colors.success} />
+        <StatCard icon="grass" value={terrenos.length} label={t('nav.terrenos')} tint={colors.success} />
       </View>
       {podeVerFinancas ? (
         <Card onPress={() => router.push('/financas')} style={{ marginTop: spacing.sm }}>
@@ -189,9 +190,9 @@ export default function InicioScreen() {
               color={temFinancas ? (saldoPositivo ? colors.success : colors.danger) : colors.primary}
             />
             <View style={{ flex: 1 }}>
-              <Text variant="bodyStrong">Finanças</Text>
+              <Text variant="bodyStrong">{t('nav.financas')}</Text>
               <Text variant="secondary" color={colors.textSecondary}>
-                {temFinancas ? 'Saldo da exploração' : 'Registe despesas e receitas'}
+                {temFinancas ? t('inicio.saldo') : t('inicio.registeContas')}
               </Text>
             </View>
             {temFinancas ? (
@@ -210,8 +211,8 @@ export default function InicioScreen() {
   const secaoExploracoes = (
     <>
       <SectionHeader
-        title="As minhas explorações"
-        actionLabel="Ver todas"
+        title={t('inicio.minhasExploracoes')}
+        actionLabel={t('comum.verTodas')}
         onAction={() => router.push('/exploracoes')}
       />
       {exploracoes.length === 0 ? (
@@ -219,7 +220,7 @@ export default function InicioScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <Icon name="barn" size="lg" color={colors.primary} />
             <Text variant="body" style={{ flex: 1 }}>
-              Ainda não tem explorações. Crie uma para começar a registar animais.
+              {t('inicio.semExploracoes')}
             </Text>
           </View>
         </Card>
@@ -229,66 +230,13 @@ export default function InicioScreen() {
     </>
   );
 
+  // A lista vive em `components/AcoesRapidas.tsx`: é a mesma que a folha do
+  // botão "+" da barra de baixo mostra, e duas cópias separavam-se no primeiro
+  // dia em que uma delas mudasse.
   const secaoAcoes = (
     <>
-      <SectionHeader title="Ações rápidas" />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-        {/* Em primeiro, e não no fim: marcar um evento é o que se faz assim que
-            se combina alguma coisa ao telefone, e é a única ação rápida que não
-            precisa de ter um animal à frente. */}
-        {podeMarcarEventos ? (
-          <QuickAction
-            icon="calendar-plus"
-            label="Novo evento"
-            color={colors.primary}
-            tint={colors.primaryTint}
-            onPress={() => router.push('/agenda/novo')}
-          />
-        ) : null}
-        <QuickAction icon="plus-circle" label="Novo animal" onPress={() => router.push('/animal/novo')} />
-        <QuickAction
-          icon="baby-bottle-outline"
-          label="Parto"
-          color={colors.info}
-          tint={colors.infoTint}
-          onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Parto' } })}
-        />
-        {/* A vacinação faltava aqui e é o registo que mais vezes se faz a um
-            lote inteiro — a campanha da língua azul num dia, o cercado todo.
-            Chegava-se a ela por Medicamento e depois trocando o tipo lá dentro,
-            que é um passo a mais no registo mais repetido do ano. */}
-        <QuickAction
-          icon="needle"
-          label="Vacinação"
-          onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Vacinação' } })}
-        />
-        <QuickAction
-          icon="medical-bag"
-          label="Medicamento"
-          color={colors.danger}
-          tint={colors.dangerTint}
-          onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Medicamento' } })}
-        />
-        <QuickAction
-          icon="scale"
-          label="Pesagem"
-          color={colors.warning}
-          tint={colors.warningTint}
-          onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Pesagem' } })}
-        />
-        {/* A despesa é o registo mais frequente de todos — a ração, o gasóleo,
-            a fatura da luz — e é a única coisa financeira que o trabalhador
-            faz. Merece estar aqui, ao lado dos eventos do dia-a-dia. */}
-        {podeRegistarDespesa ? (
-          <QuickAction
-            icon="cash-minus"
-            label="Despesa"
-            color={colors.success}
-            tint={colors.successTint}
-            onPress={() => router.push('/movimento/novo')}
-          />
-        ) : null}
-      </View>
+      <SectionHeader title={t('inicio.acoesRapidas')} />
+      <GrelhaAcoesRapidas />
     </>
   );
 
@@ -308,11 +256,15 @@ export default function InicioScreen() {
           end={{ x: 1, y: 1 }}
           style={{
             paddingTop: insets.top + (desktop ? spacing.xl : spacing.md),
-            // No telemóvel o cabeçalho é fundo e o conteúdo sobe por cima
-            // dele; em desktop as colunas começam com títulos em texto
-            // escuro, que sobre o verde ficavam ilegíveis — aqui o conteúdo
-            // fica abaixo, e o cabeçalho não precisa de folga extra.
-            paddingBottom: desktop ? spacing.xl : spacing.xxxl + spacing.lg,
+            // No telemóvel o conteúdo sobe um pouco por cima do cabeçalho, para
+            // o primeiro cartão ficar encostado à aba verde. SÓ UM POUCO: com a
+            // folga antiga (40px de subida contra 60px de folga em baixo), o
+            // primeiro elemento do conteúdo entrava 16px dentro do verde. Quando
+            // esse elemento era um cartão não se dava por nada — ele traz o seu
+            // próprio fundo. Mas quando é um TÍTULO de secção, que é texto solto
+            // e escuro, ficava metade da linha em cima do verde e metade fora: é
+            // o que se via no "O que aí vem" e no "Marcar" do calendário.
+            paddingBottom: desktop ? spacing.xl : spacing.xl,
             paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
             // Em desktop encosta à barra lateral — cantos redondos aqui
             // abririam uma fresta de fundo entre as duas.
@@ -358,7 +310,10 @@ export default function InicioScreen() {
             maxWidth: desktop ? layout.conteudoDesktop : undefined,
             alignSelf: 'center',
             paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
-            marginTop: desktop ? spacing.lg : -spacing.xxxl,
+            // 12px de subida contra 24px de folga em baixo: um cartão encosta à
+            // aba verde sem lhe entrar dentro, e um título de secção (que traz
+            // ainda `marginTop: xl` por cima) nasce sempre abaixo do verde.
+            marginTop: desktop ? spacing.lg : -spacing.sm,
           }}>
           {/* Conta suspensa — fica em primeiro, é o que explica tudo o resto */}
           <BannerSuspensao />
@@ -387,10 +342,10 @@ export default function InicioScreen() {
                 />
                 <Text variant="body" style={{ flex: 1 }}>
                   {online
-                    ? `A sincronizar ${pendentesSinc} alteração${pendentesSinc > 1 ? 'ões' : ''}…`
+                    ? t('inicio.aSincronizar', { n: pendentesSinc })
                     : pendentesSinc > 0
-                      ? `Sem ligação. ${pendentesSinc} alteração${pendentesSinc > 1 ? 'ões' : ''} guardada${pendentesSinc > 1 ? 's' : ''}. Envio automático quando houver rede.`
-                      : 'Sem ligação. Está a trabalhar offline; os dados estão guardados no dispositivo.'}
+                      ? t('inicio.semLigacaoComPendentes', { n: pendentesSinc })
+                      : t('inicio.semLigacao')}
                 </Text>
               </View>
             </Card>

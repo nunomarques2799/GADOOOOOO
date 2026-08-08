@@ -81,6 +81,13 @@ export const PrazosReproducao = {
    * reprodução. Abaixo disto é recria e não tem nada que estar lá.
    */
   idadeMinFemeaMeses: 15,
+  /**
+   * Idade mínima, em meses, para um macho ser sugerido como touro numa cobrição
+   * (ver `sugestoesDeCobricao`). Abaixo disto é um vitelo, e oferecê-lo na lista
+   * é oferecer um engano — ainda por cima num campo onde o engano fica a mentir
+   * na genealogia da cria.
+   */
+  idadeMinMachoMeses: 12,
   /** Intervalo entre partos que se considera bom, em dias (para os números). */
   intervaloPartosAlvo: 400,
 } as const;

@@ -200,6 +200,21 @@ export interface Exploracao extends ComVersao {
    */
   financasAtivas?: boolean;
   /**
+   * O registo de medicamentos (a aba Existências) está ligado nesta exploração?
+   *
+   * Mesma mecânica das finanças, e pela mesma razão: quem leva o frasco do
+   * veterinário não tem arrecadação para gerir, e um separador vazio é uma
+   * pergunta por responder no meio da barra. Decisão de CONTA, escrita só pelo
+   * RPC `definir_existencias_ativas` (ver
+   * `supabase/schema_existencias_opcional.sql`).
+   *
+   * Ao contrário das finanças, NÃO nasce desligada para toda a gente: a
+   * migração liga-a a quem já tem lotes registados. Desligar esconde e não
+   * apaga — o que resta de cada lote continua a ser comprado − aplicado, que
+   * nunca esteve guardado em coluna nenhuma.
+   */
+  existenciasAtivas?: boolean;
+  /**
    * HERANÇA. O interruptor do "registo por casa e número" já não existe na app:
    * o número do animal passou a um campo opcional sempre visível na ficha (ver
    * `FormularioAnimal`), porque um interruptor para mostrar um campo de texto

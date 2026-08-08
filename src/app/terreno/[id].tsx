@@ -1,9 +1,11 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { View } from 'react-native';
 
 import { AnimalRow } from '@/components/AnimalRow';
+import { FolhaMoverAnimais } from '@/components/FolhaMoverAnimais';
 import { BotoesDirecoes } from '@/components/mapa/BotoesDirecoes';
 import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
 import {
@@ -25,12 +27,16 @@ export default function TerrenoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const desktop = useDesktop();
-  const { terrenoById, exploracaoById, animais } = useGado();
+  const { terrenoById, exploracaoById, animais, terrenosByExploracao } = useGado();
   const { pode } = useMembros();
+  const [moverAberto, setMoverAberto] = useState(false);
 
   const terreno = id ? terrenoById(id) : undefined;
   // O veterinário trata dos animais, não do património — não edita terrenos.
   const podeEditar = pode(terreno?.exploracaoId, 'gerirTerrenos');
+  // Mudar o gado de cercado é mexer nos ANIMAIS, não no terreno: quem regista o
+  // efetivo pode fazê-lo, mesmo sem poder editar o terreno em si.
+  const podeMexerNoEfetivo = pode(terreno?.exploracaoId, 'editarAnimais');
 
   if (!terreno) {
     return (
@@ -44,6 +50,10 @@ export default function TerrenoDetalheScreen() {
   const meta = tipoTerrenoMeta[terreno.tipo ?? 'Outro'];
   const exploracao = exploracaoById(terreno.exploracaoId);
   const animaisNoTerreno = animais.filter((a) => a.terrenoId === terreno.id);
+  /** Para onde é que o gado daqui pode ir — os outros cercados da mesma quinta. */
+  const outrosTerrenos = terrenosByExploracao(terreno.exploracaoId).filter(
+    (t) => t.id !== terreno.id,
+  );
   const temCoords = terreno.latitude != null && terreno.longitude != null;
 
   return (
@@ -184,7 +194,28 @@ export default function TerrenoDetalheScreen() {
           onPress={() => router.push(`/terreno/animais/${terreno.id}`)}
           style={{ marginTop: spacing.sm }}
         />
+
+        {/* Mudar o rebanho todo de pasto. Só aparece quando há gado para mudar
+            E outro terreno para onde o mandar — sem uma das duas coisas, é um
+            botão que abre uma lista vazia. */}
+        {podeMexerNoEfetivo && animaisNoTerreno.length > 0 && outrosTerrenos.length > 0 ? (
+          <Button
+            label={`Mudar os ${animaisNoTerreno.length} para outro terreno`}
+            icon="transfer-right"
+            variant="secondary"
+            onPress={() => setMoverAberto(true)}
+            style={{ marginTop: spacing.sm }}
+          />
+        ) : null}
       </Screen>
+
+      <FolhaMoverAnimais
+        aberto={moverAberto}
+        origem={terreno}
+        destinos={outrosTerrenos}
+        animais={animaisNoTerreno}
+        onFechar={() => setMoverAberto(false)}
+      />
     </View>
   );
 }

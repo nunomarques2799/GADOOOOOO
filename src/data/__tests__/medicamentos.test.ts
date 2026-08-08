@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
+import { comRelogio } from '../../testUtils/relogio';
 import { diaIso, isoDaysAgo, isoInDays } from '../helpers';
 import {
   estadoDoLote,
@@ -83,6 +84,31 @@ describe('estadoDoLote — validade', () => {
     const e = estadoDoLote(lote({ validade: diaIso(isoDaysAgo(1)) }), []);
     expect(e.expirado).toBe(true);
     expect(e.disponivel).toBe(false);
+  });
+
+  it('e continua a ser o dia seguinte à 00:30 de verão', () => {
+    // O erro que isto fecha durava uma hora por dia, de março a outubro: a
+    // validade é gravada SEM hora (`diaIso`), o JS lia-a como meia-noite UTC e
+    // à 00:30 de Portugal em UTC+1 o frasco de ONTEM ficava a 0,98 dias de
+    // agora — perto o suficiente para passar por HOJE. O lote fora de validade
+    // aparecia como "A expirar" e continuava a poder escolher-se para um
+    // tratamento, que é o oposto do que estas duas linhas existem para garantir.
+    //
+    // Com a hora real isto passava sozinho 23 horas por dia. E em UTC passava
+    // as 24, porque aí a meia-noite UTC é a meia-noite local e não há
+    // desalinhamento nenhum — daí a suite correr fixada em hora de Portugal
+    // (`jest.config.js`), que é onde a app é usada.
+    comRelogio([2026, 8, 6, 0, 30], () => {
+      const ontem = estadoDoLote(lote({ validade: '2026-08-05' }), []);
+      expect(ontem.diasParaValidade).toBe(-1);
+      expect(ontem.expirado).toBe(true);
+      expect(ontem.disponivel).toBe(false);
+
+      const hoje = estadoDoLote(lote({ validade: '2026-08-06' }), []);
+      expect(hoje.diasParaValidade).toBe(0);
+      expect(hoje.expirado).toBe(false);
+      expect(hoje.disponivel).toBe(true);
+    });
   });
 
   it('sem validade escrita não expira nunca', () => {
@@ -170,5 +196,51 @@ describe('tabelaExistencias', () => {
     const estados = linhas.map((l) => l[l.length - 1]);
     expect(estados).toContain('A acabar');
     expect(estados).toContain('Fora de validade');
+  });
+});
+
+/**
+ * O caso que o criador perguntou: uma campanha de vacinação a um lote inteiro
+ * de animais desconta do frasco?
+ *
+ * Desconta, e é este teste que o fixa. O formulário grava UM evento por animal,
+ * cada um com o seu `medicamentoId` e a sua `quantidade` (ver `evento/novo.tsx`,
+ * onde a quantidade pedida é POR ANIMAL), e o que resta é sempre a soma desses
+ * eventos. Não há nenhuma coluna a descontar — e é por isso que isto continua
+ * certo mesmo que metade dos registos tenha sido feita offline, noutro
+ * aparelho, e só chegue ao servidor no dia seguinte.
+ */
+describe('uma campanha a vários animais desconta por animal', () => {
+  const frasco = () => lote({ nome: 'Língua azul', tipo: 'Vacina', quantidade: 100, unidade: 'ml' });
+
+  /** O que o formulário grava ao vacinar `n` animais com `dose` ml cada. */
+  const campanha = (n: number, dose: number): Evento[] =>
+    Array.from({ length: n }, (_, i) => ({
+      ...usa('m1', dose, `ev-${i}`),
+      animalId: `a-${i}`,
+      tipo: 'Vacinação' as const,
+    }));
+
+  it('trinta animais a 2 ml gastam 60 ml, não 2', () => {
+    const e = estadoDoLote(frasco(), campanha(30, 2));
+    expect(e.usado).toBe(60);
+    expect(e.resta).toBe(40);
+  });
+
+  it('e o frasco esgota-se quando a campanha o esgota', () => {
+    const e = estadoDoLote(frasco(), campanha(50, 2));
+    expect(e.resta).toBe(0);
+    expect(e.esgotado).toBe(true);
+    // Esgotado deixa de aparecer no formulário do tratamento seguinte.
+    expect(lotesUtilizaveis([frasco()], campanha(50, 2), 'exp-1', 'Vacina')).toEqual([]);
+  });
+
+  it('a soma é a mesma venha ela de um registo ou de trinta', () => {
+    // Registar 60 ml de uma vez ou 2 ml a trinta animais tem de dar o mesmo
+    // stock. Se um dia deixar de dar, é porque alguém pôs uma coluna a
+    // descontar algures — que é exatamente o que este módulo não faz.
+    expect(estadoDoLote(frasco(), campanha(30, 2)).resta).toBe(
+      estadoDoLote(frasco(), [usa('m1', 60)]).resta,
+    );
   });
 });

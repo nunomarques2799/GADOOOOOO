@@ -6,6 +6,7 @@ import { ExploracaoRow } from '@/components/ExploracaoRow';
 import { EmptyState, FAB, Text } from '@/components/ui';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, spacing } from '@/theme';
@@ -57,27 +58,29 @@ export default function ExploracoesScreen() {
         }}
         ListHeaderComponent={
           <View style={{ paddingTop: insets.top + spacing.md, marginBottom: spacing.md }}>
-            <Text variant="display">Explorações</Text>
+            <Text variant="display">{t('nav.exploracoes')}</Text>
             <Text variant="body" color={colors.textSecondary}>
-              As suas explorações pecuárias
+              {t('exploracoes.subtitulo')}
             </Text>
           </View>
         }
         ListEmptyComponent={
           <EmptyState
             icon="barn"
-            title="Sem explorações"
+            title={t('exploracoes.vazioTitulo')}
             message={
               podeCriar
-                ? 'Crie a sua primeira exploração para começar a registar terrenos e animais.'
-                : 'Ainda não foi associado a nenhuma exploração. Peça um código a quem a gere.'
+                ? t('exploracoes.vazioPodeCriar')
+                : t('exploracoes.vazioSemConvite')
             }
-            actionLabel={podeCriar ? 'Nova exploração' : undefined}
+            actionLabel={podeCriar ? t('exploracoes.nova') : undefined}
             onAction={podeCriar ? () => router.push('/exploracao/nova') : undefined}
           />
         }
       />
-      {podeCriar ? <FAB label="Nova" onPress={() => router.push('/exploracao/nova')} /> : null}
+      {podeCriar ? (
+        <FAB label={t('exploracoes.fab')} onPress={() => router.push('/exploracao/nova')} />
+      ) : null}
     </View>
   );
 }

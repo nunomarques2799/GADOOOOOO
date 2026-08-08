@@ -51,6 +51,8 @@
     "production": {
       "ios": {
         "bundleIdentifier": "com.gestaogado.app",
+        "ascAppId": "6799063195",
+        "appleTeamId": "8785V5WL8W",
         "appName": "Terrabovina",
         "language": "pt-PT"
       }

@@ -13,7 +13,17 @@ enquanto só há uma base de dados. Deixa de chegar no momento em que é preciso
 ## A ordem
 
 Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
-`drop … if exists` antes de recriar), portanto correr de novo é seguro.
+`drop … if exists` antes de recriar), portanto correr a SEQUÊNCIA de novo é
+seguro.
+
+> **Correr o 1.º sozinho por cima de uma base que já anda NÃO é seguro.** O
+> `schema.sql` recria as políticas da era de utilizador único (`perfil_self`,
+> `exploracao_owner`, … — `for all`, guiadas só pelo `user_id`), e as políticas
+> de um comando somam-se por OR: as novas continuam lá e deixam de decidir
+> nada, porque basta uma dizer que sim. Ninguém vê erro nenhum — a app funciona,
+> e o isolamento entre clientes é que deixou de existir. Se for preciso mexer no
+> 1.º, corre-se a sequência INTEIRA a seguir (é o que o `_completo.sql` faz),
+> nunca só ele. Achado da auditoria de 2026-07-18.
 
 | # | Ficheiro | O que traz | Depende de |
 | --- | --- | --- | --- |
@@ -47,7 +57,10 @@ Aplicar de cima para baixo. Todos são idempotentes (`if not exists`,
 | 28 | `schema_snira.sql` | `evento.comunicado_snira`/`comunicado_em`: marcar o que já foi comunicado ao SNIRA (mortes e saídas, a par do nascimento que o animal já tinha). | 1, **20** |
 | 29 | `schema_reproducao.sql` | `evento.resultado` (gestante/vazia/duvidoso). Os tipos `Cobrição` e `Diagnóstico` não precisam de schema — `evento.tipo` é texto livre. | **28** |
 | 30 | `schema_medicamentos.sql` | Tabela `medicamento` (um lote comprado por linha) e `evento.medicamento_id`/`quantidade`. Existências = comprado − aplicado, calculado e não guardado. | 1, 2, **13**, 29 |
-| 31 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. Tem a lista das que ficam FECHADAS mesmo a quem tem sessão. | **todos** |
+| 31 | `schema_privilegios.sql` | Tira ao `anon`/`authenticated` o `TRUNCATE`, `TRIGGER` e `REFERENCES` que as omissões do Supabase dão a cada tabela nova. O `truncate` **não passa por RLS**. Mexe também nas omissões, para as tabelas seguintes. | **todos os que criam tabelas** |
+| 32 | `schema_convite_seguro.sql` | Códigos de convite de `gen_random_bytes` (o `random()` não é criptográfico) e travão de 10 tentativas falhadas por conta em 15 min. O `resgatar_convite` passa a devolver `{"erro": …}` em vez de rebentar — ver abaixo. | **17**, **22** |
+| 33 | `schema_lint.sql` | Fecha os avisos do linter: `search_path` fixo e quem pode executar cada função `security definer`. Tem a lista das que ficam FECHADAS mesmo a quem tem sessão. **Reescrito a 2026-08-07**: o `apagar_a_minha_conta()` saiu dessa lista, porque a app passou a ter o botão de apagar a conta. Nas bases que já correram a versão anterior é preciso **correr o ficheiro outra vez** — senão o botão dá «permission denied for function» a quem o tocar, e nada no resto do `estado.sql` avisa. | **todos** |
+| 34 | `schema_existencias_opcional.sql` | As Existências passam a opt-in por cliente, como as finanças: `perfil.existencias_ativas` + espelho na exploração, RPC `definir_existencias_ativas`, e o `handle_new_exploracao` a herdar as TRÊS escolhas. **Não deixa ninguém sem nada**: liga-as a quem já tem lotes registados (passo 5). Vem DEPOIS do lint e fecha as suas próprias funções — uma função criada a seguir ao lint nasce com o `EXECUTE` a `PUBLIC` que ele existe para tirar. | **30**, **11** (o `handle_new_exploracao` que substitui vem de lá) |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 
@@ -97,7 +110,18 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
   devolve `false` para ela, e o veterinário — que já perdeu o `editarAnimais` no
   lado da app — fica sem conseguir registar tratamento nenhum. A app mostra os
   botões (a tabela dela diz que pode) e cada gravação bate contra a RLS.
-- **28 depende de todos, e é por isso que é o último.** O que ele faz é decidir
+- **32 depende de 17 e 22.** Reescreve o `criar_convite()` (que é do 17) e o
+  `resgatar_convite()` (que é do 22). Aplicado antes deles, são eles que ficam
+  por cima: os códigos voltam a sair do `random()` e o travão às tentativas
+  desaparece sem deixar rasto — a tabela `convite_tentativa` fica lá, vazia para
+  sempre, a parecer um travão que existe.
+  **E não é só SQL:** ele muda o CONTRATO do `resgatar_convite`, que passa a
+  devolver `{"erro": …}` em vez de levantar exceção (a razão está no cabeçalho
+  do ficheiro — uma exceção apagava o registo da tentativa que a acabava de
+  contar). O `data/membros.tsx` lê os dois caminhos de propósito, por isso
+  aplicar ou não aplicar nunca deixa a app partida; o que fica por existir, se
+  não se aplicar, é o travão.
+- **33 depende de todos, e é por isso que é o último.** O que ele faz é decidir
   quem pode executar cada função `security definer` da base. Se correr a meio,
   as funções que os ficheiros seguintes criarem nascem com o `EXECUTE` que o
   Postgres dá ao PUBLIC — que inclui o `anon`, ou seja, gente sem sessão
@@ -112,8 +136,8 @@ Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
   `public.notificacao_envio` e email nenhum. Confirmar sempre com
   `select public.testar_notificacao_registo();` depois de aplicar.
   Reparar também que a função de envio **não** se defende por permissões, e sim
-  por uma verificação lá dentro — precisamente porque o 22 lhe devolveria o
-  `execute` a `authenticated` a seguir.
+  por uma verificação lá dentro — precisamente porque o 33 (o linter) lhe
+  devolveria o `execute` a `authenticated` a seguir.
 - **27 depende de 15, e é por isso que fica no fim (tirando o linter).** A
   política de leitura do histórico usa o `role_em()` com a condição do prazo (do
   15). Com o `role_em()` do 2, um veterinário cujo acesso já caiu continuava a

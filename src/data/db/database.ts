@@ -151,6 +151,24 @@ export function inicializarBd(): SQLiteDatabase {
     garantirColuna(db, 'evento', 'comunicadoEm', 'TEXT');
   }
 
+  // v9 → v10: interruptor do registo de medicamentos (a aba Existências).
+  //
+  // Fica LIGADO onde já há lotes registados, e desligado no resto. É o
+  // contrário do que se fez com as finanças (v5), de propósito: aquelas
+  // nasceram com o interruptor e ninguém perdia nada por nascerem desligadas;
+  // esta funcionalidade já cá anda, e pôr toda a gente a 0 fazia desaparecer da
+  // app um registo que a lei obriga a ter. Mesma regra do lado do servidor —
+  // ver o passo 5 de `supabase/schema_existencias_opcional.sql`.
+  if (versao < 10) {
+    garantirColuna(db, 'exploracao', 'existenciasAtivas', 'INTEGER');
+    db.runSync(
+      `UPDATE exploracao SET existenciasAtivas =
+         CASE WHEN EXISTS (SELECT 1 FROM medicamento m WHERE m.exploracaoId = exploracao.id)
+              THEN 1 ELSE 0 END
+       WHERE existenciasAtivas IS NULL`,
+    );
+  }
+
   if (versao < SCHEMA_VERSION) {
     db.execSync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   }

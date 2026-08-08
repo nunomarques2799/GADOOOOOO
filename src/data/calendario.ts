@@ -11,11 +11,28 @@
  * que só aparece no fim do mês ou na mudança da hora.
  */
 
+import { idiomaAtual } from '@/i18n';
+
 import { diaIso } from './helpers';
 import type { Alerta, AlertaGravidade } from './types';
 
 /** Dias da semana, começados à SEGUNDA como em Portugal. */
 export const DIAS_SEMANA = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+
+/** O mesmo em inglês. A semana também começa à segunda no Reino Unido. */
+const DIAS_SEMANA_EN = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+/**
+ * As iniciais da semana no idioma em uso.
+ *
+ * Função e não constante: o `DIAS_SEMANA` acima continua exportado porque há
+ * testes que o usam para escrever o esperado, mas quem DESENHA tem de perguntar
+ * dentro do render — uma constante escolhida no import ficava congelada na
+ * língua de origem (a mesma armadilha do `colors`, ver AGENTS.md).
+ */
+export function diasDaSemana(): string[] {
+  return idiomaAtual() === 'en' ? DIAS_SEMANA_EN : DIAS_SEMANA;
+}
 
 /** Nomes dos dias por extenso, para quem usa leitor de ecrã. */
 const DIAS_EXTENSO = [
@@ -41,6 +58,21 @@ export const MESES = [
   'outubro',
   'novembro',
   'dezembro',
+];
+
+const MESES_EN = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 /**
@@ -129,7 +161,14 @@ export function mesVizinho(ano: number, mes: number, passo: number): { ano: numb
   return { ano: d.getFullYear(), mes: d.getMonth() };
 }
 
-/** "julho de 2026" — o título de quem está a ver o mês. */
+/**
+ * "julho de 2026" / "July 2026" — o título de quem está a ver o mês.
+ *
+ * O inglês não leva preposição nenhuma no meio, e é por isso que isto não é uma
+ * chave do dicionário com um `{mes} de {ano}`: a FORMA da frase muda, não só as
+ * palavras.
+ */
 export function rotuloMes(ano: number, mes: number): string {
+  if (idiomaAtual() === 'en') return `${MESES_EN[mes]} ${ano}`;
   return `${MESES[mes]} de ${ano}`;
 }

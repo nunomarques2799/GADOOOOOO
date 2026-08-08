@@ -1,9 +1,12 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
+import { comRelogio } from '../../testUtils/relogio';
 import {
   diaIso,
   diasAte,
+  formatDataHora,
   idadeDias,
+  idadeExtenso,
   isoDaysAgo,
   isoInDays,
   isoMaisDias,
@@ -120,6 +123,26 @@ describe('diaIso', () => {
   });
 });
 
+describe('formatDataHora', () => {
+  it('escreve o dia e a hora de um instante', () => {
+    // O caso normal, e o único que a app produz hoje: um `timestamptz` do
+    // servidor (quem alterou o quê e quando, o fim do acesso do veterinário).
+    expect(formatDataHora(new Date(2026, 2, 14, 9, 25).toISOString())).toBe('14/03 09:25');
+    expect(formatDataHora(new Date(2026, 2, 14, 0, 5).toISOString())).toBe('14/03 00:05');
+  });
+
+  it('não inventa uma hora para uma data que não a tem', () => {
+    // `2026-03-14` não é "14 de março à meia-noite" — é 14 de março, e mais
+    // nada. Escrever "14/03 00:00" punha no ecrã um momento que ninguém
+    // registou, e a meia-noite é justamente a hora que muda de dia com o fuso.
+    expect(formatDataHora('2026-03-14')).toBe('14/03');
+  });
+
+  it('devolve o texto original quando não consegue ler a data', () => {
+    expect(formatDataHora('lixo')).toBe('lixo');
+  });
+});
+
 describe('isoMaisDias', () => {
   it('soma dias e fixa a hora ao meio-dia', () => {
     // Meio-dia evita que fusos horários passem a data para o dia anterior.
@@ -128,15 +151,12 @@ describe('isoMaisDias', () => {
   });
 
   it('daqui a 10 dias continua a ler-se como 10 dias', () => {
-    // O relógio TEM de ser fixado, e ao meio-dia — a hora a que `isoMaisDias`
-    // ancora o alvo. Com a hora real este teste dava 11 de manhã e 10 de
-    // tarde: falhava em metade das execuções da CI, e uma porta de qualidade
-    // que falha ao calhar deixa de ser lida.
-    //
-    // A diferença de manhã não é ruído do teste — é `diasAte` a arredondar
-    // para cima sobre uma fração de dia, o que faz as contagens dos alertas
-    // mostrarem um dia a mais antes do meio-dia. Fica registado à parte.
-    jest.useFakeTimers().setSystemTime(new Date(2026, 6, 19, 12, 0, 0));
+    // O relógio fixa-se na mesma, para o teste não depender da hora a que a CI
+    // corre — mas já não é preciso que seja ao meio-dia. Enquanto `diasAte`
+    // media horas e arredondava para cima, esta conta dava 11 de manhã e 10 de
+    // tarde e o teste só passava se fosse ancorado ao meio-dia; agora compara
+    // dias com dias e dá 10 a qualquer hora (ver `diasAte — conta dias`).
+    jest.useFakeTimers().setSystemTime(new Date(2026, 6, 19, 8, 0, 0));
     try {
       expect(diasAte(isoMaisDias(new Date().toISOString(), 10))).toBe(10);
     } finally {
@@ -145,13 +165,122 @@ describe('isoMaisDias', () => {
   });
 });
 
+describe('diasAte — conta dias, não horas', () => {
+  it('à 00:30 de verão, ontem é −1 e não 0', () => {
+    // O erro relatado, no instante exato em que aparecia. Uma data SEM hora
+    // (`2026-08-05` — a forma que vem do servidor e a que `diaIso` produz) é
+    // lida como meia-noite UTC; à 00:30 de Portugal em UTC+1 isso punha ONTEM a
+    // 0,98 dias de agora, e arredondar para cima dava 0. Efeito no ecrã: um
+    // lote fora de validade lia-se "A expirar" em vez de "Fora de validade".
+    comRelogio([2026, 8, 6, 0, 30], () => {
+      expect(diasAte('2026-08-05')).toBe(-1);
+      expect(diasAte('2026-08-06')).toBe(0);
+      expect(diasAte('2026-08-07')).toBe(1);
+    });
+  });
+
+  // Sem o relógio fixo isto passava 23 horas por dia sem provar nada. Percorrer
+  // o dia inteiro é o que mostra que a resposta deixou de depender da hora: a
+  // meia-noite é o caso relatado, e a manhã inteira é o outro caminho (um alvo
+  // ao meio-dia ficava a 7,4 dias às 00:30 e lia-se 8).
+  it.each([0, 1, 5, 9, 11, 12, 13, 18, 23])('dá o mesmo às %ih', (hora) => {
+    comRelogio([2026, 8, 6, hora, 30], () => {
+      expect(diasAte('2026-08-05')).toBe(-1);
+      expect(diasAte('2026-08-06')).toBe(0);
+      expect(diasAte('2026-08-07')).toBe(1);
+      // Um instante completo ao meio-dia, que é o que `isoMaisDias` e
+      // `parseDataPt` gravam: o prazo de sete dias tem de ler-se sete.
+      expect(diasAte(isoMaisDias(new Date().toISOString(), 7))).toBe(7);
+    });
+  });
+
+  it('no inverno, com o país em UTC+0, responde o mesmo', () => {
+    // De novembro a março o desalinhamento desaparece. A conta não pode mudar
+    // de resposta com a estação — é a mesma pergunta.
+    comRelogio([2026, 1, 15, 0, 30], () => {
+      expect(diasAte('2026-01-14')).toBe(-1);
+      expect(diasAte('2026-01-15')).toBe(0);
+      expect(diasAte('2026-01-16')).toBe(1);
+    });
+  });
+
+  it('as noites de 23 e 25 horas da mudança da hora valem um dia, como as outras', () => {
+    // Contar dias dividindo milissegundos por 86 400 000 conta 1,04 dias na
+    // noite em que o relógio recua e 0,96 na que avança. Os dias comparam-se
+    // ancorados ao meio-dia justamente para essas duas noites não escaparem.
+    comRelogio([2026, 10, 24, 23, 30], () => {
+      expect(diasAte('2026-10-25')).toBe(1); // a noite de 25 horas
+      expect(diasAte('2026-10-26')).toBe(2);
+    });
+    comRelogio([2026, 3, 28, 23, 30], () => {
+      expect(diasAte('2026-03-29')).toBe(1); // a noite de 23 horas
+      expect(diasAte('2026-03-30')).toBe(2);
+    });
+  });
+});
+
 describe('idadeDias / diasAte', () => {
   it('idadeDias conta dias desde o nascimento', () => {
-    expect(idadeDias(isoDaysAgo(10))).toBe(10);
+    // Relógio fixo: `isoDaysAgo(10)` recua 10×24h, e nas noites de 23 e 25 horas
+    // da mudança da hora isso não cai no mesmo ponto do dia. Com a data real,
+    // este teste tinha uma janela de uma hora, duas vezes por ano, para falhar.
+    comRelogio([2026, 8, 8, 11, 29], () => {
+      expect(idadeDias(isoDaysAgo(10))).toBe(10);
+    });
   });
 
   it('diasAte é positivo no futuro e negativo no passado', () => {
     expect(diasAte(isoInDays(5))).toBeGreaterThan(0);
     expect(diasAte(isoDaysAgo(5))).toBeLessThan(0);
+  });
+});
+
+describe('idadeDias — um animal nascido hoje tem zero dias, não menos um', () => {
+  // As datas de nascimento ficam gravadas ao MEIO-DIA (`parseDataPt`). Medir a
+  // distância em horas até ao meio-dia dava −1 durante toda a manhã, e o
+  // `idadeExtenso` escrevia "por nascer" na ficha de um bezerro que estava ali à
+  // frente do criador. O mesmo desvio tirava um dia a todos os prazos que se
+  // contam a partir da idade. Percorre-se o dia inteiro: à tarde já acertava, e
+  // é por isso que isto nunca deu nas vistas.
+  const aoMeioDiaDe = (ano: number, mes: number, dia: number) =>
+    new Date(ano, mes - 1, dia, 12, 0, 0).toISOString();
+
+  it.each([0, 6, 9, 11, 12, 13, 18, 23])('às %ih', (hora) => {
+    comRelogio([2026, 8, 8, hora, 30], () => {
+      expect(idadeDias(aoMeioDiaDe(2026, 8, 8))).toBe(0);
+      expect(idadeExtenso(aoMeioDiaDe(2026, 8, 8))).toBe('0 dias');
+      expect(idadeDias(aoMeioDiaDe(2026, 8, 7))).toBe(1);
+      expect(idadeDias(aoMeioDiaDe(2026, 8, 5))).toBe(3);
+      // Um nascimento mesmo no futuro continua a ser negativo — é o que o
+      // `faixaDe` usa para não classificar um recém-nascido como "mais de 8
+      // anos" quando o relógio do aparelho está desacertado.
+      expect(idadeDias(aoMeioDiaDe(2026, 8, 9))).toBe(-1);
+      expect(idadeExtenso(aoMeioDiaDe(2026, 8, 9))).toBe('por nascer');
+    });
+  });
+
+  it('e o prazo do brinco de um bezerro de três dias é 17, a qualquer hora', () => {
+    // O efeito a jusante, tal como o `alertas.ts` o calcula: 20 dias de prazo
+    // legal menos a idade. De manhã lia-se 18.
+    comRelogio([2026, 8, 8, 9, 0], () => {
+      expect(20 - idadeDias(aoMeioDiaDe(2026, 8, 5))).toBe(17);
+    });
+    comRelogio([2026, 8, 8, 17, 0], () => {
+      expect(20 - idadeDias(aoMeioDiaDe(2026, 8, 5))).toBe(17);
+    });
+  });
+
+  it('mede o mesmo prazo que o diasAte, que é a régua do snira.ts', () => {
+    // O `alertas.ts` conta o prazo do SNIRA por `PrazosLegais.snira -
+    // idadeDias(...)` e o `snira.ts` por `diasAte(isoMaisDias(..., 7))`. São
+    // duas contas para o mesmo número, em ecrãs que o criador vê lado a lado.
+    // Enquanto uma media horas para trás e a outra para a frente, discordavam a
+    // manhã inteira. Agora assentam as duas em dias de calendário.
+    for (const hora of [0, 9, 11, 13, 23]) {
+      comRelogio([2026, 8, 8, hora, 30], () => {
+        const identificacao = aoMeioDiaDe(2026, 8, 5);
+        expect(7 - idadeDias(identificacao)).toBe(diasAte(isoMaisDias(identificacao, 7)));
+      });
+    }
   });
 });

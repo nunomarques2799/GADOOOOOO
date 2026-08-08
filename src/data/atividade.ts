@@ -210,10 +210,11 @@ export function tituloDoDia(dia: string, agora: Date = new Date()): string {
 
 /** A hora da alteração, só as horas e minutos (o dia já está no grupo). */
 export function horaDe(iso: string): string {
-  // `formatDataHora` dá "14/03 09:25"; aqui interessa a parte de trás.
-  const texto = formatDataHora(iso);
-  const partes = texto.split(' ');
-  return partes[partes.length - 1] ?? texto;
+  // `formatDataHora` dá "14/03 09:25"; aqui interessa a parte de trás. Um valor
+  // que venha SEM hora não a traz — e nesse caso não há hora para mostrar:
+  // devolver o que sobra punha "14/03" onde o ecrã espera "09:25".
+  const partes = formatDataHora(iso).split(' ');
+  return partes.length > 1 ? partes[partes.length - 1] : '';
 }
 
 /**

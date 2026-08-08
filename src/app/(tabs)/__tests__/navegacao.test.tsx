@@ -26,6 +26,24 @@ jest.mock('expo-router', () => {
 
 jest.mock('@/hooks/useDesktop', () => ({ useDesktop: () => true, BREAKPOINT_DESKTOP: 900 }));
 
+/**
+ * A folha do botão "+" não faz parte desta pergunta — aqui olha-se para os
+ * DESTINOS que cada papel vê. Importá-la a sério puxava `useFinancas` → `store`
+ * → `auth` → `supabase`, e com ele o AsyncStorage, que num teste de nós de
+ * texto não existe: a suite rebentava antes de chegar ao primeiro `expect`.
+ */
+jest.mock('@/components/AcoesRapidas', () => ({ FolhaAcoesRapidas: () => null }));
+
+/** O interruptor das Existências — ligado, para o separador entrar na conta. */
+const mockExistencias = { ativas: true };
+jest.mock('@/data/useExistencias', () => ({
+  useExistencias: () => ({
+    ativas: mockExistencias.ativas,
+    podeLigarDesligar: true,
+    podeGerir: true,
+  }),
+}));
+
 jest.mock('@/data/membros', () => {
   const api = {
     podeEmAlguma: () => mockComEquipa.valor,
@@ -122,5 +140,28 @@ describe('navegação por papel', () => {
     expect(lista).toContain('Finanças');
     expect(lista).toContain('Documentos');
     expect(lista).toContain('Trabalhadores');
+  });
+
+  /**
+   * O registo de medicamentos é opt-in, como as finanças: quem leva o frasco do
+   * veterinário não tem arrecadação nenhuma para gerir, e um separador
+   * permanentemente vazio é uma pergunta por responder no meio da barra.
+   *
+   * A diferença para as finanças é que aqui NÃO há papel nenhum a decidir — o
+   * trabalhador que vacina precisa de escolher o frasco tanto como o dono. A
+   * única condição é o interruptor.
+   */
+  it('com o registo de medicamentos desligado, a aba Existências desaparece', () => {
+    mockExistencias.ativas = false;
+    const lista = rotulos(montar());
+    expect(lista).not.toContain('Existências');
+    // E o resto da app fica: desligou-se uma funcionalidade, não a navegação.
+    expect(lista).toContain('Animais');
+    expect(lista).toContain('Alertas');
+  });
+
+  it('e volta assim que se liga', () => {
+    mockExistencias.ativas = true;
+    expect(rotulos(montar())).toContain('Existências');
   });
 });

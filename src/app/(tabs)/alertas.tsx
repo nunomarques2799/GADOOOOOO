@@ -7,6 +7,7 @@ import { CartaoIntroducao } from '@/components/CartaoIntroducao';
 import { Card, Chip, EmptyState, Icon, type IconName, Screen, Text } from '@/components/ui';
 import { useGado } from '@/data/store';
 import type { Alerta, AlertaGravidade } from '@/data/types';
+import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { colors, radii, spacing } from '@/theme';
 
@@ -21,9 +22,9 @@ export default function AlertasScreen() {
   // Os grupos vivem aqui dentro (e não no topo do módulo) para lerem as cores
   // no render — ver `theme/paletas.ts`.
   const grupos: { chave: AlertaGravidade; titulo: string; cor: string }[] = [
-    { chave: 'urgente', titulo: 'Urgente', cor: colors.danger },
-    { chave: 'aviso', titulo: 'Esta semana', cor: colors.warning },
-    { chave: 'info', titulo: 'A acompanhar', cor: colors.info },
+    { chave: 'urgente', titulo: t('alertas.urgente'), cor: colors.danger },
+    { chave: 'aviso', titulo: t('alertas.estaSemana'), cor: colors.warning },
+    { chave: 'info', titulo: t('alertas.aAcompanhar'), cor: colors.info },
   ];
 
   // Só vale a pena escolher exploração quando há mais do que uma. Com uma só,
@@ -44,7 +45,7 @@ export default function AlertasScreen() {
             `<Header>` dos ecrãs de detalhe que aqui esteve: num separador não
             há para onde o botão de voltar levar. */}
         <View style={{ marginTop: spacing.md, marginBottom: spacing.md }}>
-          <Text variant="display">Alertas</Text>
+          <Text variant="display">{t('nav.alertas')}</Text>
           <Text variant="body" color={colors.textSecondary}>
             Prazos legais e tarefas por fazer
           </Text>
@@ -78,13 +79,13 @@ export default function AlertasScreen() {
             marginBottom: spacing.md,
           }}>
           <Separador
-            label="Lista"
+            label={t('alertas.lista')}
             icon="format-list-bulleted"
             ativo={vista === 'lista'}
             onPress={() => setVista('lista')}
           />
           <Separador
-            label="Calendário"
+            label={t('alertas.calendario')}
             icon="calendar-month-outline"
             ativo={vista === 'calendario'}
             onPress={() => setVista('calendario')}
@@ -101,7 +102,7 @@ export default function AlertasScreen() {
               marginBottom: spacing.md,
             }}>
             <Chip
-              label="Todas"
+              label={t('comum.todas')}
               icon="barn"
               selected={exploracaoId === undefined}
               onPress={() => setExploracaoId(undefined)}
@@ -120,11 +121,11 @@ export default function AlertasScreen() {
         {visiveis.length === 0 ? (
           <EmptyState
             icon="check-circle-outline"
-            title="Tudo em dia"
+            title={t('alertas.tudoEmDiaTitulo')}
             message={
               nomeExploracao
                 ? `Não há prazos nem tarefas pendentes em ${nomeExploracao}.`
-                : 'Não há prazos legais nem tarefas pendentes. Bom trabalho!'
+                : t('alertas.tudoEmDiaMensagem')
             }
           />
         ) : vista === 'calendario' ? (

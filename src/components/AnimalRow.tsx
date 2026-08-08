@@ -7,6 +7,7 @@ import { Badge, Card, Icon, IconBadge, Text } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
 import { idadeExtenso } from '@/data/helpers';
 import type { Animal } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /**
@@ -108,7 +109,7 @@ export const AnimalRow = memo(function AnimalRow({
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text variant="h3" numberOfLines={1} style={{ flexShrink: 1 }}>
-              {animal.nome ?? 'Sem nome'}
+              {animal.nome ?? t('animais.semNome')}
             </Text>
             <Icon name={sexoIcon} size={16} color={sexoCor} />
             {animal.estado === 'falecido' ? (
@@ -121,11 +122,11 @@ export const AnimalRow = memo(function AnimalRow({
               <Badge tone="danger" icon="trash-can-outline" label="Eliminado" />
             ) : null}
             {porCompletar ? (
-              <Badge tone="warning" icon="pencil-outline" label="Por completar" />
+              <Badge tone="warning" icon="pencil-outline" label={t('animais.porCompletar')} />
             ) : null}
           </View>
           <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
-            {animal.numeroIdentificacao ?? 'Sem brinco'}
+            {animal.numeroIdentificacao ?? t('animais.semBrinco')}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
             <Text variant="caption" color={colors.textMuted} numberOfLines={1} style={{ flexShrink: 1 }}>

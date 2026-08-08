@@ -6,7 +6,14 @@
  * precisa das contas de datas deste ficheiro. Ficavam os dois a importar-se um
  * ao outro. Este módulo é a camada de baixo e não deve conhecer nenhum dos que
  * falam do domínio.
+ *
+ * O `@/i18n` é a exceção a essa regra, e não a contradiz: é uma camada AINDA
+ * MAIS BAIXA do que esta (só sabe ler uma preferência e devolver uma string) e
+ * não conhece nem o domínio nem este ficheiro. Serve as duas funções que
+ * produzem texto para os olhos — a saudação e a data por extenso.
  */
+
+import { idiomaAtual, t } from '@/i18n';
 
 const MESES_PT = [
   'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
@@ -15,19 +22,38 @@ const MESES_PT = [
 
 const DIAS_PT = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
+const MESES_EN = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+const DIAS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 const MS_DIA = 86_400_000;
 
 /** Saudação conforme a hora do dia. */
 export function saudacao(d = new Date()): string {
   const h = d.getHours();
-  if (h < 12) return 'Bom dia';
-  if (h < 20) return 'Boa tarde';
-  return 'Boa noite';
+  if (h < 12) return t('saudacao.manha');
+  if (h < 20) return t('saudacao.tarde');
+  return t('saudacao.noite');
 }
 
-/** Data de hoje por extenso, ex: "Segunda, 13 jul 2026". */
+/**
+ * Data de hoje por extenso, ex: "Segunda, 13 jul 2026" / "Monday, 13 Jul 2026".
+ *
+ * As tabelas de meses e dias ficam AQUI e não no dicionário do `i18n`: são
+ * catorze linhas por língua que nada mais lê, e diluí-las entre os textos de
+ * ecrã só fazia o dicionário maior. A ORDEM também não muda — dia antes do mês
+ * nas duas — porque é assim que se escreve em Portugal e no Reino Unido, e esta
+ * app é usada em Portugal.
+ *
+ * `formatDataPt` e as outras continuam em português nas duas línguas: são
+ * datas curtas em dígitos (13/07/2026), que se leem igual em qualquer sítio.
+ */
 export function dataExtensa(d = new Date()): string {
-  return `${DIAS_PT[d.getDay()]}, ${d.getDate()} ${MESES_PT[d.getMonth()]} ${d.getFullYear()}`;
+  const [dias, meses] = idiomaAtual() === 'en' ? [DIAS_EN, MESES_EN] : [DIAS_PT, MESES_PT];
+  return `${dias[d.getDay()]}, ${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 /* ---- Datas relativas (para seed sempre "vivo") ---- */
@@ -95,6 +121,14 @@ export function mascaraDataPt(texto: string): string {
 }
 
 /**
+ * Um texto que é SÓ um dia, `aaaa-mm-dd` — a forma que o servidor devolve numa
+ * coluna `date` e a que `diaIso` produz. Um valor destes não tem hora nenhuma,
+ * e quem o receber não deve inventar uma: é a diferença entre "dia 2" e "dia 2
+ * à meia-noite", e a segunda leitura muda de dia conforme o fuso.
+ */
+const SO_DIA = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
  * O DIA a que um instante pertence, em hora local: `2026-07-25`.
  *
  * Local e não UTC, e a diferença não é teórica. Portugal está em UTC+1 de
@@ -111,7 +145,7 @@ export function diaIso(d: Date | string): string {
   // faria o JS lê-lo como meia-noite UTC, e um dia sem hora não tem fuso para
   // converter: seria inventar uma hora para depois a interpretar. A ida e volta
   // ao servidor (que devolve `date` sem hora) tem de ser inofensiva.
-  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.trim())) return d.trim();
+  if (typeof d === 'string' && SO_DIA.test(d.trim())) return d.trim();
   const data = typeof d === 'string' ? new Date(d) : d;
   const p = (n: number) => String(n).padStart(2, '0');
   return `${data.getFullYear()}-${p(data.getMonth() + 1)}-${p(data.getDate())}`;
@@ -125,22 +159,50 @@ export function isoMaisDias(iso: string, dias: number): string {
   return d.toISOString();
 }
 
-/* ---- Formatação PT ---- */
+/* ---- Formatação PT ----
+ *
+ * As duas escrevem um DIA, e por isso começam por reduzir o que recebem a um
+ * dia com `diaIso` em vez de o passarem por `new Date` e lerem os componentes
+ * locais. Parece o mesmo e não é: uma data sem hora (`2026-03-02`, o que o
+ * servidor devolve numa coluna `date`) é lida como meia-noite UTC, e num fuso a
+ * OESTE de Greenwich essa meia-noite ainda pertence ao dia anterior — a folha
+ * exportada escrevia 01/03 onde a app mostrava 02/03.
+ *
+ * Em Portugal (UTC+0/+1) isto nunca se viu, e não se vê: a meia-noite UTC cai
+ * sempre no mesmo dia local. A correção não muda nada do que o criador lê — tira
+ * é a dependência de o país estar a leste, que não era uma decisão de ninguém.
+ * É também a razão de o teste que a prova ter de correr noutro fuso, à parte
+ * (`npm run test:fuso-oeste`).
+ */
 export function formatDataPt(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getDate()} ${MESES_PT[d.getMonth()]} ${d.getFullYear()}`;
+  const [ano, mes, dia] = diaIso(iso).split('-');
+  return `${Number(dia)} ${MESES_PT[Number(mes) - 1]} ${ano}`;
 }
 export function formatDataCurta(iso: string): string {
-  const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+  const [ano, mes, dia] = diaIso(iso).split('-');
+  return `${dia}/${mes}/${ano}`;
 }
-/** Dia e hora, para registos com momento exato (ex.: `14/03 09:25`). */
+/**
+ * Dia e hora, para registos com momento exato (ex.: `14/03 09:25`).
+ *
+ * Ao contrário das duas de cima, esta PRECISA do instante — é a hora que vem
+ * mostrar. Para tudo o que recebe hoje (`registadoEm`, `criadoEm`, `acessoAte`,
+ * todos `timestamptz`) já estava certa: os componentes locais de um instante dão
+ * o dia local certo em qualquer fuso.
+ *
+ * O que se fecha aqui é a entrada que nunca acontece mas não estava travada: uma
+ * data SEM hora. Passada por `new Date` virava meia-noite UTC, o que a oeste de
+ * Greenwich a punha no dia anterior — e, em qualquer fuso, fazia aparecer uma
+ * hora que ninguém registou. O dia passa a sair de `diaIso`, e onde não há hora
+ * não se escreve nenhuma: `14/03` em vez de `14/03 00:00`.
+ */
 export function formatDataHora(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
+  const [, mes, dia] = diaIso(iso).split('-');
+  if (SO_DIA.test(iso.trim())) return `${dia}/${mes}`;
   const p = (n: number) => String(n).padStart(2, '0');
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return `${dia}/${mes} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 /* ---- Dinheiro (euros, formato PT) ---- */
@@ -165,22 +227,92 @@ export function paraEuro(texto: string): number {
   return parseFloat(texto.replace(/\s/g, '').replace(',', '.'));
 }
 
-/* ---- Idade ---- */
-export function idadeDias(iso: string): number {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / MS_DIA);
+/* ---- Idade e prazos ----
+ *
+ * As duas contas abaixo são a MESMA pergunta em sentidos opostos, e por isso
+ * assentam na mesma primitiva: quantos dias de CALENDÁRIO separam dois dias.
+ * Enquanto cada uma media horas por sua conta, davam respostas diferentes para
+ * o mesmo prazo — o do SNIRA saía por `idadeDias` no `alertas.ts` e por
+ * `diasAte` no `snira.ts`, e os dois ecrãs discordavam a manhã inteira.
+ *
+ * Nenhuma delas compara instantes. Contar horas e arredondar dava um dia a mais
+ * ou a menos por dois caminhos:
+ *
+ * - Uma data SEM hora (`2026-08-05`, que é o que `diaIso` produz e o que o
+ *   servidor devolve numa coluna `date`) é lida pelo JS como meia-noite UTC.
+ *   Entre a meia-noite e a uma da manhã, com o país em UTC+1, ONTEM fica a 0,98
+ *   dias de agora: um lote fora de validade aparecia como "A expirar" em vez de
+ *   "Fora de validade" (ver `estadoDoLote`). Uma hora por dia, de março a
+ *   outubro, e só onde o fuso não é UTC.
+ * - Um instante ao MEIO-DIA (o que `parseDataPt` e `isoMaisDias` gravam) fica a
+ *   10,1 dias de distância às 9 da manhã. Este não depende de fuso nenhum:
+ *   acontecia todas as manhãs até ao meio-dia, em qualquer país.
+ *
+ * Os dois lados passam por `diaIso`, que já sabe ler o dia em hora local sem
+ * inventar uma hora para uma data que não a tem, e os dias comparam-se ancorados
+ * ao meio-dia para que as noites de 23 e 25 horas da mudança da hora não valham
+ * um dia a mais nem a menos.
+ */
+
+/** Dias de calendário de `de` até `ate`, ambos `aaaa-mm-dd` em hora local. */
+function diasEntreDias(de: string, ate: string): number {
+  return Math.round((meioDiaLocal(ate) - meioDiaLocal(de)) / MS_DIA);
 }
+
+/**
+ * Dias de calendário entre dois instantes ou datas (`b − a`).
+ *
+ * É a primitiva de todas as contas de dias da app. Aceita as três formas que
+ * circulam por aqui — `Date`, instante ISO completo e data sem hora — porque é
+ * `diaIso` quem reduz cada uma ao dia a que pertence antes de as comparar.
+ *
+ * Usar isto em vez de dividir a diferença de milissegundos por um dia. Essa
+ * conta parece equivalente e não é: as datas ficam gravadas ao meio-dia, e a
+ * fração que sobra dava um dia a mais ou a menos conforme a HORA a que se
+ * perguntasse — todas as manhãs, sem nada que o denunciasse.
+ */
+export function diasEntreDatas(a: Date | string, b: Date | string): number {
+  return diasEntreDias(diaIso(a), diaIso(b));
+}
+
+/** O meio-dia local de um `aaaa-mm-dd`. A âncora para contar dias entre dias. */
+function meioDiaLocal(dia: string): number {
+  const [ano, mes, d] = dia.split('-').map(Number);
+  return new Date(ano, mes - 1, d, 12, 0, 0, 0).getTime();
+}
+
+/**
+ * Há quantos dias foi `iso`: 0 é hoje, negativo ainda não chegou.
+ *
+ * Um animal nascido HOJE dá 0 a qualquer hora. Enquanto isto media horas contra
+ * uma data de nascimento gravada ao meio-dia, dava −1 de manhã e o
+ * `idadeExtenso` escrevia **"por nascer"** na ficha de um bezerro que estava ali
+ * à frente do criador. Pela mesma conta, o prazo do brinco de um bezerro de três
+ * dias lia-se 18 em vez de 17 até ao meio-dia.
+ */
+export function idadeDias(iso: string): number {
+  return diasEntreDatas(iso, new Date());
+}
+
+/** Quantos DIAS faltam até `iso`: 0 é hoje, negativo já passou. */
 export function diasAte(iso: string): number {
-  return Math.ceil((new Date(iso).getTime() - Date.now()) / MS_DIA);
+  return diasEntreDatas(new Date(), iso);
 }
 
 export function idadeExtenso(iso: string): string {
   const dias = idadeDias(iso);
-  if (dias < 0) return 'por nascer';
-  if (dias < 31) return `${dias} ${dias === 1 ? 'dia' : 'dias'}`;
+  if (dias < 0) return t('idade.porNascer');
+  if (dias < 31) return t('idade.dias', { n: dias });
   const meses = Math.floor(dias / 30.44);
-  if (meses < 24) return `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
+  if (meses < 24) return t('idade.meses', { n: meses });
   const anos = Math.floor(dias / 365.25);
   const mesesRest = Math.floor((dias - anos * 365.25) / 30.44);
-  if (mesesRest === 0) return `${anos} anos`;
-  return `${anos} ${anos === 1 ? 'ano' : 'anos'} e ${mesesRest} ${mesesRest === 1 ? 'mês' : 'meses'}`;
+  if (mesesRest === 0) return t('idade.anos', { n: anos });
+  // As duas partes vão já formatadas para o `|` do plural funcionar em cada
+  // uma: "1 ano e 6 meses" tem singular à esquerda e plural à direita, e uma
+  // frase só não conseguia escolher os dois.
+  return t('idade.anosEMeses', {
+    anos: t('idade.anos', { n: anos }),
+    meses: t('idade.meses', { n: mesesRest }),
+  });
 }

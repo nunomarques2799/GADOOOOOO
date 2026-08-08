@@ -7,12 +7,13 @@ import {
   agruparPorDia,
   celulasDoMes,
   chaveDia,
-  DIAS_SEMANA,
+  diasDaSemana,
   mesVizinho,
   piorGravidade,
   rotuloMes,
 } from '@/data/calendario';
 import type { Alerta, AlertaGravidade } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /** A cor de cada gravidade. Semânticas — não mudam com a paleta escolhida. */
@@ -81,7 +82,7 @@ export function CalendarioAgenda({
           }}
           disabled={noMesDeHoje}
           accessibilityRole="button"
-          accessibilityLabel={noMesDeHoje ? rotuloMes(ano, mes) : 'Voltar ao mês de hoje'}
+          accessibilityLabel={noMesDeHoje ? rotuloMes(ano, mes) : t('calendario.voltarAHoje')}
           style={({ pressed }) => [{ flex: 1 }, pressed && !noMesDeHoje && { opacity: 0.6 }]}>
           <Text variant="h3" center numberOfLines={1}>
             {rotuloMes(ano, mes)}
@@ -100,7 +101,7 @@ export function CalendarioAgenda({
 
       {/* Iniciais dos dias, de segunda a domingo */}
       <View style={{ flexDirection: 'row' }}>
-        {DIAS_SEMANA.map((d, i) => (
+        {diasDaSemana().map((d, i) => (
           <View key={i} style={{ flex: 1, alignItems: 'center', paddingVertical: 2 }}>
             <Text variant="caption" color={colors.textMuted}>
               {d}

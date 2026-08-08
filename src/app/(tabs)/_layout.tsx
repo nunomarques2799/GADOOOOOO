@@ -3,10 +3,13 @@ import { useMemo, useState } from 'react';
 import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FolhaAcoesRapidas } from '@/components/AcoesRapidas';
 import { BarraLateral, type ItemNav } from '@/components/BarraLateral';
 import { Icon, type IconName, Text } from '@/components/ui';
 import { useMembros } from '@/data/membros';
 import type { CapacidadeLeitura } from '@/data/permissoes';
+import { useExistencias } from '@/data/useExistencias';
+import { t, type ChaveTexto } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, spacing } from '@/theme';
 
@@ -25,7 +28,16 @@ type Rota = Extract<Href, string>;
 type Destino = {
   nome: string;
   rota: Rota;
-  label: string;
+  /**
+   * A CHAVE do rótulo, não o rótulo.
+   *
+   * Esta tabela é criada ao importar o módulo, e o `t()` lê o idioma de uma
+   * variável que o arranque preenche — uma string resolvida aqui ficava
+   * congelada na língua de origem, exatamente como acontece com as cores lidas
+   * fora do render (ver a nota do `colors` no AGENTS.md). Com a chave, quem
+   * desenha é que traduz.
+   */
+  chave: ChaveTexto;
   icon: IconName;
   /** Só aparece a quem gere a equipa de alguma exploração. */
   soComEquipa?: boolean;
@@ -35,6 +47,16 @@ type Destino = {
    * os ficheiros com o efetivo lá dentro.
    */
   exigeLeitura?: CapacidadeLeitura;
+  /**
+   * Só aparece se o criador tiver LIGADO a funcionalidade nas Definições.
+   *
+   * É diferente do `exigeLeitura`: aquele é sobre o que este PAPEL pode ver,
+   * este é sobre o que a CONTA escolheu ter. As finanças precisam dos dois (só
+   * o dono liga, e nem toda a equipa vê as contas depois de ligadas); as
+   * existências só deste — ligada a arrecadação, quem trata dos animais precisa
+   * de escolher o frasco de onde saiu a dose, seja trabalhador ou veterinário.
+   */
+  exigeInterruptor?: 'existencias';
 };
 
 /**
@@ -47,58 +69,71 @@ type Destino = {
  * daria), e um destino que abre sempre vazio é um destino a mais na barra.
  */
 const DESTINOS: Destino[] = [
-  { nome: 'index', rota: '/', label: 'Início', icon: 'home-variant' },
-  { nome: 'exploracoes', rota: '/exploracoes', label: 'Explorações', icon: 'barn' },
-  { nome: 'terrenos', rota: '/terrenos', label: 'Terrenos', icon: 'grass' },
-  { nome: 'animais', rota: '/animais', label: 'Animais', icon: 'cow' },
-  { nome: 'alertas', rota: '/alertas', label: 'Alertas', icon: 'bell-outline' },
-  { nome: 'reproducao', rota: '/reproducao', label: 'Reprodução', icon: 'heart-pulse' },
+  { nome: 'index', rota: '/', chave: 'nav.inicio', icon: 'home-variant' },
+  { nome: 'exploracoes', rota: '/exploracoes', chave: 'nav.exploracoes', icon: 'barn' },
+  { nome: 'terrenos', rota: '/terrenos', chave: 'nav.terrenos', icon: 'grass' },
+  { nome: 'animais', rota: '/animais', chave: 'nav.animais', icon: 'cow' },
+  { nome: 'alertas', rota: '/alertas', chave: 'nav.alertas', icon: 'bell-outline' },
+  { nome: 'reproducao', rota: '/reproducao', chave: 'nav.reproducao', icon: 'heart-pulse' },
   {
     nome: 'medicamentos',
     rota: '/medicamentos',
-    label: 'Existências',
+    chave: 'nav.existencias',
     icon: 'package-variant-closed',
+    exigeInterruptor: 'existencias',
   },
   {
     nome: 'trabalhadores',
     rota: '/trabalhadores',
-    label: 'Trabalhadores',
+    chave: 'nav.trabalhadores',
     icon: 'account-hard-hat',
     soComEquipa: true,
   },
   {
     nome: 'financas',
     rota: '/financas',
-    label: 'Finanças',
+    chave: 'nav.financas',
     icon: 'cash-multiple',
     exigeLeitura: 'verFinancas',
   },
   {
     nome: 'documentos',
     rota: '/documentos',
-    label: 'Documentos',
+    chave: 'nav.documentos',
     icon: 'file-document-outline',
     exigeLeitura: 'verDocumentos',
   },
-  { nome: 'definicoes', rota: '/definicoes', label: 'Definições', icon: 'cog-outline' },
-  { nome: 'perfil', rota: '/perfil', label: 'Perfil', icon: 'account' },
+  { nome: 'definicoes', rota: '/definicoes', chave: 'nav.definicoes', icon: 'cog-outline' },
+  { nome: 'perfil', rota: '/perfil', chave: 'nav.perfil', icon: 'account' },
 ];
 
 /**
- * O que fica na barra de baixo do TELEMÓVEL.
+ * A barra de baixo do TELEMÓVEL, pela ordem em que aparece.
  *
- * São cinco lugares para os dez destinos do `DESTINOS`: a barra reparte a
- * largura por todos, e com dez cada um ficaria espremido num ecrã de 375px —
+ * São cinco lugares para os doze destinos do `DESTINOS`: a barra reparte a
+ * largura por todos, e com doze cada um ficaria espremido num ecrã de 375px —
  * bem menos ainda com a letra do sistema no máximo, que é o cenário que esta
- * app tem de aguentar. Ficam os quatro do dia-a-dia e um botão "Mais" para os
- * restantes, que a folha de baixo mostra em lista.
+ * app tem de aguentar.
+ *
+ * O `'+'` do meio não é um destino: é o botão de REGISTAR, e abre a folha das
+ * ações rápidas (`FolhaAcoesRapidas`). Está aqui porque esta app usa-se para
+ * apontar o que se acabou de fazer — a vacina, o parto, a despesa — e isso
+ * estava a três toques de distância (Início → rolar até às ações rápidas →
+ * escolher), com o Início a ter de estar aberto. Ao meio e em destaque, é o
+ * alvo mais fácil de acertar com o polegar de qualquer ecrã da app.
+ *
+ * As Explorações saíram daqui para o "Mais": abrem-se para consultar ou para
+ * mexer numa configuração, não a cada bocado. O que se faz todos os dias é ver
+ * o Início, procurar um animal, registar, e ver o que está a arder.
  *
  * No computador não há este problema: a barra lateral é vertical e leva-os
- * todos. (Contas: quatro aqui + "Mais" = cinco lugares. Ao acrescentar um
- * destino ao `DESTINOS`, ele aparece no "Mais" sozinho — só se mexe nesta lista
- * para o promover, e aí tem de sair outro.)
+ * todos — e lá não há botão "+" nenhum, porque as ações rápidas estão à vista
+ * no Início sem ter de rolar.
  */
-const NO_TELEMOVEL = ['index', 'animais', 'exploracoes', 'alertas'];
+const BARRA_TELEMOVEL = ['index', 'animais', '+', 'alertas'] as const;
+
+/** Os destinos que a barra mostra (o `'+'` não é destino). */
+const NO_TELEMOVEL: string[] = BARRA_TELEMOVEL.filter((n) => n !== '+');
 
 /**
  * Os destinos que esta pessoa pode ver. A rota continua declarada (quem chegar
@@ -113,16 +148,18 @@ function useDestinos(): Destino[] {
   // separador. É a mesma pergunta que os ecrãs de dentro fazem.
   const comFinancas = podeVer(undefined, 'verFinancas');
   const comDocumentos = podeVer(undefined, 'verDocumentos');
+  const { ativas: comExistencias } = useExistencias();
 
   return useMemo(
     () =>
       DESTINOS.filter((d) => {
         if (d.soComEquipa && !comEquipa) return false;
+        if (d.exigeInterruptor === 'existencias' && !comExistencias) return false;
         if (d.exigeLeitura === 'verFinancas') return comFinancas;
         if (d.exigeLeitura === 'verDocumentos') return comDocumentos;
         return true;
       }),
-    [comEquipa, comFinancas, comDocumentos],
+    [comEquipa, comFinancas, comDocumentos, comExistencias],
   );
 }
 
@@ -131,8 +168,8 @@ function TabBar({ state, navigation }: TabBarProps) {
   const router = useRouter();
   const destinos = useDestinos();
   const [maisAberto, setMaisAberto] = useState(false);
+  const [registarAberto, setRegistarAberto] = useState(false);
 
-  const visiveis = state.routes.filter((r) => NO_TELEMOVEL.includes(r.name));
   const escondidos = destinos.filter((d) => !NO_TELEMOVEL.includes(d.nome));
   const rotaAtual = state.routes[state.index]?.name;
   // O "Mais" acende-se quando se está num dos destinos que ele guarda — senão
@@ -145,6 +182,10 @@ function TabBar({ state, navigation }: TabBarProps) {
         style={[
           {
             flexDirection: 'row',
+            // Centrado, e não encostado ao topo: a coluna do "+" é mais alta
+            // do que as outras (o círculo é maior do que a pastilha), e a
+            // encostar ao topo os quatro rótulos ficavam a alturas diferentes.
+            alignItems: 'center',
             backgroundColor: colors.surface,
             paddingTop: spacing.sm,
             paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.sm,
@@ -156,10 +197,13 @@ function TabBar({ state, navigation }: TabBarProps) {
           },
           shadow.lg,
         ]}>
-        {visiveis.map((route) => {
-          const cfg = destinos.find((d) => d.nome === route.name);
-          if (!cfg) return null;
-          const focused = rotaAtual === route.name;
+        {BARRA_TELEMOVEL.map((nome) => {
+          if (nome === '+') return <BotaoRegistar key="+" onPress={() => setRegistarAberto(true)} />;
+
+          const route = state.routes.find((r) => r.name === nome);
+          const cfg = destinos.find((d) => d.nome === nome);
+          if (!route || !cfg) return null;
+          const focused = rotaAtual === nome;
 
           const onPress = () => {
             const event = navigation.emit({
@@ -167,13 +211,13 @@ function TabBar({ state, navigation }: TabBarProps) {
               target: route.key,
               canPreventDefault: true,
             });
-            if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+            if (!focused && !event.defaultPrevented) navigation.navigate(nome);
           };
 
           return (
             <Botao
               key={route.key}
-              label={cfg.label}
+              label={t(cfg.chave)}
               icon={cfg.icon}
               focused={focused}
               onPress={onPress}
@@ -181,12 +225,16 @@ function TabBar({ state, navigation }: TabBarProps) {
           );
         })}
         <Botao
-          label="Mais"
+          label={t('nav.mais')}
           icon="dots-horizontal"
           focused={maisAtivo}
           onPress={() => setMaisAberto(true)}
         />
       </View>
+
+      {/* O que o "+" abre. Montada aqui, ao lado da barra, para estar acessível
+          de qualquer separador. */}
+      <FolhaAcoesRapidas aberto={registarAberto} onFechar={() => setRegistarAberto(false)} />
 
       <Modal
         visible={maisAberto}
@@ -197,7 +245,7 @@ function TabBar({ state, navigation }: TabBarProps) {
           <Pressable
             style={{ flex: 1 }}
             onPress={() => setMaisAberto(false)}
-            accessibilityLabel="Fechar"
+            accessibilityLabel={t('comum.fechar')}
           />
           <View
             style={[
@@ -218,13 +266,13 @@ function TabBar({ state, navigation }: TabBarProps) {
                 marginBottom: spacing.sm,
               }}>
               <Text variant="h3" style={{ flex: 1 }}>
-                Mais
+                {t('nav.mais')}
               </Text>
               <Pressable
                 onPress={() => setMaisAberto(false)}
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel="Fechar">
+                accessibilityLabel={t('comum.fechar')}>
                 <Icon name="close" size="lg" color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -237,7 +285,7 @@ function TabBar({ state, navigation }: TabBarProps) {
                   router.navigate(d.rota);
                 }}
                 accessibilityRole="link"
-                accessibilityLabel={d.label}
+                accessibilityLabel={t(d.chave)}
                 accessibilityState={{ selected: rotaAtual === d.nome }}
                 style={({ pressed }) => [
                   {
@@ -261,7 +309,7 @@ function TabBar({ state, navigation }: TabBarProps) {
                   variant={rotaAtual === d.nome ? 'bodyStrong' : 'body'}
                   color={rotaAtual === d.nome ? colors.primaryDark : colors.text}
                   style={{ flex: 1 }}>
-                  {d.label}
+                  {t(d.chave)}
                 </Text>
                 <Icon name="chevron-right" size="md" color={colors.textMuted} />
               </Pressable>
@@ -270,6 +318,44 @@ function TabBar({ state, navigation }: TabBarProps) {
         </View>
       </Modal>
     </>
+  );
+}
+
+/**
+ * O botão do meio — o que abre "Registar".
+ *
+ * Círculo CHEIO da cor de marca, e não a pastilha dos outros: os quatro
+ * separadores levam a sítios, este faz uma coisa, e a diferença tem de se ver
+ * antes de se ler o rótulo. É também o maior alvo da barra, de propósito — é o
+ * botão mais usado da app e quem lhe acerta muitas vezes tem 82 anos e o
+ * telemóvel numa mão só.
+ */
+function BotaoRegistar({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t('nav.registar')}
+      accessibilityHint={t('nav.registarAjuda')}
+      style={{ flex: 1, alignItems: 'center', gap: 4, paddingVertical: 2 }}>
+      <View
+        style={[
+          {
+            width: 52,
+            height: 52,
+            borderRadius: radii.pill,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.primary,
+          },
+          shadow.md,
+        ]}>
+        <Icon name="plus" size={30} color={colors.onPrimary} />
+      </View>
+      <Text variant="caption" color={colors.primaryDark}>
+        {t('nav.registar')}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -315,7 +401,7 @@ export default function TabsLayout() {
 
   const navDesktop: ItemNav[] = destinos.map((d) => ({
     rota: d.rota,
-    label: d.label,
+    label: t(d.chave),
     icon: d.icon,
   }));
 

@@ -13,6 +13,8 @@
  * punha animais mortos no meio do efetivo.
  */
 
+import { t } from '@/i18n';
+
 import { idadeDias } from './helpers';
 import { normalizar } from './racas';
 import type { Alerta, AlertaGravidade, Animal, Especie, Finalidade, Sexo } from './types';
@@ -189,12 +191,19 @@ export function mapaAlertas(alertas: Alerta[]): Map<string, Set<Alerta['categori
  */
 export type Ordenacao = 'nome' | 'alertas' | 'novos' | 'velhos';
 
-export const ORDENACOES: { valor: Ordenacao; label: string }[] = [
-  { valor: 'nome', label: 'Nome (A→Z)' },
-  { valor: 'alertas', label: 'Com alertas primeiro' },
-  { valor: 'novos', label: 'Mais novos' },
-  { valor: 'velhos', label: 'Mais velhos' },
-];
+/**
+ * As ordens possíveis. FUNÇÃO e não constante: os rótulos passam pelo `t()`, e
+ * uma tabela de módulo resolvia-os no import — ficando congelados na língua de
+ * arranque (a mesma armadilha do `colors`, ver AGENTS.md).
+ */
+export function ordenacoes(): { valor: Ordenacao; label: string }[] {
+  return [
+    { valor: 'nome', label: t('animais.ordemNome') },
+    { valor: 'alertas', label: t('animais.ordemAlertas') },
+    { valor: 'novos', label: t('animais.ordemNovos') },
+    { valor: 'velhos', label: t('animais.ordemVelhos') },
+  ];
+}
 
 export const ORDENACAO_OMISSAO: Ordenacao = 'nome';
 

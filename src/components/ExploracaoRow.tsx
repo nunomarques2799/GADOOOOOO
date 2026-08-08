@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { Card, Icon, IconBadge, Text } from '@/components/ui';
 import { useGado } from '@/data/store';
 import type { Exploracao } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 export function ExploracaoRow({ exploracao }: { exploracao: Exploracao }) {
@@ -59,8 +60,8 @@ export function ExploracaoRow({ exploracao }: { exploracao: Exploracao }) {
             borderTopWidth: 1,
             borderTopColor: colors.border,
           }}>
-          <MiniStat icon="cow" value={nAnimais} label="animais" />
-          <MiniStat icon="grass" value={nTerrenos} label="terrenos" />
+          <MiniStat icon="cow" value={nAnimais} label={t('exploracao.animais')} />
+          <MiniStat icon="grass" value={nTerrenos} label={t('exploracao.terrenos')} />
           <View style={{ flexGrow: 1, minWidth: 90, alignItems: 'flex-end' }}>
             <Text variant="caption" color={colors.textSecondary} numberOfLines={1}>
               {exploracao.marcaExploracao}

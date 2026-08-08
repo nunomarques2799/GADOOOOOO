@@ -7,6 +7,12 @@ Esta máquina é **Windows**, onde não existe o Xcode. A app iOS é compilada n
 > A conta **Apple Developer** (99 USD/ano) já está paga. Era o que faltava: a
 > Apple só deixa instalar uma app num iPhone real se ela for assinada por uma
 > conta de programador.
+>
+> **A conta não é nossa — é da equipa `8785V5WL8W`** (João Carlos), onde o Nuno
+> entrou como **Admin**. Faz-se login com o Apple ID próprio; o papel Admin é o
+> que permite criar o certificado de distribuição, e um papel abaixo disso faz o
+> build falhar a meio. A app já existe no App Store Connect com o
+> `ascAppId` 6799063195 — o `eas submit` não a vai criar.
 
 ---
 
@@ -71,17 +77,51 @@ TestFlight instala-se como qualquer app, e os updates chegam sozinhos. Com
 **testadores internos** (até 100, pessoas da sua equipa Apple) **não há revisão
 da Apple** — o build fica disponível em minutos.
 
+**Foi por aqui que a app chegou ao iPhone a 2026-08-07.** A receita que
+funcionou, com as três armadilhas que custaram a apanhar:
+
 ```bash
-eas build --platform ios --profile production
-eas submit --platform ios --profile production
+powershell $env:USERPROFILE\.appstoreconnect\build-ios.ps1 -IssuerId "..." -SemSincronizarCapacidades
 ```
 
-O `eas submit` pergunta o Apple ID e o `ascAppId` na primeira vez e guarda-os.
-Se a app ainda não existir no App Store Connect, oferece-se para a criar com o
-nome e a língua que estão no `eas.json` (`submit.production.ios`).
+O [`scripts/build-ios.ps1`](scripts/build-ios.ps1) trata das variáveis da API
+Key. Corre-se de uma cópia fora do repositório porque exige o `main` e ainda
+só existe no `dev` — o `git checkout main` apagava-o a meio.
 
-Depois, no [App Store Connect](https://appstoreconnect.apple.com) → TestFlight,
-convida-se a pessoa por email.
+**1. O primeiro build TEM de ser interativo, mesmo com a API Key.** Em
+`--non-interactive` o EAS recusa-se a criar credenciais de raiz
+(*"Credentials are not set up. Run this command again in interactive mode"*).
+Depois do primeiro, o certificado e o perfil ficam guardados na conta Expo e
+os seguintes já correm sozinhos. Responde-se **Yes** ao certificado e ao
+perfil, e **No** a *"set up Push Notifications for your project"* — essa
+pergunta é sobre uma chave **APNs**, para *enviar* avisos de um servidor, e a
+app só tem avisos locais.
+
+**2. A sincronização automática de capacidades está partida.** O EAS manda um
+pedido que a Apple já não aceita (*"not a valid request document object"* em
+`bundleIdCapabilities`), e o `eas-cli` 21.7.0 não corrige. Como o plugin
+`expo-notifications` mete `aps-environment` nos entitlements, o Bundle ID
+precisa mesmo de **Push Notifications** ligada no portal — liga-se à mão e
+passa-se `-SemSincronizarCapacidades`. Confirmar **antes** de construir, com
+`node ~/.appstoreconnect/asc.js ver`: se a capacidade estiver desligada, o
+perfil sai sem ela e a assinatura só rebenta no fim de compilar, com a quota
+já gasta.
+
+**3. O `eas submit` ignora as variáveis `EXPO_ASC_*`.** Quer a chave declarada
+no `eas.json` (`ascApiKeyPath`, `ascApiKeyId`, `ascApiKeyIssuerId`), senão
+responde *"App Store Connect API Keys cannot be set up in --non-interactive
+mode"*. O `ascApiKeyPath` é um caminho absoluto desta máquina: **não se
+commita**. Enquanto não houver melhor, edita-se o `eas.json` localmente, envia-
+se, e desfaz-se com `git checkout -- eas.json`.
+
+```bash
+eas submit --platform ios --profile production --id <build-id> --non-interactive
+```
+
+Depois, no [App Store Connect](https://appstoreconnect.apple.com) → TestFlight
+→ **Internal Testing**, cria-se o grupo e convida-se a pessoa por email. Ela
+instala a app **TestFlight** e a Terrabovina aparece lá dentro. O build
+**caduca ao fim de 90 dias**.
 
 ---
 

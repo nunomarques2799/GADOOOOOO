@@ -31,6 +31,7 @@ import { GadoProvider } from '@/data/store';
 import { ToastsProvider } from '@/data/toasts';
 import { supabaseConfigurado } from '@/data/supabase';
 import { useDesktop } from '@/hooks/useDesktop';
+import { arrancarIdioma } from '@/i18n';
 import { colors, layout } from '@/theme';
 import { arrancarTema, temaEscuro } from '@/theme/preferencia';
 
@@ -40,6 +41,9 @@ SplashScreen.preventAutoHideAsync();
 // (ver `armazenamento.ts`), o que permite a app abrir já na paleta escolhida em
 // vez de piscar do verde para a cor certa à frente do criador.
 arrancarTema();
+// Pela mesma razão e no mesmo momento: sem isto o primeiro ecrã saía em
+// português e trocava de língua à frente de quem escolheu inglês.
+arrancarIdioma();
 
 /**
  * Em janelas largas (Electron/browser) a app usa o desenho de desktop — barra
@@ -270,8 +274,11 @@ export default function RootLayout() {
                   <Stack.Screen name="conta/sincronizacao" />
                   <Stack.Screen name="conta/notificacoes" />
                   <Stack.Screen name="conta/financas" />
+                  <Stack.Screen name="conta/existencias" />
                   <Stack.Screen name="conta/aparencia" />
+                  <Stack.Screen name="conta/idioma" />
                   <Stack.Screen name="conta/ajuda" />
+                  <Stack.Screen name="conta/apagar" />
                   <Stack.Screen name="inspecionar/exploracao/[id]" />
                   <Stack.Screen name="inspecionar/animal/[id]" />
                 </Stack>

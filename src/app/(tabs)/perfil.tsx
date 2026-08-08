@@ -223,12 +223,6 @@ export default function PerfilScreen() {
               onPress={() => router.push('/conta/editar')}
               last={!configurado}
             />
-            {/*
-              Não há "Apagar a minha conta". Estava aqui, a um toque de distância
-              de "Terminar sessão", e apagava a exploração inteira sem volta —
-              incluindo a de quem tivesse trabalhadores dependentes dela. Quem
-              apaga uma conta é o administrador, a pedido; ver `schema_rgpd.sql`.
-            */}
             {configurado ? (
               <Linha
                 icon="logout"
@@ -239,6 +233,30 @@ export default function PerfilScreen() {
               />
             ) : null}
           </Card>
+
+          {/*
+            "Apagar a minha conta" NÃO entra no cartão de cima.
+            Esteve lá, a um toque de distância do "Terminar sessão", e apagava a
+            exploração inteira sem volta — foi por isso que saiu. Voltou porque
+            a App Store obriga quem deixa criar conta a deixar apagá-la de
+            dentro da app (diretriz 5.1.1(v)).
+            O que muda é a distância: cartão à parte, no fim do ecrã, e daqui
+            não se apaga nada — abre-se um ecrã que mostra o que se perde e pede
+            uma palavra escrita à mão (`conta/apagar`).
+            Ao superadmin não se mostra: é a conta que administra a plataforma,
+            e a `apagar_a_minha_conta()` apagava-a com o mesmo à-vontade.
+          */}
+          {configurado && !isSuperadmin ? (
+            <Card padded={false}>
+              <Linha
+                icon="delete-forever"
+                label="Apagar a minha conta"
+                tint={colors.danger}
+                onPress={() => router.push('/conta/apagar')}
+                last
+              />
+            </Card>
+          ) : null}
 
           <Pressable
             onPress={() => router.push('/definicoes')}
