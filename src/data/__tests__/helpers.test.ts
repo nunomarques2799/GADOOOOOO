@@ -5,6 +5,7 @@ import {
   diaIso,
   diasAte,
   idadeDias,
+  idadeExtenso,
   isoDaysAgo,
   isoInDays,
   isoMaisDias,
@@ -199,11 +200,66 @@ describe('diasAte — conta dias, não horas', () => {
 
 describe('idadeDias / diasAte', () => {
   it('idadeDias conta dias desde o nascimento', () => {
-    expect(idadeDias(isoDaysAgo(10))).toBe(10);
+    // Relógio fixo: `isoDaysAgo(10)` recua 10×24h, e nas noites de 23 e 25 horas
+    // da mudança da hora isso não cai no mesmo ponto do dia. Com a data real,
+    // este teste tinha uma janela de uma hora, duas vezes por ano, para falhar.
+    comRelogio('Europe/Lisbon', [2026, 8, 8, 11, 29], () => {
+      expect(idadeDias(isoDaysAgo(10))).toBe(10);
+    });
   });
 
   it('diasAte é positivo no futuro e negativo no passado', () => {
     expect(diasAte(isoInDays(5))).toBeGreaterThan(0);
     expect(diasAte(isoDaysAgo(5))).toBeLessThan(0);
+  });
+});
+
+describe('idadeDias — um animal nascido hoje tem zero dias, não menos um', () => {
+  // As datas de nascimento ficam gravadas ao MEIO-DIA (`parseDataPt`). Medir a
+  // distância em horas até ao meio-dia dava −1 durante toda a manhã, e o
+  // `idadeExtenso` escrevia "por nascer" na ficha de um bezerro que estava ali à
+  // frente do criador. O mesmo desvio tirava um dia a todos os prazos que se
+  // contam a partir da idade. Percorre-se o dia inteiro: à tarde já acertava, e
+  // é por isso que isto nunca deu nas vistas.
+  const aoMeioDiaDe = (ano: number, mes: number, dia: number) =>
+    new Date(ano, mes - 1, dia, 12, 0, 0).toISOString();
+
+  it.each([0, 6, 9, 11, 12, 13, 18, 23])('às %ih', (hora) => {
+    comRelogio('Europe/Lisbon', [2026, 8, 8, hora, 30], () => {
+      expect(idadeDias(aoMeioDiaDe(2026, 8, 8))).toBe(0);
+      expect(idadeExtenso(aoMeioDiaDe(2026, 8, 8))).toBe('0 dias');
+      expect(idadeDias(aoMeioDiaDe(2026, 8, 7))).toBe(1);
+      expect(idadeDias(aoMeioDiaDe(2026, 8, 5))).toBe(3);
+      // Um nascimento mesmo no futuro continua a ser negativo — é o que o
+      // `faixaDe` usa para não classificar um recém-nascido como "mais de 8
+      // anos" quando o relógio do aparelho está desacertado.
+      expect(idadeDias(aoMeioDiaDe(2026, 8, 9))).toBe(-1);
+      expect(idadeExtenso(aoMeioDiaDe(2026, 8, 9))).toBe('por nascer');
+    });
+  });
+
+  it('e o prazo do brinco de um bezerro de três dias é 17, a qualquer hora', () => {
+    // O efeito a jusante, tal como o `alertas.ts` o calcula: 20 dias de prazo
+    // legal menos a idade. De manhã lia-se 18.
+    comRelogio('Europe/Lisbon', [2026, 8, 8, 9, 0], () => {
+      expect(20 - idadeDias(aoMeioDiaDe(2026, 8, 5))).toBe(17);
+    });
+    comRelogio('Europe/Lisbon', [2026, 8, 8, 17, 0], () => {
+      expect(20 - idadeDias(aoMeioDiaDe(2026, 8, 5))).toBe(17);
+    });
+  });
+
+  it('mede o mesmo prazo que o diasAte, que é a régua do snira.ts', () => {
+    // O `alertas.ts` conta o prazo do SNIRA por `PrazosLegais.snira -
+    // idadeDias(...)` e o `snira.ts` por `diasAte(isoMaisDias(..., 7))`. São
+    // duas contas para o mesmo número, em ecrãs que o criador vê lado a lado.
+    // Enquanto uma media horas para trás e a outra para a frente, discordavam a
+    // manhã inteira. Agora assentam as duas em dias de calendário.
+    for (const hora of [0, 9, 11, 13, 23]) {
+      comRelogio('Europe/Lisbon', [2026, 8, 8, hora, 30], () => {
+        const identificacao = aoMeioDiaDe(2026, 8, 5);
+        expect(7 - idadeDias(identificacao)).toBe(diasAte(isoMaisDias(identificacao, 7)));
+      });
+    }
   });
 });
