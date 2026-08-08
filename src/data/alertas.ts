@@ -25,13 +25,11 @@ import {
   PrazosReproducao,
   PrazosSanitarios,
 } from './constants';
-import { diaIso, diasAte, idadeDias, isoMaisDias } from './helpers';
+import { diaIso, diasAte, diasEntreDatas, idadeDias, isoMaisDias } from './helpers';
 import { lotesComEstado } from './medicamentos';
 import { aguardamDiagnostico, semCobricaoAposParto } from './reproducao';
 import { comunicacoesPendentes, rotuloComunicacao } from './snira';
 import type { Alerta, Animal, Evento, Medicamento } from './types';
-
-const MS_DIA = 86_400_000;
 
 /* ---- Cálculo de alertas legais ---- */
 export function computeAlertas(
@@ -152,7 +150,10 @@ export function computeAlertas(
     const idade = idadeDias(a.dataNascimento);
     const ultima = ultimaVacinacao.get(a.id);
     if (ultima !== undefined) {
-      const diasDesde = Math.floor((Date.now() - ultima) / MS_DIA);
+      // Dias de CALENDÁRIO, como todos os outros prazos: a data da vacinação
+      // fica ao meio-dia, e dividir a diferença por um dia tirava um dia até ao
+      // meio-dia — a mesma manhã inteira que enganava a idade e a validade.
+      const diasDesde = diasEntreDatas(new Date(ultima), new Date());
       const restam = PrazosSanitarios.revacinacao - diasDesde;
       if (restam <= PrazosSanitarios.avisoRevacinacaoDias) {
         out.push({

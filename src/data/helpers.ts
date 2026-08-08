@@ -197,6 +197,22 @@ function diasEntreDias(de: string, ate: string): number {
   return Math.round((meioDiaLocal(ate) - meioDiaLocal(de)) / MS_DIA);
 }
 
+/**
+ * Dias de calendário entre dois instantes ou datas (`b − a`).
+ *
+ * É a primitiva de todas as contas de dias da app. Aceita as três formas que
+ * circulam por aqui — `Date`, instante ISO completo e data sem hora — porque é
+ * `diaIso` quem reduz cada uma ao dia a que pertence antes de as comparar.
+ *
+ * Usar isto em vez de dividir a diferença de milissegundos por um dia. Essa
+ * conta parece equivalente e não é: as datas ficam gravadas ao meio-dia, e a
+ * fração que sobra dava um dia a mais ou a menos conforme a HORA a que se
+ * perguntasse — todas as manhãs, sem nada que o denunciasse.
+ */
+export function diasEntreDatas(a: Date | string, b: Date | string): number {
+  return diasEntreDias(diaIso(a), diaIso(b));
+}
+
 /** O meio-dia local de um `aaaa-mm-dd`. A âncora para contar dias entre dias. */
 function meioDiaLocal(dia: string): number {
   const [ano, mes, d] = dia.split('-').map(Number);
@@ -213,12 +229,12 @@ function meioDiaLocal(dia: string): number {
  * dias lia-se 18 em vez de 17 até ao meio-dia.
  */
 export function idadeDias(iso: string): number {
-  return diasEntreDias(diaIso(iso), diaIso(new Date()));
+  return diasEntreDatas(iso, new Date());
 }
 
 /** Quantos DIAS faltam até `iso`: 0 é hoje, negativo já passou. */
 export function diasAte(iso: string): number {
-  return diasEntreDias(diaIso(new Date()), diaIso(iso));
+  return diasEntreDatas(new Date(), iso);
 }
 
 export function idadeExtenso(iso: string): string {

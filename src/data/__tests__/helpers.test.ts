@@ -151,7 +151,7 @@ describe('diasAte — conta dias, não horas', () => {
     // lida como meia-noite UTC; à 00:30 de Portugal em UTC+1 isso punha ONTEM a
     // 0,98 dias de agora, e arredondar para cima dava 0. Efeito no ecrã: um
     // lote fora de validade lia-se "A expirar" em vez de "Fora de validade".
-    comRelogio('Europe/Lisbon', [2026, 8, 6, 0, 30], () => {
+    comRelogio([2026, 8, 6, 0, 30], () => {
       expect(diasAte('2026-08-05')).toBe(-1);
       expect(diasAte('2026-08-06')).toBe(0);
       expect(diasAte('2026-08-07')).toBe(1);
@@ -163,7 +163,7 @@ describe('diasAte — conta dias, não horas', () => {
   // meia-noite é o caso relatado, e a manhã inteira é o outro caminho (um alvo
   // ao meio-dia ficava a 7,4 dias às 00:30 e lia-se 8).
   it.each([0, 1, 5, 9, 11, 12, 13, 18, 23])('dá o mesmo às %ih', (hora) => {
-    comRelogio('Europe/Lisbon', [2026, 8, 6, hora, 30], () => {
+    comRelogio([2026, 8, 6, hora, 30], () => {
       expect(diasAte('2026-08-05')).toBe(-1);
       expect(diasAte('2026-08-06')).toBe(0);
       expect(diasAte('2026-08-07')).toBe(1);
@@ -176,7 +176,7 @@ describe('diasAte — conta dias, não horas', () => {
   it('no inverno, com o país em UTC+0, responde o mesmo', () => {
     // De novembro a março o desalinhamento desaparece. A conta não pode mudar
     // de resposta com a estação — é a mesma pergunta.
-    comRelogio('Europe/Lisbon', [2026, 1, 15, 0, 30], () => {
+    comRelogio([2026, 1, 15, 0, 30], () => {
       expect(diasAte('2026-01-14')).toBe(-1);
       expect(diasAte('2026-01-15')).toBe(0);
       expect(diasAte('2026-01-16')).toBe(1);
@@ -187,11 +187,11 @@ describe('diasAte — conta dias, não horas', () => {
     // Contar dias dividindo milissegundos por 86 400 000 conta 1,04 dias na
     // noite em que o relógio recua e 0,96 na que avança. Os dias comparam-se
     // ancorados ao meio-dia justamente para essas duas noites não escaparem.
-    comRelogio('Europe/Lisbon', [2026, 10, 24, 23, 30], () => {
+    comRelogio([2026, 10, 24, 23, 30], () => {
       expect(diasAte('2026-10-25')).toBe(1); // a noite de 25 horas
       expect(diasAte('2026-10-26')).toBe(2);
     });
-    comRelogio('Europe/Lisbon', [2026, 3, 28, 23, 30], () => {
+    comRelogio([2026, 3, 28, 23, 30], () => {
       expect(diasAte('2026-03-29')).toBe(1); // a noite de 23 horas
       expect(diasAte('2026-03-30')).toBe(2);
     });
@@ -203,7 +203,7 @@ describe('idadeDias / diasAte', () => {
     // Relógio fixo: `isoDaysAgo(10)` recua 10×24h, e nas noites de 23 e 25 horas
     // da mudança da hora isso não cai no mesmo ponto do dia. Com a data real,
     // este teste tinha uma janela de uma hora, duas vezes por ano, para falhar.
-    comRelogio('Europe/Lisbon', [2026, 8, 8, 11, 29], () => {
+    comRelogio([2026, 8, 8, 11, 29], () => {
       expect(idadeDias(isoDaysAgo(10))).toBe(10);
     });
   });
@@ -225,7 +225,7 @@ describe('idadeDias — um animal nascido hoje tem zero dias, não menos um', ()
     new Date(ano, mes - 1, dia, 12, 0, 0).toISOString();
 
   it.each([0, 6, 9, 11, 12, 13, 18, 23])('às %ih', (hora) => {
-    comRelogio('Europe/Lisbon', [2026, 8, 8, hora, 30], () => {
+    comRelogio([2026, 8, 8, hora, 30], () => {
       expect(idadeDias(aoMeioDiaDe(2026, 8, 8))).toBe(0);
       expect(idadeExtenso(aoMeioDiaDe(2026, 8, 8))).toBe('0 dias');
       expect(idadeDias(aoMeioDiaDe(2026, 8, 7))).toBe(1);
@@ -241,10 +241,10 @@ describe('idadeDias — um animal nascido hoje tem zero dias, não menos um', ()
   it('e o prazo do brinco de um bezerro de três dias é 17, a qualquer hora', () => {
     // O efeito a jusante, tal como o `alertas.ts` o calcula: 20 dias de prazo
     // legal menos a idade. De manhã lia-se 18.
-    comRelogio('Europe/Lisbon', [2026, 8, 8, 9, 0], () => {
+    comRelogio([2026, 8, 8, 9, 0], () => {
       expect(20 - idadeDias(aoMeioDiaDe(2026, 8, 5))).toBe(17);
     });
-    comRelogio('Europe/Lisbon', [2026, 8, 8, 17, 0], () => {
+    comRelogio([2026, 8, 8, 17, 0], () => {
       expect(20 - idadeDias(aoMeioDiaDe(2026, 8, 5))).toBe(17);
     });
   });
@@ -256,7 +256,7 @@ describe('idadeDias — um animal nascido hoje tem zero dias, não menos um', ()
     // Enquanto uma media horas para trás e a outra para a frente, discordavam a
     // manhã inteira. Agora assentam as duas em dias de calendário.
     for (const hora of [0, 9, 11, 13, 23]) {
-      comRelogio('Europe/Lisbon', [2026, 8, 8, hora, 30], () => {
+      comRelogio([2026, 8, 8, hora, 30], () => {
         const identificacao = aoMeioDiaDe(2026, 8, 5);
         expect(7 - idadeDias(identificacao)).toBe(diasAte(isoMaisDias(identificacao, 7)));
       });

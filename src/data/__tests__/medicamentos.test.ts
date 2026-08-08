@@ -94,9 +94,11 @@ describe('estadoDoLote — validade', () => {
     // aparecia como "A expirar" e continuava a poder escolher-se para um
     // tratamento, que é o oposto do que estas duas linhas existem para garantir.
     //
-    // O relógio E o fuso são fixados: com a hora real isto passava sozinho 23
-    // horas por dia, e em UTC (a CI) passava as 24.
-    comRelogio('Europe/Lisbon', [2026, 8, 6, 0, 30], () => {
+    // Com a hora real isto passava sozinho 23 horas por dia. E em UTC passava
+    // as 24, porque aí a meia-noite UTC é a meia-noite local e não há
+    // desalinhamento nenhum — daí a suite correr fixada em hora de Portugal
+    // (`jest.config.js`), que é onde a app é usada.
+    comRelogio([2026, 8, 6, 0, 30], () => {
       const ontem = estadoDoLote(lote({ validade: '2026-08-05' }), []);
       expect(ontem.diasParaValidade).toBe(-1);
       expect(ontem.expirado).toBe(true);

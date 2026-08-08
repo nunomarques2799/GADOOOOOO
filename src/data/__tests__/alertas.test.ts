@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
+import { comRelogio } from '../../testUtils/relogio';
 import { computeAlertas } from '../alertas';
 import { diaIso, isoDaysAgo, isoInDays } from '../helpers';
 import type { Animal, Evento, Medicamento } from '../types';
@@ -140,6 +141,28 @@ describe('computeAlertas — revacinação', () => {
     ];
     const vac = computeAlertas([a], eventos).find((x) => x.categoria === 'vacinacao');
     expect(vac?.gravidade).toBe('urgente');
+  });
+
+  it('e o prazo não muda a meio do dia', () => {
+    // A data da vacinação fica gravada ao meio-dia (`parseDataPt`). Enquanto o
+    // prazo era medido em horas, "revacinar em N dias" contava um dia a mais até
+    // ao meio-dia e um a menos a partir dele — o mesmo número a mudar sozinho
+    // com o almoço, num alerta que o criador usa para marcar o veterinário.
+    const aoMeioDiaDe = (ano: number, mes: number, dia: number) =>
+      new Date(ano, mes - 1, dia, 12, 0, 0).toISOString();
+
+    for (const hora of [0, 9, 11, 13, 23]) {
+      comRelogio([2026, 8, 8, hora, 30], () => {
+        const a = animal({ numeroIdentificacao: 'PT1' });
+        // Vacinado há 360 dias: faltam 5 para o ano.
+        const eventos: Evento[] = [
+          evento({ tipo: 'Vacinação', data: aoMeioDiaDe(2025, 8, 13) }),
+        ];
+        const vac = computeAlertas([a], eventos).find((x) => x.categoria === 'vacinacao');
+        expect(vac?.diasRestantes).toBe(5);
+        expect(vac?.descricao).toContain('última há 360 dias');
+      });
+    }
   });
 });
 

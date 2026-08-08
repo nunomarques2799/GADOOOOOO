@@ -23,10 +23,8 @@
  */
 
 import { GestacaoDias, PrazosReproducao } from './constants';
-import { diasAte, idadeDias, isoMaisDias } from './helpers';
+import { diasAte, diasEntreDatas, idadeDias, isoMaisDias } from './helpers';
 import type { Animal, Evento, ResultadoDiagnostico } from './types';
-
-const MS_DIA = 86_400_000;
 
 /** Em que ponto do ciclo está a fêmea. */
 export type FaseReprodutiva =
@@ -92,14 +90,22 @@ export function elegivelParaReproducao(a: Animal, jaAndaNaReproducao = false): b
   return idadeDias(a.dataNascimento) >= PrazosReproducao.idadeMinFemeaMeses * 30.44;
 }
 
-/** Dias entre duas datas ISO (b − a), arredondado para baixo. */
+/**
+ * Dias de calendário entre duas datas ISO (b − a).
+ *
+ * Delega no `diasEntreDatas` do `helpers.ts`. Estas duas contas eram feitas aqui
+ * à mão, a dividir milissegundos por um dia e a arredondar para baixo: como os
+ * eventos ficam gravados ao MEIO-DIA (`parseDataPt`), a fração que sobrava
+ * tirava um dia até ao meio-dia. O "pariu há 12 dias" lia-se 11 de manhã, e
+ * mudava sozinho a meio do dia sem nada ter acontecido.
+ */
 function diasEntre(a: string, b: string): number {
-  return Math.floor((new Date(b).getTime() - new Date(a).getTime()) / MS_DIA);
+  return diasEntreDatas(a, b);
 }
 
-/** Dias desde uma data ISO até hoje. */
+/** Dias de calendário desde uma data ISO até hoje. */
 function diasDesde(iso: string): number {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / MS_DIA);
+  return diasEntreDatas(iso, new Date());
 }
 
 /**
