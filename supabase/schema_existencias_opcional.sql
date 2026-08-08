@@ -158,9 +158,24 @@ update public.perfil p
 -- `EXECUTE` que o Postgres dá a `PUBLIC` por omissão, que é exatamente o que o
 -- lint existe para tirar. Assim o ficheiro fecha-se a si mesmo e não fica a
 -- depender de alguém se lembrar de correr o lint outra vez.
-revoke execute on function public.definir_existencias_ativas(boolean) from public;
-revoke execute on function public.existencias_ativas_em(text) from public;
-revoke execute on function public.handle_new_exploracao() from public;
+--
+-- E é `from anon, public` e não só `from public`, porque são DUAS origens
+-- diferentes e tirar uma não tira a outra. Além do `EXECUTE` que o Postgres dá
+-- a `PUBLIC`, o Supabase tem `alter default privileges ... grant execute on
+-- functions to anon, authenticated, service_role`, que põe o `anon` na ACL da
+-- função por NOME. Revogar de `PUBLIC` deixa essa linha intacta: a 2026-08-08 o
+-- ficheiro corrido em dev deixou `existencias_ativas_em` e
+-- `definir_existencias_ativas` com `anon=X`, e foi a marca do `schema_lint.sql`
+-- no `estado.sql` que deu por isso. É o mesmo `revoke ... from anon, public`
+-- que a secção 5 do `schema_lint.sql` faz a todas as outras.
+--
+-- Importa porque `existencias_ativas_em` é SECURITY DEFINER e lê a `exploracao`
+-- por fora da RLS: aberta ao `anon`, dizia a quem tivesse a chave anónima (que
+-- vai dentro da app, é pública) se uma dada exploração tem as existências
+-- ligadas, sem sessão nenhuma.
+revoke execute on function public.definir_existencias_ativas(boolean) from anon, public;
+revoke execute on function public.existencias_ativas_em(text) from anon, public;
+revoke execute on function public.handle_new_exploracao() from anon, public;
 
 grant execute on function public.definir_existencias_ativas(boolean) to authenticated;
 -- O helper é chamado de dentro de policies, que correm no papel de quem
