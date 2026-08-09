@@ -23,7 +23,7 @@ import {
   nomeMes,
   noPeriodo,
   porAnimal,
-  PERIODOS,
+  periodos,
   resumo,
   rotuloMovimento,
   serieMensal,
@@ -38,6 +38,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
 import type { CategoriaMovimento } from '@/data/types';
+import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, spacing } from '@/theme';
@@ -154,18 +155,18 @@ export default function FinancasScreen() {
 
   const nomeAnimal = (id: string) => {
     const a = animalById(id);
-    return a?.nome ?? a?.numeroIdentificacao ?? 'Animal removido';
+    return a?.nome ?? a?.numeroIdentificacao ?? t('financas.animalRemovido');
   };
 
   function exportar() {
     try {
       descarregarTabelaExcel(
         `financas-${hojeISO()}.xlsx`,
-        'Movimentos',
+        t('financas.movimentos'),
         tabelaFinancas(doPeriodo, animais),
       );
     } catch (e) {
-      avisar('Não foi possível exportar', e instanceof Error ? e.message : String(e));
+      avisar(t('financas.semExportar'), e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -177,11 +178,11 @@ export default function FinancasScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <Screen topInset>
-          <TituloFinancas legenda="Despesas, receitas e o saldo da exploração" />
+          <TituloFinancas legenda={t('financas.legenda')} />
           <EmptyState
             icon="cash-off"
-            title="Gestão financeira desligada"
-            message="Esta conta não usa a app para registar despesas e receitas. Quem gere a exploração pode ligá-la em Perfil → Gestão financeira."
+            title={t('financas.desligadaTitulo')}
+            message={t('financas.desligadaMensagem')}
           />
         </Screen>
       </View>
@@ -192,15 +193,15 @@ export default function FinancasScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <Screen topInset>
-          <TituloFinancas legenda="Despesas, receitas e o saldo da exploração" />
+          <TituloFinancas legenda={t('financas.legenda')} />
           <EmptyState
             icon="lock-outline"
-            title="Contas reservadas ao dono"
-            message="As receitas e o balanço da exploração só podem ser consultados por quem a gere. Pode continuar a registar as despesas que fizer."
+            title={t('financas.reservadasTitulo')}
+            message={t('financas.reservadasMensagem')}
           />
           {podeRegistarDespesa ? (
             <Button
-              label="Registar despesa"
+              label={t('financas.registarDespesa')}
               icon="cash-minus"
               onPress={() => router.push('/movimento/novo')}
             />
@@ -213,7 +214,7 @@ export default function FinancasScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Screen topInset refreshControl={controloAtualizar}>
-        <TituloFinancas legenda="Despesas, receitas e o saldo da exploração" />
+        <TituloFinancas legenda={t('financas.legenda')} />
 
         {/* À primeira vez, o que é este separador. Não se mostra nos dois casos
             acima (finanças desligadas, contas reservadas ao dono): explicar com
@@ -223,12 +224,12 @@ export default function FinancasScreen() {
           <CartaoIntroducao
             chave="financas"
             icon="cash-multiple"
-            titulo="Para que serve este separador"
+            titulo={t('financas.introTitulo')}
             pontos={[
-              'Aqui aponta o que gasta (ração, veterinário, rendas) e o que recebe (vendas, leite, subsídios). A app faz a conta e mostra-lhe o saldo.',
-              'Cada despesa pode ficar ligada a um animal ou a um terreno: é assim que depois se sabe quanto custou cada um.',
-              'Os totais em cima são do período que escolher; com mais do que uma exploração, escolha primeiro qual.',
-              'O dinheiro é opcional e pode desligá-lo em Perfil → Gestão financeira. Desligar esconde, não apaga.',
+              t('financas.intro1'),
+              t('financas.intro2'),
+              t('financas.intro3'),
+              t('financas.intro4'),
             ]}
           />
         </View>
@@ -237,11 +238,11 @@ export default function FinancasScreen() {
           <>
             <EmptyState
               icon="cash-multiple"
-              title="Ainda sem movimentos"
-              message="Registe o que gasta em ração, energia ou vacinas, e o que recebe das vendas. O resumo aparece aqui."
+              title={t('financas.vazioTitulo')}
+              message={t('financas.vazioMensagem')}
             />
             <Button
-              label="Registar movimento"
+              label={t('financas.registarMovimento')}
               icon="plus"
               onPress={() => router.push('/movimento/novo')}
             />
@@ -268,7 +269,7 @@ export default function FinancasScreen() {
                 gap: spacing.xs,
                 marginBottom: spacing.md,
               }}>
-              {PERIODOS.map((p) => (
+              {periodos().map((p) => (
                 <Chip
                   key={p.valor}
                   label={p.label}
@@ -289,9 +290,13 @@ export default function FinancasScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <Icon name="calendar-blank" size="lg" color={colors.textMuted} />
                   <Text variant="body" style={{ flex: 1 }}>
-                    Sem movimentos {periodo === 'mes' ? 'neste mês' : 'neste ano'}
-                    {nomeExploracao ? ` em ${nomeExploracao}` : ''}. Escolha outro período
-                    {podeEscolher ? ' ou outra exploração' : ''} para ver o histórico.
+                    {periodo === 'mes'
+                      ? t('financas.semMovimentosMes')
+                      : t('financas.semMovimentosAno')}
+                    {nomeExploracao ? ` ${t('financas.em', { nome: nomeExploracao })}` : ''}.{' '}
+                    {podeEscolher
+                      ? t('financas.escolhaOutroOuExploracao')
+                      : t('financas.escolhaOutroPeriodo')}
                   </Text>
                 </View>
               </Card>
@@ -309,12 +314,10 @@ export default function FinancasScreen() {
                     <Icon name="tag-off-outline" size="lg" color={colors.warning} />
                     <View style={{ flex: 1 }}>
                       <Text variant="bodyStrong">
-                        {porFechar.length}{' '}
-                        {porFechar.length === 1 ? 'venda sem preço' : 'vendas sem preço'}
+                        {t('financas.vendasSemPreco', { n: porFechar.length })}
                       </Text>
                       <Text variant="secondary" color={colors.textSecondary}>
-                        Alguém registou a saída do animal mas não o valor. As receitas
-                        abaixo estão incompletas até as fechar.
+                        {t('financas.vendasSemPrecoDetalhe')}
                       </Text>
                     </View>
                     <Icon name="chevron-right" size="md" color={colors.textMuted} />
@@ -337,7 +340,7 @@ export default function FinancasScreen() {
                 />
                 <View style={{ flex: 1 }}>
                   <Text variant="secondary" color={colors.textSecondary}>
-                    Saldo (receitas − despesas)
+                    {t('financas.saldo')}
                   </Text>
                   <Text
                     variant="display"
@@ -353,7 +356,7 @@ export default function FinancasScreen() {
               style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
               <TotalCard
                 icon="arrow-down-bold-circle"
-                label="Receitas"
+                label={t('financas.receitas')}
                 valor={r.receitas}
                 cor={colors.success}
                 variacao={comparacao.disponivel ? comparacao.variacaoReceitas : undefined}
@@ -361,7 +364,7 @@ export default function FinancasScreen() {
               />
               <TotalCard
                 icon="arrow-up-bold-circle"
-                label="Despesas"
+                label={t('financas.despesas')}
                 valor={r.despesas}
                 cor={colors.danger}
                 variacao={comparacao.disponivel ? comparacao.variacaoDespesas : undefined}
@@ -371,7 +374,7 @@ export default function FinancasScreen() {
 
             {/* Evolução mensal */}
             <Text variant="h3" style={{ marginBottom: spacing.sm }}>
-              Últimos 6 meses
+              {t('financas.ultimos6Meses')}
             </Text>
             <Card style={{ marginBottom: spacing.md }}>
               <GraficoMeses meses={meses} />
@@ -381,7 +384,7 @@ export default function FinancasScreen() {
             {r.categoriasDespesa.length > 0 ? (
               <>
                 <Text variant="h3" style={{ marginBottom: spacing.sm }}>
-                  Para onde vai o dinheiro
+                  {t('financas.paraOndeVai')}
                 </Text>
                 <Card padded={false} style={{ marginBottom: spacing.md }}>
                   <View style={{ paddingHorizontal: spacing.md }}>
@@ -401,7 +404,7 @@ export default function FinancasScreen() {
             {r.categoriasReceita.length > 0 ? (
               <>
                 <Text variant="h3" style={{ marginBottom: spacing.sm }}>
-                  De onde vem o dinheiro
+                  {t('financas.deOndeVem')}
                 </Text>
                 <Card padded={false} style={{ marginBottom: spacing.md }}>
                   <View style={{ paddingHorizontal: spacing.md }}>
@@ -421,7 +424,7 @@ export default function FinancasScreen() {
             {ranking.length > 0 ? (
               <>
                 <Text variant="h3" style={{ marginBottom: spacing.sm }}>
-                  Animais que mais pesam
+                  {t('financas.animaisQueMaisPesam')}
                 </Text>
                 <Card padded={false} style={{ marginBottom: spacing.md }}>
                   <View style={{ paddingHorizontal: spacing.md }}>
@@ -477,7 +480,7 @@ export default function FinancasScreen() {
 
             {/* Movimentos */}
             <Text variant="h3" style={{ marginBottom: spacing.sm }}>
-              Movimentos ({r.movimentos.length})
+              {t('financas.movimentos')} ({r.movimentos.length})
             </Text>
             <Card padded={false} style={{ marginBottom: spacing.md }}>
               <View style={{ paddingHorizontal: spacing.md }}>
@@ -509,8 +512,8 @@ export default function FinancasScreen() {
               <Button
                 label={
                   porMostrar <= PAGINA_MOVIMENTOS
-                    ? `Ver os últimos ${porMostrar}`
-                    : `Ver mais ${PAGINA_MOVIMENTOS} (faltam ${porMostrar})`
+                    ? t('financas.verUltimos', { n: porMostrar })
+                    : t('financas.verMaisFaltam', { n: PAGINA_MOVIMENTOS, faltam: porMostrar })
                 }
                 icon="chevron-down"
                 variant="secondary"
@@ -520,7 +523,7 @@ export default function FinancasScreen() {
             ) : null}
 
             <Button
-              label="Registar movimento"
+              label={t('financas.registarMovimento')}
               icon="plus"
               onPress={() => router.push('/movimento/novo')}
               style={{ marginBottom: spacing.sm }}
@@ -529,7 +532,7 @@ export default function FinancasScreen() {
                 da fatura; esta pela hora a que a linha entrou na app, que é a
                 pergunta que se faz quando há mais do que uma pessoa a lançar. */}
             <Button
-              label="Histórico de registos"
+              label={t('financas.historicoRegistos')}
               icon="history"
               variant="secondary"
               onPress={() => router.push('/movimento/historico')}
@@ -539,7 +542,7 @@ export default function FinancasScreen() {
             {excelDisponivel ? (
               <>
                 <Button
-                  label="Exportar para Excel"
+                  label={t('financas.exportarExcel')}
                   icon="microsoft-excel"
                   variant="secondary"
                   onPress={exportar}
@@ -548,7 +551,9 @@ export default function FinancasScreen() {
                   variant="caption"
                   color={colors.textMuted}
                   style={{ marginTop: spacing.sm, textAlign: 'center' }}>
-                  Exporta o que está a ver: o período{nomeExploracao ? ` e ${nomeExploracao}` : ''}.
+                  {nomeExploracao
+                    ? t('financas.exportaPeriodoEExploracao', { nome: nomeExploracao })
+                    : t('financas.exportaPeriodo')}
                 </Text>
               </>
             ) : (
@@ -556,7 +561,7 @@ export default function FinancasScreen() {
                 variant="caption"
                 color={colors.textMuted}
                 style={{ marginTop: spacing.sm, textAlign: 'center' }}>
-                Exportar as contas para Excel faz-se na app de computador.
+                {t('financas.excelSoNoComputador')}
               </Text>
             )}
           </>
@@ -687,14 +692,14 @@ function GraficoMeses({ meses }: { meses: BarraMes[] }) {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: 2 }}>
           {foco.receitas === 0 && foco.despesas === 0 ? (
             <Text variant="secondary" color={colors.textSecondary}>
-              Sem registos neste mês.
+              {t('financas.semRegistosNesteMes')}
             </Text>
           ) : (
             <>
-              <ValorMes label="Receitas" valor={foco.receitas} cor={colors.success} />
-              <ValorMes label="Despesas" valor={foco.despesas} cor={colors.danger} />
+              <ValorMes label={t('financas.receitas')} valor={foco.receitas} cor={colors.success} />
+              <ValorMes label={t('financas.despesas')} valor={foco.despesas} cor={colors.danger} />
               <ValorMes
-                label="Saldo"
+                label={t('financas.saldoCurto')}
                 valor={foco.saldo}
                 cor={foco.saldo < 0 ? colors.danger : colors.success}
                 comSinal
@@ -776,8 +781,8 @@ function GraficoMeses({ meses }: { meses: BarraMes[] }) {
           marginTop: spacing.sm,
           justifyContent: 'center',
         }}>
-        <Legenda cor={colors.success} label="Receitas" />
-        <Legenda cor={colors.danger} label="Despesas" />
+        <Legenda cor={colors.success} label={t('financas.receitas')} />
+        <Legenda cor={colors.danger} label={t('financas.despesas')} />
       </View>
 
       {meses.length > 1 ? (
@@ -785,7 +790,7 @@ function GraficoMeses({ meses }: { meses: BarraMes[] }) {
           variant="caption"
           color={colors.textMuted}
           style={{ textAlign: 'center', marginTop: spacing.xs }}>
-          Toque num mês para ver os valores desse mês.
+          {t('financas.toqueNumMes')}
         </Text>
       ) : null}
     </View>

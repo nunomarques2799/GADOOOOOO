@@ -14,6 +14,7 @@ import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFotoPerfil } from '@/data/useFotoPerfil';
+import { t } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, shadow, spacing } from '@/theme';
 
@@ -51,10 +52,10 @@ export default function PerfilScreen() {
     setAGravarFoto(true);
     try {
       await definirFoto(dataUri);
-      toast.sucesso(dataUri ? 'Fotografia guardada' : 'Fotografia removida');
+      toast.sucesso(dataUri ? t('perfil.fotoGuardada') : t('perfil.fotoRemovida'));
       setAEscolherFoto(null);
     } catch (e) {
-      toast.erro('Não foi possível guardar a fotografia', mensagemDeErro(e));
+      toast.erro(t('perfil.fotoSemGravar'), mensagemDeErro(e));
     } finally {
       setAGravarFoto(false);
     }
@@ -71,12 +72,10 @@ export default function PerfilScreen() {
       return;
     }
     confirmar(
-      'Ainda há alterações por enviar',
-      `Tem ${pendentesSinc} alteração${pendentesSinc > 1 ? 'ões' : ''} guardada${pendentesSinc > 1 ? 's' : ''} neste ` +
-        'aparelho que ainda não chegou ao servidor. Se terminar sessão agora, perde-se. ' +
-        'Ligue-se à internet e espere pela sincronização, ou termine sessão à mesma.',
+      t('perfil.porEnviarTitulo'),
+      t('perfil.porEnviarMensagem', { n: pendentesSinc }),
       () => void sair(),
-      { rotuloConfirmar: 'Terminar à mesma', destrutivo: true },
+      { rotuloConfirmar: t('perfil.sairAMesma'), destrutivo: true },
     );
   }
 
@@ -109,7 +108,7 @@ export default function PerfilScreen() {
           paddingBottom: insets.bottom + spacing.xxl,
         }}>
         <View style={{ ...coluna, paddingTop: insets.top + spacing.md, paddingBottom: spacing.lg }}>
-          <Text variant="display">Perfil</Text>
+          <Text variant="display">{t('nav.perfil')}</Text>
         </View>
 
         <View style={{ ...coluna, gap: spacing.md }}>
@@ -127,9 +126,7 @@ export default function PerfilScreen() {
               <Pressable
                 onPress={() => setAEscolherFoto({ atual: foto })}
                 accessibilityRole="button"
-                accessibilityLabel={
-                  foto ? 'Mudar a sua fotografia' : 'Escolher uma fotografia para si'
-                }
+                accessibilityLabel={foto ? t('perfil.mudarFoto') : t('perfil.escolherFoto')}
                 style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
                 <View>
                   {foto ? (
@@ -177,8 +174,12 @@ export default function PerfilScreen() {
                     gap: spacing.xs,
                     marginTop: spacing.xs,
                   }}>
-                  <Badge tone="brand" icon="cow" label={`${noEfetivo} animais`} />
-                  <Badge tone="neutral" icon="barn" label={`${exploracoes.length} explor.`} />
+                  <Badge tone="brand" icon="cow" label={t('terrenos.nAnimais', { n: noEfetivo })} />
+                  <Badge
+                    tone="neutral"
+                    icon="barn"
+                    label={t('perfil.nExploracoes', { n: exploracoes.length })}
+                  />
                 </View>
               </View>
             </View>
@@ -190,25 +191,25 @@ export default function PerfilScreen() {
             <View style={{ gap: spacing.sm }}>
               <LinhaInfo
                 icon={isSuperadmin ? 'shield-crown' : 'account-check-outline'}
-                label="Tipo de conta"
-                valor={isSuperadmin ? 'Administrador da plataforma' : 'Criador'}
+                label={t('perfil.tipoDeConta')}
+                valor={isSuperadmin ? t('perfil.administrador') : t('perfil.criador')}
               />
               {!isSuperadmin ? (
                 <LinhaInfo
                   icon="badge-account-horizontal-outline"
-                  label={papeis.length > 1 ? 'Os seus papéis' : 'O seu papel'}
+                  label={papeis.length > 1 ? t('perfil.osSeusPapeis') : t('perfil.oSeuPapel')}
                   valor={
                     papeis.length > 0
                       ? papeis.map(legendaRole).join(' · ')
-                      : 'Sem exploração associada'
+                      : t('perfil.semExploracao')
                   }
                 />
               ) : null}
               {!isSuperadmin && estadoPerfil !== 'ativo' ? (
                 <LinhaInfo
                   icon="clock-alert-outline"
-                  label="Estado"
-                  valor="Por aprovar (só de leitura)"
+                  label={t('perfil.estado')}
+                  valor={t('perfil.porAprovar')}
                   tom={colors.warning}
                 />
               ) : null}
@@ -219,14 +220,14 @@ export default function PerfilScreen() {
           <Card padded={false}>
             <Linha
               icon="account-edit"
-              label="Editar dados pessoais"
+              label={t('perfil.editarDados')}
               onPress={() => router.push('/conta/editar')}
               last={!configurado}
             />
             {configurado ? (
               <Linha
                 icon="logout"
-                label="Terminar sessão"
+                label={t('perfil.terminarSessao')}
                 tint={colors.danger}
                 onPress={confirmarSair}
                 last
@@ -250,7 +251,7 @@ export default function PerfilScreen() {
             <Card padded={false}>
               <Linha
                 icon="delete-forever"
-                label="Apagar a minha conta"
+                label={t('perfil.apagarConta')}
                 tint={colors.danger}
                 onPress={() => router.push('/conta/apagar')}
                 last
@@ -261,10 +262,10 @@ export default function PerfilScreen() {
           <Pressable
             onPress={() => router.push('/definicoes')}
             accessibilityRole="button"
-            accessibilityLabel="Abrir definições"
+            accessibilityLabel={t('perfil.abrirDefinicoes')}
             style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
             <Text variant="secondary" color={colors.primary} center>
-              As opções da app estão em Definições
+              {t('perfil.opcoesEmDefinicoes')}
             </Text>
           </Pressable>
         </View>
@@ -281,7 +282,7 @@ export default function PerfilScreen() {
           <Pressable
             style={{ flex: 1 }}
             onPress={() => setAEscolherFoto(null)}
-            accessibilityLabel="Fechar"
+            accessibilityLabel={t('comum.fechar')}
           />
           <View
             style={[
@@ -297,13 +298,13 @@ export default function PerfilScreen() {
             ]}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text variant="h3" style={{ flex: 1 }}>
-                A sua fotografia
+                {t('perfil.aSuaFotografia')}
               </Text>
               <Pressable
                 onPress={() => setAEscolherFoto(null)}
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel="Fechar">
+                accessibilityLabel={t('comum.fechar')}>
                 <Icon name="close" size="lg" color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -314,15 +315,15 @@ export default function PerfilScreen() {
               foto={aEscolherFoto?.atual}
               onMudar={(dataUri) => setAEscolherFoto({ atual: dataUri })}
               icone="account"
-              assunto="da sua conta"
+              assunto={t('perfil.assuntoFoto')}
             />
 
             <Text variant="caption" color={colors.textMuted}>
-              Por agora a fotografia é só sua: aparece aqui no Perfil e mais ninguém a vê.
+              {t('perfil.fotoSoSua')}
             </Text>
 
             <Button
-              label={aGravarFoto ? 'A guardar…' : 'Guardar'}
+              label={aGravarFoto ? t('comum.aGuardar') : t('comum.guardar')}
               icon="check"
               loading={aGravarFoto}
               disabled={aGravarFoto || aEscolherFoto?.atual === foto}

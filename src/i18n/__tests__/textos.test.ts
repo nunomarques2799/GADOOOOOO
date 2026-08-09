@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from '@jest/globals';
 
 import { definirIdiomaParaTestes, IDIOMA_OMISSAO, IDIOMAS } from '../idioma';
-import { CHAVES_TEXTO, DICIONARIOS_EM_CRU, t } from '../textos';
+import { CHAVES_TEXTO, DICIONARIOS_EM_CRU, t, type ChaveTexto } from '../textos';
 
 afterEach(() => definirIdiomaParaTestes(IDIOMA_OMISSAO));
 
@@ -75,15 +75,39 @@ describe('o dicionário está completo', () => {
    * SEM tradução nem compila. Este teste apanha o que o tipo não apanha: uma
    * tradução ESQUECIDA, deixada igual ao português por copiar-colar — que
    * compila lindamente e só se vê com a app em inglês à frente.
+   *
+   * As exceções abaixo são as chaves em que as duas colunas SÃO iguais de
+   * propósito, e cada uma tem de dizer porquê. A lista é curta e à mão de
+   * propósito: acrescentar uma tem de ser uma decisão, não um atalho para
+   * calar o teste.
    */
+  const IGUAIS_DE_PROPOSITO: ChaveTexto[] = [
+    // O formato do brinco português (SIA). Não é uma frase: é a máscara que se
+    // escreve no campo, e em inglês escreve-se exatamente igual.
+    'formAnimal.exBrinco',
+  ];
+
   it('e nenhuma tradução ficou igual ao português por esquecimento', () => {
     definirIdiomaParaTestes('pt');
     const emPt = new Map(CHAVES_TEXTO.map((c) => [c, t(c)]));
 
     definirIdiomaParaTestes('en');
-    const iguais = CHAVES_TEXTO.filter((c) => t(c) === emPt.get(c));
+    const iguais = CHAVES_TEXTO.filter(
+      (c) => t(c) === emPt.get(c) && !IGUAIS_DE_PROPOSITO.includes(c),
+    );
 
     expect(iguais).toEqual([]);
+  });
+
+  it('e a lista de exceções não tem chaves já traduzidas', () => {
+    // Uma exceção que deixou de fazer falta é uma porta aberta para a próxima
+    // tradução esquecida entrar por ela sem ninguém dar conta.
+    definirIdiomaParaTestes('pt');
+    const emPt = new Map(CHAVES_TEXTO.map((c) => [c, t(c)]));
+    definirIdiomaParaTestes('en');
+
+    const jaTraduzidas = IGUAIS_DE_PROPOSITO.filter((c) => t(c) !== emPt.get(c));
+    expect(jaTraduzidas).toEqual([]);
   });
 
   /**

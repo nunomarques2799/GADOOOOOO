@@ -21,6 +21,8 @@
  * uns membros e não a outros.
  */
 
+import { idiomaAtual, t } from '@/i18n';
+
 import { formatEuro } from './helpers';
 import type {
   Animal,
@@ -168,11 +170,17 @@ export function lancamentos(
 
 export type Periodo = 'mes' | 'ano' | 'tudo';
 
-export const PERIODOS: { valor: Periodo; label: string }[] = [
-  { valor: 'mes', label: 'Este mês' },
-  { valor: 'ano', label: 'Este ano' },
-  { valor: 'tudo', label: 'Tudo' },
-];
+/**
+ * FUNÇÃO e não constante: os rótulos passam pelo `t()`, e uma tabela criada no
+ * import ficava congelada na língua de arranque (ver AGENTS.md).
+ */
+export function periodos(): { valor: Periodo; label: string }[] {
+  return [
+    { valor: 'mes', label: t('financas.esteMes') },
+    { valor: 'ano', label: t('financas.esteAno') },
+    { valor: 'tudo', label: t('financas.tudo') },
+  ];
+}
 
 /** Chave `aaaa-mm` de uma data, em hora local (a mesma que o ecrã mostra). */
 export function chaveMes(iso: string): string {
@@ -323,9 +331,14 @@ const MESES_CURTOS = [
   'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
 ];
 
-const MESES_LONGOS = [
+const MESES_LONGOS_PT = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
+const MESES_LONGOS_EN = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
 /**
@@ -336,9 +349,10 @@ const MESES_LONGOS = [
  */
 export function nomeMes(chave: string): string {
   const [ano, mes] = chave.split('-');
-  const nome = MESES_LONGOS[Number(mes) - 1];
+  const meses = idiomaAtual() === 'en' ? MESES_LONGOS_EN : MESES_LONGOS_PT;
+  const nome = meses[Number(mes) - 1];
   if (!nome || !ano) return chave;
-  return `${nome} de ${ano}`;
+  return t('financas.mesDeAno', { mes: nome, ano });
 }
 
 /**
