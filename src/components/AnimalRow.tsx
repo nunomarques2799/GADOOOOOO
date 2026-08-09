@@ -61,11 +61,15 @@ export const AnimalRow = memo(function AnimalRow({
   return (
     <Card
       onPress={() => router.push(`/animal/${animal.id}`)}
-      accessibilityLabel={`${animal.nome ?? 'Animal'}, ${animal.especie}, ${idadeExtenso(
+      accessibilityLabel={`${animal.nome ?? t('ficha.animal')}, ${animal.especie}, ${idadeExtenso(
         animal.dataNascimento,
-      )}${porCompletar ? ', por completar: sem nome nem brinco' : semBrinco ? ', por identificar: sem brinco' : ''}${
-        sinais.length > 0 ? `. ${t('sinal.falado')}: ${sinais.map(rotuloDoSinal).join(', ')}` : ''
-      }`}
+      )}${
+        porCompletar
+          ? `, ${t('animais.faladoPorCompletar')}`
+          : semBrinco
+            ? `, ${t('animais.faladoSemBrinco')}`
+            : ''
+      }${sinais.length > 0 ? `. ${t('sinal.falado')}: ${sinais.map(rotuloDoSinal).join(', ')}` : ''}`}
       style={{ marginBottom: spacing.sm, opacity: saiu ? 0.7 : 1 }}
       padded={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.sm }}>

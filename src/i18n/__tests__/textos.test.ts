@@ -85,6 +85,9 @@ describe('o dicionário está completo', () => {
     // O formato do brinco português (SIA). Não é uma frase: é a máscara que se
     // escreve no campo, e em inglês escreve-se exatamente igual.
     'formAnimal.exBrinco',
+    // "Animal" e "Dose" escrevem-se igual nas duas línguas.
+    'ficha.animal',
+    'evento.dose',
   ];
 
   it('e nenhuma tradução ficou igual ao português por esquecimento', () => {

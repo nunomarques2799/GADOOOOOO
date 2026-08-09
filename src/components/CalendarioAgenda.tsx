@@ -74,7 +74,7 @@ export function CalendarioAgenda({
           paddingHorizontal: spacing.xs,
           marginBottom: spacing.xs,
         }}>
-        <Seta icon="chevron-left" label="Mês anterior" onPress={() => andar(-1)} />
+        <Seta icon="chevron-left" label={t('calendario.mesAnterior')} onPress={() => andar(-1)} />
         <Pressable
           onPress={() => {
             setAno(hoje.getFullYear());
@@ -96,7 +96,7 @@ export function CalendarioAgenda({
             </Text>
           ) : null}
         </Pressable>
-        <Seta icon="chevron-right" label="Mês seguinte" onPress={() => andar(1)} />
+        <Seta icon="chevron-right" label={t('calendario.mesSeguinte')} onPress={() => andar(1)} />
       </View>
 
       {/* Iniciais dos dias, de segunda a domingo */}
@@ -213,10 +213,10 @@ function Dia({
 
 /** O que se anuncia a quem ouve o ecrã: "2 eventos e 1 prazo." */
 function rotuloMarcas(eventos: number, avisos: number): string {
-  if (eventos === 0 && avisos === 0) return 'Nada marcado.';
+  if (eventos === 0 && avisos === 0) return t('calendario.nadaMarcado');
   const partes: string[] = [];
-  if (eventos > 0) partes.push(`${eventos} ${eventos === 1 ? 'evento' : 'eventos'}`);
-  if (avisos > 0) partes.push(`${avisos} ${avisos === 1 ? 'prazo' : 'prazos'}`);
+  if (eventos > 0) partes.push(t('calendario.nEventos', { n: eventos }));
+  if (avisos > 0) partes.push(t('calendario.nPrazos', { n: avisos }));
   return `${partes.join(' e ')}.`;
 }
 

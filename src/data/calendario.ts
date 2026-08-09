@@ -45,6 +45,16 @@ const DIAS_EXTENSO = [
   'domingo',
 ];
 
+const DIAS_EXTENSO_EN = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
 export const MESES = [
   'janeiro',
   'fevereiro',
@@ -145,7 +155,11 @@ export function celulasDoMes(ano: number, mes: number): Celula[] {
       data: d,
       chave: chaveDia(d),
       doMes: d.getMonth() === mes,
-      descricao: `${DIAS_EXTENSO[(d.getDay() + 6) % 7]}, ${d.getDate()} de ${MESES[d.getMonth()]}`,
+      // A etiqueta falada segue a língua da app, como o resto do calendário.
+      descricao:
+        idiomaAtual() === 'en'
+          ? `${DIAS_EXTENSO_EN[(d.getDay() + 6) % 7]}, ${d.getDate()} ${MESES_EN[d.getMonth()]}`
+          : `${DIAS_EXTENSO[(d.getDay() + 6) % 7]}, ${d.getDate()} de ${MESES[d.getMonth()]}`,
     });
   }
 
