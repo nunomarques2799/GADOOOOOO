@@ -82,12 +82,17 @@ describe('o dicionário está completo', () => {
    * calar o teste.
    */
   const IGUAIS_DE_PROPOSITO: ChaveTexto[] = [
-    // O formato do brinco português (SIA). Não é uma frase: é a máscara que se
-    // escreve no campo, e em inglês escreve-se exatamente igual.
+    // Máscaras de números oficiais portugueses (o brinco do SIA, a marca de
+    // exploração). Não são frases: é o que se escreve no campo, e escreve-se
+    // exatamente igual em inglês.
     'formAnimal.exBrinco',
+    'formExploracao.exMarca',
     // "Animal" e "Dose" escrevem-se igual nas duas línguas.
     'ficha.animal',
     'evento.dose',
+    // A pré-visualização das paletas mostra uma espécie e uma raça, e esses são
+    // nomes de DOMÍNIO: ficam em português nas duas línguas (ver `textos.ts`).
+    'aspeto.exemploRaca',
   ];
 
   it('e nenhuma tradução ficou igual ao português por esquecimento', () => {

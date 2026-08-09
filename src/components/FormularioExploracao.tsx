@@ -12,6 +12,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { Exploracao } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 /** Formulário reutilizável para criar/editar exploração. */
@@ -62,17 +63,17 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
       };
       if (editar && exploracao) {
         await updateExploracao(exploracao.id, dados);
-        toast.sucesso('Exploração guardada', nome.trim());
+        toast.sucesso(t('formExploracao.guardada'), nome.trim());
         router.back();
       } else {
         const nova = await addExploracao(dados);
-        toast.sucesso('Exploração criada', nova.nome);
+        toast.sucesso(t('formExploracao.criada'), nova.nome);
         router.replace(`/exploracao/${nova.id}`);
       }
     } catch (e) {
       const razao = mensagemDeErro(e);
       setErroGuardar(razao);
-      toast.erro(editar ? 'Exploração não guardada' : 'Exploração não criada', razao);
+      toast.erro(editar ? t('formExploracao.semGuardar') : t('formExploracao.semCriar'), razao);
     } finally {
       setAGravar(false);
     }
@@ -86,7 +87,7 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
    * não dá a dimensão do que se perde, e é a dimensão que faz alguém parar.
    */
   function resumoDoQueSeVai(): string {
-    if (!exploracao) return 'nada';
+    if (!exploracao) return t('formExploracao.nada');
     const meusTerrenos = terrenos.filter((t) => t.exploracaoId === exploracao.id);
     const meusAnimais = animais.filter((a) => a.exploracaoId === exploracao.id);
     const ids = new Set(meusAnimais.map((a) => a.id));
@@ -94,18 +95,14 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
     const meusMovimentos = movimentos.filter((m) => m.exploracaoId === exploracao.id);
 
     const partes = [
-      `${meusTerrenos.length} ${meusTerrenos.length === 1 ? 'terreno' : 'terrenos'}`,
-      `${meusAnimais.length} ${meusAnimais.length === 1 ? 'animal' : 'animais'}`,
-      `${meusEventos.length} ${meusEventos.length === 1 ? 'registo' : 'registos'}`,
+      t('terrenos.contagem', { n: meusTerrenos.length }),
+      t('terrenos.nAnimais', { n: meusAnimais.length }),
+      t('docs.nRegistos', { n: meusEventos.length }),
     ];
     // O dinheiro só se nomeia se existir: numa conta sem gestão económica
     // ligada, falar de despesas era assustar com uma coisa que não há.
     if (meusMovimentos.length > 0) {
-      partes.push(
-        `${meusMovimentos.length} ${
-          meusMovimentos.length === 1 ? 'despesa ou receita' : 'despesas e receitas'
-        }`,
-      );
+      partes.push(t('formExploracao.nDespesas', { n: meusMovimentos.length }));
     }
     return partes.join(', ');
   }
@@ -120,23 +117,22 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
     const executar = async () => {
       try {
         await deleteExploracao(exploracao.id);
-        toast.sucesso('Exploração eliminada', exploracao.nome);
+        toast.sucesso(t('formExploracao.eliminada'), exploracao.nome);
         router.replace('/exploracoes');
       } catch (e) {
-        avisar('Não foi possível eliminar', mensagemDeErro(e));
+        avisar(t('comum.semEliminar'), mensagemDeErro(e));
       }
     };
     // O aviso conta o que a cascata leva DE FACTO. Dizia "terrenos, animais e
     // histórico" e ficavam de fora o dinheiro e a equipa — que é precisamente o
     // que ninguém espera perder ao apagar uma exploração.
     confirmar(
-      'Eliminar exploração',
-      `Vai eliminar "${exploracao.nome}" e tudo o que está lá dentro: `
+      t('formExploracao.eliminarExploracao'),
+      `${t('formExploracao.vaiEliminar', { nome: exploracao.nome })} `
         + `${resumoDoQueSeVai()}. `
-        + 'Leva também os animais que já tinham saído do efetivo, e com eles a '
-        + 'genealogia. Esta ação não pode ser desfeita.',
+        + t('formExploracao.eliminarDetalhe'),
       () => void executar(),
-      { rotuloConfirmar: 'Eliminar', destrutivo: true },
+      { rotuloConfirmar: t('comum.eliminar'), destrutivo: true },
     );
   }
 
@@ -147,11 +143,11 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
   if (!editar && !podeCriarExploracoes) {
     return (
       <EcraComTeclado>
-        <Header title="Nova exploração" />
+        <Header title={t('exploracoes.nova')} />
         <EmptyState
           icon="barn"
-          title="Só quem tem a sua própria exploração"
-          message="Entrou nesta app por convite de quem gere uma exploração, e é lá que trabalha. Para abrir uma exploração sua, crie uma conta própria."
+          title={t('formExploracao.soComContaPropriaTitulo')}
+          message={t('formExploracao.soComContaPropriaMensagem')}
         />
       </EcraComTeclado>
     );
@@ -164,11 +160,11 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
   if (editar && !pode(exploracao?.id, 'editarExploracao')) {
     return (
       <EcraComTeclado>
-        <Header title="Editar exploração" />
+        <Header title={t('formExploracao.editar')} />
         <EmptyState
           icon="lock-outline"
-          title="A exploração é de quem a tem a cargo"
-          message="O nome, a marca de exploração, o NIF e a localização são alterados por quem responde por ela. Continua a poder trabalhar nos animais e no que lhe compete."
+          title={t('formExploracao.semPermissaoTitulo')}
+          message={t('formExploracao.semPermissaoMensagem')}
         />
       </EcraComTeclado>
     );
@@ -176,38 +172,38 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
 
   return (
     <EcraComTeclado>
-      <Header title={editar ? 'Editar exploração' : 'Nova exploração'} />
+      <Header title={editar ? t('formExploracao.editar') : t('exploracoes.nova')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.huge * 2 }}>
         <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
-          Dados oficiais da exploração pecuária. Todos os campos com * são obrigatórios.
+          {t('formExploracao.ajuda')}
         </Text>
 
         <SeletorFoto foto={foto} onMudar={setFoto} icone="barn" assunto="da exploração" forma="cartao" />
 
-        <Field label="Nome" obrigatorio>
+        <Field label={t('formAnimal.nome')} obrigatorio>
           <TextField
             value={nome}
             onChangeText={setNome}
-            placeholder="Ex: Monte do Avô"
+            placeholder={t('formExploracao.exNome')}
             icon="barn"
             autoCapitalize="words"
           />
         </Field>
 
-        <Field label="Marca de exploração" obrigatorio>
+        <Field label={t('formExploracao.marca')} obrigatorio>
           <TextField
             value={marca}
             onChangeText={setMarca}
-            placeholder="PT 00 000 0000"
+            placeholder={t('formExploracao.exMarca')}
             icon="barcode"
             autoCapitalize="characters"
           />
         </Field>
 
-        <Field label="NIF do detentor" obrigatorio>
+        <Field label={t('formExploracao.nif')} obrigatorio>
           <TextField
             value={nifDetentor}
             onChangeText={setNif}
@@ -217,14 +213,14 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
           />
         </Field>
 
-        <Field label="Localização" opcional>
+        <Field label={t('formExploracao.localizacao')} opcional>
           <CampoLocalidade
             value={localizacao}
             onChangeText={setLocalizacao}
-            placeholder="Ex: Idanha-a-Nova"
+            placeholder={t('formExploracao.exLocalizacao')}
           />
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-            Escreva o nome da terra e escolha da lista. Chega para a meteorologia local.
+            {t('formExploracao.localizacaoAjuda')}
           </Text>
 
           {/* As duas maneiras de dizer onde é, e nenhuma obrigatória: o nome da
@@ -247,10 +243,10 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
             />
             <Text variant="bodyStrong" color={colors.primary}>
               {mapaAberto
-                ? 'Fechar o mapa'
+                ? t('formExploracao.fecharMapa')
                 : temCoords
-                  ? 'Ver no mapa'
-                  : 'Ou marque no mapa onde fica'}
+                  ? t('formExploracao.verNoMapa')
+                  : t('formExploracao.marcarNoMapa')}
             </Text>
           </Pressable>
 
@@ -281,7 +277,7 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
                 <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
                   {temCoords
                     ? `Marcado: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
-                    : 'Toque no mapa para marcar a exploração.'}
+                    : t('formExploracao.toqueNoMapa')}
                 </Text>
                 {temCoords ? (
                   <Pressable
@@ -291,9 +287,9 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
                     }}
                     hitSlop={8}
                     accessibilityRole="button"
-                    accessibilityLabel="Limpar a marca no mapa">
+                    accessibilityLabel={t('formExploracao.limparMarca')}>
                     <Text variant="bodyStrong" color={colors.danger}>
-                      Limpar
+                      {t('comum.limpar')}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -320,7 +316,7 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
 
         {editar && podeEliminar ? (
           <Button
-            label="Eliminar exploração"
+            label={t('formExploracao.eliminarExploracao')}
             icon="trash-can-outline"
             variant="danger"
             onPress={confirmarEliminar}
@@ -346,7 +342,7 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
           shadow.lg,
         ]}>
         <Button
-          label={editar ? 'Guardar alterações' : 'Criar exploração'}
+          label={editar ? t('formAnimal.guardarAlteracoes') : t('formExploracao.criar')}
           icon="check"
           onPress={guardar}
           disabled={!valido}

@@ -29,6 +29,7 @@ import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
 import type { Medicamento, TipoMedicamento } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 /** Converte "20,5" num número; undefined se vazio, NaN se inválido. */
@@ -148,14 +149,14 @@ export function FormularioMedicamento({
     try {
       if (editar) {
         await updateMedicamento(medicamento.id, dados);
-        toast.sucesso('Lote guardado', dados.nome);
+        toast.sucesso(t('formLote.guardado'), dados.nome);
       } else {
         const comDespesa = podeLancarDespesa && lancarDespesa && dados.custo != null;
         await addMedicamento(dados, { lancarDespesa: comDespesa });
         toast.sucesso(
-          'Entrada registada',
+          t('formLote.entradaRegistada'),
           comDespesa
-            ? `${dados.nome} · despesa lançada em Sanidade`
+            ? `${dados.nome} · ${t('formLote.despesaLancada')}`
             : `${dados.nome} · ${formatQuantidade(dados.quantidade, dados.unidade)}`,
         );
       }
@@ -172,34 +173,33 @@ export function FormularioMedicamento({
   function eliminar() {
     if (!medicamento) return;
     confirmar(
-      'Eliminar lote',
+      t('formLote.eliminarLote'),
       jaUsado > 0
-        ? `Já foram administrados ${formatQuantidade(jaUsado, medicamento.unidade)} deste lote. Os tratamentos ficam registados, mas deixam de dizer de que frasco saíram.`
-        : 'Tem a certeza? Esta ação não pode ser anulada.',
+        ? t('formLote.eliminarComUso', { usado: formatQuantidade(jaUsado, medicamento.unidade) })
+        : t('comum.semVoltaAtras'),
       () => {
         void (async () => {
           try {
             await deleteMedicamento(medicamento.id);
-            toast.sucesso('Lote eliminado', medicamento.nome);
+            toast.sucesso(t('formLote.eliminado'), medicamento.nome);
             router.back();
           } catch (e) {
-            toast.erro('Não foi possível eliminar', mensagemDeErro(e));
+            toast.erro(t('comum.semEliminar'), mensagemDeErro(e));
           }
         })();
       },
-      { rotuloConfirmar: 'Eliminar', destrutivo: true },
+      { rotuloConfirmar: t('comum.eliminar'), destrutivo: true },
     );
   }
 
   if (!podeGerir) {
     return (
       <EcraComTeclado>
-        <Header title={editar ? 'Lote' : 'Dar entrada'} />
+        <Header title={editar ? t('formLote.lote') : t('existencias.darEntrada')} />
         <View style={{ padding: spacing.lg }}>
-          <Text variant="h3">Sem permissão</Text>
+          <Text variant="h3">{t('formLote.semPermissaoTitulo')}</Text>
           <Text variant="body" color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
-            Dar entrada de medicamentos é de quem gere a exploração. Pode continuar a escolher
-            os lotes que já lá estão ao registar um tratamento.
+            {t('formLote.semPermissao')}
           </Text>
         </View>
       </EcraComTeclado>
@@ -208,7 +208,7 @@ export function FormularioMedicamento({
 
   return (
     <EcraComTeclado>
-      <Header title={editar ? 'Lote' : 'Dar entrada'} />
+      <Header title={editar ? t('formLote.lote') : t('existencias.darEntrada')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -222,7 +222,7 @@ export function FormularioMedicamento({
           </Text>
         ) : null}
 
-        <Field label="Tipo" obrigatorio>
+        <Field label={t('formTerreno.tipo')} obrigatorio>
           <View style={{ flexDirection: 'row', gap: spacing.xs }}>
             {tiposMedicamento.map((t) => (
               <Chip key={t} label={t} selected={tipo === t} onPress={() => setTipo(t)} />
@@ -230,20 +230,20 @@ export function FormularioMedicamento({
           </View>
         </Field>
 
-        <Field label="Nome do produto" obrigatorio>
+        <Field label={t('formLote.nomeProduto')} obrigatorio>
           <TextField
             value={nome}
             onChangeText={setNome}
-            placeholder="Ex: Penicilina"
+            placeholder={t('formLote.exNome')}
             icon={tipo === 'Vacina' ? 'needle' : 'medical-bag'}
           />
         </Field>
 
-        <Field label="Lote" opcional>
+        <Field label={t('formLote.lote')} opcional>
           <TextField
             value={lote}
             onChangeText={setLote}
-            placeholder="Ex: PN-2291"
+            placeholder={t('formLote.exLote')}
             icon="barcode"
             autoCapitalize="characters"
           />
@@ -251,21 +251,21 @@ export function FormularioMedicamento({
               sem lote visível regista-se na mesma, e é melhor tê-lo sem lote do
               que não o ter. */}
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-            Vem no rótulo. É por ele que se rastreia o frasco numa inspeção.
+            {t('formLote.loteAjuda')}
           </Text>
         </Field>
 
-        <Field label="Validade" opcional>
+        <Field label={t('formLote.validade')} opcional>
           <CampoData
             value={validade}
             onChangeText={setValidade}
-            placeholder="Ex: 31/12/2027"
-            rotuloCalendario="Escolher a validade no calendário"
+            placeholder={t('formLote.exValidade')}
+            rotuloCalendario={t('formLote.calendarioValidade')}
             permitirFuturo
           />
           {validadeInvalida ? (
             <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
-              Data inválida. Use o formato dd/mm/aaaa.
+              {t('formAnimal.dataInvalida')}
             </Text>
           ) : validadeIso ? (
             <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
@@ -274,11 +274,11 @@ export function FormularioMedicamento({
           ) : null}
         </Field>
 
-        <Field label="Quantidade" obrigatorio>
+        <Field label={t('formLote.quantidade')} obrigatorio>
           <TextField
             value={quantidade}
             onChangeText={setQuantidade}
-            placeholder="Ex: 250"
+            placeholder={t('formLote.exQuantidade')}
             icon="beaker-outline"
             keyboardType="decimal-pad"
           />
@@ -294,21 +294,20 @@ export function FormularioMedicamento({
             ))}
           </View>
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-            O que o frasco trazia, não o que resta. O que resta a app calcula.
+            {t('formLote.quantidadeAjuda')}
           </Text>
           {quantidadeAbaixoDoUsado ? (
             <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
-              Já foram administrados {formatQuantidade(jaUsado, unidade)} deste lote. Uma
-              quantidade menor do que essa deixa o stock a zero.
+              {t('formLote.quantidadeAbaixo', { usado: formatQuantidade(jaUsado, unidade) })}
             </Text>
           ) : null}
         </Field>
 
-        <Field label="Intervalo de segurança (dias)" opcional>
+        <Field label={t('evento.intervaloSeguranca')} opcional>
           <TextField
             value={seguranca}
             onChangeText={setSeguranca}
-            placeholder="Ex: 10"
+            placeholder={t('formLote.exSeguranca')}
             icon="clock-alert-outline"
             keyboardType="number-pad"
           />
@@ -316,41 +315,40 @@ export function FormularioMedicamento({
               passa a propor este número sozinho, e é ele que impede vender
               para abate um animal ainda dentro do prazo. */}
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-            Vem na bula. A app propõe-o quando este lote for usado num
-            tratamento, para o animal não ir para abate antes do tempo.
+            {t('formLote.segurancaAjuda')}
           </Text>
         </Field>
 
-        <Field label="Fornecedor" opcional>
+        <Field label={t('formLote.fornecedor')} opcional>
           <TextField
             value={fornecedor}
             onChangeText={setFornecedor}
-            placeholder="Ex: Agro-Nisa"
+            placeholder={t('formLote.exFornecedor')}
             icon="storefront-outline"
             autoCapitalize="words"
           />
         </Field>
 
-        <Field label="Data da compra" obrigatorio>
+        <Field label={t('formLote.dataCompra')} obrigatorio>
           <CampoData
             value={dataCompra}
             onChangeText={setDataCompra}
-            placeholder="Ex: 15/03/2026"
-            rotuloCalendario="Escolher a data da compra no calendário"
+            placeholder={t('formLote.exDataCompra')}
+            rotuloCalendario={t('formLote.calendarioCompra')}
           />
           {compraInvalida ? (
             <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
-              Data inválida. Use o formato dd/mm/aaaa e uma data não futura.
+              {t('formAnimal.dataInvalidaNaoFutura')}
             </Text>
           ) : null}
         </Field>
 
         {podeRegistarDespesa ? (
-          <Field label="Custo total (€)" opcional>
+          <Field label={t('formLote.custoTotal')} opcional>
             <TextField
               value={custo}
               onChangeText={setCusto}
-              placeholder="Ex: 95"
+              placeholder={t('formLote.exCusto')}
               icon="cash"
               keyboardType="decimal-pad"
             />
@@ -359,8 +357,8 @@ export function FormularioMedicamento({
                 <Chip
                   label={
                     lancarDespesa
-                      ? 'Lança a despesa em Sanidade'
-                      : 'Não lançar despesa nas contas'
+                      ? t('formLote.lancaDespesa')
+                      : t('formLote.naoLancaDespesa')
                   }
                   selected={lancarDespesa}
                   onPress={() => setLancarDespesa((v) => !v)}
@@ -370,11 +368,11 @@ export function FormularioMedicamento({
           </Field>
         ) : null}
 
-        <Field label="Notas" opcional>
+        <Field label={t('evento.notas')} opcional>
           <TextField
             value={notas}
             onChangeText={setNotas}
-            placeholder="Observações (opcional)"
+            placeholder={t('evento.exNotas')}
             icon="note-text-outline"
             multiline
           />
@@ -399,7 +397,7 @@ export function FormularioMedicamento({
 
         {editar && podeEliminar ? (
           <Button
-            label="Eliminar lote"
+            label={t('formLote.eliminarLote')}
             icon="trash-can-outline"
             variant="danger"
             onPress={eliminar}

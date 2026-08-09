@@ -5,6 +5,7 @@ import { Card, EmptyState, Header, Icon, Screen, Text } from '@/components/ui';
 import { avisar } from '@/data/avisos';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /**
@@ -25,7 +26,7 @@ export default function FinancasDefinicaoScreen() {
     try {
       await definirFinancasAtivas(valor);
     } catch (e) {
-      avisar('Não foi possível guardar', e instanceof Error ? e.message : String(e));
+      avisar(t('comum.semGravar'), e instanceof Error ? e.message : String(e));
     } finally {
       setAGuardar(false);
     }
@@ -34,12 +35,12 @@ export default function FinancasDefinicaoScreen() {
   if (!podeLigarDesligar) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Gestão financeira" />
+        <Header title={t('definicoes.financas')} />
         <Screen>
           <EmptyState
             icon="lock-outline"
-            title="Só quem gere a exploração"
-            message="Esta definição pertence ao dono da exploração. Fale com ele se precisar de registar despesas na app."
+            title={t('interruptor.soQuemGere')}
+            message={t('interruptor.soQuemGereFinancas')}
           />
         </Screen>
       </View>
@@ -48,7 +49,7 @@ export default function FinancasDefinicaoScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Gestão financeira" />
+      <Header title={t('definicoes.financas')} />
       <Screen>
         <Card style={{ marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
@@ -68,16 +69,16 @@ export default function FinancasDefinicaoScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text variant="h3">Registar contas na app</Text>
+              <Text variant="h3">{t('interruptor.registarContas')}</Text>
               <Text variant="secondary" color={colors.textSecondary}>
-                {ativas ? 'Ligado' : 'Desligado'}
+                {ativas ? t('comum.ligado') : t('comum.desligado')}
               </Text>
             </View>
             <Switch
               value={ativas}
               onValueChange={alternar}
               disabled={aGuardar}
-              accessibilityLabel="Registar contas na app"
+              accessibilityLabel={t('interruptor.registarContas')}
               trackColor={{ false: colors.borderStrong, true: colors.success }}
               thumbColor={colors.white}
             />
@@ -85,26 +86,26 @@ export default function FinancasDefinicaoScreen() {
         </Card>
 
         <Text variant="h3" style={{ marginBottom: spacing.sm }}>
-          O que isto muda
+          {t('interruptor.oQueMuda')}
         </Text>
         <Card padded={false} style={{ marginBottom: spacing.md }}>
           <View style={{ paddingHorizontal: spacing.md }}>
             <Linha
               icon="cash-minus"
-              titulo="Despesas e receitas"
-              texto="Ração, energia, gasóleo, rendas, vendas e subsídios. Sem isto, ninguém na sua equipa consegue registar valores."
+              titulo={t('interruptor.financas1Titulo')}
+              texto={t('interruptor.financas1Texto')}
               divider
             />
             <Linha
               icon="chart-box-outline"
-              titulo="Ecrã de Finanças"
-              texto="Saldo, evolução mês a mês e onde está a gastar mais. Desligado, o ecrã desaparece da app."
+              titulo={t('interruptor.financas2Titulo')}
+              texto={t('interruptor.financas2Texto')}
               divider
             />
             <Linha
               icon="needle"
-              titulo="Custo das vacinas e medicamentos"
-              texto="O campo do custo deixa de aparecer ao registar um tratamento. O registo sanitário continua igual: só o valor é que não é pedido."
+              titulo={t('interruptor.financas3Titulo')}
+              texto={t('interruptor.financas3Texto')}
             />
           </View>
         </Card>
@@ -123,8 +124,8 @@ export default function FinancasDefinicaoScreen() {
           <Icon name="information" size="md" color={colors.info} />
           <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
             {movimentos.length > 0
-              ? `Desligar não apaga nada. Os ${movimentos.length} movimentos que já registou ficam guardados e voltam a aparecer se ligar outra vez.`
-              : 'Desligar não apaga nada. O que registar fica sempre guardado, mesmo que volte a desligar mais tarde.'}
+              ? t('interruptor.desligarComMovimentos', { n: movimentos.length })
+              : t('interruptor.desligarNaoApaga')}
           </Text>
         </View>
 
@@ -132,7 +133,7 @@ export default function FinancasDefinicaoScreen() {
           variant="caption"
           color={colors.textMuted}
           style={{ marginTop: spacing.md, textAlign: 'center' }}>
-          Esta definição vale para todas as suas explorações.
+          {t('interruptor.valeParaTodas')}
         </Text>
       </Screen>
     </View>

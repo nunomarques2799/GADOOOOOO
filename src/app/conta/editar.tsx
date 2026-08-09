@@ -7,6 +7,7 @@ import { Button, Card, Field, Header, Icon, TextField, Text } from '@/components
 import { useAuth } from '@/data/auth';
 import { avisar } from '@/data/avisos';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, layout, radii, shadow, spacing } from '@/theme';
 
 /**
@@ -44,11 +45,11 @@ export default function EditarDadosPessoaisScreen() {
     }
     if (r.confirmarEmail) {
       avisar(
-        'Confirme o novo email',
+        t('editarConta.confirmeEmail'),
         `Enviámos um link de confirmação para ${email.trim()}. Só depois de o abrir é que a troca de email fica em vigor.`,
       );
     } else {
-      avisar('Dados atualizados', 'As alterações foram guardadas.');
+      avisar(t('editarConta.atualizados'), t('editarConta.guardadas'));
     }
     router.back();
   }
@@ -62,7 +63,7 @@ export default function EditarDadosPessoaisScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Editar dados pessoais" />
+      <Header title={t('perfil.editarDados')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -75,14 +76,14 @@ export default function EditarDadosPessoaisScreen() {
             variant="secondary"
             color={colors.textSecondary}
             style={{ marginBottom: spacing.md }}>
-            Nome e email associados à sua conta. Os animais e explorações não são afetados.
+            {t('editarConta.ajuda')}
           </Text>
 
-          <Field label="Nome" obrigatorio>
+          <Field label={t('formAnimal.nome')} obrigatorio>
             <TextField
               value={nome}
               onChangeText={setNome}
-              placeholder="O seu nome"
+              placeholder={t('login.nomePlaceholder')}
               icon="account"
               autoCapitalize="words"
               autoComplete="name"
@@ -90,9 +91,9 @@ export default function EditarDadosPessoaisScreen() {
           </Field>
 
           <Field
-            label="Email"
+            label={t('login.email')}
             obrigatorio
-            ajuda="Ao mudar de email vamos enviar um link de confirmação para o endereço novo: só nessa altura é que a troca fica ativa.">
+            ajuda={t('editarConta.emailAjuda')}>
             <TextField
               value={email}
               onChangeText={setEmail}
@@ -109,7 +110,7 @@ export default function EditarDadosPessoaisScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <Icon name="information-outline" size="md" color={colors.info} />
                 <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
-                  Esta app está em modo offline. Para alterar os dados da conta é
+                  {t('editarConta.modoOffline')}
                   preciso iniciar sessão.
                 </Text>
               </View>
@@ -156,7 +157,7 @@ export default function EditarDadosPessoaisScreen() {
         ]}>
         <View style={{ width: '100%', maxWidth: desktop ? layout.conteudoEstreito : undefined }}>
           <Button
-            label="Guardar alterações"
+            label={t('formAnimal.guardarAlteracoes')}
             icon="check"
             onPress={() => void guardar()}
             disabled={!valido}

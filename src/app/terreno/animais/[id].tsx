@@ -19,6 +19,7 @@ import { normalizar } from '@/data/racas';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { Animal } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /** Quantos animais a lista mostra de cada vez. */
@@ -96,8 +97,8 @@ export default function AssociarAnimaisScreen() {
   if (!terreno) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Associar animais" />
-        <EmptyState icon="map-marker" title="Terreno não encontrado" message="Este registo já não existe." />
+        <Header title={t('associar.titulo')} />
+        <EmptyState icon="map-marker" title={t('formTerreno.naoEncontrado')} message={t('ficha.jaNaoExiste')} />
       </View>
     );
   }
@@ -116,7 +117,7 @@ export default function AssociarAnimaisScreen() {
       // logo, mesmo quando a gravação ainda não chegou ao servidor.
       toast.sucesso(dentro ? `Tirado de ${terreno.nome}` : `Colocado em ${terreno.nome}`, rotulo);
     } catch (e) {
-      toast.erro('Não foi possível guardar', mensagemDeErro(e));
+      toast.erro(t('comum.semGravar'), mensagemDeErro(e));
     }
   };
 
@@ -128,17 +129,17 @@ export default function AssociarAnimaisScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Associar animais" />
+      <Header title={t('associar.titulo')} />
       <Screen>
         <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
-          {exploracao?.nome ?? 'Sem exploração'} · toque num animal para o colocar ou tirar de{' '}
+          {exploracao?.nome ?? t('ficha.semExploracao')} · {t('associar.ajuda')}{' '}
           <Text variant="bodyStrong">{terreno.nome}</Text>.
         </Text>
 
         {animais.length === 0 ? (
           <Card>
             <Text variant="body" color={colors.textSecondary}>
-              Esta exploração ainda não tem animais registados.
+              {t('associar.semAnimais')}
             </Text>
           </Card>
         ) : (
@@ -183,7 +184,7 @@ export default function AssociarAnimaisScreen() {
                     setProcura(t);
                     setLimite(PAGINA);
                   }}
-                  placeholder="Procurar por nome, brinco, raça ou número"
+                  placeholder={t('associar.procurar')}
                   icon="magnify"
                 />
               </View>
@@ -194,7 +195,7 @@ export default function AssociarAnimaisScreen() {
                 <Text variant="body" color={colors.textSecondary}>
                   {procura.trim()
                     ? `Nenhum animal corresponde a “${procura.trim()}”.`
-                    : 'Não há animais neste grupo.'}
+                    : t('associar.grupoVazio')}
                 </Text>
               </Card>
             ) : null}
@@ -211,7 +212,7 @@ export default function AssociarAnimaisScreen() {
                   void alternar(
                     a.id,
                     a.terrenoId === terreno.id,
-                    a.nome ?? a.numeroIdentificacao ?? 'Sem nome',
+                    a.nome ?? a.numeroIdentificacao ?? t('animais.semNome'),
                   )
                 }
               />
@@ -235,7 +236,7 @@ export default function AssociarAnimaisScreen() {
                 ]}>
                 <Icon name="chevron-down" size="md" color={colors.primary} />
                 <Text variant="bodyStrong" color={colors.primary}>
-                  Ver mais {Math.min(PAGINA, porMostrar)} (faltam {porMostrar})
+                  {t('financas.verMaisFaltam', { n: Math.min(PAGINA, porMostrar), faltam: porMostrar })}
                 </Text>
               </Pressable>
             ) : null}
@@ -243,7 +244,7 @@ export default function AssociarAnimaisScreen() {
         )}
 
         <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.md, textAlign: 'center' }}>
-          As alterações são guardadas automaticamente.
+          {t('associar.guardaSozinho')}
         </Text>
       </Screen>
     </View>
@@ -267,17 +268,17 @@ function LinhaAnimal({
       onPress={onPress}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: dentro }}
-      accessibilityLabel={`${animal.nome ?? 'Animal'} ${dentro ? 'neste terreno' : 'fora do terreno'}`}
+      accessibilityLabel={`${animal.nome ?? t('ficha.animal')} ${dentro ? t('associar.dentro') : t('associar.fora')}`}
       style={({ pressed }) => [{ marginBottom: spacing.sm }, pressed && { opacity: 0.7 }]}>
       <Card padded={false} style={dentro ? { borderWidth: 1.5, borderColor: colors.primary } : undefined}>
         <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.sm }}>
           <IconBadge name={meta.icon} color={meta.cor} background={colors.primaryTint} size={48} iconSize={26} />
           <View style={{ flex: 1 }}>
             <Text variant="bodyStrong" numberOfLines={1}>
-              {animal.nome ?? 'Sem nome'}
+              {animal.nome ?? t('animais.semNome')}
             </Text>
             <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
-              {animal.numeroIdentificacao ?? 'Sem brinco'} · {idadeExtenso(animal.dataNascimento)}
+              {animal.numeroIdentificacao ?? t('animais.semBrinco')} · {idadeExtenso(animal.dataNascimento)}
               {noutro ? ` · em ${noutro}` : ''}
             </Text>
           </View>

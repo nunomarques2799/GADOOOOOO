@@ -949,6 +949,184 @@ const pt = {
   'evento.exNotas': 'Observações (opcional)',
   'evento.guardarRegisto': 'Guardar registo',
   'evento.guardarEmNAnimais': 'Guardar em {n} animal|Guardar em {n} animais',
+
+  /* ---- Formulário do terreno ---- */
+  'formTerreno.terreno': 'Terreno',
+  'formTerreno.editar': 'Editar terreno',
+  'formTerreno.naoEncontrado': 'Terreno não encontrado',
+  'formTerreno.criar': 'Criar terreno',
+  'formTerreno.guardado': 'Terreno guardado',
+  'formTerreno.adicionado': 'Terreno adicionado',
+  'formTerreno.semGuardar': 'Terreno não guardado',
+  'formTerreno.semAdicionar': 'Terreno não adicionado',
+  'formTerreno.eliminado': 'Terreno eliminado',
+  'formTerreno.eliminarTerreno': 'Eliminar terreno',
+  'formTerreno.vaiEliminar': 'Vai eliminar "{nome}".',
+  'formTerreno.ficamSemTerreno': 'O {n} animal fica sem terreno,|Os {n} animais ficam sem terreno,',
+  'formTerreno.nenhumSePerde': 'Nenhum animal se perde:',
+  'formTerreno.eliminarDetalhe':
+    'nada é apagado além do próprio terreno. As despesas que lhe estavam imputadas continuam nas contas da exploração.',
+  'formTerreno.semPermissaoTitulo': 'Os terrenos são de quem gere a exploração',
+  'formTerreno.semPermissaoEditar':
+    'Pode ver este terreno e os animais que lá andam, mas alterá-lo é de quem tem a exploração a cargo.',
+  'formTerreno.semPermissaoNovo': 'Registar terrenos novos é de quem tem a exploração a cargo.',
+  'formTerreno.semExploracoesTitulo': 'Sem explorações',
+  'formTerreno.semExploracoesMensagem':
+    'Crie primeiro uma exploração para poder adicionar terrenos.',
+  'formTerreno.exploracaoE': 'Exploração: {nome}',
+  'formTerreno.assuntoFoto': 'do terreno',
+  'formTerreno.exNome': 'Ex: Lameiro Grande',
+  'formTerreno.tipo': 'Tipo',
+  'formTerreno.area': 'Área (hectares)',
+  'formTerreno.exArea': 'Ex: 4.2',
+  'formTerreno.descricao': 'Descrição',
+  'formTerreno.exDescricao': 'Ex: Poço e bebedouro a norte',
+  'formTerreno.localizacaoNoMapa': 'Localização no mapa',
+  'formTerreno.toqueNoMapa': 'Toque no mapa para marcar o terreno.',
+  'formTerreno.limparLocalizacao': 'Limpar localização',
+
+  /* ---- Associar animais a um terreno ---- */
+  'associar.titulo': 'Associar animais',
+  'associar.ajuda': 'toque num animal para o colocar ou tirar de',
+  'associar.semAnimais': 'Esta exploração ainda não tem animais registados.',
+  'associar.procurar': 'Procurar por nome, brinco, raça ou número',
+  'associar.grupoVazio': 'Não há animais neste grupo.',
+  'associar.guardaSozinho': 'As alterações são guardadas automaticamente.',
+  'associar.dentro': 'neste terreno',
+  'associar.fora': 'fora do terreno',
+
+  /* ---- Formulário da exploração ---- */
+  'formExploracao.editar': 'Editar exploração',
+  'formExploracao.criar': 'Criar exploração',
+  'formExploracao.naoEncontrada': 'Exploração não encontrada',
+  'formExploracao.guardada': 'Exploração guardada',
+  'formExploracao.criada': 'Exploração criada',
+  'formExploracao.semGuardar': 'Exploração não guardada',
+  'formExploracao.semCriar': 'Exploração não criada',
+  'formExploracao.eliminada': 'Exploração eliminada',
+  'formExploracao.eliminarExploracao': 'Eliminar exploração',
+  'formExploracao.vaiEliminar': 'Vai eliminar "{nome}" e tudo o que está lá dentro:',
+  'formExploracao.eliminarDetalhe':
+    'Leva também os animais que já tinham saído do efetivo, e com eles a genealogia. Esta ação não pode ser desfeita.',
+  'formExploracao.nada': 'nada',
+  'formExploracao.nDespesas': '{n} despesa ou receita|{n} despesas e receitas',
+  'formExploracao.soComContaPropriaTitulo': 'Só quem tem a sua própria exploração',
+  'formExploracao.soComContaPropriaMensagem':
+    'Entrou nesta app por convite de quem gere uma exploração, e é lá que trabalha. Para abrir uma exploração sua, crie uma conta própria.',
+  'formExploracao.semPermissaoTitulo': 'A exploração é de quem a tem a cargo',
+  'formExploracao.semPermissaoMensagem':
+    'O nome, a marca de exploração, o NIF e a localização são alterados por quem responde por ela. Continua a poder trabalhar nos animais e no que lhe compete.',
+  'formExploracao.ajuda':
+    'Dados oficiais da exploração pecuária. Todos os campos com * são obrigatórios.',
+  'formExploracao.exNome': 'Ex: Monte do Avô',
+  'formExploracao.marca': 'Marca de exploração',
+  'formExploracao.exMarca': 'PT 00 000 0000',
+  'formExploracao.nif': 'NIF do detentor',
+  'formExploracao.localizacao': 'Localização',
+  'formExploracao.exLocalizacao': 'Ex: Idanha-a-Nova',
+  'formExploracao.localizacaoAjuda':
+    'Escreva o nome da terra e escolha da lista. Chega para a meteorologia local.',
+  'formExploracao.fecharMapa': 'Fechar o mapa',
+  'formExploracao.verNoMapa': 'Ver no mapa',
+  'formExploracao.marcarNoMapa': 'Ou marque no mapa onde fica',
+  'formExploracao.toqueNoMapa': 'Toque no mapa para marcar a exploração.',
+  'formExploracao.limparMarca': 'Limpar a marca no mapa',
+
+  /* ---- Formulário do lote (existências) ---- */
+  'formLote.lote': 'Lote',
+  'formLote.exLote': 'Ex: PN-2291',
+  'formLote.loteAjuda': 'Vem no rótulo. É por ele que se rastreia o frasco numa inspeção.',
+  'formLote.guardado': 'Lote guardado',
+  'formLote.entradaRegistada': 'Entrada registada',
+  'formLote.eliminado': 'Lote eliminado',
+  'formLote.eliminarLote': 'Eliminar lote',
+  'formLote.eliminarComUso':
+    'Já foram administrados {usado} deste lote. Os tratamentos ficam registados, mas deixam de dizer de que frasco saíram.',
+  'formLote.semPermissaoTitulo': 'Sem permissão',
+  'formLote.semPermissao':
+    'Dar entrada de medicamentos é de quem gere a exploração. Pode continuar a escolher os lotes que já lá estão ao registar um tratamento.',
+  'formLote.nomeProduto': 'Nome do produto',
+  'formLote.exNome': 'Ex: Penicilina',
+  'formLote.validade': 'Validade',
+  'formLote.exValidade': 'Ex: 31/12/2027',
+  'formLote.calendarioValidade': 'Escolher a validade no calendário',
+  'formLote.quantidade': 'Quantidade',
+  'formLote.exQuantidade': 'Ex: 250',
+  'formLote.quantidadeAjuda': 'O que o frasco trazia, não o que resta. O que resta a app calcula.',
+  'formLote.quantidadeAbaixo':
+    'Já foram administrados {usado} deste lote. Uma quantidade menor do que essa deixa o stock a zero.',
+  'formLote.exSeguranca': 'Ex: 10',
+  'formLote.segurancaAjuda':
+    'Vem na bula. A app propõe-o quando este lote for usado num tratamento, para o animal não ir para abate antes do tempo.',
+  'formLote.fornecedor': 'Fornecedor',
+  'formLote.exFornecedor': 'Ex: Agro-Nisa',
+  'formLote.dataCompra': 'Data da compra',
+  'formLote.exDataCompra': 'Ex: 15/03/2026',
+  'formLote.calendarioCompra': 'Escolher a data da compra no calendário',
+  'formLote.custoTotal': 'Custo total (€)',
+  'formLote.exCusto': 'Ex: 95',
+  'formLote.lancaDespesa': 'Lança a despesa em Sanidade',
+  'formLote.naoLancaDespesa': 'Não lançar despesa nas contas',
+  'formLote.despesaLancada': 'despesa lançada em Sanidade',
+
+  /* ---- Interruptores da conta (finanças, existências) ---- */
+  'interruptor.soQuemGere': 'Só quem gere a exploração',
+  'interruptor.soQuemGereFinancas':
+    'Esta definição pertence ao dono da exploração. Fale com ele se precisar de registar despesas na app.',
+  'interruptor.soQuemGereExistencias':
+    'Esta definição pertence ao dono da exploração. Fale com ele se precisar de dar entrada de medicamentos na app.',
+  'interruptor.oQueMuda': 'O que isto muda',
+  'interruptor.registarContas': 'Registar contas na app',
+  'interruptor.gerirArrecadacao': 'Gerir a arrecadação na app',
+  'interruptor.desligarNaoApaga':
+    'Desligar não apaga nada. O que registar fica sempre guardado, mesmo que volte a desligar mais tarde.',
+  'interruptor.desligarComMovimentos':
+    'Desligar não apaga nada. O movimento que já registou fica guardado e volta a aparecer se ligar outra vez.|Desligar não apaga nada. Os {n} movimentos que já registou ficam guardados e voltam a aparecer se ligar outra vez.',
+  'interruptor.desligarComLotes':
+    'Desligar não apaga nada. O lote que já registou fica guardado e volta a aparecer se ligar outra vez.|Desligar não apaga nada. Os {n} lotes que já registou ficam guardados e voltam a aparecer se ligar outra vez.',
+  'interruptor.valeParaTodas': 'Esta definição vale para todas as suas explorações.',
+  'interruptor.obrigacaoLegal':
+    'O registo de medicamentos é obrigatório por lei e pode ser pedido numa inspeção. Desligue-o só se o mantiver noutro sítio.',
+  'interruptor.financas1Titulo': 'Despesas e receitas',
+  'interruptor.financas1Texto':
+    'Ração, energia, gasóleo, rendas, vendas e subsídios. Sem isto, ninguém na sua equipa consegue registar valores.',
+  'interruptor.financas2Titulo': 'Ecrã de Finanças',
+  'interruptor.financas2Texto':
+    'Saldo, evolução mês a mês e onde está a gastar mais. Desligado, o ecrã desaparece da app.',
+  'interruptor.financas3Titulo': 'Custo das vacinas e medicamentos',
+  'interruptor.financas3Texto':
+    'O campo do custo deixa de aparecer ao registar um tratamento. O registo sanitário continua igual: só o valor é que não é pedido.',
+  'interruptor.existencias1Titulo': 'Separador Existências',
+  'interruptor.existencias1Texto':
+    'Os lotes que comprou, o que resta de cada um e a validade. Desligado, o separador desaparece da app.',
+  'interruptor.existencias2Titulo': 'Escolher o lote no tratamento',
+  'interruptor.existencias2Texto':
+    'Ao registar uma vacina ou um medicamento deixa de lhe ser perguntado de que frasco saiu. O registo sanitário continua igual: o animal, a data, o produto e o intervalo de segurança ficam todos.',
+  'interruptor.existencias3Titulo': 'Avisos de validade e de stock',
+  'interruptor.existencias3Texto':
+    'Deixa de ser avisado quando um lote está a acabar ou a chegar à validade.',
+
+  /* ---- Aspeto da app ---- */
+  'aspeto.titulo': 'Aspeto da app',
+  'aspeto.mudar': 'Mudar',
+  'aspeto.vaiRecarregar':
+    'A app volta a abrir para ficar tudo com as cores novas. Não se perde nada do que está registado, e os outros aparelhos onde entrar com esta conta passam a abrir assim.',
+  'aspeto.coresDosAvisos':
+    'As cores dos avisos não mudam: o vermelho continua a ser prazo vencido, o âmbar esta semana e o azul informação.',
+  'aspeto.exemploAnimal': 'Mimosa · 12 anos',
+  'aspeto.exemploRaca': 'Bovino · Mertolenga',
+  'idioma.escolhaGuardada': 'Escolha guardada',
+
+  /* ---- Editar dados pessoais ---- */
+  'editarConta.ajuda':
+    'Nome e email associados à sua conta. Os animais e explorações não são afetados.',
+  'editarConta.emailAjuda':
+    'Ao mudar de email vamos enviar um link de confirmação para o endereço novo: só nessa altura é que a troca fica ativa.',
+  'editarConta.confirmeEmail': 'Confirme o novo email',
+  'editarConta.atualizados': 'Dados atualizados',
+  'editarConta.guardadas': 'As alterações foram guardadas.',
+  'editarConta.modoOffline':
+    'Esta app está em modo offline. Para alterar os dados da conta é preciso ligação.',
 } as const;
 
 export type ChaveTexto = keyof typeof pt;
@@ -1868,6 +2046,184 @@ const en: Record<ChaveTexto, string> = {
   'evento.exNotas': 'Observations (optional)',
   'evento.guardarRegisto': 'Save record',
   'evento.guardarEmNAnimais': 'Save on {n} animal|Save on {n} animals',
+
+  /* ---- Formulário do terreno ---- */
+  'formTerreno.terreno': 'Plot of land',
+  'formTerreno.editar': 'Edit plot',
+  'formTerreno.naoEncontrado': 'Plot not found',
+  'formTerreno.criar': 'Create plot',
+  'formTerreno.guardado': 'Plot saved',
+  'formTerreno.adicionado': 'Plot added',
+  'formTerreno.semGuardar': 'Plot not saved',
+  'formTerreno.semAdicionar': 'Plot not added',
+  'formTerreno.eliminado': 'Plot deleted',
+  'formTerreno.eliminarTerreno': 'Delete plot',
+  'formTerreno.vaiEliminar': 'You are about to delete "{nome}".',
+  'formTerreno.ficamSemTerreno':
+    'The {n} animal there is left without a plot,|The {n} animals there are left without a plot,',
+  'formTerreno.nenhumSePerde': 'No animal is lost:',
+  'formTerreno.eliminarDetalhe':
+    'nothing is deleted apart from the plot itself. The expenses charged to it stay in the farm books.',
+  'formTerreno.semPermissaoTitulo': 'Land belongs to whoever runs the farm',
+  'formTerreno.semPermissaoEditar':
+    'You can see this plot and the animals on it, but changing it is for whoever runs the farm.',
+  'formTerreno.semPermissaoNovo': 'Recording new land is for whoever runs the farm.',
+  'formTerreno.semExploracoesTitulo': 'No farms',
+  'formTerreno.semExploracoesMensagem': 'Create a farm first so you can add land to it.',
+  'formTerreno.exploracaoE': 'Farm: {nome}',
+  'formTerreno.assuntoFoto': 'of the plot',
+  'formTerreno.exNome': 'e.g. Lower Meadow',
+  'formTerreno.tipo': 'Type',
+  'formTerreno.area': 'Area (hectares)',
+  'formTerreno.exArea': 'e.g. 4.2',
+  'formTerreno.descricao': 'Description',
+  'formTerreno.exDescricao': 'e.g. Well and trough to the north',
+  'formTerreno.localizacaoNoMapa': 'Location on the map',
+  'formTerreno.toqueNoMapa': 'Tap the map to mark the plot.',
+  'formTerreno.limparLocalizacao': 'Clear the location',
+
+  /* ---- Associar animais a um terreno ---- */
+  'associar.titulo': 'Put animals here',
+  'associar.ajuda': 'tap an animal to put it in or take it out of',
+  'associar.semAnimais': 'This farm has no animals recorded yet.',
+  'associar.procurar': 'Search by name, tag, breed or number',
+  'associar.grupoVazio': 'No animals in this group.',
+  'associar.guardaSozinho': 'Changes are saved automatically.',
+  'associar.dentro': 'on this plot',
+  'associar.fora': 'not on this plot',
+
+  /* ---- Formulário da exploração ---- */
+  'formExploracao.editar': 'Edit farm',
+  'formExploracao.criar': 'Create farm',
+  'formExploracao.naoEncontrada': 'Farm not found',
+  'formExploracao.guardada': 'Farm saved',
+  'formExploracao.criada': 'Farm created',
+  'formExploracao.semGuardar': 'Farm not saved',
+  'formExploracao.semCriar': 'Farm not created',
+  'formExploracao.eliminada': 'Farm deleted',
+  'formExploracao.eliminarExploracao': 'Delete farm',
+  'formExploracao.vaiEliminar': 'You are about to delete "{nome}" and everything in it:',
+  'formExploracao.eliminarDetalhe':
+    'It also takes the animals that had already left the herd, and their parentage with them. This cannot be undone.',
+  'formExploracao.nada': 'nothing',
+  'formExploracao.nDespesas': '{n} expense or income entry|{n} expense and income entries',
+  'formExploracao.soComContaPropriaTitulo': 'Only for people with a farm of their own',
+  'formExploracao.soComContaPropriaMensagem':
+    'You came into this app on an invitation from whoever runs a farm, and that is where you work. To open a farm of your own, create your own account.',
+  'formExploracao.semPermissaoTitulo': 'The farm belongs to whoever runs it',
+  'formExploracao.semPermissaoMensagem':
+    'The name, the holding number, the tax number and the location are changed by whoever answers for it. You can still work on the animals and on whatever is yours to do.',
+  'formExploracao.ajuda': 'Official details of the holding. Every field with * is required.',
+  'formExploracao.exNome': 'e.g. Hillside Farm',
+  'formExploracao.marca': 'Holding number',
+  'formExploracao.exMarca': 'PT 00 000 0000',
+  'formExploracao.nif': 'Keeper tax number',
+  'formExploracao.localizacao': 'Location',
+  'formExploracao.exLocalizacao': 'e.g. Idanha-a-Nova',
+  'formExploracao.localizacaoAjuda':
+    'Type the name of the place and pick it from the list. That is enough for the local weather.',
+  'formExploracao.fecharMapa': 'Close the map',
+  'formExploracao.verNoMapa': 'See it on the map',
+  'formExploracao.marcarNoMapa': 'Or mark on the map where it is',
+  'formExploracao.toqueNoMapa': 'Tap the map to mark the farm.',
+  'formExploracao.limparMarca': 'Clear the mark on the map',
+
+  /* ---- Formulário do lote (existências) ---- */
+  'formLote.lote': 'Batch',
+  'formLote.exLote': 'e.g. PN-2291',
+  'formLote.loteAjuda': 'It is on the label. It is how a bottle is traced in an inspection.',
+  'formLote.guardado': 'Batch saved',
+  'formLote.entradaRegistada': 'Stock recorded',
+  'formLote.eliminado': 'Batch deleted',
+  'formLote.eliminarLote': 'Delete batch',
+  'formLote.eliminarComUso':
+    '{usado} of this batch has already been given. The treatments stay on record, but they stop saying which bottle they came from.',
+  'formLote.semPermissaoTitulo': 'You cannot do this',
+  'formLote.semPermissao':
+    'Adding medicines to stock is for whoever runs the farm. You can still pick from the batches already there when you record a treatment.',
+  'formLote.nomeProduto': 'Product name',
+  'formLote.exNome': 'e.g. Penicillin',
+  'formLote.validade': 'Expiry date',
+  'formLote.exValidade': 'e.g. 31/12/2027',
+  'formLote.calendarioValidade': 'Pick the expiry date on the calendar',
+  'formLote.quantidade': 'Quantity',
+  'formLote.exQuantidade': 'e.g. 250',
+  'formLote.quantidadeAjuda':
+    'What the bottle came with, not what is left. The app works out what is left.',
+  'formLote.quantidadeAbaixo':
+    '{usado} of this batch has already been given. A smaller quantity than that leaves the stock at zero.',
+  'formLote.exSeguranca': 'e.g. 10',
+  'formLote.segurancaAjuda':
+    'It is on the leaflet. The app suggests it when this batch is used in a treatment, so the animal does not go for slaughter too early.',
+  'formLote.fornecedor': 'Supplier',
+  'formLote.exFornecedor': 'e.g. Agro-Nisa',
+  'formLote.dataCompra': 'Date of purchase',
+  'formLote.exDataCompra': 'e.g. 15/03/2026',
+  'formLote.calendarioCompra': 'Pick the purchase date on the calendar',
+  'formLote.custoTotal': 'Total cost (€)',
+  'formLote.exCusto': 'e.g. 95',
+  'formLote.lancaDespesa': 'Enter the expense under Sanidade',
+  'formLote.naoLancaDespesa': 'Do not enter an expense in the books',
+  'formLote.despesaLancada': 'expense entered under Sanidade',
+
+  /* ---- Interruptores da conta (finanças, existências) ---- */
+  'interruptor.soQuemGere': 'Only for whoever runs the farm',
+  'interruptor.soQuemGereFinancas':
+    'This setting belongs to the farm owner. Talk to them if you need to record expenses in the app.',
+  'interruptor.soQuemGereExistencias':
+    'This setting belongs to the farm owner. Talk to them if you need to add medicines to stock in the app.',
+  'interruptor.oQueMuda': 'What this changes',
+  'interruptor.registarContas': 'Keep the books in the app',
+  'interruptor.gerirArrecadacao': 'Manage the medicine store in the app',
+  'interruptor.desligarNaoApaga':
+    'Turning it off deletes nothing. Whatever you record stays saved, even if you turn it off again later.',
+  'interruptor.desligarComMovimentos':
+    'Turning it off deletes nothing. The entry you already recorded stays saved and comes back if you turn it on again.|Turning it off deletes nothing. The {n} entries you already recorded stay saved and come back if you turn it on again.',
+  'interruptor.desligarComLotes':
+    'Turning it off deletes nothing. The batch you already recorded stays saved and comes back if you turn it on again.|Turning it off deletes nothing. The {n} batches you already recorded stay saved and come back if you turn it on again.',
+  'interruptor.valeParaTodas': 'This setting applies to all your farms.',
+  'interruptor.obrigacaoLegal':
+    'The medicine register is required by law and can be asked for in an inspection. Only turn it off if you keep it somewhere else.',
+  'interruptor.financas1Titulo': 'Expenses and income',
+  'interruptor.financas1Texto':
+    'Feed, power, fuel, rent, sales and subsidies. Without this, nobody on your team can record amounts.',
+  'interruptor.financas2Titulo': 'The Finances tab',
+  'interruptor.financas2Texto':
+    'Balance, month by month, and where most of the money goes. Turned off, the tab disappears from the app.',
+  'interruptor.financas3Titulo': 'Cost of vaccines and medicines',
+  'interruptor.financas3Texto':
+    'The cost field stops showing when you record a treatment. The health record stays the same: only the amount is not asked for.',
+  'interruptor.existencias1Titulo': 'The Stock tab',
+  'interruptor.existencias1Texto':
+    'The batches you bought, what is left of each one and the expiry date. Turned off, the tab disappears from the app.',
+  'interruptor.existencias2Titulo': 'Picking the batch on a treatment',
+  'interruptor.existencias2Texto':
+    'When recording a vaccine or a medicine you stop being asked which bottle it came from. The health record stays the same: the animal, the date, the product and the withdrawal period are all still there.',
+  'interruptor.existencias3Titulo': 'Expiry and stock warnings',
+  'interruptor.existencias3Texto':
+    'You stop being warned when a batch is running out or nearing its expiry date.',
+
+  /* ---- Aspeto da app ---- */
+  'aspeto.titulo': 'How the app looks',
+  'aspeto.mudar': 'Change',
+  'aspeto.vaiRecarregar':
+    'The app reopens so everything picks up the new colours. Nothing you have recorded is lost, and the other devices where you sign in with this account will open like this too.',
+  'aspeto.coresDosAvisos':
+    'Alert colours do not change: red still means a deadline passed, amber this week and blue information.',
+  'aspeto.exemploAnimal': 'Daisy · 12 years',
+  'aspeto.exemploRaca': 'Bovino · Mertolenga',
+  'idioma.escolhaGuardada': 'Choice saved',
+
+  /* ---- Editar dados pessoais ---- */
+  'editarConta.ajuda':
+    'The name and email on your account. The animals and farms are not affected.',
+  'editarConta.emailAjuda':
+    'When you change the email we send a confirmation link to the new address: the change only takes effect then.',
+  'editarConta.confirmeEmail': 'Confirm the new email',
+  'editarConta.atualizados': 'Details updated',
+  'editarConta.guardadas': 'The changes were saved.',
+  'editarConta.modoOffline':
+    'This app is in offline mode. Changing your account details needs a connection.',
 };
 
 const DICIONARIOS: Record<Idioma, Record<ChaveTexto, string>> = { pt, en };
