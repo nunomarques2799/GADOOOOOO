@@ -93,6 +93,9 @@ describe('o dicionário está completo', () => {
     // A pré-visualização das paletas mostra uma espécie e uma raça, e esses são
     // nomes de DOMÍNIO: ficam em português nas duas línguas (ver `textos.ts`).
     'aspeto.exemploRaca',
+    // "Offline" é a mesma palavra nas duas línguas, e é a que se usa em
+    // português corrente.
+    'sinc.offline',
   ];
 
   it('e nenhuma tradução ficou igual ao português por esquecimento', () => {

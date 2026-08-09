@@ -6,6 +6,7 @@ import { especieMeta } from '@/data/constants';
 import { SEM_TERRENO } from '@/data/filtrosAnimais';
 import { normalizar } from '@/data/racas';
 import type { Animal, Terreno } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, sizes, spacing } from '@/theme';
 
 /**
@@ -70,7 +71,7 @@ export function SeletorAnimais({
     return [...porTerreno.entries()]
       .map(([id, lista]) => ({
         id,
-        nome: id === SEM_TERRENO ? 'Sem terreno' : (nomes.get(id) ?? 'Terreno'),
+        nome: id === SEM_TERRENO ? t('filtro.semTerreno') : (nomes.get(id) ?? t('filtro.terreno')),
         animais: lista,
       }))
       .sort((x, y) => {
@@ -142,7 +143,7 @@ export function SeletorAnimais({
           <TextField
             value={procura}
             onChangeText={setProcura}
-            placeholder="Procurar por nome, brinco, raça ou número"
+            placeholder={t('associar.procurar')}
             icon="magnify"
           />
         </View>
@@ -152,7 +153,7 @@ export function SeletorAnimais({
         /* Passo 1: em que terreno. */
         <View style={{ gap: spacing.xs }}>
           <Text variant="secondary" color={colors.textSecondary}>
-            Escolha o terreno onde o animal anda.
+            {t('selAnimais.escolhaTerreno')}
           </Text>
           {grupos.map((g) => (
             <LinhaTerreno
@@ -184,7 +185,7 @@ export function SeletorAnimais({
                   existir e este botão não levava a lado nenhum. */}
               {grupos.length > 1 ? (
                 <Button
-                  label="Trocar de terreno"
+                  label={t('selAnimais.trocarTerreno')}
                   icon="swap-horizontal"
                   variant="ghost"
                   fullWidth={false}
@@ -212,7 +213,7 @@ export function SeletorAnimais({
               />
               {escolhidos.length > 0 ? (
                 <Button
-                  label="Limpar"
+                  label={t('comum.limpar')}
                   icon="close"
                   variant="ghost"
                   fullWidth={false}
@@ -226,7 +227,7 @@ export function SeletorAnimais({
             {aVista.map((a) => (
               <Chip
                 key={a.id}
-                label={a.nome ?? a.numeroIdentificacao ?? 'Sem nome'}
+                label={a.nome ?? a.numeroIdentificacao ?? t('animais.semNome')}
                 icon={escolhidos.includes(a.id) ? 'check' : especieMeta[a.especie].icon}
                 selected={escolhidos.includes(a.id)}
                 onPress={() => alternar(a.id)}
@@ -236,7 +237,7 @@ export function SeletorAnimais({
               <Text variant="secondary" color={colors.textMuted}>
                 {procura.trim()
                   ? `Nenhum animal corresponde a “${procura.trim()}”.`
-                  : 'Não há animais neste terreno.'}
+                  : t('selAnimais.semAnimaisNoTerreno')}
               </Text>
             ) : null}
           </View>
@@ -345,12 +346,12 @@ function AnimalSelecionado({ animal, onTrocar }: { animal: Animal; onTrocar: () 
         <Icon name={icone} size="md" color={colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text variant="bodyStrong">{animal.nome ?? 'Sem nome'}</Text>
+        <Text variant="bodyStrong">{animal.nome ?? t('animais.semNome')}</Text>
         <Text variant="secondary" color={colors.textSecondary}>
-          {animal.numeroIdentificacao ?? 'Sem brinco'}
+          {animal.numeroIdentificacao ?? t('animais.semBrinco')}
         </Text>
       </View>
-      <Pressable onPress={onTrocar} accessibilityRole="button" accessibilityLabel="Trocar animal" hitSlop={8}>
+      <Pressable onPress={onTrocar} accessibilityRole="button" accessibilityLabel={t('selAnimais.trocarAnimal')} hitSlop={8}>
         <View
           style={{
             flexDirection: 'row',
@@ -363,7 +364,7 @@ function AnimalSelecionado({ animal, onTrocar }: { animal: Animal; onTrocar: () 
           }}>
           <Icon name="swap-horizontal" size="sm" color={colors.primaryDark} />
           <Text variant="label" color={colors.primaryDark}>
-            Trocar
+            {t('selAnimais.trocar')}
           </Text>
         </View>
       </Pressable>

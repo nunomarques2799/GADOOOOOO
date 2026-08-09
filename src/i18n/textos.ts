@@ -1345,6 +1345,68 @@ const pt = {
   'pendente.codigoInvalido': 'Código inválido.',
   'pendente.codigoUsado': 'Este código já foi utilizado.',
   'pendente.codigoExpirado': 'Este código expirou. Peça um novo ao cliente.',
+
+  /* ---- Notificações e alertas ---- */
+  'notif.explicacao':
+    'Escolha que avisos aparecem no início. Prazos já vencidos ou urgentes aparecem sempre, mesmo que a categoria esteja desligada.',
+  'notif.repor': 'Repor',
+  'notif.reporTitulo': 'Repor as preferências',
+  'notif.reporMensagem':
+    'Volta às definições recomendadas: todas as categorias ligadas, com antecedências pré-definidas.',
+  'notif.reporRecomendacoes': 'Repor recomendações',
+  'notif.autorizacaoRecusada': 'Autorização recusada',
+  'notif.autorizacaoRecusadaTexto':
+    'O telemóvel está a bloquear os avisos desta app. Pode autorizá-los nas definições do sistema, em Notificações.',
+  'notif.avisarNoTelemovel': 'Avisar no telemóvel',
+  'notif.avisarLigado':
+    'O telemóvel avisa-o de manhã quando um prazo se aproxima, mesmo com a app fechada e sem internet.',
+  'notif.avisarDesligado': 'Os avisos só aparecem quando abrir a app.',
+  'notif.vibrar': 'Vibrar ao gravar',
+  'notif.vibrarLigado':
+    'O aparelho dá um toque curto quando um registo fica gravado, e um toque diferente quando alguma coisa falha. Dá para confirmar sem ler o ecrã.',
+  'notif.vibrarDesligado': 'Os registos só se confirmam pelo aviso no ecrã.',
+  'notif.som': 'Som ao gravar',
+  'notif.somLigado':
+    'A app dá um sinal sonoro curto quando um registo fica gravado, e outro diferente quando alguma coisa falha. O aparelho no silencioso continua calado.',
+  'notif.somDesligado': 'Os registos só se confirmam pelo aviso no ecrã e pela vibração.',
+  'notif.dispensados': 'Avisos dispensados',
+  'notif.dispensadosAjuda':
+    'Estes avisos não aparecem no início. Voltam sozinhos se a situação se agravar.',
+  'notif.comecarAAvisar': 'Começar a avisar',
+  'notif.menosDias': 'Menos dias',
+  'notif.maisDias': 'Mais dias',
+
+  /* ---- Sincronização e cópia ---- */
+  'sinc.offline': 'Offline',
+  'sinc.aSincronizar': 'A sincronizar',
+  'sinc.aSincronizarPontos': 'A sincronizar…',
+  'sinc.sincronizado': 'Sincronizado',
+  'sinc.sincronizarAgora': 'Sincronizar agora',
+  'sinc.semLigacao':
+    'Sem ligação. As alterações ficam guardadas no dispositivo e enviam-se automaticamente quando a rede voltar.',
+  'sinc.tudoEnviado': 'Tudo enviado. Os dados no servidor estão em dia.',
+  'sinc.perdidas': 'ALTERAÇÕES PERDIDAS',
+  'sinc.semGravar': 'NÃO FOI POSSÍVEL GRAVAR',
+  'sinc.perdidasTexto':
+    'Foram feitas sem ligação e não chegaram ao servidor. Confira o que está em falta e volte a registar o que ainda fizer sentido.',
+  'sinc.recusadasTexto':
+    'Foram feitas sem ligação e o servidor não as aceitou, normalmente por não ter permissão para essa exploração.',
+  'sinc.esquecer': 'Esquecer',
+  'sinc.esquecerLista': 'Esquecer esta lista',
+  'sinc.esquecerTitulo': 'Esquecer alterações recusadas',
+  'sinc.esquecerMensagem':
+    'A lista deixa de aparecer. As alterações em si já não estão guardadas: se ainda forem precisas, tem de as fazer outra vez.',
+  'sinc.copiaGuardada': 'Cópia guardada',
+  'sinc.copiaGuardadaTexto':
+    'Guardámos uma cópia dos seus dados neste dispositivo. Mantenha o ficheiro num local seguro.',
+  'sinc.descarregarCopia': 'Descarregar cópia (JSON)',
+
+  /* ---- Seletor de animais ---- */
+  'selAnimais.escolhaTerreno': 'Escolha o terreno onde o animal anda.',
+  'selAnimais.trocarTerreno': 'Trocar de terreno',
+  'selAnimais.semAnimaisNoTerreno': 'Não há animais neste terreno.',
+  'selAnimais.trocarAnimal': 'Trocar animal',
+  'selAnimais.trocar': 'Trocar',
 } as const;
 
 export type ChaveTexto = keyof typeof pt;
@@ -2657,6 +2719,68 @@ const en: Record<ChaveTexto, string> = {
   'pendente.codigoInvalido': 'Invalid code.',
   'pendente.codigoUsado': 'This code has already been used.',
   'pendente.codigoExpirado': 'This code has expired. Ask the client for a new one.',
+
+  /* ---- Notificações e alertas ---- */
+  'notif.explicacao':
+    'Choose which alerts show up on the home screen. Deadlines already passed, or urgent ones, always show, even if the category is off.',
+  'notif.repor': 'Reset',
+  'notif.reporTitulo': 'Reset the preferences',
+  'notif.reporMensagem':
+    'Back to the recommended settings: every category on, with the default notice periods.',
+  'notif.reporRecomendacoes': 'Reset to recommended',
+  'notif.autorizacaoRecusada': 'Permission refused',
+  'notif.autorizacaoRecusadaTexto':
+    'The phone is blocking this app notifications. You can allow them in the system settings, under Notifications.',
+  'notif.avisarNoTelemovel': 'Notify me on the phone',
+  'notif.avisarLigado':
+    'The phone tells you in the morning when a deadline is coming up, even with the app closed and no internet.',
+  'notif.avisarDesligado': 'Alerts only show up when you open the app.',
+  'notif.vibrar': 'Vibrate on save',
+  'notif.vibrarLigado':
+    'The device gives a short buzz when a record is saved, and a different one when something fails. You can tell without reading the screen.',
+  'notif.vibrarDesligado': 'Records are only confirmed by the message on screen.',
+  'notif.som': 'Sound on save',
+  'notif.somLigado':
+    'The app plays a short sound when a record is saved, and a different one when something fails. A device on silent stays silent.',
+  'notif.somDesligado': 'Records are only confirmed by the message on screen and by the buzz.',
+  'notif.dispensados': 'Dismissed alerts',
+  'notif.dispensadosAjuda':
+    'These alerts do not show on the home screen. They come back on their own if things get worse.',
+  'notif.comecarAAvisar': 'Start warning',
+  'notif.menosDias': 'Fewer days',
+  'notif.maisDias': 'More days',
+
+  /* ---- Sincronização e cópia ---- */
+  'sinc.offline': 'Offline',
+  'sinc.aSincronizar': 'Syncing',
+  'sinc.aSincronizarPontos': 'Syncing…',
+  'sinc.sincronizado': 'Synced',
+  'sinc.sincronizarAgora': 'Sync now',
+  'sinc.semLigacao':
+    'No connection. Changes are kept on the device and sent automatically once the network is back.',
+  'sinc.tudoEnviado': 'Everything sent. The data on the server is up to date.',
+  'sinc.perdidas': 'CHANGES LOST',
+  'sinc.semGravar': 'COULD NOT BE SAVED',
+  'sinc.perdidasTexto':
+    'They were made offline and never reached the server. Check what is missing and record again whatever still makes sense.',
+  'sinc.recusadasTexto':
+    'They were made offline and the server did not accept them, usually for lack of permission on that farm.',
+  'sinc.esquecer': 'Forget',
+  'sinc.esquecerLista': 'Forget this list',
+  'sinc.esquecerTitulo': 'Forget the refused changes',
+  'sinc.esquecerMensagem':
+    'The list stops showing. The changes themselves are already gone: if you still need them, you have to make them again.',
+  'sinc.copiaGuardada': 'Copy saved',
+  'sinc.copiaGuardadaTexto':
+    'We saved a copy of your data on this device. Keep the file somewhere safe.',
+  'sinc.descarregarCopia': 'Download a copy (JSON)',
+
+  /* ---- Seletor de animais ---- */
+  'selAnimais.escolhaTerreno': 'Choose the plot the animal is on.',
+  'selAnimais.trocarTerreno': 'Change plot',
+  'selAnimais.semAnimaisNoTerreno': 'No animals on this plot.',
+  'selAnimais.trocarAnimal': 'Change animal',
+  'selAnimais.trocar': 'Change',
 };
 
 const DICIONARIOS: Record<Idioma, Record<ChaveTexto, string>> = { pt, en };
