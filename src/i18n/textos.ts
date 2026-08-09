@@ -1187,6 +1187,94 @@ const pt = {
     'Não foi possível carregar o histórico. Tente com ligação à internet.',
   'formMovimento.semAlteracoes':
     'Sem alterações registadas. Os lançamentos antigos, e os feitos sem servidor, não têm este registo.',
+
+  /* ---- Comunicar ao SNIRA ---- */
+  'snira.marcado': 'Marcado como comunicado',
+  'snira.semMarcar': 'Não foi possível marcar',
+  'snira.aComunicar': 'A comunicar',
+  'snira.relatorioTitulo': 'Comunicações ao SNIRA',
+  'snira.relatorioGuardado': 'Relatório guardado',
+  'snira.relatorioDescarregado': 'Relatório descarregado',
+  'snira.abraEImprima': 'Abra-o e imprima para PDF.',
+  'snira.reservadoTitulo': 'Reservado a quem gere a exploração',
+  'snira.reservadoMensagem':
+    'As comunicações ao SNIRA são de quem responde pela exploração. Pode continuar a registar o que fizer a cada animal.',
+  'snira.vazioTitulo': 'Não há nada por comunicar',
+  'snira.vazioMensagem':
+    'Todos os nascimentos, mortes e saídas registados já foram comunicados. Quando registar um novo, ele aparece aqui com o prazo a contar.',
+  'snira.porComunicar': 'Por comunicar',
+  'snira.ate3Dias': 'Até 3 dias',
+  'snira.abrirIDigital': 'Abrir o iDigital',
+  'snira.levarEmExcel': 'Levar em Excel',
+  'snira.imprimirFolha': 'Imprimir a folha',
+  'snira.guardarPdf': 'Guardar em PDF',
+  'snira.semImpressao': 'Não foi possível abrir a impressão',
+  'snira.navegadorBloqueou': 'O navegador bloqueou a janela.',
+  'snira.soNoComputador':
+    'Para levar esta lista em Excel ou em papel, abra a app no computador. Aqui pode conferir e marcar o que já comunicou.',
+  'snira.semBrinco': 'Sem brinco registado. O portal precisa dele.',
+  'snira.ultimoDia': 'Último dia',
+  'snira.aMarcar': 'A marcar…',
+  'snira.jaComuniquei': 'Já comuniquei',
+
+  /* ---- Gaveta de documentos ---- */
+  'gaveta.gaveta': 'Gaveta',
+  'gaveta.semAcesso': 'Sem acesso',
+  'gaveta.semCamara':
+    'A app precisa de autorização para usar a câmara. Pode dá-la nas definições do telemóvel.',
+  'gaveta.semGaleria': 'A app precisa de autorização para ver as suas fotografias.',
+  'gaveta.semImagem': 'Não foi possível preparar a imagem',
+  'gaveta.semAbrir': 'Não foi possível abrir',
+  'gaveta.eliminarDocumento': 'Eliminar documento',
+  'gaveta.eliminado': 'Documento eliminado',
+  'gaveta.vaziaTitulo': 'Gaveta vazia',
+  'gaveta.vaziaPodeGuardar':
+    'Fotografe um papel e ele fica aqui, na exploração e não no telemóvel.',
+  'gaveta.vaziaSemPermissao': 'Ainda não há nada guardado nesta gaveta.',
+  'gaveta.fotografar': 'Fotografar',
+  'gaveta.daGaleria': 'Da galeria',
+  'gaveta.guardarAqui': 'Guardar nesta gaveta',
+  'gaveta.guardadoPorSi': 'Guardado por si',
+  'gaveta.guardadoPor': 'Guardado por {nome}',
+  'gaveta.autorDesconhecido': 'Autor desconhecido',
+  'gaveta.precisaNome': 'O documento tem de ter um nome.',
+  'gaveta.alterado': 'Documento alterado',
+  'gaveta.semAlterar': 'Não foi possível alterar',
+  'gaveta.alterarDocumento': 'Alterar documento',
+  'gaveta.exTitulo': 'Ex: Fatura da ração de julho',
+  'gaveta.eliminarPergunta':
+    'Vai apagar "{titulo}" e a imagem que lhe está guardada. Não há como voltar atrás.',
+
+  /* ---- Histórico do efetivo ---- */
+  'motivo.falecidos': 'Falecidos',
+  'motivo.vendidos': 'Vendidos',
+  'motivo.eliminados': 'Eliminados',
+  'histAnimal.titulo': 'Histórico do efetivo',
+  'histAnimal.ajuda':
+    'Os animais que saíram do efetivo. Nenhum destes registos foi apagado: ficam aqui com o dia e o nome de quem os registou.',
+  'histAnimal.procurar': 'Nome ou brinco',
+  'histAnimal.vazioTitulo': 'Ainda não saiu nenhum animal',
+  'histAnimal.vazioMensagem':
+    'Quando marcar uma morte ou uma venda, ou eliminar um registo, o que aconteceu fica escrito aqui.',
+  'histAnimal.semFiltrosTitulo': 'Nada com esses filtros',
+  'histAnimal.semFiltrosMensagem':
+    'Experimente outro motivo, outra exploração ou limpar a pesquisa.',
+  'histAnimal.porEQuando': 'Registado por {autor}, {quando}',
+  'histAnimal.porQuem': 'Registado por {autor}',
+  'histAnimal.quando': 'Registado {quando}',
+  'histAnimal.semAutor': 'Sem registo de quem o fez',
+
+  /* ---- Histórico de lançamentos ---- */
+  'histMovimento.reservadoMensagem':
+    'Só quem gere a exploração pode ver quem lançou cada movimento.',
+  'histMovimento.ajuda':
+    'Cada lançamento pela ordem em que entrou na app, com o nome de quem o registou e a hora.',
+  'histMovimento.vazioTitulo': 'Ainda não há registos',
+  'histMovimento.vazioMensagem':
+    'Assim que alguém lançar uma despesa ou uma receita, fica aqui escrito quem foi e a que horas.',
+  'histMovimento.soFinancas':
+    'Só despesas e receitas lançadas em Finanças. O custo de uma vacina ou de um medicamento fica no histórico do animal, junto do tratamento.',
+  'histMovimento.semAutor': 'Sem registo de quem o lançou',
 } as const;
 
 export type ChaveTexto = keyof typeof pt;
@@ -2343,6 +2431,93 @@ const en: Record<ChaveTexto, string> = {
   'formMovimento.semHistorico': 'Could not load the history. Try again with an internet connection.',
   'formMovimento.semAlteracoes':
     'No changes recorded. Older entries, and those made without a server, have no history.',
+
+  /* ---- Comunicar ao SNIRA ---- */
+  'snira.marcado': 'Marked as reported',
+  'snira.semMarcar': 'Could not mark it',
+  'snira.aComunicar': 'Reporting',
+  'snira.relatorioTitulo': 'SNIRA reports',
+  'snira.relatorioGuardado': 'Report saved',
+  'snira.relatorioDescarregado': 'Report downloaded',
+  'snira.abraEImprima': 'Open it and print to PDF.',
+  'snira.reservadoTitulo': 'For whoever runs the farm',
+  'snira.reservadoMensagem':
+    'Reporting to SNIRA is for whoever answers for the farm. You can still record what you do to each animal.',
+  'snira.vazioTitulo': 'Nothing to report',
+  'snira.vazioMensagem':
+    'Every birth, death and departure you have recorded is already reported. When you record a new one it shows up here with its deadline counting down.',
+  'snira.porComunicar': 'To report',
+  'snira.ate3Dias': 'Within 3 days',
+  'snira.abrirIDigital': 'Open iDigital',
+  'snira.levarEmExcel': 'Take it in Excel',
+  'snira.imprimirFolha': 'Print the sheet',
+  'snira.guardarPdf': 'Save as PDF',
+  'snira.semImpressao': 'Could not open the print dialog',
+  'snira.navegadorBloqueou': 'The browser blocked the window.',
+  'snira.soNoComputador':
+    'To take this list in Excel or on paper, open the app on a computer. Here you can check it and mark what you have already reported.',
+  'snira.semBrinco': 'No ear tag recorded. The portal needs it.',
+  'snira.ultimoDia': 'Last day',
+  'snira.aMarcar': 'Marking…',
+  'snira.jaComuniquei': 'I have reported it',
+
+  /* ---- Gaveta de documentos ---- */
+  'gaveta.gaveta': 'Drawer',
+  'gaveta.semAcesso': 'No access',
+  'gaveta.semCamara':
+    'The app needs permission to use the camera. You can give it in your phone settings.',
+  'gaveta.semGaleria': 'The app needs permission to see your photos.',
+  'gaveta.semImagem': 'Could not prepare the image',
+  'gaveta.semAbrir': 'Could not open it',
+  'gaveta.eliminarDocumento': 'Delete document',
+  'gaveta.eliminado': 'Document deleted',
+  'gaveta.vaziaTitulo': 'The drawer is empty',
+  'gaveta.vaziaPodeGuardar':
+    'Photograph a piece of paper and it stays here, on the farm and not on your phone.',
+  'gaveta.vaziaSemPermissao': 'Nothing kept in this drawer yet.',
+  'gaveta.fotografar': 'Take a photo',
+  'gaveta.daGaleria': 'From the gallery',
+  'gaveta.guardarAqui': 'Keep it in this drawer',
+  'gaveta.guardadoPorSi': 'Kept by you',
+  'gaveta.guardadoPor': 'Kept by {nome}',
+  'gaveta.autorDesconhecido': 'Unknown author',
+  'gaveta.precisaNome': 'The document needs a name.',
+  'gaveta.alterado': 'Document changed',
+  'gaveta.semAlterar': 'Could not change it',
+  'gaveta.alterarDocumento': 'Change document',
+  'gaveta.exTitulo': 'e.g. Feed invoice for July',
+  'gaveta.eliminarPergunta':
+    'You are about to delete "{titulo}" and the image kept with it. There is no way back.',
+
+  /* ---- Histórico do efetivo ---- */
+  'motivo.falecidos': 'Died',
+  'motivo.vendidos': 'Sold',
+  'motivo.eliminados': 'Deleted',
+  'histAnimal.titulo': 'Herd history',
+  'histAnimal.ajuda':
+    'The animals that left the herd. None of these records was deleted: they stay here with the day and the name of whoever recorded them.',
+  'histAnimal.procurar': 'Name or ear tag',
+  'histAnimal.vazioTitulo': 'No animal has left yet',
+  'histAnimal.vazioMensagem':
+    'When you mark a death or a sale, or delete a record, what happened is written here.',
+  'histAnimal.semFiltrosTitulo': 'Nothing with those filters',
+  'histAnimal.semFiltrosMensagem': 'Try another reason, another farm, or clear the search.',
+  'histAnimal.porEQuando': 'Recorded by {autor}, {quando}',
+  'histAnimal.porQuem': 'Recorded by {autor}',
+  'histAnimal.quando': 'Recorded {quando}',
+  'histAnimal.semAutor': 'No record of who did it',
+
+  /* ---- Histórico de lançamentos ---- */
+  'histMovimento.reservadoMensagem':
+    'Only whoever runs the farm can see who entered each item.',
+  'histMovimento.ajuda':
+    'Every entry in the order it reached the app, with the name of whoever recorded it and the time.',
+  'histMovimento.vazioTitulo': 'Nothing recorded yet',
+  'histMovimento.vazioMensagem':
+    'As soon as someone enters an expense or income, it says here who it was and at what time.',
+  'histMovimento.soFinancas':
+    'Only expenses and income entered under Finances. The cost of a vaccine or a medicine stays in the animal history, next to the treatment.',
+  'histMovimento.semAutor': 'No record of who entered it',
 };
 
 const DICIONARIOS: Record<Idioma, Record<ChaveTexto, string>> = { pt, en };

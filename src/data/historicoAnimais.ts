@@ -15,23 +15,32 @@
  * o que aqui se está a ver é o rasto do que as pessoas fizeram na app.
  */
 
+import { t } from '@/i18n';
+
 import type { Animal, EstadoAnimal } from './types';
 
 /** Os três motivos por que um animal deixa de estar no efetivo. */
 export type MotivoSaida = Exclude<EstadoAnimal, 'ativo'>;
 
-export const MOTIVOS: { valor: MotivoSaida; label: string }[] = [
-  { valor: 'falecido', label: 'Falecidos' },
-  { valor: 'vendido', label: 'Vendidos' },
-  { valor: 'eliminado', label: 'Eliminados' },
-];
+/**
+ * Os motivos, para os chips do filtro. FUNÇÃO e não constante: os rótulos
+ * passam pelo `t()` e uma tabela de módulo congelava a língua de arranque (ver
+ * AGENTS.md).
+ */
+export function motivos(): { valor: MotivoSaida; label: string }[] {
+  return [
+    { valor: 'falecido', label: t('motivo.falecidos') },
+    { valor: 'vendido', label: t('motivo.vendidos') },
+    { valor: 'eliminado', label: t('motivo.eliminados') },
+  ];
+}
 
 /** O que se lê de cada motivo, no singular, dentro de uma frase. */
-export const rotuloMotivo: Record<MotivoSaida, string> = {
-  falecido: 'Falecido',
-  vendido: 'Vendido',
-  eliminado: 'Eliminado',
-};
+export function rotuloMotivo(motivo: MotivoSaida): string {
+  if (motivo === 'falecido') return t('ficha.falecido');
+  if (motivo === 'vendido') return t('ficha.vendido');
+  return t('ficha.eliminado');
+}
 
 export interface LinhaHistorico {
   animal: Animal;

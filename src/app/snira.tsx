@@ -19,6 +19,7 @@ import {
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, layout, radii, spacing } from '@/theme';
 
 const URL_IDIGITAL = 'https://www.idigital.dgav.pt';
@@ -63,9 +64,9 @@ export default function SniraScreen() {
     try {
       if (p.eventoId) await updateEvento(p.eventoId, { comunicadoSnira: true });
       else await updateAnimal(p.animalId, { comunicadoSnira: true });
-      toast.sucesso('Marcado como comunicado', `${p.rotulo} · ${rotuloComunicacao[p.tipo]}`);
+      toast.sucesso(t('snira.marcado'), `${p.rotulo} · ${rotuloComunicacao[p.tipo]}`);
     } catch (e) {
-      toast.erro('Não foi possível marcar', mensagemDeErro(e));
+      toast.erro(t('snira.semMarcar'), mensagemDeErro(e));
     } finally {
       setAMarcar(null);
     }
@@ -75,24 +76,24 @@ export default function SniraScreen() {
     try {
       descarregarTabelaExcel(
         `snira-${hojeISO()}.xlsx`,
-        'A comunicar',
+        t('snira.aComunicar'),
         tabelaSnira(pendentes, exploracoes),
       );
       toast.sucesso(
-        'Ficheiro descarregado',
+        t('docs.descarregado'),
         `${pendentes.length} ${pendentes.length === 1 ? 'comunicação' : 'comunicações'}`,
       );
     } catch (e) {
-      toast.erro('Não foi possível descarregar', mensagemDeErro(e));
+      toast.erro(t('docs.semDescarga'), mensagemDeErro(e));
     }
   }
 
   async function guardarPdf() {
     const html = htmlRelatorioSnira(pendentes, exploracoes);
-    const r = await guardarRelatorio('Comunicações ao SNIRA', html, `snira-${hojeISO()}`);
-    if (r.estado === 'guardado') toast.sucesso('Relatório guardado');
-    else if (r.estado === 'html') toast.sucesso('Relatório descarregado', 'Abra-o e imprima para PDF.');
-    else if (r.estado === 'erro') toast.erro('Não foi possível guardar', r.motivo);
+    const r = await guardarRelatorio(t('snira.relatorioTitulo'), html, `snira-${hojeISO()}`);
+    if (r.estado === 'guardado') toast.sucesso(t('snira.relatorioGuardado'));
+    else if (r.estado === 'html') toast.sucesso(t('snira.relatorioDescarregado'), t('snira.abraEImprima'));
+    else if (r.estado === 'erro') toast.erro(t('comum.semGravar'), r.motivo);
   }
 
   // A porta é a mesma dos Documentos: quem não tem que levar o efetivo de outra
@@ -101,11 +102,11 @@ export default function SniraScreen() {
   if (!podeVer(undefined, 'verDocumentos')) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Comunicar ao SNIRA" />
+        <Header title={t('docs.comunicarSnira')} />
         <EmptyState
           icon="lock-outline"
-          title="Reservado a quem gere a exploração"
-          message="As comunicações ao SNIRA são de quem responde pela exploração. Pode continuar a registar o que fizer a cada animal."
+          title={t('snira.reservadoTitulo')}
+          message={t('snira.reservadoMensagem')}
         />
       </View>
     );
@@ -120,7 +121,7 @@ export default function SniraScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Comunicar ao SNIRA" />
+      <Header title={t('docs.comunicarSnira')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -131,8 +132,8 @@ export default function SniraScreen() {
           {pendentes.length === 0 ? (
             <EmptyState
               icon="check-circle-outline"
-              title="Não há nada por comunicar"
-              message="Todos os nascimentos, mortes e saídas registados já foram comunicados. Quando registar um novo, ele aparece aqui com o prazo a contar."
+              title={t('snira.vazioTitulo')}
+              message={t('snira.vazioMensagem')}
             />
           ) : (
             <>
@@ -140,9 +141,9 @@ export default function SniraScreen() {
                   já passaram do prazo — é essa a conversa com a DGAV. */}
               <Card>
                 <View style={{ flexDirection: 'row', gap: spacing.md }}>
-                  <Numero valor={resumo.total} label="Por comunicar" cor={colors.text} />
-                  <Numero valor={resumo.emAtraso} label="Em atraso" cor={colors.danger} />
-                  <Numero valor={resumo.urgentes} label="Até 3 dias" cor={colors.warning} />
+                  <Numero valor={resumo.total} label={t('snira.porComunicar')} cor={colors.text} />
+                  <Numero valor={resumo.emAtraso} label={t('alerta.emAtraso')} cor={colors.danger} />
+                  <Numero valor={resumo.urgentes} label={t('snira.ate3Dias')} cor={colors.warning} />
                 </View>
               </Card>
 
@@ -156,7 +157,7 @@ export default function SniraScreen() {
                   </Text>
                 </View>
                 <Button
-                  label="Abrir o iDigital"
+                  label={t('snira.abrirIDigital')}
                   icon="open-in-new"
                   variant="secondary"
                   onPress={() => void Linking.openURL(URL_IDIGITAL)}
@@ -168,21 +169,21 @@ export default function SniraScreen() {
                 <Card padded={false}>
                   <Linha
                     icon="microsoft-excel"
-                    label="Levar em Excel"
+                    label={t('snira.levarEmExcel')}
                     onPress={exportarExcel}
                   />
                   <Linha
                     icon="printer-outline"
-                    label="Imprimir a folha"
+                    label={t('snira.imprimirFolha')}
                     onPress={() => {
-                      if (!imprimirRelatorio('Comunicações ao SNIRA', htmlRelatorioSnira(pendentes, exploracoes))) {
-                        toast.erro('Não foi possível abrir a impressão', 'O navegador bloqueou a janela.');
+                      if (!imprimirRelatorio(t('snira.relatorioTitulo'), htmlRelatorioSnira(pendentes, exploracoes))) {
+                        toast.erro(t('snira.semImpressao'), t('snira.navegadorBloqueou'));
                       }
                     }}
                   />
                   <Linha
                     icon="file-pdf-box"
-                    label="Guardar em PDF"
+                    label={t('snira.guardarPdf')}
                     onPress={() => void guardarPdf()}
                     last
                   />
@@ -192,8 +193,7 @@ export default function SniraScreen() {
                   <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                     <Icon name="laptop" size="lg" color={colors.info} />
                     <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
-                      Para levar esta lista em Excel ou em papel, abra a app no computador.
-                      Aqui pode conferir e marcar o que já comunicou.
+                      {t('snira.soNoComputador')}
                     </Text>
                   </View>
                 </Card>
@@ -282,7 +282,7 @@ function LinhaPendencia({
             </Text>
           ) : (
             <Text variant="caption" color={colors.danger} style={{ marginTop: 2 }}>
-              Sem brinco registado. O portal precisa dele.
+              {t('snira.semBrinco')}
             </Text>
           )}
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: 2 }}>
@@ -292,7 +292,7 @@ function LinhaPendencia({
             {atraso
               ? `Em atraso há ${Math.abs(pendencia.diasRestantes)} dia(s)`
               : pendencia.diasRestantes === 0
-                ? 'Último dia'
+                ? t('snira.ultimoDia')
                 : `Faltam ${pendencia.diasRestantes} dia(s)`}
           </Text>
         </View>
@@ -321,7 +321,7 @@ function LinhaPendencia({
           ]}>
           <Icon name="check-circle-outline" size="md" color={colors.primaryDark} />
           <Text variant="button" color={colors.primaryDark}>
-            {aMarcar ? 'A marcar…' : 'Já comuniquei'}
+            {aMarcar ? t('snira.aMarcar') : t('snira.jaComuniquei')}
           </Text>
         </Pressable>
       ) : null}

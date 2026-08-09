@@ -39,6 +39,7 @@ import { useNomesEquipa } from '@/data/nomesEquipa';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useDocumentos } from '@/data/useDocumentos';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /**
@@ -82,10 +83,10 @@ export default function GavetaScreen() {
       const r = comCamera ? await fotografarDocumento() : await escolherDocumento();
       if (r.estado === 'sem-permissao') {
         avisar(
-          'Sem acesso',
+          t('gaveta.semAcesso'),
           comCamera
-            ? 'A app precisa de autorização para usar a câmara. Pode dá-la nas definições do telemóvel.'
-            : 'A app precisa de autorização para ver as suas fotografias.',
+            ? t('gaveta.semCamara')
+            : t('gaveta.semGaleria'),
         );
         return;
       }
@@ -99,7 +100,7 @@ export default function GavetaScreen() {
         exploracaoId: disponiveis[0]?.id,
       });
     } catch (e) {
-      toast.erro('Não foi possível preparar a imagem', mensagemDeErro(e));
+      toast.erro(t('gaveta.semImagem'), mensagemDeErro(e));
     }
   }
 
@@ -113,7 +114,7 @@ export default function GavetaScreen() {
     try {
       await Linking.openURL(await api.ligacaoPara(d));
     } catch (e) {
-      toast.erro('Não foi possível abrir', mensagemDeErro(e));
+      toast.erro(t('gaveta.semAbrir'), mensagemDeErro(e));
     } finally {
       setAAbrir(null);
     }
@@ -121,19 +122,19 @@ export default function GavetaScreen() {
 
   function eliminar(d: Documento) {
     confirmar(
-      'Eliminar documento',
-      `Vai apagar "${d.titulo}" e a imagem que lhe está guardada. Não há como voltar atrás.`,
+      t('gaveta.eliminarDocumento'),
+      t('gaveta.eliminarPergunta', { titulo: d.titulo }),
       () => {
         void (async () => {
           try {
             await api.eliminarDocumento(d.id);
-            toast.sucesso('Documento eliminado', d.titulo);
+            toast.sucesso(t('gaveta.eliminado'), d.titulo);
           } catch (e) {
-            toast.erro('Não foi possível eliminar', mensagemDeErro(e));
+            toast.erro(t('comum.semEliminar'), mensagemDeErro(e));
           }
         })();
       },
-      { rotuloConfirmar: 'Eliminar', destrutivo: true },
+      { rotuloConfirmar: t('comum.eliminar'), destrutivo: true },
     );
   }
 
@@ -154,11 +155,11 @@ export default function GavetaScreen() {
         {visiveis.length === 0 ? (
           <EmptyState
             icon={iconeCategoria(categoria)}
-            title="Gaveta vazia"
+            title={t('gaveta.vaziaTitulo')}
             message={
               podeGuardar
-                ? 'Fotografe um papel e ele fica aqui, na exploração e não no telemóvel.'
-                : 'Ainda não há nada guardado nesta gaveta.'
+                ? t('gaveta.vaziaPodeGuardar')
+                : t('gaveta.vaziaSemPermissao')
             }
           />
         ) : (
@@ -180,7 +181,7 @@ export default function GavetaScreen() {
           <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
             {suportaCamera ? (
               <Button
-                label="Fotografar"
+                label={t('gaveta.fotografar')}
                 icon="camera-outline"
                 variant="secondary"
                 style={{ flex: 1 }}
@@ -188,7 +189,7 @@ export default function GavetaScreen() {
               />
             ) : null}
             <Button
-              label={suportaCamera ? 'Da galeria' : 'Guardar nesta gaveta'}
+              label={suportaCamera ? t('gaveta.daGaleria') : t('gaveta.guardarAqui')}
               icon={suportaCamera ? 'image-outline' : 'plus'}
               variant="secondary"
               style={{ flex: 1 }}
@@ -288,7 +289,11 @@ function CartaoDocumento({
                 todas as linhas não distingue nada — o que distingue é a linha
                 que NÃO é sua. */}
             <Text variant="caption" color={colors.textMuted} numberOfLines={1}>
-              {souEu ? 'Guardado por si' : autor ? `Guardado por ${autor}` : 'Autor desconhecido'}
+              {souEu
+                ? t('gaveta.guardadoPorSi')
+                : autor
+                  ? t('gaveta.guardadoPor', { nome: autor })
+                  : t('gaveta.autorDesconhecido')}
               {' · '}
               {formatDataPt(documento.criadoEm)}
               {documento.tamanho ? ` · ${tamanhoLegivel(documento.tamanho)}` : ''}
@@ -299,7 +304,7 @@ function CartaoDocumento({
               <Badge
                 tone="neutral"
                 icon="lock-outline"
-                label="Só eu vejo"
+                label={t('calendario.soEuVejo')}
                 style={{ marginTop: 4 }}
               />
             ) : null}
@@ -375,19 +380,19 @@ function FolhaEditarDocumento({
   async function guardar() {
     if (aGuardar) return;
     if (!titulo.trim()) {
-      setErro('O documento tem de ter um nome.');
+      setErro(t('gaveta.precisaNome'));
       return;
     }
     setAGuardar(true);
     setErro(null);
     try {
       await onGuardar(documento.id, { titulo, categoria, publico });
-      toast.sucesso('Documento alterado', titulo.trim());
+      toast.sucesso(t('gaveta.alterado'), titulo.trim());
       onFechar();
     } catch (e) {
       const razao = mensagemDeErro(e);
       setErro(razao);
-      toast.erro('Não foi possível alterar', razao);
+      toast.erro(t('gaveta.semAlterar'), razao);
     } finally {
       setAGuardar(false);
     }
@@ -396,7 +401,7 @@ function FolhaEditarDocumento({
   return (
     <Modal visible animationType="slide" transparent onRequestClose={onFechar}>
       <FolhaComTeclado>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel="Fechar" />
+        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
         <View
           style={{
             backgroundColor: colors.background,
@@ -413,13 +418,13 @@ function FolhaEditarDocumento({
               marginBottom: spacing.sm,
             }}>
             <Text variant="h3" style={{ flex: 1 }}>
-              Alterar documento
+              {t('gaveta.alterarDocumento')}
             </Text>
             <Pressable
               onPress={onFechar}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Fechar">
+              accessibilityLabel={t('comum.fechar')}>
               <Icon name="close" size="lg" color={colors.textSecondary} />
             </Pressable>
           </View>
@@ -439,7 +444,7 @@ function FolhaEditarDocumento({
               <TextField
                 value={titulo}
                 onChangeText={setTitulo}
-                placeholder="Ex: Fatura da ração de julho"
+                placeholder={t('gaveta.exTitulo')}
                 icon="file-document-outline"
               />
             </View>
@@ -448,7 +453,7 @@ function FolhaEditarDocumento({
 
             <View>
               <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                Gaveta
+                {t('gaveta.gaveta')}
               </Text>
               <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
                 {CATEGORIAS_DOCUMENTO.map((c) => (
@@ -475,7 +480,7 @@ function FolhaEditarDocumento({
             ) : null}
 
             <Button
-              label={aGuardar ? 'A guardar…' : mexido ? 'Guardar alterações' : 'Fechar'}
+              label={aGuardar ? t('comum.aGuardar') : mexido ? t('formAnimal.guardarAlteracoes') : t('comum.fechar')}
               icon={mexido ? 'check' : 'close'}
               loading={aGuardar}
               disabled={aGuardar}
