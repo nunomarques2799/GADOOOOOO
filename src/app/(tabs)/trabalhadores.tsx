@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CartaoIntroducao } from '@/components/CartaoIntroducao';
 import { FolhaPermissoes } from '@/components/FolhaPermissoes';
-import { Avatar, Badge, Button, Card, Chip, EmptyState, Icon, Text } from '@/components/ui';
+import { SeletorExploracao } from '@/components/SeletorExploracao';
+import { Avatar, Badge, Button, Card, EmptyState, Icon, Text } from '@/components/ui';
 import { acessoTerminou, rotuloPrazo } from '@/data/acessoTemporario';
 import { useAuth } from '@/data/auth';
 import { formatDataHora } from '@/data/helpers';
@@ -273,31 +274,20 @@ export default function TrabalhadoresScreen() {
             titulo="Para que serve este separador"
             pontos={[
               'Aqui estão as pessoas a quem deu acesso à sua exploração: trabalhadores e veterinários. Quem não está nesta lista não vê nada do que registou.',
-              'Convida-se com um código: a pessoa instala a app, escreve o código e fica logo ligada à sua exploração — não precisa de saber a sua palavra-passe.',
+              'Convida-se com um código: a pessoa instala a app, escreve o código e fica logo ligada à sua exploração, sem precisar de saber a sua palavra-passe.',
               'Cada um só mexe no que lhe compete: o trabalhador aponta o que faz no dia a dia, o veterinário regista tratamentos.',
               'Toque numa pessoa para ver e mudar ao certo o que ela pode alterar. Ao veterinário pode dar acesso até ao dia e hora que quiser, findos os quais ele sai sozinho.',
-              'No registo de alterações vê o que cada um mexeu e a que horas — quem registou um animal, quem mudou um terreno, quem lançou uma despesa.',
+              'No registo de alterações vê o que cada um mexeu e a que horas: quem registou um animal, quem mudou um terreno, quem lançou uma despesa.',
             ]}
           />
 
           {/* Por exploração, à vista e não escondido, como nos Animais */}
           {minhas.length > 1 ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-              <Chip
-                label="Todas"
-                icon="barn"
-                selected={exploracaoId === undefined}
-                onPress={() => setExploracaoId(undefined)}
-              />
-              {minhas.map((e) => (
-                <Chip
-                  key={e.id}
-                  label={e.nome}
-                  selected={exploracaoId === e.id}
-                  onPress={() => setExploracaoId(exploracaoId === e.id ? undefined : e.id)}
-                />
-              ))}
-            </View>
+            <SeletorExploracao
+              exploracoes={minhas}
+              valor={exploracaoId}
+              onEscolher={setExploracaoId}
+            />
           ) : null}
 
           {erro ? (

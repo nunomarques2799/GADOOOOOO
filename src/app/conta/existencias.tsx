@@ -98,7 +98,7 @@ export default function ExistenciasDefinicaoScreen() {
             <Linha
               icon="needle"
               titulo="Escolher o lote no tratamento"
-              texto="Ao registar uma vacina ou um medicamento deixa de lhe ser perguntado de que frasco saiu. O registo sanitário continua igual — o animal, a data, o produto e o intervalo de segurança ficam todos."
+              texto="Ao registar uma vacina ou um medicamento deixa de lhe ser perguntado de que frasco saiu. O registo sanitário continua igual: o animal, a data, o produto e o intervalo de segurança ficam todos."
               divider
             />
             <Linha

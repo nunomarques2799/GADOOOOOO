@@ -13,7 +13,7 @@
  * punha animais mortos no meio do efetivo.
  */
 
-import { t } from '@/i18n';
+import { t, type ChaveTexto } from '@/i18n';
 
 import { idadeDias } from './helpers';
 import { normalizar } from './racas';
@@ -22,12 +22,25 @@ import type { Alerta, AlertaGravidade, Animal, Especie, Finalidade, Sexo } from 
 /** Faixas etárias. Em meses, que é como o criador fala das idades. */
 export type FaixaIdade = 'cria' | 'jovem' | 'adulto' | 'velho';
 
-export const FAIXAS: { valor: FaixaIdade; label: string; meses: [number, number] }[] = [
-  { valor: 'cria', label: 'Até 6 meses', meses: [0, 6] },
-  { valor: 'jovem', label: '6 meses a 2 anos', meses: [6, 24] },
-  { valor: 'adulto', label: '2 a 8 anos', meses: [24, 96] },
-  { valor: 'velho', label: 'Mais de 8 anos', meses: [96, Infinity] },
+/**
+ * As faixas guardam a CHAVE do rótulo, não o rótulo.
+ *
+ * Esta tabela é criada ao importar o módulo; um texto resolvido aqui ficava
+ * congelado na língua de arranque (ver AGENTS.md). Quem desenha chama
+ * `rotuloFaixa()` dentro do render.
+ */
+export const FAIXAS: { valor: FaixaIdade; chave: ChaveTexto; meses: [number, number] }[] = [
+  { valor: 'cria', chave: 'faixa.cria', meses: [0, 6] },
+  { valor: 'jovem', chave: 'faixa.jovem', meses: [6, 24] },
+  { valor: 'adulto', chave: 'faixa.adulto', meses: [24, 96] },
+  { valor: 'velho', chave: 'faixa.velho', meses: [96, Infinity] },
 ];
+
+/** O nome de uma faixa etária, no idioma em uso. Ler dentro do render. */
+export function rotuloFaixa(valor: FaixaIdade | undefined): string {
+  const f = FAIXAS.find((x) => x.valor === valor);
+  return f ? t(f.chave) : '';
+}
 
 const MESES_DIA = 30.44;
 
@@ -376,17 +389,24 @@ export function facetasDisponiveis(
   };
 }
 
-/** Rótulo curto de cada categoria de alerta, para os chips do filtro. */
-export const rotuloCategoriaAlerta: Record<Alerta['categoria'], string> = {
-  identificacao: 'Identificação',
-  snira: 'SNIRA',
-  parto: 'Partos',
-  reproducao: 'Reprodução',
-  medicamento: 'Medicamentos',
-  vacinacao: 'Vacinação',
-  // Nunca aparece nos chips: os alertas de existências não têm animal, por isso
-  // não entram no `mapaAlertas` e nenhum animal os traz. Fica aqui porque o
-  // `Record` os pede todos, e porque uma entrada em falta é um erro de
-  // compilação no dia em que alguém os ligar a um animal.
-  existencias: 'Existências',
-};
+/**
+ * Rótulo curto de cada categoria de alerta, para os chips do filtro.
+ *
+ * FUNÇÃO e não tabela: o texto passa pelo `t()` e tem de ser lido no render.
+ */
+export function rotuloCategoriaAlerta(categoria: Alerta['categoria']): string {
+  const chaves: Record<Alerta['categoria'], ChaveTexto> = {
+    identificacao: 'categoria.identificacao',
+    snira: 'categoria.snira',
+    parto: 'categoria.parto',
+    reproducao: 'categoria.reproducao',
+    medicamento: 'categoria.medicamento',
+    vacinacao: 'categoria.vacinacao',
+    // Nunca aparece nos chips: os alertas de existências não têm animal, por
+    // isso não entram no `mapaAlertas` e nenhum animal os traz. Fica aqui
+    // porque o `Record` os pede todos, e porque uma entrada em falta é um erro
+    // de compilação no dia em que alguém os ligar a um animal.
+    existencias: 'categoria.existencias',
+  };
+  return t(chaves[categoria]);
+}

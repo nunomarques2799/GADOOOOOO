@@ -5,12 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimalRow } from '@/components/AnimalRow';
 import { FolhaFiltros } from '@/components/FolhaFiltros';
+import { SeletorExploracao } from '@/components/SeletorExploracao';
+import { LegendaSinais } from '@/components/SinaisAnimal';
 import { Button, Chip, EmptyState, FAB, Icon, type IconName, Text } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
 import {
   contarAtivos,
   facetasDisponiveis,
-  FAIXAS,
   filtrarAnimais,
   mapaAlertas,
   mapaGravidade,
@@ -18,12 +19,14 @@ import {
   ORDENACAO_OMISSAO,
   ordenacoes,
   rotuloCategoriaAlerta,
+  rotuloFaixa,
   SEM_TERRENO,
   type Filtros,
   type Ordenacao,
 } from '@/data/filtrosAnimais';
 import { saiuDoEfetivo } from '@/data/historicoAnimais';
 import { useMembros } from '@/data/membros';
+import { SINAIS, sinaisDe, type Sinal } from '@/data/sinaisAlerta';
 import { useGado } from '@/data/store';
 import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
@@ -193,28 +196,48 @@ export default function AnimaisScreen() {
   // no topo da lista e dizia sempre a mesma coisa.
   const podeEscolherExploracao = exploracoes.length > 1;
 
+  /**
+   * Que cores de ponto aparecem na lista que está à vista — é o que a legenda
+   * explica. Só as que aparecem: uma legenda que fala de partos numa lista sem
+   * fêmeas prenhes manda procurar o que não está lá.
+   */
+  const sinaisNaLista = useMemo(() => {
+    const vistos = new Set<Sinal>();
+    for (const a of lista) {
+      for (const s of sinaisDe(porAnimal.get(a.id))) vistos.add(s);
+      // Três é o total: assim que aparecem todos não há mais nada por descobrir
+      // e poupa-se o resto da volta num efetivo de milhares.
+      if (vistos.size === SINAIS.length) break;
+    }
+    return SINAIS.filter((s) => vistos.has(s));
+  }, [lista, porAnimal]);
+
   /** Etiquetas do que está a filtrar, para se poder tirar uma a uma. */
   const etiquetas = useMemo(() => {
     const out: { chave: string; label: string; limpar: () => void }[] = [];
     const tirar = (k: keyof Filtros) => () => setFiltros((f) => ({ ...f, [k]: undefined }));
 
     if (filtros.especie) out.push({ chave: 'especie', label: especieMeta[filtros.especie].plural, limpar: tirar('especie') });
-    if (filtros.sexo) out.push({ chave: 'sexo', label: filtros.sexo === 'Fêmea' ? 'Fêmeas' : 'Machos', limpar: tirar('sexo') });
-    if (filtros.prenhe !== undefined) out.push({ chave: 'prenhe', label: filtros.prenhe ? 'Cobertas' : 'Não cobertas', limpar: tirar('prenhe') });
-    if (filtros.idade) out.push({ chave: 'idade', label: FAIXAS.find((f) => f.valor === filtros.idade)?.label ?? '', limpar: tirar('idade') });
+    if (filtros.sexo) out.push({ chave: 'sexo', label: filtros.sexo === 'Fêmea' ? t('filtro.femeas') : t('filtro.machos'), limpar: tirar('sexo') });
+    if (filtros.prenhe !== undefined) out.push({ chave: 'prenhe', label: filtros.prenhe ? t('filtro.cobertas') : t('filtro.naoCobertas'), limpar: tirar('prenhe') });
+    if (filtros.idade) out.push({ chave: 'idade', label: rotuloFaixa(filtros.idade), limpar: tirar('idade') });
     if (filtros.raca) out.push({ chave: 'raca', label: filtros.raca, limpar: tirar('raca') });
     if (filtros.cor) out.push({ chave: 'cor', label: filtros.cor, limpar: tirar('cor') });
     if (filtros.finalidade) out.push({ chave: 'finalidade', label: filtros.finalidade, limpar: tirar('finalidade') });
     if (filtros.terrenoId) {
-      const nome = filtros.terrenoId === SEM_TERRENO ? 'Sem terreno' : (terrenoById(filtros.terrenoId)?.nome ?? 'Terreno');
+      const nome =
+        filtros.terrenoId === SEM_TERRENO
+          ? t('filtro.semTerreno')
+          : (terrenoById(filtros.terrenoId)?.nome ?? t('filtro.terreno'));
       out.push({ chave: 'terreno', label: nome, limpar: tirar('terrenoId') });
     }
     if (filtros.alerta) {
-      const label = filtros.alerta === true ? 'Com alertas' : rotuloCategoriaAlerta[filtros.alerta];
+      const label =
+        filtros.alerta === true ? t('filtro.comAlertas') : rotuloCategoriaAlerta(filtros.alerta);
       out.push({ chave: 'alerta', label, limpar: tirar('alerta') });
     }
-    if (filtros.semBrinco) out.push({ chave: 'semBrinco', label: 'Sem brinco', limpar: tirar('semBrinco') });
-    if (filtros.incluirSaidos) out.push({ chave: 'arquivo', label: 'Com arquivo', limpar: tirar('incluirSaidos') });
+    if (filtros.semBrinco) out.push({ chave: 'semBrinco', label: t('animais.semBrinco'), limpar: tirar('semBrinco') });
+    if (filtros.incluirSaidos) out.push({ chave: 'arquivo', label: t('filtro.comArquivo'), limpar: tirar('incluirSaidos') });
     return out;
   }, [filtros, terrenoById]);
 
@@ -231,10 +254,18 @@ export default function AnimaisScreen() {
         renderItem={({ item }) =>
           desktop ? (
             <View style={{ flex: 1 }}>
-              <AnimalRow animal={item} nomeTerreno={item.terrenoId ? nomeTerrenoPorId.get(item.terrenoId) : undefined} />
+              <AnimalRow
+                animal={item}
+                nomeTerreno={item.terrenoId ? nomeTerrenoPorId.get(item.terrenoId) : undefined}
+                alertas={porAnimal.get(item.id)}
+              />
             </View>
           ) : (
-            <AnimalRow animal={item} nomeTerreno={item.terrenoId ? nomeTerrenoPorId.get(item.terrenoId) : undefined} />
+            <AnimalRow
+              animal={item}
+              nomeTerreno={item.terrenoId ? nomeTerrenoPorId.get(item.terrenoId) : undefined}
+              alertas={porAnimal.get(item.id)}
+            />
           )
         }
         showsVerticalScrollIndicator={false}
@@ -268,29 +299,16 @@ export default function AnimaisScreen() {
 
             {/* Exploração à VISTA, sem abrir a folha de filtros: com duas ou
                 mais explorações, "de que quinta são estes animais?" é a
-                primeira pergunta de quem abre esta lista. */}
+                primeira pergunta de quem abre esta lista. Um botão só, que
+                abre a lista das quintas: a fila de pastilhas que aqui esteve
+                saía pela margem do ecrã com dois nomes compridos. */}
             {podeEscolherExploracao ? (
-              <LinhaChips desktop={desktop}>
-                <Chip
-                  label={t('comum.todas')}
-                  icon="barn"
-                  selected={filtros.exploracaoId === undefined}
-                  onPress={() => setFiltros((f) => ({ ...f, exploracaoId: undefined }))}
-                />
-                {exploracoes.map((e) => (
-                  <Chip
-                    key={e.id}
-                    label={e.nome}
-                    selected={filtros.exploracaoId === e.id}
-                    onPress={() =>
-                      setFiltros((f) => ({
-                        ...f,
-                        exploracaoId: f.exploracaoId === e.id ? undefined : e.id,
-                      }))
-                    }
-                  />
-                ))}
-              </LinhaChips>
+              <SeletorExploracao
+                exploracoes={exploracoes}
+                valor={filtros.exploracaoId}
+                onEscolher={(id) => setFiltros((f) => ({ ...f, exploracaoId: id }))}
+                style={{ marginBottom: spacing.sm }}
+              />
             ) : null}
 
             {/* Pesquisa + botão de filtros */}
@@ -383,6 +401,9 @@ export default function AnimaisScreen() {
                 ))}
               </LinhaChips>
             ) : null}
+
+            {/* O que querem dizer os pontos coloridos nos retratos */}
+            <LegendaSinais sinais={sinaisNaLista} />
 
             {/* O que está a filtrar, para se tirar sem reabrir a folha */}
             {etiquetas.length > 0 ? (

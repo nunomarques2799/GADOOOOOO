@@ -89,7 +89,7 @@ export default function ApagarContaScreen() {
       consequencias.apagaDados
         ? `Vai apagar a sua conta, ${frase(consequencias.exploracoesApagadas.length, 'exploração', 'explorações')} ` +
           `e ${frase(consequencias.animais, 'animal', 'animais')}. ` +
-          'Não há forma de recuperar isto — nem sua, nem de quem gere a aplicação.'
+          'Não há forma de recuperar isto: nem sua, nem de quem gere a aplicação.'
         : 'Vai apagar a sua conta e perder o acesso à aplicação. Não há forma de voltar atrás.',
       () => void executar(),
       { rotuloConfirmar: 'Apagar definitivamente', destrutivo: true },
@@ -136,9 +136,9 @@ export default function ApagarContaScreen() {
         }}>
         <View style={{ ...conteudo, gap: spacing.md }}>
           <Text variant="secondary" color={colors.textSecondary}>
-            Apagar a conta é definitivo. Ninguém — nem quem gere a aplicação —
-            consegue recuperar o que se perde aqui. Leia o que vai desaparecer
-            antes de continuar.
+            Apagar a conta é definitivo. Ninguém, nem sequer quem gere a
+            aplicação, consegue recuperar o que se perde aqui. Leia o que vai
+            desaparecer antes de continuar.
           </Text>
 
           {/* O que desaparece, contado dos dados desta pessoa. Uma lista de
@@ -190,7 +190,7 @@ export default function ApagarContaScreen() {
                 ))}
                 <Text variant="secondary" color={colors.textSecondary}>
                   Estas explorações são de outra pessoa: os animais e os
-                  registos ficam lá. O que se perde é a sua entrada — para
+                  registos ficam lá. O que se perde é a sua entrada: para
                   voltar precisa de um código de convite novo.
                 </Text>
               </View>

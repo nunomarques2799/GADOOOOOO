@@ -331,7 +331,7 @@ export function FormularioAnimal({
         <EmptyState
           icon="trash-can-outline"
           title="Este registo já não se altera"
-          message="O animal foi eliminado da lista, e o registo fica como está — com o dia e o nome de quem o eliminou. Pode vê-lo no Histórico do efetivo."
+          message="O animal foi eliminado da lista, e o registo fica como está, com o dia e o nome de quem o eliminou. Pode vê-lo no Histórico do efetivo."
         />
       </EcraComTeclado>
     );
@@ -351,7 +351,7 @@ export function FormularioAnimal({
           title="A ficha é de quem gere o efetivo"
           message={
             editar
-              ? 'Pode registar o que fizer a este animal — uma vacina, um medicamento, um parto — mas os dados da ficha são alterados por quem tem a exploração a cargo.'
+              ? 'Pode registar o que fizer a este animal (uma vacina, um medicamento, um parto), mas os dados da ficha são alterados por quem tem a exploração a cargo.'
               : 'Registar animais novos é de quem tem a exploração a cargo. Pode registar tratamentos nos animais que já lá estão.'
           }
         />

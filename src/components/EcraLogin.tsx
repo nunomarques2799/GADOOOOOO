@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
-import { entraPorCodigo, INTENCOES, type Intencao } from '@/data/intencao';
+import { entraPorCodigo, intencoes, type Intencao } from '@/data/intencao';
+import { t } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
@@ -119,7 +120,11 @@ export function EcraLogin() {
               Terrabovina
             </Text>
             <Text variant="body" color={colors.textOnDarkMuted} style={{ marginTop: 2 }}>
-              {recuperar ? 'Recuperar o acesso' : registo ? 'Criar a sua conta' : 'Entrar na sua conta'}
+              {recuperar
+                ? t('login.recuperarAcesso')
+                : registo
+                  ? t('login.criarConta')
+                  : t('login.entrarNaConta')}
             </Text>
           </LinearGradient>
 
@@ -137,10 +142,10 @@ export function EcraLogin() {
             {registo ? (
               <View style={{ marginBottom: spacing.lg }}>
                 <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                  O que veio cá fazer?
+                  {t('login.oQueVeioFazer')}
                 </Text>
                 <View style={{ gap: spacing.xs }}>
-                  {INTENCOES.map((op) => (
+                  {intencoes().map((op) => (
                     <OpcaoIntencao
                       key={op.id}
                       rotulo={op.rotulo}
@@ -155,35 +160,35 @@ export function EcraLogin() {
             ) : null}
             {registo ? (
               <Campo
-                label="Nome"
+                label={t('login.nome')}
                 icon="account-outline"
                 value={nome}
                 onChangeText={setNome}
-                placeholder="O seu nome"
+                placeholder={t('login.nomePlaceholder')}
                 autoCapitalize="words"
               />
             ) : null}
             <Campo
-              label="Email"
+              label={t('login.email')}
               icon="email-outline"
               value={email}
               onChangeText={setEmail}
-              placeholder="nome@exemplo.pt"
+              placeholder={t('login.emailPlaceholder')}
               autoCapitalize="none"
               keyboardType="email-address"
             />
             {!recuperar ? (
               <Campo
-                label="Palavra-passe"
+                label={t('login.palavraPasse')}
                 icon="lock-outline"
                 value={palavra}
                 onChangeText={setPalavra}
-                placeholder="Mínimo 6 caracteres"
+                placeholder={t('login.palavraPassePlaceholder')}
                 secureTextEntry
               />
             ) : (
               <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.lg }}>
-                Enviamos-lhe um email com um link para definir uma nova palavra-passe.
+                {t('login.explicacaoRecuperar')}
               </Text>
             )}
 
@@ -193,7 +198,7 @@ export function EcraLogin() {
                 accessibilityRole="button"
                 style={{ marginTop: -spacing.sm, marginBottom: spacing.md, alignSelf: 'flex-start', paddingVertical: spacing.xs }}>
                 <Text variant="secondary" color={colors.primary}>
-                  Esqueci-me da palavra-passe
+                  {t('login.esqueciMe')}
                 </Text>
               </Pressable>
             ) : null}
@@ -221,16 +226,22 @@ export function EcraLogin() {
                 <Icon name="email-check-outline" size="md" color={colors.success} />
                 <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
                   {recuperado
-                    ? 'Se existir uma conta com este email, enviámos um link para redefinir a palavra-passe. Verifique a caixa de entrada.'
+                    ? t('login.recuperadoAviso')
                     : entraPorCodigo(intencao ?? undefined)
-                      ? 'Conta criada. Enviámos um email de confirmação: confirme, entre, e use o código de convite que lhe deram.'
-                      : 'Conta criada. Enviámos um email de confirmação: confirme e depois entre.'}
+                      ? t('login.contaCriadaComCodigo')
+                      : t('login.contaCriada')}
                 </Text>
               </View>
             ) : null}
 
             <Button
-              label={recuperar ? 'Enviar link de recuperação' : registo ? 'Criar conta' : 'Entrar'}
+              label={
+                recuperar
+                  ? t('login.enviarLink')
+                  : registo
+                    ? t('login.criarContaBotao')
+                    : t('login.entrar')
+              }
               icon={recuperar ? 'email-fast-outline' : registo ? 'account-plus' : 'login'}
               onPress={submeter}
               disabled={!valido}
@@ -243,7 +254,7 @@ export function EcraLogin() {
                 accessibilityRole="button"
                 style={{ marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.xs }}>
                 <Text variant="body" color={colors.primary}>
-                  Voltar a entrar
+                  {t('login.voltarAEntrar')}
                 </Text>
               </Pressable>
             ) : (
@@ -252,9 +263,9 @@ export function EcraLogin() {
                 accessibilityRole="button"
                 style={{ marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.xs }}>
                 <Text variant="body" color={colors.textSecondary}>
-                  {registo ? 'Já tem conta? ' : 'Ainda não tem conta? '}
+                  {registo ? t('login.jaTemConta') : t('login.aindaNaoTemConta')}{' '}
                   <Text variant="bodyStrong" color={colors.primary}>
-                    {registo ? 'Entrar' : 'Criar conta'}
+                    {registo ? t('login.entrar') : t('login.criarContaBotao')}
                   </Text>
                 </Text>
               </Pressable>

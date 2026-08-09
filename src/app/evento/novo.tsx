@@ -590,7 +590,7 @@ export default function NovoEventoScreen() {
     toast.sucesso(
       META[tipo].feito,
       cria
-        ? `${descricao}. A cria já está na lista — falta pôr-lhe o brinco.`
+        ? `${descricao}. A cria já está na lista: falta pôr-lhe o brinco.`
         : gravados === 1
           ? `${descricao} · ${formatDataPt(data)}`
           : `${descricao} em ${gravados} animais, a ${formatDataPt(data)}`,
@@ -947,7 +947,7 @@ export default function NovoEventoScreen() {
                       : ''}
                     Restam {formatQuantidade(loteEscolhido.resta, loteEscolhido.medicamento.unidade)} neste lote.
                     {quantidadeNum * animalIds.length > loteEscolhido.resta
-                      ? ' Não chega — o registo grava na mesma, mas confira o que está na arrecadação.'
+                      ? ' Não chega: o registo grava na mesma, mas confira o que está na arrecadação.'
                       : ''}
                   </Text>
                 ) : null}

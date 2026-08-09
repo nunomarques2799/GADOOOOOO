@@ -258,7 +258,7 @@ export function FormularioMovimento({
     };
     confirmar(
       'Eliminar movimento',
-      `Vai apagar ${formatEuro(movimento.valor)} — "${movimento.descricao}" — das contas da `
+      `Vai apagar ${formatEuro(movimento.valor)} ("${movimento.descricao}") das contas da `
         + 'exploração. O saldo muda. Fica registado quem o apagou, mas o lançamento em si não '
         + 'se recupera.',
       () => void executar(),

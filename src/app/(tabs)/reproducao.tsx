@@ -19,6 +19,7 @@ import {
   type LinhaReproducao,
 } from '@/data/reproducao';
 import { useGado } from '@/data/store';
+import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, shadow, spacing } from '@/theme';
@@ -47,11 +48,17 @@ import { colors, layout, radii, shadow, spacing } from '@/theme';
  */
 type GrupoFases = { titulo: string; fases: FaseReprodutiva[] };
 
-const GRUPOS = {
-  gestantes: { titulo: 'Gestantes', fases: ['gestante'] },
-  cobertas: { titulo: 'Cobertas', fases: ['coberta', 'duvidosa'] },
-  vazias: { titulo: 'Vazias', fases: ['vazia'] },
-} satisfies Record<string, GrupoFases>;
+/**
+ * FUNÇÃO e não constante: os títulos passam pelo `t()`, e uma tabela de módulo
+ * resolvia-os no import, congelando a língua de arranque (ver AGENTS.md).
+ */
+function grupos(): Record<'gestantes' | 'cobertas' | 'vazias', GrupoFases> {
+  return {
+    gestantes: { titulo: t('repro.gestantes'), fases: ['gestante'] },
+    cobertas: { titulo: t('repro.cobertas'), fases: ['coberta', 'duvidosa'] },
+    vazias: { titulo: t('repro.vazias'), fases: ['vazia'] },
+  };
+}
 
 export default function ReproducaoScreen() {
   const insets = useSafeAreaInsets();
@@ -78,29 +85,37 @@ export default function ReproducaoScreen() {
     return [
       {
         chave: 'parir',
-        titulo: 'Prestes a parir',
+        titulo: t('repro.prestesAParir'),
         icon: 'baby-bottle-outline' as IconName,
         cor: colors.info,
-        vazio: 'Nenhuma fêmea com parto previsto para o próximo mês.',
+        vazio: t('repro.prestesAParirVazio'),
+        // `acao` é o valor de DOMÍNIO que vai no `evento.tipo` (gravado na base
+        // e usado nos filtros), por isso fica em português nas duas línguas;
+        // `acaoRotulo` é o que se lê. Ver a nota do domínio no `textos.ts`.
         acao: undefined,
+        acaoRotulo: undefined,
         data: parir,
       },
       {
         chave: 'diagnosticar',
-        titulo: 'À espera de diagnóstico',
+        titulo: t('repro.aguardaDiagnostico'),
         icon: 'stethoscope' as IconName,
         cor: colors.warning,
-        vazio: `Nenhuma fêmea coberta há mais de ${PrazosReproducao.diagnosticoAPartirDe} dias sem diagnóstico.`,
+        vazio: t('repro.aguardaDiagnosticoVazio', {
+          dias: PrazosReproducao.diagnosticoAPartirDe,
+        }),
         acao: 'Diagnóstico' as const,
+        acaoRotulo: t('repro.diagnostico'),
         data: diagnosticar,
       },
       {
         chave: 'paradas',
-        titulo: 'Sem cobrição desde o parto',
+        titulo: t('repro.paradas'),
         icon: 'alert-circle-outline' as IconName,
         cor: colors.danger,
-        vazio: `Nenhuma fêmea parida há mais de ${PrazosReproducao.cobrirApos} dias por cobrir.`,
+        vazio: t('repro.paradasVazio', { dias: PrazosReproducao.cobrirApos }),
         acao: 'Cobrição' as const,
+        acaoRotulo: t('repro.cobricao'),
         data: paradas,
       },
     ];
@@ -117,6 +132,7 @@ export default function ReproducaoScreen() {
           <LinhaFemea
             linha={item}
             acao={section.acao}
+            acaoRotulo={section.acaoRotulo}
             podeRegistar={podeRegistar}
             onAbrir={() => router.push(`/animal/${item.animal.id}`)}
             onRegistar={
@@ -171,11 +187,11 @@ export default function ReproducaoScreen() {
         }}
         ListHeaderComponent={
           <View style={{ paddingTop: insets.top + spacing.md }}>
-            <Text variant="display">Reprodução</Text>
+            <Text variant="display">{t('nav.reproducao')}</Text>
             <Text variant="body" color={colors.textSecondary}>
               {nadaARegistar
-                ? 'O ciclo das fêmeas do efetivo'
-                : `${resumo.elegiveis} ${resumo.elegiveis === 1 ? 'fêmea' : 'fêmeas'} em idade de reprodução`}
+                ? t('repro.subtituloVazio')
+                : t('repro.femeasEmIdade', { n: resumo.elegiveis })}
             </Text>
             {nadaARegistar ? null : <Resumo resumo={resumo} onAbrirFase={setGrupoAberto} />}
           </View>
@@ -184,15 +200,15 @@ export default function ReproducaoScreen() {
           nadaARegistar ? (
             <EmptyState
               icon="heart-pulse"
-              title="Ainda não há fêmeas para acompanhar"
-              message="Assim que houver fêmeas em idade de reprodução no efetivo, esta página mostra quem está prenhe, quem falta diagnosticar e quem está parada desde o parto."
+              title={t('repro.vazioTitulo')}
+              message={t('repro.vazioMensagem')}
             />
           ) : null
         }
       />
       {podeRegistar && !nadaARegistar ? (
         <FAB
-          label="Cobrição"
+          label={t('repro.registarCobricao')}
           onPress={() => router.push({ pathname: '/evento/novo', params: { tipo: 'Cobrição' } })}
         />
       ) : null}
@@ -230,7 +246,7 @@ function FolhaFase({
   return (
     <Modal visible={!!grupo} animationType="slide" transparent onRequestClose={onFechar}>
       <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel="Fechar" />
+        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
         <View
           style={[
             {
@@ -252,7 +268,7 @@ function FolhaFase({
               onPress={onFechar}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Fechar">
+              accessibilityLabel={t('comum.fechar')}>
               <Icon name="close" size="lg" color={colors.textSecondary} />
             </Pressable>
           </View>
@@ -291,53 +307,56 @@ function Resumo({
   return (
     <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
       {/* Os três números abrem a lista de QUEM são. Antes eram só números: via-se
-          "14 cobertas" e não havia por onde saber quais — a pergunta seguinte,
-          sempre, e a app não a respondia em lado nenhum. As três listas de baixo
-          respondem a "o que é preciso fazer", que é outra coisa: uma vaca coberta
-          na semana passada não está em nenhuma delas, e ainda assim está coberta. */}
+          "14 cobertas" e não havia por onde saber quais, que é a pergunta
+          seguinte, sempre, e a app não a respondia em lado nenhum. As três
+          listas de baixo respondem a "o que é preciso fazer", que é outra coisa:
+          uma vaca coberta na semana passada não está em nenhuma delas, e ainda
+          assim está coberta. */}
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         <StatCard
           icon="check-circle-outline"
-          label="Gestantes"
+          label={t('repro.gestantes')}
           value={resumo.gestantes}
           tint={colors.success}
-          onPress={resumo.gestantes > 0 ? () => onAbrirFase(GRUPOS.gestantes) : undefined}
+          onPress={resumo.gestantes > 0 ? () => onAbrirFase(grupos().gestantes) : undefined}
         />
         <StatCard
           icon="gender-male-female"
-          label="Cobertas"
+          label={t('repro.cobertas')}
           value={resumo.cobertas + resumo.duvidosas}
           tint={colors.info}
           onPress={
-            resumo.cobertas + resumo.duvidosas > 0 ? () => onAbrirFase(GRUPOS.cobertas) : undefined
+            resumo.cobertas + resumo.duvidosas > 0
+              ? () => onAbrirFase(grupos().cobertas)
+              : undefined
           }
         />
         <StatCard
           icon="circle-outline"
-          label="Vazias"
+          label={t('repro.vazias')}
           value={resumo.vazias}
           tint={colors.textSecondary}
-          onPress={resumo.vazias > 0 ? () => onAbrirFase(GRUPOS.vazias) : undefined}
+          onPress={resumo.vazias > 0 ? () => onAbrirFase(grupos().vazias) : undefined}
         />
       </View>
       <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <View style={{ flex: 1 }}>
             <Text variant="caption" color={colors.textMuted}>
-              TAXA DE GESTAÇÃO
+              {t('repro.taxaGestacao')}
             </Text>
             <Text variant="h2">{resumo.taxaGestacao}%</Text>
           </View>
           <View style={{ flex: 1.4 }}>
             <Text variant="caption" color={colors.textMuted}>
-              INTERVALO ENTRE PARTOS
+              {t('repro.intervaloPartos')}
             </Text>
             {resumo.intervaloMedioPartos == null ? (
               // Ausente é honesto: com um ano de registos ainda não há duas
               // parições em quase ninguém, e inventar uma média a partir de uma
               // vaca só dava um número que parece medida e não é.
               <Text variant="secondary" color={colors.textSecondary}>
-                Ainda sem dois partos registados
+                {t('repro.semDoisPartos')}
               </Text>
             ) : (
               <Text
@@ -347,7 +366,7 @@ function Resumo({
                     ? colors.warning
                     : colors.text
                 }>
-                {resumo.intervaloMedioPartos} dias
+                {t('alerta.dias', { n: resumo.intervaloMedioPartos })}
               </Text>
             )}
           </View>
@@ -360,34 +379,41 @@ function Resumo({
 function LinhaFemea({
   linha,
   acao,
+  acaoRotulo,
   podeRegistar,
   onAbrir,
   onRegistar,
 }: {
   linha: LinhaReproducao;
+  /** O `evento.tipo` que se vai gravar. Fica em português (valor de domínio). */
   acao?: 'Cobrição' | 'Diagnóstico';
+  /** O mesmo, mas para ser lido em voz alta. */
+  acaoRotulo?: string;
   podeRegistar: boolean;
   onAbrir: () => void;
   onRegistar?: () => void;
 }) {
   const { animal, estado } = linha;
-  const nome = animal.nome ?? animal.numeroIdentificacao ?? 'Sem nome';
+  const nome = animal.nome ?? animal.numeroIdentificacao ?? t('animais.semNome');
 
   /** A linha de baixo muda conforme a lista: cada uma responde à sua pergunta. */
   const contexto = (() => {
     if (estado.fase === 'gestante' && estado.dataPrevistaParto) {
       const dias = estado.diasParaParto ?? 0;
+      const quando = formatDataPt(estado.dataPrevistaParto);
       return dias < 0
-        ? `Passou a data prevista há ${Math.abs(dias)} dia(s) · ${formatDataPt(estado.dataPrevistaParto)}`
-        : `Faltam ${dias} dia(s) · ${formatDataPt(estado.dataPrevistaParto)}`;
+        ? `${t('repro.passouPrevisao', { n: Math.abs(dias) })} · ${quando}`
+        : `${t('repro.faltam', { n: dias })} · ${quando}`;
     }
     if (estado.fase === 'coberta') {
-      return `Coberta há ${estado.diasNaFase} dias${estado.detalheCobricao ? ` · ${estado.detalheCobricao}` : ''}`;
+      const base = t('repro.cobertaHa', { n: estado.diasNaFase });
+      return estado.detalheCobricao ? `${base} · ${estado.detalheCobricao}` : base;
     }
     if (estado.fase === 'duvidosa') {
-      return `Diagnóstico inconclusivo há ${estado.diasNaFase} dias`;
+      return t('repro.diagInconclusivo', { n: estado.diasNaFase });
     }
-    return `Pariu há ${estado.diasDesdeUltimoParto} dias${estado.partos > 1 ? ` · ${estado.partos} partos` : ''}`;
+    const base = t('repro.pariuHa', { n: estado.diasDesdeUltimoParto ?? 0 });
+    return estado.partos > 1 ? `${base} · ${t('repro.nPartos', { n: estado.partos })}` : base;
   })();
 
   const comAcao = acao && podeRegistar && onRegistar;
@@ -415,7 +441,7 @@ function LinhaFemea({
             <Text variant="h3" numberOfLines={1} style={{ flexShrink: 1 }}>
               {nome}
             </Text>
-            <Badge tone="neutral" label={faseMeta[estado.fase].label} />
+            <Badge tone="neutral" label={faseMeta(estado.fase).label} />
           </View>
           {animal.numeroIdentificacao && animal.nome ? (
             <Text variant="caption" color={colors.textMuted}>
@@ -434,7 +460,10 @@ function LinhaFemea({
           <Pressable
             onPress={onRegistar}
             accessibilityRole="button"
-            accessibilityLabel={`Registar ${acao!.toLowerCase()} em ${nome}`}
+            accessibilityLabel={t('repro.registarEm', {
+              acao: (acaoRotulo ?? '').toLowerCase(),
+              nome,
+            })}
             style={({ pressed }) => [
               {
                 minWidth: 72,
@@ -453,7 +482,7 @@ function LinhaFemea({
               color={colors.primary}
             />
             <Text variant="caption" color={colors.primary}>
-              Registar
+              {t('repro.registar')}
             </Text>
           </Pressable>
         ) : (

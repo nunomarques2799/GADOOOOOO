@@ -151,7 +151,7 @@ export default function SniraScreen() {
                   <Icon name="information" size="md" color={colors.info} />
                   <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
                     A app não comunica por si. Abra o iDigital, escreva o que está nesta lista
-                    e marque aqui cada linha à medida que a for fazendo — é isso que cala o
+                    e marque aqui cada linha à medida que a for fazendo: é isso que cala o
                     aviso e para a contagem do prazo.
                   </Text>
                 </View>
@@ -282,7 +282,7 @@ function LinhaPendencia({
             </Text>
           ) : (
             <Text variant="caption" color={colors.danger} style={{ marginTop: 2 }}>
-              Sem brinco registado — o portal precisa dele.
+              Sem brinco registado. O portal precisa dele.
             </Text>
           )}
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: 2 }}>

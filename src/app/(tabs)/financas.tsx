@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { CartaoIntroducao } from '@/components/CartaoIntroducao';
+import { SeletorExploracao } from '@/components/SeletorExploracao';
 import { avisar } from '@/data/avisos';
 import {
   Button,
@@ -225,7 +226,7 @@ export default function FinancasScreen() {
             titulo="Para que serve este separador"
             pontos={[
               'Aqui aponta o que gasta (ração, veterinário, rendas) e o que recebe (vendas, leite, subsídios). A app faz a conta e mostra-lhe o saldo.',
-              'Cada despesa pode ficar ligada a um animal ou a um terreno — é assim que depois se sabe quanto custou cada um.',
+              'Cada despesa pode ficar ligada a um animal ou a um terreno: é assim que depois se sabe quanto custou cada um.',
               'Os totais em cima são do período que escolher; com mais do que uma exploração, escolha primeiro qual.',
               'O dinheiro é opcional e pode desligá-lo em Perfil → Gestão financeira. Desligar esconde, não apaga.',
             ]}
@@ -251,30 +252,12 @@ export default function FinancasScreen() {
                 as contas de nenhuma delas. Fica à vista, como em Animais e
                 Alertas, e não escondido atrás de um botão de filtros. */}
             {podeEscolher ? (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  flexWrap: 'wrap',
-                  gap: spacing.xs,
-                  marginBottom: spacing.sm,
-                }}>
-                <Chip
-                  label="Todas"
-                  icon="barn"
-                  selected={exploracaoId === undefined}
-                  onPress={() => escolherExploracao(undefined)}
-                />
-                {consultaveis.map((e) => (
-                  <Chip
-                    key={e.id}
-                    label={e.nome}
-                    selected={exploracaoId === e.id}
-                    onPress={() =>
-                      escolherExploracao(exploracaoId === e.id ? undefined : e.id)
-                    }
-                  />
-                ))}
-              </View>
+              <SeletorExploracao
+                exploracoes={consultaveis}
+                valor={exploracaoId}
+                onEscolher={escolherExploracao}
+                style={{ marginBottom: spacing.sm }}
+              />
             ) : null}
 
             {/* Período — muda tudo o que está abaixo */}

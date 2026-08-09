@@ -18,6 +18,7 @@ import { comunicacoesPendentes } from '@/data/snira';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useDocumentos } from '@/data/useDocumentos';
+import { t } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, sizes, spacing } from '@/theme';
 
@@ -71,9 +72,9 @@ export default function DocumentosScreen() {
   function descarregar(nomeFicheiro: string, quantos: string, escrever: () => void) {
     try {
       escrever();
-      toast.sucesso('Ficheiro descarregado', `${nomeFicheiro} · ${quantos}`);
+      toast.sucesso(t('docs.descarregado'), `${nomeFicheiro} · ${quantos}`);
     } catch (e) {
-      toast.erro('Não foi possível descarregar', mensagemDeErro(e));
+      toast.erro(t('docs.semDescarga'), mensagemDeErro(e));
     }
   }
 
@@ -96,16 +97,16 @@ export default function DocumentosScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ alignItems: 'center', paddingBottom: insets.bottom + spacing.xxl }}>
           <View style={{ ...coluna, paddingTop: insets.top + spacing.md, paddingBottom: spacing.lg }}>
-            <Text variant="display">Documentos</Text>
+            <Text variant="display">{t('nav.documentos')}</Text>
             <Text variant="body" color={colors.textSecondary}>
-              Importar, exportar e as suas notas
+              {t('docs.subtituloSemAcesso')}
             </Text>
           </View>
           <View style={coluna}>
             <EmptyState
               icon="lock-outline"
-              title="Documentos reservados à exploração"
-              message="Importar e exportar o efetivo é de quem tem a exploração a cargo. Pode continuar a consultar os animais e a registar o que fizer a cada um."
+              title={t('docs.semAcessoTitulo')}
+              message={t('docs.semAcessoMensagem')}
             />
           </View>
         </ScrollView>
@@ -119,27 +120,27 @@ export default function DocumentosScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ alignItems: 'center', paddingBottom: insets.bottom + spacing.xxl }}>
         <View style={{ ...coluna, paddingTop: insets.top + spacing.md, paddingBottom: spacing.lg }}>
-          <Text variant="display">Documentos</Text>
+          <Text variant="display">{t('nav.documentos')}</Text>
           <Text variant="body" color={colors.textSecondary}>
-            Guardar papéis, importar, exportar e as suas notas
+            {t('docs.subtitulo')}
           </Text>
         </View>
 
         <View style={{ ...coluna, gap: spacing.md }}>
           {/* À primeira vez, o que é este separador. "Documentos" parece uma
               gaveta de ficheiros, e é por aqui que se traz o efetivo inteiro de
-              um Excel — o atalho que poupa uma tarde de escrita à mão a quem
-              não faz ideia de que ele existe. */}
+              um Excel: o atalho que poupa uma tarde de escrita à mão a quem não
+              faz ideia de que ele existe. */}
           <CartaoIntroducao
             chave="documentos"
             icon="file-document-multiple-outline"
-            titulo="Para que serve este separador"
+            titulo={t('docs.introTitulo')}
             pontos={[
-              'Guarde aqui os papéis que recebe: fotografe a fatura da ração, a guia de circulação ou o recibo do veterinário e ficam arrumados por gaveta, na exploração e não no telemóvel.',
-              'Se já tem os animais escritos num ficheiro Excel, pode trazê-los todos de uma vez em vez de os escrever um a um.',
-              'Daqui também leva os seus dados para fora: a lista de animais em Excel, e relatórios de prazos para imprimir ou entregar.',
-              'As notas são suas e só suas: servem para o que não cabe na ficha de um animal — combinações, telefones, o que ficou por fazer.',
-              'Importar e exportar ficheiros só funciona no computador. Guardar documentos e as notas funcionam também no telemóvel.',
+              t('docs.intro1'),
+              t('docs.intro2'),
+              t('docs.intro3'),
+              t('docs.intro4'),
+              t('docs.intro5'),
             ]}
           />
 
@@ -152,24 +153,22 @@ export default function DocumentosScreen() {
               Funciona no telemóvel, ao contrário de tudo o resto deste ecrã: a
               lista lê-se e marca-se sem precisar de disco. Só levar a folha em
               Excel ou em papel é que é do computador. */}
-          <Grupo titulo="OBRIGAÇÕES">
+          <Grupo titulo={t('docs.grupoObrigacoes')}>
             <Linha
               icon="cloud-upload-outline"
-              label="Comunicar ao SNIRA"
-              trailing={
-                porComunicar === 0 ? 'em dia' : String(porComunicar)
-              }
+              label={t('docs.comunicarSnira')}
+              trailing={porComunicar === 0 ? t('docs.emDia') : String(porComunicar)}
               onPress={() => router.push('/snira')}
               last
             />
           </Grupo>
 
-          {/* Importar — só web/Electron (o telemóvel não escolhe ficheiros sem build nativo) */}
+          {/* Importar: só web/Electron (o telemóvel não escolhe ficheiros sem build nativo) */}
           {comFicheiros && !contaSuspensa ? (
-            <Grupo titulo="IMPORTAR">
+            <Grupo titulo={t('docs.grupoImportar')}>
               <Linha
                 icon="microsoft-excel"
-                label="Importar animais de Excel"
+                label={t('docs.importarAnimais')}
                 onPress={() => router.push('/animal/importar')}
                 last
               />
@@ -177,17 +176,17 @@ export default function DocumentosScreen() {
           ) : null}
 
           {/* Exportar e relatórios (vindos das Definições) */}
-          <Grupo titulo="EXPORTAR E RELATÓRIOS">
+          <Grupo titulo={t('docs.grupoExportar')}>
             {comFicheiros ? (
               <>
                 <Linha
                   icon="microsoft-excel"
-                  label="Exportar animais (Excel)"
+                  label={t('docs.exportarAnimais')}
                   trailing={String(exportaveis.length)}
                   onPress={() =>
                     descarregar(
                       `animais-${hojeISO()}.xlsx`,
-                      `${exportaveis.length} ${exportaveis.length === 1 ? 'animal' : 'animais'}`,
+                      t('terrenos.nAnimais', { n: exportaveis.length }),
                       // `animais` (o efetivo TODO) no fim, e não só os
                       // exportáveis: é de lá que saem os nomes da mãe e do pai,
                       // e um progenitor já vendido não está na lista que sai na
@@ -199,16 +198,16 @@ export default function DocumentosScreen() {
                 />
                 <Linha
                   icon="calendar-text-outline"
-                  label="Exportar eventos (Excel)"
+                  label={t('docs.exportarEventos')}
                   trailing={String(eventos.length)}
                   onPress={() =>
                     descarregar(
                       `eventos-${hojeISO()}.xlsx`,
-                      `${eventos.length} ${eventos.length === 1 ? 'registo' : 'registos'}`,
+                      t('docs.nRegistos', { n: eventos.length }),
                       () =>
                         descarregarTabelaExcel(
                           `eventos-${hojeISO()}.xlsx`,
-                          'Eventos',
+                          t('docs.eventos'),
                           tabelaEventos(eventos, animais),
                         ),
                     )
@@ -217,7 +216,7 @@ export default function DocumentosScreen() {
                 {/* Imprimir e PDF juntos: escolhe-se o que sai e só depois o destino. */}
                 <Linha
                   icon="printer-outline"
-                  label="Relatório de prazos (imprimir ou PDF)"
+                  label={t('docs.relatorioPrazos')}
                   trailing={String(alertas.length)}
                   onPress={() => setRelatorioAberto(true)}
                 />
@@ -226,10 +225,9 @@ export default function DocumentosScreen() {
               <View style={{ flexDirection: 'row', gap: spacing.sm, padding: spacing.md }}>
                 <Icon name="laptop" size="lg" color={colors.info} />
                 <View style={{ flex: 1 }}>
-                  <Text variant="bodyStrong">Ficheiros são do computador</Text>
+                  <Text variant="bodyStrong">{t('docs.soNoComputador')}</Text>
                   <Text variant="secondary" color={colors.textSecondary}>
-                    Exportar para Excel, imprimir e guardar relatórios em PDF faz-se na app
-                    de computador ou no site da app: é lá que há onde guardar os ficheiros.
+                    {t('docs.soNoComputadorDetalhe')}
                   </Text>
                 </View>
               </View>
@@ -271,21 +269,24 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
   async function guardar() {
     if (!editor || aGuardar) return;
     if (!editor.texto.trim() && !editor.titulo.trim()) {
-      avisar('Nota vazia', 'Escreva alguma coisa antes de guardar.');
+      avisar(t('notas.vaziaTitulo'), t('notas.vaziaMensagem'));
       return;
     }
     setAGuardar(true);
     try {
       await notas.guardarNota({ id: editor.id, titulo: editor.titulo, texto: editor.texto });
-      toast.sucesso(editor.id ? 'Nota guardada' : 'Nota criada', editor.titulo.trim() || undefined);
+      toast.sucesso(
+        editor.id ? t('notas.guardada') : t('notas.criada'),
+        editor.titulo.trim() || undefined,
+      );
       setEditor(null);
     } catch (e) {
       // Fica a interromper: ao contrário do resto da app, as notas NÃO têm fila
-      // de sincronização — sem ligação o texto perde-se, e isso tem de ser lido
+      // de sincronização. Sem ligação o texto perde-se, e isso tem de ser lido
       // antes de se fechar a folha.
       avisar(
-        'Não foi possível guardar',
-        e instanceof Error ? `${e.message}\n\nAs notas precisam de ligação para gravar.` : String(e),
+        t('notas.semGravacao'),
+        e instanceof Error ? `${e.message}\n\n${t('notas.precisamLigacao')}` : String(e),
       );
     } finally {
       setAGuardar(false);
@@ -296,20 +297,20 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
     const id = editor?.id;
     if (!id) return;
     confirmar(
-      'Eliminar nota',
-      'Tem a certeza? Esta ação não pode ser anulada.',
+      t('notas.eliminarTitulo'),
+      t('comum.semVoltaAtras'),
       () => {
         void (async () => {
           try {
             await notas.eliminarNota(id);
-            toast.sucesso('Nota eliminada');
+            toast.sucesso(t('notas.eliminada'));
             setEditor(null);
           } catch (e) {
-            toast.erro('Não foi possível eliminar', mensagemDeErro(e));
+            toast.erro(t('comum.semEliminar'), mensagemDeErro(e));
           }
         })();
       },
-      { rotuloConfirmar: 'Eliminar', destrutivo: true },
+      { rotuloConfirmar: t('comum.eliminar'), destrutivo: true },
     );
   }
 
@@ -323,11 +324,11 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
           marginLeft: spacing.xs,
         }}>
         <Text variant="label" color={colors.textSecondary} style={{ flex: 1 }}>
-          NOTAS
+          {t('notas.titulo')}
         </Text>
         {notas.aCarregar ? (
           <Text variant="caption" color={colors.textMuted}>
-            a carregar…
+            {t('comum.aCarregar')}
           </Text>
         ) : null}
       </View>
@@ -337,8 +338,7 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
           <View style={{ alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm }}>
             <Icon name="note-text-outline" size="lg" color={colors.textMuted} />
             <Text variant="secondary" color={colors.textSecondary} center>
-              Ainda não tem notas. Guarde aqui o que precisar de ter à mão: contactos,
-              lembretes, o que quiser.
+              {t('notas.vazio')}
             </Text>
           </View>
         </Card>
@@ -355,7 +355,7 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
       )}
 
       <Button
-        label="Nova nota"
+        label={t('notas.nova')}
         icon="plus"
         variant="secondary"
         onPress={() => setEditor({ titulo: '', texto: '' })}
@@ -368,7 +368,11 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
         transparent
         onRequestClose={() => setEditor(null)}>
         <FolhaComTeclado>
-          <Pressable style={{ flex: 1 }} onPress={() => setEditor(null)} accessibilityLabel="Fechar" />
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={() => setEditor(null)}
+            accessibilityLabel={t('comum.fechar')}
+          />
           <View
             style={{
               backgroundColor: colors.background,
@@ -379,13 +383,13 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
             }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text variant="h3" style={{ flex: 1 }}>
-                {editor?.id ? 'Editar nota' : 'Nova nota'}
+                {editor?.id ? t('notas.editar') : t('notas.nova')}
               </Text>
               <Pressable
                 onPress={() => setEditor(null)}
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel="Fechar">
+                accessibilityLabel={t('comum.fechar')}>
                 <Icon name="close" size="lg" color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -393,7 +397,7 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
             <TextInput
               value={editor?.titulo ?? ''}
               onChangeText={(t) => setEditor((e) => (e ? { ...e, titulo: t } : e))}
-              placeholder="Título (opcional)"
+              placeholder={t('notas.tituloOpcional')}
               placeholderTextColor={colors.textMuted}
               style={{
                 borderWidth: 1.5,
@@ -410,7 +414,7 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
             <TextInput
               value={editor?.texto ?? ''}
               onChangeText={(t) => setEditor((e) => (e ? { ...e, texto: t } : e))}
-              placeholder="Escreva a sua nota…"
+              placeholder={t('notas.placeholder')}
               placeholderTextColor={colors.textMuted}
               multiline
               textAlignVertical="top"
@@ -428,13 +432,18 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
             />
 
             <Button
-              label={aGuardar ? 'A guardar…' : 'Guardar nota'}
+              label={aGuardar ? t('comum.aGuardar') : t('notas.guardar')}
               icon="check"
               loading={aGuardar}
               onPress={() => void guardar()}
             />
             {editor?.id ? (
-              <Button label="Eliminar nota" icon="trash-can-outline" variant="danger" onPress={eliminar} />
+              <Button
+                label={t('notas.eliminarTitulo')}
+                icon="trash-can-outline"
+                variant="danger"
+                onPress={eliminar}
+              />
             ) : null}
           </View>
         </FolhaComTeclado>
@@ -448,11 +457,11 @@ function CartaoNota({ nota, onPress }: { nota: Nota; onPress: () => void }) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={nota.titulo || 'Nota'}
+      accessibilityLabel={nota.titulo || t('notas.uma')}
       style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
       <Card>
         <Text variant="bodyStrong" numberOfLines={1}>
-          {nota.titulo || 'Sem título'}
+          {nota.titulo || t('notas.semTitulo')}
         </Text>
         {nota.texto.trim() ? (
           <Text variant="secondary" color={colors.textSecondary} numberOfLines={2} style={{ marginTop: 2 }}>

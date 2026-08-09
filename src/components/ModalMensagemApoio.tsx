@@ -152,7 +152,7 @@ export function ModalMensagemApoio({
             contentContainerStyle={{ padding: spacing.lg }}>
             <Text variant="body" color={colors.textSecondary} style={{ marginBottom: spacing.lg }}>
               {eBug
-                ? 'Conte o que estava a fazer e o que aconteceu. Não precisa de saber termos técnicos — a versão da app e o aparelho seguem sozinhos.'
+                ? 'Conte o que estava a fazer e o que aconteceu. Não precisa de saber termos técnicos: a versão da app e o aparelho seguem sozinhos.'
                 : 'Escreva-nos com a sua dúvida ou com o que precisa. Respondemos para o email da sua conta.'}
             </Text>
 

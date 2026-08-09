@@ -79,11 +79,11 @@ export function iconeCategoria(c: CategoriaDocumento): IconName {
 export function explicacaoCategoria(c: CategoriaDocumento): string {
   switch (c) {
     case 'Financeiro':
-      return 'Faturas, recibos, talões — o que se paga e o que se recebe.';
+      return 'Faturas, recibos, talões: o que se paga e o que se recebe.';
     case 'Sanidade':
       return 'Guias de circulação, atestados, receitas do veterinário.';
     case 'Documentos pessoais':
-      return 'Cartões, licenças, contratos — o que é seu e não da exploração.';
+      return 'Cartões, licenças, contratos: o que é seu e não da exploração.';
     case 'Outros':
       return 'Tudo o que não cabe nas anteriores.';
   }
@@ -115,7 +115,7 @@ export const TAMANHO_MAX = 10 * 1024 * 1024;
  * coisas diferentes de quem está a carregar.
  */
 export function problemaComDocumento(titulo: string, tamanho: number): string | null {
-  if (!titulo.trim()) return 'Dê um nome ao documento — "Fatura da ração de julho", por exemplo.';
+  if (!titulo.trim()) return 'Dê um nome ao documento: "Fatura da ração de julho", por exemplo.';
   if (titulo.trim().length > 120) return 'O nome é demasiado comprido.';
   if (tamanho <= 0) return 'O ficheiro está vazio.';
   if (tamanho > TAMANHO_MAX) {

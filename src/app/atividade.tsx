@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SeletorExploracao } from '@/components/SeletorExploracao';
 import { Avatar, Card, Chip, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
 import {
   agruparPorDia,
@@ -126,7 +127,7 @@ export default function AtividadeScreen() {
         <View style={coluna}>
           <Text variant="body" color={colors.textSecondary}>
             O que cada pessoa alterou nas suas explorações, e a que horas. Fica
-            registado pelo servidor — ninguém o pode apagar nem mudar, nem sequer
+            registado pelo servidor: ninguém o pode apagar nem mudar, nem sequer
             quem fez a alteração.
           </Text>
 
@@ -148,22 +149,11 @@ export default function AtividadeScreen() {
 
           {/* Por exploração */}
           {minhas.length > 1 ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-              <Chip
-                label="Todas"
-                icon="barn"
-                selected={exploracaoId === undefined}
-                onPress={() => setExploracaoId(undefined)}
-              />
-              {minhas.map((e) => (
-                <Chip
-                  key={e.id}
-                  label={e.nome}
-                  selected={exploracaoId === e.id}
-                  onPress={() => setExploracaoId(exploracaoId === e.id ? undefined : e.id)}
-                />
-              ))}
-            </View>
+            <SeletorExploracao
+              exploracoes={minhas}
+              valor={exploracaoId}
+              onEscolher={setExploracaoId}
+            />
           ) : null}
 
           {/* Por pessoa */}

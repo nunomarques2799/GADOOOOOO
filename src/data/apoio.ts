@@ -44,7 +44,7 @@ export const MIN_TEXTO = 10;
 export function problemaComMensagem(assunto: string, texto: string): string | null {
   const a = assunto.trim();
   const t = texto.trim();
-  if (!a) return 'Escreva um assunto — uma linha a dizer do que se trata.';
+  if (!a) return 'Escreva um assunto: uma linha a dizer do que se trata.';
   if (a.length > MAX_ASSUNTO) return 'O assunto é demasiado comprido.';
   if (t.length < MIN_TEXTO) return 'Conte-nos um pouco mais sobre o que se passa.';
   if (t.length > MAX_TEXTO) return 'A mensagem é demasiado comprida. Conte o essencial.';

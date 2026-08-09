@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { AnimalRow } from '@/components/AnimalRow';
@@ -18,6 +19,7 @@ import {
   Text,
 } from '@/components/ui';
 import { tipoTerrenoMeta } from '@/data/constants';
+import { mapaAlertas } from '@/data/filtrosAnimais';
 import { useMembros } from '@/data/membros';
 import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
@@ -28,7 +30,8 @@ import { colors, radii, shadow, spacing } from '@/theme';
 export default function ExploracaoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { exploracaoById, terrenosByExploracao, animaisByExploracao } = useGado();
+  const { exploracaoById, terrenosByExploracao, animaisByExploracao, alertas } = useGado();
+  const porAnimal = useMemo(() => mapaAlertas(alertas), [alertas]);
   const { roleEm, pode } = useMembros();
   const { meteo, estado, recarregar } = useMeteorologia(id);
   // Os controlos seguem as permissões do papel (ver `permissoes.ts`): um
@@ -279,6 +282,7 @@ export default function ExploracaoDetalheScreen() {
                 key={a.id}
                 animal={a}
                 nomeTerreno={a.terrenoId ? terrenos.find((t) => t.id === a.terrenoId)?.nome : undefined}
+                alertas={porAnimal.get(a.id)}
               />
             ))
         )}

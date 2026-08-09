@@ -176,7 +176,11 @@ export function isoMaisDias(iso: string, dias: number): string {
  */
 export function formatDataPt(iso: string): string {
   const [ano, mes, dia] = diaIso(iso).split('-');
-  return `${Number(dia)} ${MESES_PT[Number(mes) - 1]} ${ano}`;
+  // O MÊS segue a língua da app: ao contrário do `formatDataCurta` (que é só
+  // dígitos e se lê igual em qualquer sítio), aqui há uma palavra, e "15 ago
+  // 2026" no meio de um ecrã inglês é a única coisa que fica por traduzir.
+  const meses = idiomaAtual() === 'en' ? MESES_EN : MESES_PT;
+  return `${Number(dia)} ${meses[Number(mes) - 1]} ${ano}`;
 }
 export function formatDataCurta(iso: string): string {
   const [ano, mes, dia] = diaIso(iso).split('-');

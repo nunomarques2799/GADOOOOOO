@@ -385,7 +385,7 @@ export default function AnimalDetalheScreen() {
               <InfoField
                 icon="heart-pulse"
                 label="Estado"
-                value={`${faseMeta[reproducao.fase].label} · ${faseMeta[reproducao.fase].explicacao}`}
+                value={`${faseMeta(reproducao.fase).label} · ${faseMeta(reproducao.fase).explicacao}`}
               />
               {reproducao.fase === 'coberta' || reproducao.fase === 'duvidosa' ? (
                 <InfoField

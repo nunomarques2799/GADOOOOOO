@@ -122,8 +122,8 @@ export function FormularioTerreno({
       'Eliminar terreno',
       `Vai eliminar "${terreno.nome}". `
         + (quantos > 0
-          ? `Os ${quantos} ${quantos === 1 ? 'animal fica' : 'animais ficam'} sem terreno — `
-          : 'Nenhum animal se perde — ')
+          ? `Os ${quantos} ${quantos === 1 ? 'animal fica' : 'animais ficam'} sem terreno, `
+          : 'Nenhum animal se perde: ')
         + 'nada é apagado além do próprio terreno. As despesas que lhe estavam '
         + 'imputadas continuam nas contas da exploração.',
       () => void executar(),

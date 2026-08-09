@@ -7,6 +7,7 @@ import {
   marcarIntroducaoVista,
   type ChaveIntroducao,
 } from '@/data/introducoes';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 type Props = {
@@ -70,7 +71,7 @@ export function CartaoIntroducao({ chave, icon, titulo, pontos }: Props) {
       </View>
 
       <Button
-        label="Percebi"
+        label={t('comum.percebi')}
         icon="check"
         variant="secondary"
         onPress={fechar}

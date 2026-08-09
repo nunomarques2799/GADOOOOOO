@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
+import { SeletorExploracao } from '@/components/SeletorExploracao';
 import {
   Badge,
   Card,
@@ -83,28 +84,12 @@ export default function HistoricoEfetivoScreen() {
         </Text>
 
         {podeEscolherExploracao ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: spacing.xs,
-              marginBottom: spacing.sm,
-            }}>
-            <Chip
-              label="Todas"
-              icon="barn"
-              selected={exploracaoId === undefined}
-              onPress={() => setExploracaoId(undefined)}
-            />
-            {exploracoes.map((e) => (
-              <Chip
-                key={e.id}
-                label={e.nome}
-                selected={exploracaoId === e.id}
-                onPress={() => setExploracaoId(exploracaoId === e.id ? undefined : e.id)}
-              />
-            ))}
-          </View>
+          <SeletorExploracao
+            exploracoes={exploracoes}
+            valor={exploracaoId}
+            onEscolher={setExploracaoId}
+            style={{ marginBottom: spacing.sm }}
+          />
         ) : null}
 
         {/* Motivo. Um motivo sem ninguém dentro não aparece: um chip que só

@@ -3,28 +3,37 @@ import { useRouter } from 'expo-router';
 import { memo } from 'react';
 import { View } from 'react-native';
 
+import { PontosSinal, rotuloDoSinal } from '@/components/SinaisAnimal';
 import { Badge, Card, Icon, IconBadge, Text } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
 import { idadeExtenso } from '@/data/helpers';
-import type { Animal } from '@/data/types';
+import { sinaisDe } from '@/data/sinaisAlerta';
+import type { Alerta, Animal } from '@/data/types';
 import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /**
  * Uma linha da lista de animais.
  *
- * `nomeTerreno` vem já resolvido de fora, e não de um `useGado()` aqui dentro:
- * numa lista de trezentos animais eram trezentas subscrições ao store, e cada
- * sincronização remexia a lista toda (ver `animais.tsx`, onde o nome se resolve
- * uma vez só). O `memo` fecha o ciclo — sem novas props, a linha não volta a
- * desenhar-se quando é outra que muda.
+ * `nomeTerreno` e `alertas` vêm já resolvidos de fora, e não de um `useGado()`
+ * aqui dentro: numa lista de trezentos animais eram trezentas subscrições ao
+ * store, e cada sincronização remexia a lista toda (ver `animais.tsx`, onde uns
+ * e outros se resolvem uma vez só, em mapas memoizados). O `memo` fecha o ciclo:
+ * sem novas props, a linha não volta a desenhar-se quando é outra que muda.
  */
 export const AnimalRow = memo(function AnimalRow({
   animal,
   nomeTerreno,
+  alertas,
 }: {
   animal: Animal;
   nomeTerreno?: string;
+  /**
+   * As categorias de alerta pendentes DESTE animal (de `mapaAlertas`). O
+   * conjunto tem de ser estável entre renders, senão o `memo` deixa de servir
+   * para alguma coisa.
+   */
+  alertas?: ReadonlySet<Alerta['categoria']>;
 }) {
   const router = useRouter();
   const meta = especieMeta[animal.especie];
@@ -45,15 +54,18 @@ export const AnimalRow = memo(function AnimalRow({
   const sexoCor = femea ? colors.femea : colors.macho;
   const sexoIcon = femea ? 'gender-female' : 'gender-male';
 
+  // Os pontos coloridos no fundo do retrato. Uma cor não se lê num leitor de
+  // ecrã, por isso o que eles dizem entra também na etiqueta falada da linha.
+  const sinais = sinaisDe(alertas);
+
   return (
     <Card
       onPress={() => router.push(`/animal/${animal.id}`)}
-      // O ponto vermelho no canto do retrato quer dizer "bovino por identificar"
-      // (ver abaixo). Uma cor não se lê num leitor de ecrã, e a falta de brinco é
-      // um problema legal — por isso vai também na etiqueta falada.
       accessibilityLabel={`${animal.nome ?? 'Animal'}, ${animal.especie}, ${idadeExtenso(
         animal.dataNascimento,
-      )}${porCompletar ? ', por completar: sem nome nem brinco' : semBrinco ? ', por identificar: sem brinco' : ''}`}
+      )}${porCompletar ? ', por completar: sem nome nem brinco' : semBrinco ? ', por identificar: sem brinco' : ''}${
+        sinais.length > 0 ? `. ${t('sinal.falado')}: ${sinais.map(rotuloDoSinal).join(', ')}` : ''
+      }`}
       style={{ marginBottom: spacing.sm, opacity: saiu ? 0.7 : 1 }}
       padded={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.sm }}>
@@ -85,25 +97,12 @@ export const AnimalRow = memo(function AnimalRow({
               iconSize={30}
             />
           )}
-          {/* Bovino sem brinco: o ponto vermelho. A lei obriga a identificar
-              um bovino em poucos dias, e é o único aviso que se vê sem abrir a
-              ficha. A linha "Sem brinco" logo abaixo é que o explica por
-              palavras — sozinho, o ponto seria um enfeite por decifrar. */}
-          {semBrinco ? (
-            <View
-              style={{
-                position: 'absolute',
-                top: -2,
-                right: -2,
-                width: 16,
-                height: 16,
-                borderRadius: 8,
-                backgroundColor: colors.danger,
-                borderWidth: 2,
-                borderColor: colors.surface,
-              }}
-            />
-          ) : null}
+          {/* O que este animal tem pendente, por cores. Esteve aqui um ponto
+              vermelho só, para o bovino sem brinco; ficou pequeno assim que a
+              app passou a contar prazos de SNIRA, de parto e de vacinação, que
+              se viam na ordenação da lista mas não na lista. A legenda por cima
+              é que os explica por palavras — sozinhas, as cores eram enfeite. */}
+          <PontosSinal sinais={sinais} />
         </View>
 
         <View style={{ flex: 1 }}>

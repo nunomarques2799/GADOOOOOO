@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { AnimalRow } from '@/components/AnimalRow';
@@ -18,6 +18,7 @@ import {
   Text,
 } from '@/components/ui';
 import { tipoTerrenoMeta } from '@/data/constants';
+import { mapaAlertas } from '@/data/filtrosAnimais';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -27,9 +28,12 @@ export default function TerrenoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const desktop = useDesktop();
-  const { terrenoById, exploracaoById, animais, terrenosByExploracao } = useGado();
+  const { terrenoById, exploracaoById, animais, terrenosByExploracao, alertas } = useGado();
   const { pode } = useMembros();
   const [moverAberto, setMoverAberto] = useState(false);
+  // Antes do `return` do terreno que não existe: um hook não pode ficar depois
+  // de uma saída antecipada.
+  const porAnimal = useMemo(() => mapaAlertas(alertas), [alertas]);
 
   const terreno = id ? terrenoById(id) : undefined;
   // O veterinário trata dos animais, não do património — não edita terrenos.
@@ -184,7 +188,9 @@ export default function TerrenoDetalheScreen() {
         ) : (
           // Sem `nomeTerreno`: são todos deste terreno, repetir o nome em cada
           // linha era ruído.
-          animaisNoTerreno.map((a) => <AnimalRow key={a.id} animal={a} />)
+          animaisNoTerreno.map((a) => (
+            <AnimalRow key={a.id} animal={a} alertas={porAnimal.get(a.id)} />
+          ))
         )}
 
         <Button

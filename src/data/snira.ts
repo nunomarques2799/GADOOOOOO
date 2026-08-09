@@ -251,7 +251,7 @@ export function htmlRelatorioSnira(pendentes: Pendencia[], exploracoes: Explorac
             : `${p.diasRestantes} dia(s)`;
       return `<tr>
         <td class="check"></td>
-        <td class="brinco">${escapar(p.brinco ?? '—')}</td>
+        <td class="brinco">${escapar(p.brinco ?? '-')}</td>
         <td>${escapar(p.rotulo)}</td>
         <td><span class="dot" style="background:${cor}"></span>${escapar(rotuloComunicacao[p.tipo])}</td>
         <td>${escapar(diaIso(p.data))}</td>

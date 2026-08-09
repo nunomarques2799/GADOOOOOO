@@ -61,7 +61,7 @@ export function problemaComEvento(
   dia: string | null,
   hora: string,
 ): string | null {
-  if (!titulo.trim()) return 'Escreva o que é — "Feira", "Entrega da ração", o que for.';
+  if (!titulo.trim()) return 'Escreva o que é: "Feira", "Entrega da ração", o que for.';
   if (titulo.trim().length > 120) return 'O título é demasiado comprido. Ponha o resto na descrição.';
   if (!dia) return 'Escreva o dia (dd/mm/aaaa).';
   // A hora é opcional; escrita, tem de se perceber. Uma hora meio escrita

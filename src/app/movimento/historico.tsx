@@ -2,9 +2,9 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { SeletorExploracao } from '@/components/SeletorExploracao';
 import {
   Card,
-  Chip,
   EmptyState,
   Header,
   Icon,
@@ -88,34 +88,15 @@ export default function HistoricoMovimentosScreen() {
         </Text>
 
         {podeEscolher ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: spacing.xs,
-              marginBottom: spacing.md,
-            }}>
-            <Chip
-              label="Todas"
-              icon="barn"
-              selected={exploracaoId === undefined}
-              onPress={() => {
-                setExploracaoId(undefined);
-                setLimite(PAGINA);
-              }}
-            />
-            {consultaveis.map((e) => (
-              <Chip
-                key={e.id}
-                label={e.nome}
-                selected={exploracaoId === e.id}
-                onPress={() => {
-                  setExploracaoId(exploracaoId === e.id ? undefined : e.id);
-                  setLimite(PAGINA);
-                }}
-              />
-            ))}
-          </View>
+          <SeletorExploracao
+            exploracoes={consultaveis}
+            valor={exploracaoId}
+            onEscolher={(id) => {
+              setExploracaoId(id);
+              setLimite(PAGINA);
+            }}
+            style={{ marginBottom: spacing.md }}
+          />
         ) : null}
 
         {lista.length === 0 ? (

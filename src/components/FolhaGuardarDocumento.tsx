@@ -242,7 +242,7 @@ export function FolhaGuardarDocumento({
 
             {Platform.OS !== 'web' ? (
               <Text variant="caption" color={colors.textMuted} center>
-                Guardar um documento precisa de ligação — a imagem sobe para a sua conta.
+                Guardar um documento precisa de ligação: a imagem sobe para a sua conta.
               </Text>
             ) : null}
           </ScrollView>

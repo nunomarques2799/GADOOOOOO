@@ -10,6 +10,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { agruparTerrenosPorExploracao, emLinhas } from '@/data/terrenos';
 import type { Terreno } from '@/data/types';
+import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
@@ -95,9 +96,9 @@ export default function TerrenosScreen() {
       exploracoes.length === 0 ? (
         <EmptyState
           icon="grass"
-          title="Sem terrenos"
-          message="Os terrenos pertencem a uma exploração. Crie primeiro a sua exploração e depois registe aqui as pastagens e os cercados."
-          actionLabel={estadoPerfil === 'ativo' ? 'Nova exploração' : undefined}
+          title={t('terrenos.vazioTitulo')}
+          message={t('terrenos.vazioSemExploracao')}
+          actionLabel={estadoPerfil === 'ativo' ? t('exploracoes.nova') : undefined}
           onAction={
             estadoPerfil === 'ativo' ? () => router.push('/exploracao/nova') : undefined
           }
@@ -105,13 +106,13 @@ export default function TerrenosScreen() {
       ) : (
         <EmptyState
           icon="grass"
-          title="Sem terrenos"
+          title={t('terrenos.vazioTitulo')}
           message={
             primeiraEditavel
-              ? 'Registe as pastagens, os cercados e os currais onde o gado anda. Depois pode dizer em que terreno está cada animal e ver, de uma olhadela, quantos estão em cada sítio.'
-              : 'Ainda não há terrenos registados nesta exploração. Quem a gere é que os pode registar.'
+              ? t('terrenos.vazioPodeCriar')
+              : t('terrenos.vazioSemPermissao')
           }
-          actionLabel={primeiraEditavel ? 'Novo terreno' : undefined}
+          actionLabel={primeiraEditavel ? t('terrenos.novo') : undefined}
           onAction={primeiraEditavel ? () => criarEm(primeiraEditavel.id) : undefined}
         />
       )
@@ -157,7 +158,7 @@ export default function TerrenosScreen() {
           agruparPorExploracao && section.terrenos.length === 0 ? (
             <Card style={{ marginBottom: spacing.md }}>
               <Text variant="secondary" color={colors.textSecondary}>
-                Esta exploração ainda não tem terrenos registados.
+                {t('terrenos.grupoVazio')}
               </Text>
             </Card>
           ) : (
@@ -176,21 +177,21 @@ export default function TerrenosScreen() {
         }}
         ListHeaderComponent={
           <View style={{ paddingTop: insets.top + spacing.md, marginBottom: spacing.md }}>
-            <Text variant="display">Terrenos</Text>
+            <Text variant="display">{t('nav.terrenos')}</Text>
             <Text variant="body" color={colors.textSecondary}>
               {semTerrenos
-                ? 'Onde o gado anda'
-                : `${terrenos.length} ${terrenos.length === 1 ? 'terreno' : 'terrenos'}`}
+                ? t('terrenos.subtitulo')
+                : t('terrenos.contagem', { n: terrenos.length })}
             </Text>
           </View>
         }
         ListFooterComponent={convite}
       />
       {/* O botão flutuante só faz sentido quando há UMA exploração: com várias,
-          criar é dentro do grupo certo — o "Novo" do cabeçalho — em vez de
+          criar é dentro do grupo certo (o "Novo" do cabeçalho) em vez de
           adivinhar a primeira da lista. */}
       {primeiraEditavel && exploracoes.length === 1 && !semTerrenos ? (
-        <FAB label="Novo" onPress={() => criarEm(primeiraEditavel.id)} />
+        <FAB label={t('terrenos.novo')} onPress={() => criarEm(primeiraEditavel.id)} />
       ) : null}
     </View>
   );
@@ -230,14 +231,14 @@ function CabecalhoExploracao({
           onPress={onNovo}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel={`Novo terreno em ${nome}`}
+          accessibilityLabel={t('terrenos.novoEm', { nome })}
           style={({ pressed }) => [
             { flexDirection: 'row', alignItems: 'center', gap: 2 },
             pressed && { opacity: 0.6 },
           ]}>
           <Icon name="plus" size="sm" color={colors.primary} />
           <Text variant="caption" color={colors.primary}>
-            NOVO
+            {t('terrenos.novoCurto')}
           </Text>
         </Pressable>
       ) : null}
@@ -259,7 +260,7 @@ function TerrenoRow({
   return (
     <Card
       onPress={onPress}
-      accessibilityLabel={`${terreno.nome}, ${animais} animais`}
+      accessibilityLabel={`${terreno.nome}, ${t('terrenos.nAnimais', { n: animais })}`}
       style={{ marginBottom: spacing.sm }}
       padded={false}>
       <View
@@ -288,7 +289,7 @@ function TerrenoRow({
             ) : null}
           </View>
           <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
-            {terreno.tipo ?? 'Sem tipo'}
+            {terreno.tipo ?? t('terrenos.semTipo')}
             {terreno.area != null ? ` · ${terreno.area} ha` : ''}
           </Text>
         </View>

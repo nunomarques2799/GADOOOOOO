@@ -56,6 +56,15 @@ const pt = {
   'comum.desligado': 'Desligado',
   'comum.ligada': 'Ligada',
   'comum.desligada': 'Desligada',
+  'comum.eliminar': 'Eliminar',
+  'comum.guardar': 'Guardar',
+  'comum.cancelar': 'Cancelar',
+  'comum.aGuardar': 'A guardar…',
+  'comum.aCarregar': 'a carregar…',
+  'comum.semVoltaAtras': 'Tem a certeza? Esta ação não pode ser anulada.',
+  'comum.semEliminar': 'Não foi possível eliminar',
+  'comum.semGravar': 'Não foi possível guardar',
+  'comum.percebi': 'Percebi',
 
   /* ---- Saudação e data (Início) ---- */
   'saudacao.manha': 'Bom dia',
@@ -122,6 +131,13 @@ const pt = {
   'animais.semBrinco': 'Sem brinco',
   'animais.porCompletar': 'Por completar',
 
+  /* ---- Pontos coloridos no retrato do animal ---- */
+  'sinal.legal': 'Brinco e SNIRA',
+  'sinal.reproducao': 'Reprodução',
+  'sinal.saude': 'Vacinas e medicamentos',
+  /** Como um leitor de ecrã anuncia os pontos de uma linha. */
+  'sinal.falado': 'Por tratar',
+
   /* ---- Idade por extenso ---- */
   'idade.porNascer': 'por nascer',
   'idade.dias': '{n} dia|{n} dias',
@@ -144,6 +160,9 @@ const pt = {
   'calendario.voltarAHoje': 'Voltar ao mês de hoje',
   'exploracao.animais': 'animais',
   'exploracao.terrenos': 'terrenos',
+  'exploracao.escolher': 'Ver que exploração?',
+  'exploracao.filtroRotulo': 'Exploração: {nome}',
+  'exploracao.filtroAjuda': 'Abre a lista das suas explorações',
   'alerta.emAtraso': 'Em atraso',
   'alerta.hoje': 'Hoje',
   'alerta.dias': '{n} dia|{n} dias',
@@ -156,6 +175,20 @@ const pt = {
   'alertas.calendario': 'Calendário',
   'alertas.tudoEmDiaTitulo': 'Tudo em dia',
   'alertas.tudoEmDiaMensagem': 'Não há prazos legais nem tarefas pendentes. Bom trabalho!',
+  'alertas.tudoEmDiaNaExploracao': 'Não há prazos nem tarefas pendentes em {nome}.',
+  'alertas.subtitulo': 'Prazos legais e tarefas por fazer',
+  'alertas.introTitulo': 'Para que serve este separador',
+  'alertas.intro1':
+    'A app conta sozinha os prazos legais a partir das datas que registou: identificar um vitelo, comunicar ao SNIRA, o fim de um intervalo de segurança.',
+  'alertas.intro2':
+    'Em cima ficam os urgentes, e a seguir o que é desta semana. Quando trata do assunto no animal, o alerta desaparece daqui.',
+  'alertas.intro3':
+    'Toque no título de um grupo para o fechar. No Calendário vê os mesmos prazos por dias, para saber o que o espera na semana que vem.',
+  'alertas.intro4':
+    'Só os avisos sem contagem decrescente se podem dispensar. O que tem prazo a correr fica: é o que não pode ser esquecido.',
+  'alertas.verMais': 'Ver mais {n}',
+  'alertas.abrirGrupoAjuda': 'Abre a lista deste grupo',
+  'alertas.fecharGrupoAjuda': 'Fecha a lista deste grupo',
 
   /* ---- Definições ---- */
   'definicoes.subtitulo': 'Como a app funciona para si',
@@ -176,12 +209,357 @@ const pt = {
   /* ---- Ecrã do idioma ---- */
   'idioma.titulo': 'Idioma',
   'idioma.explicacao':
-    'Muda a língua dos menus e das mensagens da app. Os nomes que escreveu — animais, terrenos, notas — ficam como os escreveu.',
+    'Muda a língua dos menus e das mensagens da app. Os nomes que escreveu (animais, terrenos, notas) ficam como os escreveu.',
   'idioma.aRecarregar': 'A app vai recarregar para mudar de língua.',
   'idioma.porAplicar':
     'Escolha guardada. A app muda de língua da próxima vez que a abrir.',
   'idioma.domínioEmPortugues':
     'Os tipos de registo (Parto, Cobrição, Vacinação) e as raças ficam em português: são o que está gravado nas fichas dos animais.',
+
+  /* ---- Guia de primeiros passos (Início) ---- */
+  'tutorial.titulo': 'Vamos começar',
+  'tutorial.progresso': '{n} de {total} feito|{n} de {total} feitos',
+  'tutorial.esconder': 'Esconder',
+  'tutorial.esconderAjuda': 'Esconder o guia de primeiros passos',
+  'tutorial.comoFunciona':
+    'Siga os passos pela ordem. Toque em cada um para saber o que é. Pode parar a meio e continuar quando quiser: a app guarda tudo.',
+  'tutorial.opcionaisTitulo': 'SE QUISER, NÃO É PRECISO',
+  'tutorial.opcionaisAjuda':
+    'Feitios da app que pode ligar agora ou nunca. Também estão no Perfil.',
+  'tutorial.feito': 'Feito',
+  'tutorial.toqueParaSaber': 'Toque para saber o que é',
+
+  'tutorial.exploracaoTitulo': 'Criar a sua exploração',
+  'tutorial.exploracaoDescricao': 'É a sua quinta dentro da app. Comece por aqui.',
+  'tutorial.exploracaoDetalhe':
+    'A exploração é a sua quinta ou herdade dentro da app: é dentro dela que ficam os terrenos, os animais e tudo o que registar. Basta o nome por que lhe chama e a localidade; a marca de exploração e o resto podem ficar para depois. Se tiver duas quintas, crie duas: a app mantém as contas de cada uma separadas.',
+  'tutorial.exploracaoAcao': 'Criar a exploração',
+
+  'tutorial.terrenoTitulo': 'Registar os seus terrenos',
+  'tutorial.terrenoDescricao': 'As pastagens, os cercados e os currais onde o gado anda.',
+  'tutorial.terrenoDetalhe':
+    'Um terreno é cada sítio onde os animais podem estar: uma pastagem, um cercado, um curral. Dê-lhe o nome por que lhe chama ("Courela de Baixo") e, se quiser, marque-o no mapa por satélite. Feito isto, pode dizer em que terreno está cada animal e ver, de uma olhadela, quantos estão em cada sítio.',
+  'tutorial.terrenoAcao': 'Adicionar um terreno',
+
+  'tutorial.animalTitulo': 'Registar o primeiro animal',
+  'tutorial.animalDescricao': 'Basta a espécie, o sexo e a idade: o resto fica para depois.',
+  'tutorial.animalDetalhe':
+    'Comece por um animal só, para ver como é. Não precisa de ter tudo à mão: a espécie, o sexo e a data de nascimento chegam para o registar, e o brinco, a raça, a fotografia e o terreno acrescentam-se quando quiser. Se já tiver o efetivo escrito num ficheiro Excel, pode importá-lo todo de uma vez em vez de o escrever à mão.',
+  'tutorial.animalAcao': 'Registar um animal',
+
+  'tutorial.avisosTitulo': 'Ligar os avisos no telemóvel',
+  'tutorial.avisosDescricao':
+    'Para os prazos legais o avisarem a tempo, mesmo com a app fechada.',
+  'tutorial.avisosDetalhe':
+    'A app conta os prazos por si (identificar um vitelo, comunicar ao SNIRA, a próxima vacinação), mas só o consegue chamar se lhe der autorização. Com os avisos ligados, o recado aparece no ecrã do telemóvel no dia certo, mesmo que não abra a app nessa semana.',
+  'tutorial.avisosAcao': 'Ligar os avisos',
+
+  'tutorial.financasTitulo': 'Ligar a gestão do dinheiro',
+  'tutorial.financasDescricao': 'Só se quiser apontar despesas e vendas na app.',
+  'tutorial.financasDetalhe':
+    'Ligando a gestão financeira, passa a poder apontar o que gasta (ração, veterinário, rendas) e o que recebe (vendas, leite, subsídios), e a app mostra-lhe o saldo da exploração e quanto lhe custou cada animal. Se não a ligar, nada de dinheiro aparece na app. Pode ligar e desligar quando quiser: desligar esconde, não apaga.',
+  'tutorial.financasAcao': 'Ver a gestão do dinheiro',
+
+  /* ---- O que se comunica ao SNIRA (só o texto dos avisos: a exportação
+         para o iDigital continua em português, ver `alertas.ts`) ---- */
+  'snira.nascimento': 'nascimento',
+  'snira.morte': 'morte',
+  'snira.saida': 'saída',
+  'snira.entrada': 'entrada',
+  'snira.movimentacao': 'movimentação',
+
+  /* ---- Cada aviso que a app calcula (`data/alertas.ts`) ---- */
+  'aviso.idAtrasoTitulo': 'Identificação em atraso',
+  'aviso.idTitulo': 'Falta identificar (brinco)',
+  'aviso.idAtrasoDesc':
+    '{rotulo} devia estar identificado. Prazo excedido há {n} dia.|{rotulo} devia estar identificado. Prazo excedido há {n} dias.',
+  'aviso.idDesc':
+    '{rotulo} tem {idade}. Colocar brinco em {n} dia.|{rotulo} tem {idade}. Colocar brinco em {n} dias.',
+
+  'aviso.sniraAtrasoTitulo': 'Comunicação SNIRA em atraso',
+  'aviso.sniraNascTitulo': 'Comunicar ao SNIRA',
+  'aviso.sniraNascAtrasoDesc':
+    '{rotulo}: nascimento por comunicar ao SNIRA. Prazo excedido há {n} dia.|{rotulo}: nascimento por comunicar ao SNIRA. Prazo excedido há {n} dias.',
+  'aviso.sniraNascDesc':
+    '{rotulo}: comunicar nascimento ao SNIRA em {n} dia.|{rotulo}: comunicar nascimento ao SNIRA em {n} dias.',
+  'aviso.sniraEvTitulo': 'Comunicar {oQue} ao SNIRA',
+  'aviso.sniraEvAtrasoDesc':
+    '{rotulo}: {oQue} de {data} por comunicar. Prazo excedido há {n} dia.|{rotulo}: {oQue} de {data} por comunicar. Prazo excedido há {n} dias.',
+  'aviso.sniraEvDesc':
+    '{rotulo}: comunicar {oQue} de {data} em {n} dia.|{rotulo}: comunicar {oQue} de {data} em {n} dias.',
+
+  'aviso.partoConfirmarTitulo': 'Parto previsto por confirmar',
+  'aviso.partoConfirmarDesc':
+    '{rotulo}: a data prevista de parto já passou há mais de {dias} dias. Registe o parto ou corrija a previsão.',
+  'aviso.partoTitulo': 'Parto previsto',
+  'aviso.partoAtrasoDesc':
+    '{rotulo} passou a data prevista de parto há {n} dia.|{rotulo} passou a data prevista de parto há {n} dias.',
+  'aviso.partoDesc':
+    '{rotulo} está próxima do parto ({n} dia).|{rotulo} está próxima do parto ({n} dias).',
+
+  'aviso.segurancaTitulo': 'Período de segurança',
+  'aviso.segurancaDesc':
+    '{rotulo}: em intervalo de segurança, não vender para abate (falta {n} dia).|{rotulo}: em intervalo de segurança, não vender para abate (faltam {n} dias).',
+
+  'aviso.revacinarAtrasoTitulo': 'Revacinação em atraso',
+  'aviso.revacinarTitulo': 'Revacinação a aproximar-se',
+  'aviso.revacinarAtrasoDesc':
+    '{rotulo}: passou cerca de 1 ano da última vacinação. Prazo excedido há {n} dia.|{rotulo}: passou cerca de 1 ano da última vacinação. Prazo excedido há {n} dias.',
+  'aviso.revacinarDesc':
+    '{rotulo}: revacinar em {n} dia (última há {desde} dias).|{rotulo}: revacinar em {n} dias (última há {desde} dias).',
+  'aviso.semVacinacaoTitulo': 'Sem registo de vacinação',
+  'aviso.semVacinacaoDesc':
+    '{rotulo} não tem nenhuma vacinação registada. Registe a última para acompanhar o plano.',
+
+  'aviso.diagRepetirTitulo': 'Diagnóstico por repetir',
+  'aviso.diagTitulo': 'Diagnóstico de gestação em falta',
+  'aviso.diagRepetirDesc':
+    '{rotulo}: o diagnóstico ficou por confirmar há {n} dia. Repetir.|{rotulo}: o diagnóstico ficou por confirmar há {n} dias. Repetir.',
+  'aviso.diagDesc':
+    '{rotulo}: coberta há {n} dia e ainda sem diagnóstico. Confirme se está gestante.|{rotulo}: coberta há {n} dias e ainda sem diagnóstico. Confirme se está gestante.',
+  'aviso.semCobricaoTitulo': 'Sem cobrição desde o parto',
+  'aviso.semCobricaoDesc':
+    '{rotulo}: pariu há {n} dia e não voltou a ser coberta. Cada dia parada adia o parto seguinte.|{rotulo}: pariu há {n} dias e não voltou a ser coberta. Cada dia parada adia o parto seguinte.',
+
+  'aviso.comLote': '{nome} (lote {lote})',
+  'aviso.foraValidadeTitulo': 'Medicamento fora de validade',
+  'aviso.foraValidadeDesc':
+    '{nome}: a validade passou há {n} dia e ainda há existências. Não administrar.|{nome}: a validade passou há {n} dias e ainda há existências. Não administrar.',
+  'aviso.validadeATerminarTitulo': 'Validade a terminar',
+  'aviso.validadeATerminarDesc':
+    '{nome}: expira em {n} dia. Gaste este lote antes dos outros.|{nome}: expira em {n} dias. Gaste este lote antes dos outros.',
+  'aviso.aAcabarTitulo': 'Existências a acabar',
+  'aviso.aAcabarDesc': '{nome}: restam {resta} {unidade} de {total}.',
+
+  /* ---- Fase reprodutiva de uma fêmea (`data/reproducao.ts`) ---- */
+  'fase.gestante': 'Gestante',
+  'fase.gestanteExplicacao': 'Confirmada prenhe.',
+  'fase.coberta': 'Coberta',
+  'fase.cobertaExplicacao': 'Coberta, à espera de diagnóstico.',
+  'fase.duvidosa': 'Por confirmar',
+  'fase.duvidosaExplicacao': 'Diagnóstico inconclusivo: repetir.',
+  'fase.vazia': 'Vazia',
+  'fase.vaziaExplicacao': 'Não está prenhe.',
+  'fase.naoAplicavel': 'Não se aplica',
+  'fase.naoAplicavelExplicacao': 'Não entra na gestão reprodutiva.',
+
+  /* ---- Ecrã da Reprodução ---- */
+  'repro.subtituloVazio': 'O ciclo das fêmeas do efetivo',
+  'repro.femeasEmIdade':
+    '{n} fêmea em idade de reprodução|{n} fêmeas em idade de reprodução',
+  'repro.prestesAParir': 'Prestes a parir',
+  'repro.prestesAParirVazio': 'Nenhuma fêmea com parto previsto para o próximo mês.',
+  'repro.aguardaDiagnostico': 'À espera de diagnóstico',
+  'repro.aguardaDiagnosticoVazio':
+    'Nenhuma fêmea coberta há mais de {dias} dias sem diagnóstico.',
+  'repro.paradas': 'Sem cobrição desde o parto',
+  'repro.paradasVazio': 'Nenhuma fêmea parida há mais de {dias} dias por cobrir.',
+  'repro.vazioTitulo': 'Ainda não há fêmeas para acompanhar',
+  'repro.vazioMensagem':
+    'Assim que houver fêmeas em idade de reprodução no efetivo, esta página mostra quem está prenhe, quem falta diagnosticar e quem está parada desde o parto.',
+  'repro.gestantes': 'Gestantes',
+  'repro.cobertas': 'Cobertas',
+  'repro.vazias': 'Vazias',
+  'repro.taxaGestacao': 'TAXA DE GESTAÇÃO',
+  'repro.intervaloPartos': 'INTERVALO ENTRE PARTOS',
+  'repro.semDoisPartos': 'Ainda sem dois partos registados',
+  'repro.passouPrevisao':
+    'Passou a data prevista há {n} dia|Passou a data prevista há {n} dias',
+  'repro.faltam': 'Falta {n} dia|Faltam {n} dias',
+  'repro.cobertaHa': 'Coberta há {n} dia|Coberta há {n} dias',
+  'repro.diagInconclusivo':
+    'Diagnóstico inconclusivo há {n} dia|Diagnóstico inconclusivo há {n} dias',
+  'repro.pariuHa': 'Pariu há {n} dia|Pariu há {n} dias',
+  'repro.nPartos': '{n} parto|{n} partos',
+  'repro.registar': 'Registar',
+  'repro.registarEm': 'Registar {acao} em {nome}',
+  'repro.registarCobricao': 'Registar cobrição',
+  'repro.cobricao': 'Cobrição',
+  'repro.diagnostico': 'Diagnóstico',
+
+  /* ---- Ecrã das Existências ---- */
+  'existencias.subtitulo': 'Medicamentos e vacinas na arrecadação',
+  'existencias.nLotesRegistados': '{n} lote registado|{n} lotes registados',
+  'existencias.nLotes': '{n} lote|{n} lotes',
+  'existencias.aTratar': 'A tratar',
+  'existencias.disponivel': 'Disponível',
+  'existencias.foraDeUso': 'Fora de uso',
+  'existencias.introTitulo': 'Para que serve este separador',
+  'existencias.intro1':
+    'Dê entrada de cada frasco ou caixa que compra, com o lote e a validade. Uma linha por compra: se comprar outro do mesmo, é outra linha.',
+  'existencias.intro2':
+    'Ao registar uma vacina ou um medicamento na ficha de um animal, escolha o lote de onde saiu e a app desconta sozinha o que gastou.',
+  'existencias.intro3':
+    'A app avisa quando um lote está a acabar e quando a validade se aproxima, para não descobrir isso com o animal já preso no tronco.',
+  'existencias.intro4':
+    'É também o registo de medicamentos que a lei obriga a ter. Do computador, sai em Excel para levar a uma inspeção.',
+  'existencias.exportar': 'Exportar registo de medicamentos',
+  'existencias.registoMedicamentos': 'Registo de medicamentos',
+  'existencias.descarregado': 'Ficheiro descarregado',
+  'existencias.semDescarga': 'Não foi possível descarregar',
+  'existencias.vazioTitulo': 'Arrecadação vazia',
+  'existencias.vazioPodeGerir':
+    'Dê entrada dos medicamentos e vacinas que tem. Depois, ao registar um tratamento, escolhe o lote e a app desconta o que gastou.',
+  'existencias.vazioSemPermissao':
+    'Ainda não há medicamentos registados nesta exploração. Quem a gere é que lhes pode dar entrada.',
+  'existencias.darEntrada': 'Dar entrada',
+  'existencias.foraDeValidade': 'Fora de validade',
+  'existencias.esgotado': 'Esgotado',
+  'existencias.expiraEm': 'Expira em {n} dia|Expira em {n} dias',
+  'existencias.aAcabar': 'A acabar',
+  'existencias.lote': 'Lote {lote}',
+  'existencias.semLote': 'Sem lote',
+  'existencias.validade': 'validade {data}',
+  'existencias.restamDe': 'Restam {resta} de {total}',
+  'existencias.seguranca': 'segurança {n} dia|segurança {n} dias',
+
+  /* ---- Ecrã dos Terrenos ---- */
+  'terrenos.subtitulo': 'Onde o gado anda',
+  'terrenos.contagem': '{n} terreno|{n} terrenos',
+  'terrenos.vazioTitulo': 'Sem terrenos',
+  'terrenos.vazioSemExploracao':
+    'Os terrenos pertencem a uma exploração. Crie primeiro a sua exploração e depois registe aqui as pastagens e os cercados.',
+  'terrenos.vazioPodeCriar':
+    'Registe as pastagens, os cercados e os currais onde o gado anda. Depois pode dizer em que terreno está cada animal e ver, de uma olhadela, quantos estão em cada sítio.',
+  'terrenos.vazioSemPermissao':
+    'Ainda não há terrenos registados nesta exploração. Quem a gere é que os pode registar.',
+  'terrenos.grupoVazio': 'Esta exploração ainda não tem terrenos registados.',
+  'terrenos.novo': 'Novo terreno',
+  'terrenos.novoCurto': 'NOVO',
+  'terrenos.novoEm': 'Novo terreno em {nome}',
+  'terrenos.semTipo': 'Sem tipo',
+  'terrenos.nAnimais': '{n} animal|{n} animais',
+
+  /* ---- Ecrã dos Documentos ---- */
+  'docs.subtitulo': 'Guardar papéis, importar, exportar e as suas notas',
+  'docs.subtituloSemAcesso': 'Importar, exportar e as suas notas',
+  'docs.semAcessoTitulo': 'Documentos reservados à exploração',
+  'docs.semAcessoMensagem':
+    'Importar e exportar o efetivo é de quem tem a exploração a cargo. Pode continuar a consultar os animais e a registar o que fizer a cada um.',
+  'docs.introTitulo': 'Para que serve este separador',
+  'docs.intro1':
+    'Guarde aqui os papéis que recebe: fotografe a fatura da ração, a guia de circulação ou o recibo do veterinário e ficam arrumados por gaveta, na exploração e não no telemóvel.',
+  'docs.intro2':
+    'Se já tem os animais escritos num ficheiro Excel, pode trazê-los todos de uma vez em vez de os escrever um a um.',
+  'docs.intro3':
+    'Daqui também leva os seus dados para fora: a lista de animais em Excel, e relatórios de prazos para imprimir ou entregar.',
+  'docs.intro4':
+    'As notas são suas e só suas: servem para o que não cabe na ficha de um animal, como combinações, telefones ou o que ficou por fazer.',
+  'docs.intro5':
+    'Importar e exportar ficheiros só funciona no computador. Guardar documentos e as notas funcionam também no telemóvel.',
+  'docs.grupoObrigacoes': 'OBRIGAÇÕES',
+  'docs.comunicarSnira': 'Comunicar ao SNIRA',
+  'docs.emDia': 'em dia',
+  'docs.grupoImportar': 'IMPORTAR',
+  'docs.importarAnimais': 'Importar animais de Excel',
+  'docs.grupoExportar': 'EXPORTAR E RELATÓRIOS',
+  'docs.exportarAnimais': 'Exportar animais (Excel)',
+  'docs.exportarEventos': 'Exportar eventos (Excel)',
+  'docs.eventos': 'Eventos',
+  'docs.nRegistos': '{n} registo|{n} registos',
+  'docs.relatorioPrazos': 'Relatório de prazos (imprimir ou PDF)',
+  'docs.soNoComputador': 'Ficheiros são do computador',
+  'docs.soNoComputadorDetalhe':
+    'Exportar para Excel, imprimir e guardar relatórios em PDF faz-se na app de computador ou no site da app: é lá que há onde guardar os ficheiros.',
+  'docs.descarregado': 'Ficheiro descarregado',
+  'docs.semDescarga': 'Não foi possível descarregar',
+
+  /* ---- Notas ---- */
+  'notas.titulo': 'NOTAS',
+  'notas.uma': 'Nota',
+  'notas.vazio':
+    'Ainda não tem notas. Guarde aqui o que precisar de ter à mão: contactos, lembretes, o que quiser.',
+  'notas.nova': 'Nova nota',
+  'notas.editar': 'Editar nota',
+  'notas.guardar': 'Guardar nota',
+  'notas.guardada': 'Nota guardada',
+  'notas.criada': 'Nota criada',
+  'notas.eliminada': 'Nota eliminada',
+  'notas.eliminarTitulo': 'Eliminar nota',
+  'notas.semTitulo': 'Sem título',
+  'notas.tituloOpcional': 'Título (opcional)',
+  'notas.placeholder': 'Escreva a sua nota…',
+  'notas.vaziaTitulo': 'Nota vazia',
+  'notas.vaziaMensagem': 'Escreva alguma coisa antes de guardar.',
+  'notas.semGravacao': 'Não foi possível guardar',
+  'notas.precisamLigacao': 'As notas precisam de ligação para gravar.',
+
+  /* ---- Ecrã de entrada ---- */
+  'login.entrarNaConta': 'Entrar na sua conta',
+  'login.criarConta': 'Criar a sua conta',
+  'login.recuperarAcesso': 'Recuperar o acesso',
+  'login.oQueVeioFazer': 'O que veio cá fazer?',
+  'login.nome': 'Nome',
+  'login.nomePlaceholder': 'O seu nome',
+  'login.email': 'Email',
+  'login.emailPlaceholder': 'nome@exemplo.pt',
+  'login.palavraPasse': 'Palavra-passe',
+  'login.palavraPassePlaceholder': 'Mínimo 6 caracteres',
+  'login.explicacaoRecuperar':
+    'Enviamos-lhe um email com um link para definir uma nova palavra-passe.',
+  'login.esqueciMe': 'Esqueci-me da palavra-passe',
+  'login.recuperadoAviso':
+    'Se existir uma conta com este email, enviámos um link para redefinir a palavra-passe. Verifique a caixa de entrada.',
+  'login.contaCriadaComCodigo':
+    'Conta criada. Enviámos um email de confirmação: confirme, entre, e use o código de convite que lhe deram.',
+  'login.contaCriada': 'Conta criada. Enviámos um email de confirmação: confirme e depois entre.',
+  'login.enviarLink': 'Enviar link de recuperação',
+  'login.criarContaBotao': 'Criar conta',
+  'login.entrar': 'Entrar',
+  'login.voltarAEntrar': 'Voltar a entrar',
+  'login.jaTemConta': 'Já tem conta?',
+  'login.aindaNaoTemConta': 'Ainda não tem conta?',
+
+  /* ---- O que a pessoa vem cá fazer (`data/intencao.ts`) ---- */
+  'intencao.dono': 'Dono de exploração',
+  'intencao.donoDescricao':
+    'Tenho animais meus para registar. A conta é aprovada pelo administrador.',
+  'intencao.trabalhador': 'Trabalhador',
+  'intencao.trabalhadorDescricao':
+    'Trabalho numa exploração de outra pessoa. Entro com um código de convite.',
+  'intencao.veterinario': 'Veterinário',
+  'intencao.veterinarioDescricao':
+    'Presto assistência a explorações. Entro com um código de convite.',
+
+  /* ---- Folha de filtros da lista de animais ---- */
+  'filtro.titulo': 'Filtrar animais',
+  'filtro.fecharFiltros': 'Fechar filtros',
+  'filtro.especie': 'Espécie',
+  'filtro.sexo': 'Sexo',
+  'filtro.femeas': 'Fêmeas',
+  'filtro.machos': 'Machos',
+  'filtro.cobricao': 'Cobrição',
+  'filtro.cobertas': 'Cobertas',
+  'filtro.naoCobertas': 'Não cobertas',
+  'filtro.idade': 'Idade',
+  'filtro.raca': 'Raça',
+  'filtro.cor': 'Cor da pelagem',
+  'filtro.finalidade': 'Finalidade',
+  'filtro.terreno': 'Terreno',
+  'filtro.semTerreno': 'Sem terreno',
+  'filtro.todos': 'Todos',
+  'filtro.outros': 'Outros',
+  'filtro.comAlertas': 'Com alertas',
+  'filtro.comArquivo': 'Com arquivo',
+  'filtro.incluirArquivo': 'Incluir arquivo ({n})',
+  'filtro.nadaParaAfinar': 'Não há mais nada para afinar nesta lista.',
+  'filtro.nenhumCorresponde': 'Nenhum animal corresponde',
+  'filtro.verN': 'Ver {n} animal|Ver {n} animais',
+
+  /* ---- Faixas etárias ---- */
+  'faixa.cria': 'Até 6 meses',
+  'faixa.jovem': '6 meses a 2 anos',
+  'faixa.adulto': '2 a 8 anos',
+  'faixa.velho': 'Mais de 8 anos',
+
+  /* ---- Categorias de alerta (chips do filtro) ---- */
+  'categoria.identificacao': 'Identificação',
+  'categoria.snira': 'SNIRA',
+  'categoria.parto': 'Partos',
+  'categoria.reproducao': 'Reprodução',
+  'categoria.medicamento': 'Medicamentos',
+  'categoria.vacinacao': 'Vacinação',
+  'categoria.existencias': 'Existências',
 } as const;
 
 export type ChaveTexto = keyof typeof pt;
@@ -221,6 +599,15 @@ const en: Record<ChaveTexto, string> = {
   'comum.desligado': 'Off',
   'comum.ligada': 'On',
   'comum.desligada': 'Off',
+  'comum.eliminar': 'Delete',
+  'comum.guardar': 'Save',
+  'comum.cancelar': 'Cancel',
+  'comum.aGuardar': 'Saving…',
+  'comum.aCarregar': 'loading…',
+  'comum.semVoltaAtras': 'Are you sure? This cannot be undone.',
+  'comum.semEliminar': 'Could not delete',
+  'comum.semGravar': 'Could not save',
+  'comum.percebi': 'Got it',
 
   /* ---- Saudação e data ---- */
   'saudacao.manha': 'Good morning',
@@ -286,6 +673,12 @@ const en: Record<ChaveTexto, string> = {
   'animais.semBrinco': 'No tag',
   'animais.porCompletar': 'Incomplete',
 
+  /* ---- Pontos coloridos no retrato do animal ---- */
+  'sinal.legal': 'Tag and SNIRA',
+  'sinal.reproducao': 'Breeding',
+  'sinal.saude': 'Vaccines and medicines',
+  'sinal.falado': 'Needs attention',
+
   /* ---- Idade por extenso ---- */
   'idade.porNascer': 'not born yet',
   'idade.dias': '{n} day|{n} days',
@@ -306,6 +699,9 @@ const en: Record<ChaveTexto, string> = {
   'calendario.voltarAHoje': 'Back to this month',
   'exploracao.animais': 'animals',
   'exploracao.terrenos': 'land',
+  'exploracao.escolher': 'Which farm?',
+  'exploracao.filtroRotulo': 'Farm: {nome}',
+  'exploracao.filtroAjuda': 'Opens the list of your farms',
   'alerta.emAtraso': 'Overdue',
   'alerta.hoje': 'Today',
   'alerta.dias': '{n} day|{n} days',
@@ -318,6 +714,20 @@ const en: Record<ChaveTexto, string> = {
   'alertas.calendario': 'Calendar',
   'alertas.tudoEmDiaTitulo': 'All up to date',
   'alertas.tudoEmDiaMensagem': 'No legal deadlines or pending tasks. Good work!',
+  'alertas.tudoEmDiaNaExploracao': 'No deadlines or pending tasks at {nome}.',
+  'alertas.subtitulo': 'Legal deadlines and tasks to do',
+  'alertas.introTitulo': 'What this tab is for',
+  'alertas.intro1':
+    'The app works out the legal deadlines on its own, from the dates you record: tagging a calf, reporting to SNIRA, the end of a withdrawal period.',
+  'alertas.intro2':
+    'The urgent ones come first, then whatever is due this week. Once you deal with it on the animal, the alert disappears from here.',
+  'alertas.intro3':
+    'Tap a group heading to close it. The Calendar shows the same deadlines day by day, so you know what next week holds.',
+  'alertas.intro4':
+    'Only alerts without a countdown can be dismissed. Anything with a deadline running stays: that is what must not be forgotten.',
+  'alertas.verMais': 'Show {n} more',
+  'alertas.abrirGrupoAjuda': 'Opens this group',
+  'alertas.fecharGrupoAjuda': 'Closes this group',
 
   /* ---- Definições ---- */
   'definicoes.subtitulo': 'How the app works for you',
@@ -338,11 +748,354 @@ const en: Record<ChaveTexto, string> = {
   /* ---- Ecrã do idioma ---- */
   'idioma.titulo': 'Language',
   'idioma.explicacao':
-    "Changes the language of the app's menus and messages. The names you typed — animals, land, notes — stay exactly as you wrote them.",
+    "Changes the language of the app's menus and messages. The names you typed (animals, land, notes) stay exactly as you wrote them.",
   'idioma.aRecarregar': 'The app will reload to change language.',
   'idioma.porAplicar': 'Choice saved. The app will change language next time you open it.',
   'idioma.domínioEmPortugues':
-    'Record types (Parto, Cobrição, Vacinação) and breeds stay in Portuguese: they are what is stored on the animals’ records.',
+    'Record types (Parto, Cobrição, Vacinação) and breeds stay in Portuguese: they are what is stored on the animals records.',
+
+  /* ---- Guia de primeiros passos (Início) ---- */
+  'tutorial.titulo': 'Let us get started',
+  'tutorial.progresso': '{n} of {total} done|{n} of {total} done',
+  'tutorial.esconder': 'Hide',
+  'tutorial.esconderAjuda': 'Hide the getting started guide',
+  'tutorial.comoFunciona':
+    'Follow the steps in order. Tap any of them to see what it is about. You can stop halfway and carry on whenever you like: the app saves everything.',
+  'tutorial.opcionaisTitulo': 'IF YOU WANT, NOT REQUIRED',
+  'tutorial.opcionaisAjuda':
+    'Parts of the app you can turn on now or never. They are also in your Profile.',
+  'tutorial.feito': 'Done',
+  'tutorial.toqueParaSaber': 'Tap to see what it is about',
+
+  'tutorial.exploracaoTitulo': 'Create your farm',
+  'tutorial.exploracaoDescricao': 'It is your farm inside the app. Start here.',
+  'tutorial.exploracaoDetalhe':
+    'The farm is your holding inside the app: it is where the land, the animals and everything you record live. The name you call it by and the town are enough; the holding number and the rest can wait. If you have two holdings, create two: the app keeps their books apart.',
+  'tutorial.exploracaoAcao': 'Create the farm',
+
+  'tutorial.terrenoTitulo': 'Record your land',
+  'tutorial.terrenoDescricao': 'The pastures, the paddocks and the pens where the herd goes.',
+  'tutorial.terrenoDetalhe':
+    'A plot of land is any place the animals can be: a pasture, a paddock, a pen. Give it the name you call it by ("Lower Field") and, if you like, mark it on the satellite map. Once that is done you can say where each animal is and see, at a glance, how many are in each place.',
+  'tutorial.terrenoAcao': 'Add a plot of land',
+
+  'tutorial.animalTitulo': 'Record your first animal',
+  'tutorial.animalDescricao': 'Species, sex and age are enough: the rest can wait.',
+  'tutorial.animalDetalhe':
+    'Start with a single animal, just to see how it goes. You do not need everything to hand: species, sex and date of birth are enough to record it, and the ear tag, the breed, the photo and the land can be added whenever you like. If your herd is already written up in an Excel file, you can import the lot in one go instead of typing it out.',
+  'tutorial.animalAcao': 'Record an animal',
+
+  'tutorial.avisosTitulo': 'Turn on phone reminders',
+  'tutorial.avisosDescricao':
+    'So legal deadlines reach you in time, even with the app closed.',
+  'tutorial.avisosDetalhe':
+    'The app counts the deadlines for you (tagging a calf, reporting to SNIRA, the next vaccination), but it can only call you if you allow it. With reminders on, the message shows up on your phone on the right day, even if you do not open the app that week.',
+  'tutorial.avisosAcao': 'Turn on reminders',
+
+  'tutorial.financasTitulo': 'Turn on money management',
+  'tutorial.financasDescricao': 'Only if you want to record expenses and sales in the app.',
+  'tutorial.financasDetalhe':
+    'With financial management on, you can record what you spend (feed, vet, rent) and what you take in (sales, milk, subsidies), and the app shows you the farm balance and what each animal has cost you. If you leave it off, no money appears anywhere in the app. You can turn it on and off whenever you like: turning it off hides, it does not delete.',
+  'tutorial.financasAcao': 'See money management',
+
+  /* ---- O que se comunica ao SNIRA ---- */
+  'snira.nascimento': 'birth',
+  'snira.morte': 'death',
+  'snira.saida': 'departure',
+  'snira.entrada': 'arrival',
+  'snira.movimentacao': 'movement',
+
+  /* ---- Cada aviso que a app calcula (`data/alertas.ts`) ---- */
+  'aviso.idAtrasoTitulo': 'Tagging overdue',
+  'aviso.idTitulo': 'Still to be tagged',
+  'aviso.idAtrasoDesc':
+    '{rotulo} should already be tagged. The deadline passed {n} day ago.|{rotulo} should already be tagged. The deadline passed {n} days ago.',
+  'aviso.idDesc':
+    '{rotulo} is {idade} old. Tag within {n} day.|{rotulo} is {idade} old. Tag within {n} days.',
+
+  'aviso.sniraAtrasoTitulo': 'SNIRA report overdue',
+  'aviso.sniraNascTitulo': 'Report to SNIRA',
+  'aviso.sniraNascAtrasoDesc':
+    '{rotulo}: birth not yet reported to SNIRA. The deadline passed {n} day ago.|{rotulo}: birth not yet reported to SNIRA. The deadline passed {n} days ago.',
+  'aviso.sniraNascDesc':
+    '{rotulo}: report the birth to SNIRA within {n} day.|{rotulo}: report the birth to SNIRA within {n} days.',
+  'aviso.sniraEvTitulo': 'Report {oQue} to SNIRA',
+  'aviso.sniraEvAtrasoDesc':
+    '{rotulo}: {oQue} on {data} not reported. The deadline passed {n} day ago.|{rotulo}: {oQue} on {data} not reported. The deadline passed {n} days ago.',
+  'aviso.sniraEvDesc':
+    '{rotulo}: report the {oQue} on {data} within {n} day.|{rotulo}: report the {oQue} on {data} within {n} days.',
+
+  'aviso.partoConfirmarTitulo': 'Expected birth to confirm',
+  'aviso.partoConfirmarDesc':
+    '{rotulo}: the expected calving date passed more than {dias} days ago. Record the birth or correct the estimate.',
+  'aviso.partoTitulo': 'Birth expected',
+  'aviso.partoAtrasoDesc':
+    '{rotulo} passed the expected calving date {n} day ago.|{rotulo} passed the expected calving date {n} days ago.',
+  'aviso.partoDesc':
+    '{rotulo} is close to calving ({n} day).|{rotulo} is close to calving ({n} days).',
+
+  'aviso.segurancaTitulo': 'Withdrawal period',
+  'aviso.segurancaDesc':
+    '{rotulo}: within the withdrawal period, do not sell for slaughter ({n} day left).|{rotulo}: within the withdrawal period, do not sell for slaughter ({n} days left).',
+
+  'aviso.revacinarAtrasoTitulo': 'Booster overdue',
+  'aviso.revacinarTitulo': 'Booster coming up',
+  'aviso.revacinarAtrasoDesc':
+    '{rotulo}: about a year has passed since the last vaccination. The deadline passed {n} day ago.|{rotulo}: about a year has passed since the last vaccination. The deadline passed {n} days ago.',
+  'aviso.revacinarDesc':
+    '{rotulo}: booster due in {n} day (last one {desde} days ago).|{rotulo}: booster due in {n} days (last one {desde} days ago).',
+  'aviso.semVacinacaoTitulo': 'No vaccination on record',
+  'aviso.semVacinacaoDesc':
+    '{rotulo} has no vaccination recorded. Record the last one to keep track of the plan.',
+
+  'aviso.diagRepetirTitulo': 'Diagnosis to repeat',
+  'aviso.diagTitulo': 'Pregnancy diagnosis missing',
+  'aviso.diagRepetirDesc':
+    '{rotulo}: the diagnosis has been unconfirmed for {n} day. Repeat it.|{rotulo}: the diagnosis has been unconfirmed for {n} days. Repeat it.',
+  'aviso.diagDesc':
+    '{rotulo}: mated {n} day ago and still without a diagnosis. Check whether she is in calf.|{rotulo}: mated {n} days ago and still without a diagnosis. Check whether she is in calf.',
+  'aviso.semCobricaoTitulo': 'Not mated since calving',
+  'aviso.semCobricaoDesc':
+    '{rotulo}: calved {n} day ago and has not been mated again. Every idle day pushes back the next calving.|{rotulo}: calved {n} days ago and has not been mated again. Every idle day pushes back the next calving.',
+
+  'aviso.comLote': '{nome} (batch {lote})',
+  'aviso.foraValidadeTitulo': 'Medicine past its expiry date',
+  'aviso.foraValidadeDesc':
+    '{nome}: expired {n} day ago and there is still stock left. Do not administer.|{nome}: expired {n} days ago and there is still stock left. Do not administer.',
+  'aviso.validadeATerminarTitulo': 'Expiry date approaching',
+  'aviso.validadeATerminarDesc':
+    '{nome}: expires in {n} day. Use this batch before the others.|{nome}: expires in {n} days. Use this batch before the others.',
+  'aviso.aAcabarTitulo': 'Stock running out',
+  'aviso.aAcabarDesc': '{nome}: {resta} {unidade} left out of {total}.',
+
+  /* ---- Fase reprodutiva de uma fêmea ---- */
+  'fase.gestante': 'In calf',
+  'fase.gestanteExplicacao': 'Pregnancy confirmed.',
+  'fase.coberta': 'Mated',
+  'fase.cobertaExplicacao': 'Mated, waiting on a diagnosis.',
+  'fase.duvidosa': 'Unconfirmed',
+  'fase.duvidosaExplicacao': 'Inconclusive diagnosis: repeat it.',
+  'fase.vazia': 'Empty',
+  'fase.vaziaExplicacao': 'Not pregnant.',
+  'fase.naoAplicavel': 'Not applicable',
+  'fase.naoAplicavelExplicacao': 'Not part of breeding management.',
+
+  /* ---- Ecrã da Reprodução ---- */
+  'repro.subtituloVazio': 'The cycle of the females in your herd',
+  'repro.femeasEmIdade': '{n} female of breeding age|{n} females of breeding age',
+  'repro.prestesAParir': 'About to calve',
+  'repro.prestesAParirVazio': 'No female is due to calve in the coming month.',
+  'repro.aguardaDiagnostico': 'Waiting on a diagnosis',
+  'repro.aguardaDiagnosticoVazio':
+    'No female mated more than {dias} days ago is still without a diagnosis.',
+  'repro.paradas': 'Not mated since calving',
+  'repro.paradasVazio': 'No female that calved more than {dias} days ago is still unmated.',
+  'repro.vazioTitulo': 'No females to follow yet',
+  'repro.vazioMensagem':
+    'As soon as there are females of breeding age in the herd, this page shows who is in calf, who still needs a diagnosis and who has been idle since calving.',
+  'repro.gestantes': 'In calf',
+  'repro.cobertas': 'Mated',
+  'repro.vazias': 'Empty',
+  'repro.taxaGestacao': 'PREGNANCY RATE',
+  'repro.intervaloPartos': 'CALVING INTERVAL',
+  'repro.semDoisPartos': 'Not two calvings on record yet',
+  'repro.passouPrevisao': 'Due date passed {n} day ago|Due date passed {n} days ago',
+  'repro.faltam': '{n} day to go|{n} days to go',
+  'repro.cobertaHa': 'Mated {n} day ago|Mated {n} days ago',
+  'repro.diagInconclusivo':
+    'Diagnosis inconclusive for {n} day|Diagnosis inconclusive for {n} days',
+  'repro.pariuHa': 'Calved {n} day ago|Calved {n} days ago',
+  'repro.nPartos': '{n} calving|{n} calvings',
+  'repro.registar': 'Record',
+  'repro.registarEm': 'Record {acao} for {nome}',
+  'repro.registarCobricao': 'Record a mating',
+  'repro.cobricao': 'Mating',
+  'repro.diagnostico': 'Diagnosis',
+
+  /* ---- Ecrã das Existências ---- */
+  'existencias.subtitulo': 'Medicines and vaccines in the store',
+  'existencias.nLotesRegistados': '{n} batch recorded|{n} batches recorded',
+  'existencias.nLotes': '{n} batch|{n} batches',
+  'existencias.aTratar': 'Needs attention',
+  'existencias.disponivel': 'Available',
+  'existencias.foraDeUso': 'Out of use',
+  'existencias.introTitulo': 'What this tab is for',
+  'existencias.intro1':
+    'Record every bottle or box you buy, with its batch number and expiry date. One line per purchase: buy another of the same and that is another line.',
+  'existencias.intro2':
+    'When you record a vaccine or a medicine on an animal, pick the batch it came from and the app takes off what you used.',
+  'existencias.intro3':
+    'The app warns you when a batch is running low and when the expiry date is coming up, so you do not find out with the animal already in the crush.',
+  'existencias.intro4':
+    'It is also the medicine register the law requires you to keep. From a computer it exports to Excel to take to an inspection.',
+  'existencias.exportar': 'Export the medicine register',
+  'existencias.registoMedicamentos': 'Medicine register',
+  'existencias.descarregado': 'File downloaded',
+  'existencias.semDescarga': 'Could not download',
+  'existencias.vazioTitulo': 'The store is empty',
+  'existencias.vazioPodeGerir':
+    'Record the medicines and vaccines you have. Then, when you record a treatment, you pick the batch and the app takes off what you used.',
+  'existencias.vazioSemPermissao':
+    'No medicines recorded on this farm yet. Only whoever runs it can add them.',
+  'existencias.darEntrada': 'Add stock',
+  'existencias.foraDeValidade': 'Past its expiry date',
+  'existencias.esgotado': 'Used up',
+  'existencias.expiraEm': 'Expires in {n} day|Expires in {n} days',
+  'existencias.aAcabar': 'Running out',
+  'existencias.lote': 'Batch {lote}',
+  'existencias.semLote': 'No batch number',
+  'existencias.validade': 'expires {data}',
+  'existencias.restamDe': '{resta} left out of {total}',
+  'existencias.seguranca': 'withdrawal {n} day|withdrawal {n} days',
+
+  /* ---- Ecrã dos Terrenos ---- */
+  'terrenos.subtitulo': 'Where the herd goes',
+  'terrenos.contagem': '{n} plot|{n} plots',
+  'terrenos.vazioTitulo': 'No land recorded',
+  'terrenos.vazioSemExploracao':
+    'Land belongs to a farm. Create your farm first, then record the pastures and paddocks here.',
+  'terrenos.vazioPodeCriar':
+    'Record the pastures, the paddocks and the pens where the herd goes. Then you can say where each animal is and see, at a glance, how many are in each place.',
+  'terrenos.vazioSemPermissao':
+    'No land recorded on this farm yet. Only whoever runs it can add it.',
+  'terrenos.grupoVazio': 'This farm has no land recorded yet.',
+  'terrenos.novo': 'New plot',
+  'terrenos.novoCurto': 'NEW',
+  'terrenos.novoEm': 'New plot at {nome}',
+  'terrenos.semTipo': 'No type',
+  'terrenos.nAnimais': '{n} animal|{n} animals',
+
+  /* ---- Ecrã dos Documentos ---- */
+  'docs.subtitulo': 'Keep paperwork, import, export and your notes',
+  'docs.subtituloSemAcesso': 'Import, export and your notes',
+  'docs.semAcessoTitulo': 'Documents are for whoever runs the farm',
+  'docs.semAcessoMensagem':
+    'Importing and exporting the herd is for whoever runs the farm. You can still look at the animals and record what you do to each one.',
+  'docs.introTitulo': 'What this tab is for',
+  'docs.intro1':
+    'Keep the paperwork you receive here: photograph the feed invoice, the movement document or the vet receipt and they are filed by drawer, on the farm rather than on your phone.',
+  'docs.intro2':
+    'If your animals are already written up in an Excel file, you can bring them all in at once instead of typing them one by one.',
+  'docs.intro3':
+    'This is also where your data goes out: the animal list in Excel, and deadline reports to print or hand in.',
+  'docs.intro4':
+    'The notes are yours alone: they are for whatever does not fit on an animal record, such as arrangements, phone numbers or what is still to be done.',
+  'docs.intro5':
+    'Importing and exporting files only works on a computer. Keeping documents and notes works on the phone too.',
+  'docs.grupoObrigacoes': 'OBLIGATIONS',
+  'docs.comunicarSnira': 'Report to SNIRA',
+  'docs.emDia': 'up to date',
+  'docs.grupoImportar': 'IMPORT',
+  'docs.importarAnimais': 'Import animals from Excel',
+  'docs.grupoExportar': 'EXPORT AND REPORTS',
+  'docs.exportarAnimais': 'Export animals (Excel)',
+  'docs.exportarEventos': 'Export records (Excel)',
+  'docs.eventos': 'Records',
+  'docs.nRegistos': '{n} record|{n} records',
+  'docs.relatorioPrazos': 'Deadline report (print or PDF)',
+  'docs.soNoComputador': 'Files are a computer job',
+  'docs.soNoComputadorDetalhe':
+    'Exporting to Excel, printing and saving PDF reports is done in the desktop app or on the app website: that is where there is somewhere to put the files.',
+  'docs.descarregado': 'File downloaded',
+  'docs.semDescarga': 'Could not download',
+
+  /* ---- Notas ---- */
+  'notas.titulo': 'NOTES',
+  'notas.uma': 'Note',
+  'notas.vazio':
+    'No notes yet. Keep whatever you need to hand here: contacts, reminders, anything you like.',
+  'notas.nova': 'New note',
+  'notas.editar': 'Edit note',
+  'notas.guardar': 'Save note',
+  'notas.guardada': 'Note saved',
+  'notas.criada': 'Note created',
+  'notas.eliminada': 'Note deleted',
+  'notas.eliminarTitulo': 'Delete note',
+  'notas.semTitulo': 'Untitled',
+  'notas.tituloOpcional': 'Title (optional)',
+  'notas.placeholder': 'Write your note…',
+  'notas.vaziaTitulo': 'Empty note',
+  'notas.vaziaMensagem': 'Write something before saving.',
+  'notas.semGravacao': 'Could not save',
+  'notas.precisamLigacao': 'Notes need a connection to be saved.',
+
+  /* ---- Ecrã de entrada ---- */
+  'login.entrarNaConta': 'Sign in to your account',
+  'login.criarConta': 'Create your account',
+  'login.recuperarAcesso': 'Recover your access',
+  'login.oQueVeioFazer': 'What brings you here?',
+  'login.nome': 'Name',
+  'login.nomePlaceholder': 'Your name',
+  'login.email': 'Email address',
+  'login.emailPlaceholder': 'name@example.com',
+  'login.palavraPasse': 'Password',
+  'login.palavraPassePlaceholder': 'At least 6 characters',
+  'login.explicacaoRecuperar': 'We will email you a link to set a new password.',
+  'login.esqueciMe': 'I forgot my password',
+  'login.recuperadoAviso':
+    'If an account exists with this email, we have sent a link to reset the password. Check your inbox.',
+  'login.contaCriadaComCodigo':
+    'Account created. We have sent a confirmation email: confirm it, sign in, and use the invite code you were given.',
+  'login.contaCriada':
+    'Account created. We have sent a confirmation email: confirm it and then sign in.',
+  'login.enviarLink': 'Send recovery link',
+  'login.criarContaBotao': 'Create account',
+  'login.entrar': 'Sign in',
+  'login.voltarAEntrar': 'Back to signing in',
+  'login.jaTemConta': 'Already have an account?',
+  'login.aindaNaoTemConta': 'No account yet?',
+
+  /* ---- O que a pessoa vem cá fazer (`data/intencao.ts`) ---- */
+  'intencao.dono': 'Farm owner',
+  'intencao.donoDescricao':
+    'I have animals of my own to record. The account is approved by the administrator.',
+  'intencao.trabalhador': 'Farm worker',
+  'intencao.trabalhadorDescricao':
+    "I work on someone else's farm. I get in with an invite code.",
+  'intencao.veterinario': 'Vet',
+  'intencao.veterinarioDescricao': 'I attend farms. I get in with an invite code.',
+
+  /* ---- Folha de filtros da lista de animais ---- */
+  'filtro.titulo': 'Filter animals',
+  'filtro.fecharFiltros': 'Close filters',
+  'filtro.especie': 'Species',
+  'filtro.sexo': 'Sex',
+  'filtro.femeas': 'Females',
+  'filtro.machos': 'Males',
+  'filtro.cobricao': 'Mating',
+  'filtro.cobertas': 'Mated',
+  'filtro.naoCobertas': 'Not mated',
+  'filtro.idade': 'Age',
+  'filtro.raca': 'Breed',
+  'filtro.cor': 'Coat colour',
+  'filtro.finalidade': 'Purpose',
+  'filtro.terreno': 'Land',
+  'filtro.semTerreno': 'No land',
+  'filtro.todos': 'All',
+  'filtro.outros': 'Other',
+  'filtro.comAlertas': 'With alerts',
+  'filtro.comArquivo': 'With archive',
+  'filtro.incluirArquivo': 'Include archive ({n})',
+  'filtro.nadaParaAfinar': 'There is nothing more to narrow down in this list.',
+  'filtro.nenhumCorresponde': 'No animal matches',
+  'filtro.verN': 'See {n} animal|See {n} animals',
+
+  /* ---- Faixas etárias ---- */
+  'faixa.cria': 'Up to 6 months',
+  'faixa.jovem': '6 months to 2 years',
+  'faixa.adulto': '2 to 8 years',
+  'faixa.velho': 'Over 8 years',
+
+  /* ---- Categorias de alerta (chips do filtro) ---- */
+  'categoria.identificacao': 'Tagging',
+  // "SNIRA" é o nome do sistema e não se traduz; o teste de completude proíbe
+  // duas colunas iguais, e a palavra a mais diz o que a categoria é.
+  'categoria.snira': 'SNIRA reports',
+  'categoria.parto': 'Births',
+  'categoria.reproducao': 'Breeding',
+  'categoria.medicamento': 'Medicines',
+  'categoria.vacinacao': 'Vaccination',
+  'categoria.existencias': 'Stock',
 };
 
 const DICIONARIOS: Record<Idioma, Record<ChaveTexto, string>> = { pt, en };

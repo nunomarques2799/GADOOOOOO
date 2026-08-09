@@ -19,6 +19,7 @@
  */
 
 import type { IconName } from '@/components/ui';
+import { t } from '@/i18n';
 
 export type Intencao = 'dono' | 'trabalhador' | 'veterinario';
 
@@ -32,35 +33,49 @@ export type IntencaoMeta = {
   precisaCodigo: boolean;
 };
 
-export const INTENCOES: readonly IntencaoMeta[] = [
-  {
-    id: 'dono',
-    rotulo: 'Dono de exploração',
-    icone: 'barn',
-    descricao: 'Tenho animais meus para registar. A conta é aprovada pelo administrador.',
-    precisaCodigo: false,
-  },
-  {
-    id: 'trabalhador',
-    rotulo: 'Trabalhador',
-    icone: 'account-hard-hat',
-    descricao: 'Trabalho numa exploração de outra pessoa. Entro com um código de convite.',
-    precisaCodigo: true,
-  },
-  {
-    id: 'veterinario',
-    rotulo: 'Veterinário',
-    icone: 'medical-bag',
-    descricao: 'Presto assistência a explorações. Entro com um código de convite.',
-    precisaCodigo: true,
-  },
-] as const;
+/**
+ * As três respostas a "o que veio cá fazer?".
+ *
+ * FUNÇÃO e não constante: o rótulo e a descrição passam pelo `t()`, e uma
+ * tabela criada no import ficava congelada na língua de arranque (a mesma
+ * armadilha das cores, ver AGENTS.md). O `id` e o `precisaCodigo` é que não
+ * mudam: são o que se grava e o que decide o caminho da conta.
+ */
+export function intencoes(): readonly IntencaoMeta[] {
+  return [
+    {
+      id: 'dono',
+      rotulo: t('intencao.dono'),
+      icone: 'barn',
+      descricao: t('intencao.donoDescricao'),
+      precisaCodigo: false,
+    },
+    {
+      id: 'trabalhador',
+      rotulo: t('intencao.trabalhador'),
+      icone: 'account-hard-hat',
+      descricao: t('intencao.trabalhadorDescricao'),
+      precisaCodigo: true,
+    },
+    {
+      id: 'veterinario',
+      rotulo: t('intencao.veterinario'),
+      icone: 'medical-bag',
+      descricao: t('intencao.veterinarioDescricao'),
+      precisaCodigo: true,
+    },
+  ];
+}
+
+/** Os ids conhecidos, sem passar por texto nenhum. */
+const IDS_INTENCAO = ['dono', 'trabalhador', 'veterinario'] as const;
 
 export function intencaoMeta(id: Intencao): IntencaoMeta {
-  // O `find` nunca falha para um `Intencao` válido; o `?? INTENCOES[0]` existe
-  // para o tipo de retorno não ficar opcional e obrigar cada sítio a tratar um
-  // caso que não acontece.
-  return INTENCOES.find((i) => i.id === id) ?? INTENCOES[0];
+  // O `find` nunca falha para um `Intencao` válido; o `?? [0]` existe para o
+  // tipo de retorno não ficar opcional e obrigar cada sítio a tratar um caso
+  // que não acontece.
+  const todas = intencoes();
+  return todas.find((i) => i.id === id) ?? todas[0];
 }
 
 /**
@@ -73,7 +88,7 @@ export function intencaoMeta(id: Intencao): IntencaoMeta {
 export function lerIntencao(metadata: unknown): Intencao | undefined {
   if (!metadata || typeof metadata !== 'object') return undefined;
   const valor = (metadata as Record<string, unknown>).intencao;
-  return INTENCOES.some((i) => i.id === valor) ? (valor as Intencao) : undefined;
+  return IDS_INTENCAO.some((i) => i === valor) ? (valor as Intencao) : undefined;
 }
 
 /** true se esta pessoa entra por código de convite, e não por aprovação. */

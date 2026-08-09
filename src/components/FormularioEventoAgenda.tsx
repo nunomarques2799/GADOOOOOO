@@ -222,7 +222,7 @@ export function FormularioEventoAgenda({
                 <Text variant="secondary" color={colors.textSecondary}>
                   {comHora
                     ? 'O calendário mostra a hora ao lado do evento.'
-                    : 'Sem hora marcada — aparece no topo do dia.'}
+                    : 'Sem hora marcada. Aparece no topo do dia.'}
                 </Text>
               </View>
               <Switch

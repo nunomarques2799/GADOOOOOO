@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Avatar, Badge, Card, Chip, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
+import { SeletorExploracao } from '@/components/SeletorExploracao';
+import { Avatar, Badge, Card, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
 import { acessoTerminou } from '@/data/acessoTemporario';
 import { formatDataHora } from '@/data/helpers';
 import {
@@ -187,22 +188,11 @@ export default function HistoricoEquipaScreen() {
           ) : null}
 
           {minhas.length > 1 ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-              <Chip
-                label="Todas"
-                icon="barn"
-                selected={exploracaoId === undefined}
-                onPress={() => setExploracaoId(undefined)}
-              />
-              {minhas.map((e) => (
-                <Chip
-                  key={e.id}
-                  label={e.nome}
-                  selected={exploracaoId === e.id}
-                  onPress={() => setExploracaoId(exploracaoId === e.id ? undefined : e.id)}
-                />
-              ))}
-            </View>
+            <SeletorExploracao
+              exploracoes={minhas}
+              valor={exploracaoId}
+              onEscolher={setExploracaoId}
+            />
           ) : null}
 
           {entradas.length > 0 ? (

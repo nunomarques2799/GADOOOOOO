@@ -194,6 +194,10 @@ describe('ecrã Trabalhadores', () => {
 
   it('filtrar por exploração deixa só quem lá entra', async () => {
     const r = await abrir();
+    // A escolha da exploração deixou de ser uma fila de pastilhas e passou a
+    // ser um botão que abre a folha com as quintas lá dentro — daí os dois
+    // toques (ver `SeletorExploracao`).
+    tocar(r, 'Exploração: Todas');
     tocar(r, 'Herdade das Corgas');
     const t = textos(r);
     expect(t).toContain('Ana Pastora');

@@ -99,8 +99,8 @@ export default function AjudaScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <Icon name="bug-outline" size="lg" color={colors.warning} />
                 <Text variant="body" style={{ flex: 1 }}>
-                  Se a app fez algo que não devia — fechou-se, não gravou, mostrou
-                  um erro — conte-nos o que estava a fazer. A versão da app e o
+                  Se a app fez algo que não devia (fechou-se, não gravou, mostrou
+                  um erro), conte-nos o que estava a fazer. A versão da app e o
                   aparelho seguem sozinhos.
                 </Text>
               </View>
@@ -315,6 +315,6 @@ const PERGUNTAS = [
   {
     titulo: 'Como termino a sessão ou apago a conta?',
     resposta:
-      'Ambos em Perfil, no fim do ecrã. Terminar sessão volta ao ecrã de entrada e não apaga nada do servidor. Apagar a minha conta abre um ecrã à parte que mostra o que vai desaparecer — se for dono, a exploração vai com a conta, com os animais e o histórico lá dentro — e só avança depois de escrever APAGAR. É definitivo: nem quem gere a aplicação consegue recuperar.',
+      'Ambos em Perfil, no fim do ecrã. Terminar sessão volta ao ecrã de entrada e não apaga nada do servidor. Apagar a minha conta abre um ecrã à parte que mostra o que vai desaparecer (se for dono, a exploração vai com a conta, com os animais e o histórico lá dentro) e só avança depois de escrever APAGAR. É definitivo: nem quem gere a aplicação consegue recuperar.',
   },
 ];

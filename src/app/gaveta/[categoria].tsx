@@ -157,7 +157,7 @@ export default function GavetaScreen() {
             title="Gaveta vazia"
             message={
               podeGuardar
-                ? 'Fotografe um papel e ele fica aqui — na exploração, e não no telemóvel.'
+                ? 'Fotografe um papel e ele fica aqui, na exploração e não no telemóvel.'
                 : 'Ainda não há nada guardado nesta gaveta.'
             }
           />

@@ -23,7 +23,7 @@ export default function EditarEventoAgendaScreen() {
           message={
             aCarregar
               ? 'A ir buscar o calendário.'
-              : 'Este evento já não existe — pode ter sido apagado por quem o marcou.'
+              : 'Este evento já não existe. Pode ter sido apagado por quem o marcou.'
           }
         />
       </View>
