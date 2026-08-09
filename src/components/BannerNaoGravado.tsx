@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { Button, Card, Icon, Text } from '@/components/ui';
 import { useGado } from '@/data/store';
+import { t } from '@/i18n';
 import { colors, spacing } from '@/theme';
 
 /**
@@ -48,13 +49,13 @@ export function BannerNaoGravado() {
           </Text>
           <Text variant="secondary" color={colors.textSecondary}>
             {conflitos === falhadas.length
-              ? 'Outra pessoa mexeu nos mesmos registos primeiro. Veja o que está em falta e volte a registar o que ainda fizer sentido.'
-              : 'O servidor não as aceitou. Veja quais foram: o que se registou nelas não está guardado.'}
+              ? t('banner.conflitoTexto')
+              : t('banner.recusadoTexto')}
           </Text>
         </View>
       </View>
       <Button
-        label="Ver o que falhou"
+        label={t('banner.verOQueFalhou')}
         icon="clipboard-alert-outline"
         variant="secondary"
         onPress={() => router.push('/conta/sincronizacao')}

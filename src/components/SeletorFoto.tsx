@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { Button, Icon, type IconName, Text } from '@/components/ui';
 import { avisar } from '@/data/avisos';
 import { escolherDaGaleria, suportaCamera, tirarFoto, type ResultadoFoto } from '@/data/foto';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /**
@@ -53,13 +54,13 @@ export function SeletorFoto({
       if (r.estado === 'ok') onMudar(r.dataUri);
       else if (r.estado === 'sem-permissao') {
         avisar(
-          'Sem autorização',
-          'O telemóvel está a bloquear o acesso à câmara ou às fotografias. Pode autorizá-lo nas definições do sistema.',
+          t('foto.semAutorizacao'),
+          t('foto.semAutorizacaoTexto'),
         );
       }
       // 'cancelado' — o criador fechou o seletor; não se diz nada.
     } catch (e) {
-      avisar('Não foi possível usar a fotografia', e instanceof Error ? e.message : String(e));
+      avisar(t('foto.semUsar'), e instanceof Error ? e.message : String(e));
     } finally {
       setAProcessar(false);
     }
@@ -127,7 +128,7 @@ export function SeletorFoto({
       <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
         {suportaCamera ? (
           <Button
-            label="Tirar foto"
+            label={t('foto.tirarFoto')}
             icon="camera"
             variant="secondary"
             fullWidth={false}

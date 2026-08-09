@@ -1275,6 +1275,76 @@ const pt = {
   'histMovimento.soFinancas':
     'Só despesas e receitas lançadas em Finanças. O custo de uma vacina ou de um medicamento fica no histórico do animal, junto do tratamento.',
   'histMovimento.semAutor': 'Sem registo de quem o lançou',
+
+  /* ---- Faixas de aviso no topo dos ecrãs ---- */
+  'banner.acessoTerminouTitulo': 'O seu acesso terminou',
+  'banner.acessoTerminouTexto':
+    'O tempo de acesso à exploração acabou, por isso já não vê os animais nem os registos dela. A sua conta continua criada: peça um código novo a quem o convidou para voltar a entrar.',
+  'banner.acessoAcabaTexto':
+    'Depois disso deixa de ver esta exploração. Termine o que tiver em mãos, ou peça mais tempo a quem o convidou.',
+  'banner.jaDescarregada': 'Já está descarregada. A app fecha e volta a abrir sozinha.',
+  'banner.dispensar': 'Dispensar',
+  'banner.atualizarAgora': 'Atualizar agora',
+  'banner.aAtualizar': 'A atualizar…',
+  'banner.conflitoTexto':
+    'Outra pessoa mexeu nos mesmos registos primeiro. Veja o que está em falta e volte a registar o que ainda fizer sentido.',
+  'banner.recusadoTexto':
+    'O servidor não as aceitou. Veja quais foram: o que se registou nelas não está guardado.',
+  'banner.verOQueFalhou': 'Ver o que falhou',
+  'banner.suspensaPropria':
+    'Pode ver e exportar tudo o que já registou, mas de momento não é possível gravar alterações. Fale connosco para reativar a conta.',
+  'banner.suspensaDoDono':
+    'Pode consultar os dados desta exploração, mas não gravar alterações. A conta do responsável pela exploração está suspensa.',
+
+  /* ---- Nova palavra-passe ---- */
+  'novaPalavra.titulo': 'Nova palavra-passe',
+  'novaPalavra.subtitulo': 'Escolha uma nova palavra-passe',
+  'novaPalavra.confirmar': 'Confirmar palavra-passe',
+  'novaPalavra.repita': 'Repita a palavra-passe',
+  'novaPalavra.curta': 'A palavra-passe deve ter pelo menos 6 caracteres.',
+  'novaPalavra.naoCoincidem': 'As palavras-passe não coincidem.',
+  'novaPalavra.guardar': 'Guardar nova palavra-passe',
+
+  /* ---- Ecrã de arranque ---- */
+  'carregar.aAbrir': 'A abrir a Terrabovina…',
+  'carregar.aDemorar':
+    'Está a demorar mais do que o costume. Pode ser falta de rede, ou a sessão ter caducado e ser preciso entrar outra vez.',
+  'carregar.sairEEntrar': 'Terminar sessão e entrar de novo',
+
+  /* ---- Escolher uma fotografia ---- */
+  'foto.semAutorizacao': 'Sem autorização',
+  'foto.semAutorizacaoTexto':
+    'O telemóvel está a bloquear o acesso à câmara ou às fotografias. Pode autorizá-lo nas definições do sistema.',
+  'foto.semUsar': 'Não foi possível usar a fotografia',
+  'foto.tirarFoto': 'Tirar foto',
+
+  /* ---- Conta por aprovar / por código ---- */
+  'pendente.bemVindo': 'Bem-vindo',
+  'pendente.faltaCodigo': 'Falta o código',
+  'pendente.aAguardar': 'A aguardar aprovação',
+  'pendente.contaAtiva': 'A sua conta está ativa',
+  'pendente.contaPendente': 'A sua conta está pendente',
+  'pendente.pecaCodigo':
+    'Peça o código de convite a quem gere a exploração onde vai trabalhar e escreva-o abaixo.',
+  'pendente.podeCriar':
+    'Pode criar a sua primeira exploração ou associar-se a uma através de um código de convite.',
+  'pendente.semEsperar':
+    'Não tem de esperar por ninguém: com o código de convite de uma exploração entra de imediato. Peça-o a quem a gere.',
+  'pendente.emAnalise':
+    'O administrador da plataforma vai analisar o pedido de acesso. Se tiver recebido um código de convite de um cliente, pode usá-lo já para entrar.',
+  'pendente.conta': 'Conta: {email}',
+  'pendente.criarDescricao': 'Registar a minha exploração e começar a lançar animais.',
+  'pendente.tenhoCodigo': 'Tenho um código',
+  'pendente.tenhoCodigoDescricao': 'Entrar na exploração de outra pessoa com um código de convite.',
+  'pendente.criarEContinuar': 'Criar e continuar',
+  'pendente.codigoConvite': 'Código de convite',
+  'pendente.exCodigo': 'Ex: A7BXK2M9',
+  'pendente.pecaAoResponsavel': 'Peça o código ao responsável pela exploração.',
+  'pendente.entrarComCodigo': 'Entrar com este código',
+  'pendente.verificarNovamente': 'Verificar novamente',
+  'pendente.codigoInvalido': 'Código inválido.',
+  'pendente.codigoUsado': 'Este código já foi utilizado.',
+  'pendente.codigoExpirado': 'Este código expirou. Peça um novo ao cliente.',
 } as const;
 
 export type ChaveTexto = keyof typeof pt;
@@ -2518,6 +2588,75 @@ const en: Record<ChaveTexto, string> = {
   'histMovimento.soFinancas':
     'Only expenses and income entered under Finances. The cost of a vaccine or a medicine stays in the animal history, next to the treatment.',
   'histMovimento.semAutor': 'No record of who entered it',
+
+  /* ---- Faixas de aviso no topo dos ecrãs ---- */
+  'banner.acessoTerminouTitulo': 'Your access has ended',
+  'banner.acessoTerminouTexto':
+    'Your time on the farm is up, so you no longer see its animals or its records. Your account is still there: ask whoever invited you for a new code to get back in.',
+  'banner.acessoAcabaTexto':
+    'After that you stop seeing this farm. Finish what you have in hand, or ask whoever invited you for more time.',
+  'banner.jaDescarregada': 'It is already downloaded. The app closes and reopens on its own.',
+  'banner.dispensar': 'Dismiss',
+  'banner.atualizarAgora': 'Update now',
+  'banner.aAtualizar': 'Updating…',
+  'banner.conflitoTexto':
+    'Someone else touched the same records first. See what is missing and record again whatever still makes sense.',
+  'banner.recusadoTexto':
+    'The server did not accept them. See which ones: what was recorded in them is not saved.',
+  'banner.verOQueFalhou': 'See what failed',
+  'banner.suspensaPropria':
+    'You can see and export everything you have recorded, but for now changes cannot be saved. Talk to us to reactivate the account.',
+  'banner.suspensaDoDono':
+    'You can look at this farm data, but not save changes. The account of whoever answers for the farm is suspended.',
+
+  /* ---- Nova palavra-passe ---- */
+  'novaPalavra.titulo': 'New password',
+  'novaPalavra.subtitulo': 'Choose a new password',
+  'novaPalavra.confirmar': 'Confirm password',
+  'novaPalavra.repita': 'Type the password again',
+  'novaPalavra.curta': 'The password must have at least 6 characters.',
+  'novaPalavra.naoCoincidem': 'The passwords do not match.',
+  'novaPalavra.guardar': 'Save the new password',
+
+  /* ---- Ecrã de arranque ---- */
+  'carregar.aAbrir': 'Opening Terrabovina…',
+  'carregar.aDemorar':
+    'This is taking longer than usual. It may be the connection, or your session may have expired and need signing in again.',
+  'carregar.sairEEntrar': 'Sign out and sign in again',
+
+  /* ---- Escolher uma fotografia ---- */
+  'foto.semAutorizacao': 'No permission',
+  'foto.semAutorizacaoTexto':
+    'The phone is blocking access to the camera or the photos. You can allow it in the system settings.',
+  'foto.semUsar': 'Could not use the photo',
+  'foto.tirarFoto': 'Take a photo',
+
+  /* ---- Conta por aprovar / por código ---- */
+  'pendente.bemVindo': 'Welcome',
+  'pendente.faltaCodigo': 'The code is missing',
+  'pendente.aAguardar': 'Waiting for approval',
+  'pendente.contaAtiva': 'Your account is active',
+  'pendente.contaPendente': 'Your account is pending',
+  'pendente.pecaCodigo':
+    'Ask whoever runs the farm you will work on for the invite code, and type it below.',
+  'pendente.podeCriar': 'You can create your first farm or join one with an invite code.',
+  'pendente.semEsperar':
+    'You do not have to wait for anyone: with a farm invite code you get in right away. Ask whoever runs it.',
+  'pendente.emAnalise':
+    'The platform administrator will look at your request. If you have been given an invite code by a client, you can use it right now to get in.',
+  'pendente.conta': 'Account: {email}',
+  'pendente.criarDescricao': 'Record my farm and start adding animals.',
+  'pendente.tenhoCodigo': 'I have a code',
+  'pendente.tenhoCodigoDescricao': "Join someone else's farm with an invite code.",
+  'pendente.criarEContinuar': 'Create and carry on',
+  'pendente.codigoConvite': 'Invite code',
+  'pendente.exCodigo': 'e.g. A7BXK2M9',
+  'pendente.pecaAoResponsavel': 'Ask whoever answers for the farm for the code.',
+  'pendente.entrarComCodigo': 'Get in with this code',
+  'pendente.verificarNovamente': 'Check again',
+  'pendente.codigoInvalido': 'Invalid code.',
+  'pendente.codigoUsado': 'This code has already been used.',
+  'pendente.codigoExpirado': 'This code has expired. Ask the client for a new one.',
 };
 
 const DICIONARIOS: Record<Idioma, Record<ChaveTexto, string>> = { pt, en };
