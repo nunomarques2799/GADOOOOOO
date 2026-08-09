@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { FormularioMovimento } from '@/components/FormularioMovimento';
 import { EmptyState, Header, Screen } from '@/components/ui';
 import { useGado } from '@/data/store';
+import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 /**
@@ -23,12 +24,12 @@ export default function EditarMovimentoScreen() {
   if (!movimento) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Movimento" />
+        <Header title={t('formMovimento.movimento')} />
         <Screen>
           <EmptyState
             icon="cash-remove"
-            title="Movimento não encontrado"
-            message="Este lançamento já não existe, ou foi apagado noutro aparelho."
+            title={t('formMovimento.naoEncontrado')}
+            message={t('formMovimento.naoEncontradoMensagem')}
           />
         </Screen>
       </View>

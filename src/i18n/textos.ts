@@ -1127,6 +1127,66 @@ const pt = {
   'editarConta.guardadas': 'As alterações foram guardadas.',
   'editarConta.modoOffline':
     'Esta app está em modo offline. Para alterar os dados da conta é preciso ligação.',
+
+  /* ---- Ficha de um terreno ---- */
+  'detTerreno.area': 'Área',
+  'detTerreno.semArea': 'Sem área',
+  'detTerreno.comoChegar': 'Como chegar ao terreno:',
+  'detTerreno.semLocalizacao': 'Sem localização no mapa. Edite o terreno para marcar onde fica.',
+  'detTerreno.semAnimais': 'Ainda não há animais neste terreno. Associe os que estão aqui.',
+
+  /* ---- Ficha de uma exploração ---- */
+  'detExploracao.semLocalizacao': 'Sem localização',
+  'detExploracao.areaTotal': 'Área total',
+  'detExploracao.entrouComo': 'Entrou como {papel}',
+  'detExploracao.meteorologia': 'Meteorologia local',
+  'detExploracao.aObter': 'A obter meteorologia…',
+  'detExploracao.semLocalizacaoDefinida': 'Sem localização definida.',
+  'detExploracao.semLigacaoMeteo': 'Sem ligação à meteorologia.',
+  'detExploracao.editeParaLocalizar':
+    'Edite a exploração e escreva a localização, ou marque no mapa onde ela fica.',
+  'detExploracao.dados': 'Dados da exploração',
+  'detExploracao.adicionarTerreno': 'Adicionar terreno',
+  'detExploracao.adicionar': 'Adicionar',
+  'detExploracao.editarDados': 'Editar dados da exploração',
+  'detExploracao.gerirEquipa': 'Gerir equipa e convites',
+
+  /* ---- Formulário do movimento (despesa / receita) ---- */
+  'formMovimento.movimento': 'Movimento',
+  'formMovimento.editar': 'Editar movimento',
+  'formMovimento.registarReceita': 'Registar receita',
+  'formMovimento.guardarMovimento': 'Guardar movimento',
+  'formMovimento.guardado': 'Movimento guardado',
+  'formMovimento.receitaRegistada': 'Receita registada',
+  'formMovimento.despesaRegistada': 'Despesa registada',
+  'formMovimento.semGuardar': 'Movimento não guardado',
+  'formMovimento.receitaSemRegistar': 'Receita não registada',
+  'formMovimento.despesaSemRegistar': 'Despesa não registada',
+  'formMovimento.eliminado': 'Movimento eliminado',
+  'formMovimento.eliminarMovimento': 'Eliminar movimento',
+  'formMovimento.naoEncontrado': 'Movimento não encontrado',
+  'formMovimento.naoEncontradoMensagem':
+    'Este lançamento já não existe, ou foi apagado noutro aparelho.',
+  'formMovimento.naoESeuTitulo': 'Este lançamento não é seu',
+  'formMovimento.naoESeuMensagem':
+    'Cada pessoa corrige o que lançou. Para mudar este, fale com quem gere a exploração.',
+  'formMovimento.naoMudaExploracao':
+    'Um lançamento não muda de exploração. Se foi na outra, elimine e volte a lançar.',
+  'formMovimento.ha1Mes': 'Há 1 mês',
+  'formMovimento.ouOutraData': 'Ou outra data (dd/mm/aaaa)',
+  'formMovimento.calendarioData': 'Escolher a data do movimento no calendário',
+  'formMovimento.comprador': 'Comprador',
+  'formMovimento.animalAjuda':
+    'Só se este movimento for mesmo de um animal. Deixe em branco para custos da exploração inteira.',
+  'formMovimento.soDespesas':
+    'Pode registar despesas. As receitas (vendas, subsídios) são lançadas por quem gere a exploração.',
+  'formMovimento.entra': 'Entra',
+  'formMovimento.sai': 'Sai',
+  'formMovimento.historicoAlteracoes': 'Histórico de alterações',
+  'formMovimento.semHistorico':
+    'Não foi possível carregar o histórico. Tente com ligação à internet.',
+  'formMovimento.semAlteracoes':
+    'Sem alterações registadas. Os lançamentos antigos, e os feitos sem servidor, não têm este registo.',
 } as const;
 
 export type ChaveTexto = keyof typeof pt;
@@ -2224,6 +2284,65 @@ const en: Record<ChaveTexto, string> = {
   'editarConta.guardadas': 'The changes were saved.',
   'editarConta.modoOffline':
     'This app is in offline mode. Changing your account details needs a connection.',
+
+  /* ---- Ficha de um terreno ---- */
+  'detTerreno.area': 'Area',
+  'detTerreno.semArea': 'No area',
+  'detTerreno.comoChegar': 'How to get there:',
+  'detTerreno.semLocalizacao': 'Not on the map. Edit the plot to mark where it is.',
+  'detTerreno.semAnimais': 'No animals on this plot yet. Put the ones that are here.',
+
+  /* ---- Ficha de uma exploração ---- */
+  'detExploracao.semLocalizacao': 'No location',
+  'detExploracao.areaTotal': 'Total area',
+  'detExploracao.entrouComo': 'You came in as a {papel}',
+  'detExploracao.meteorologia': 'Local weather',
+  'detExploracao.aObter': 'Getting the weather…',
+  'detExploracao.semLocalizacaoDefinida': 'No location set.',
+  'detExploracao.semLigacaoMeteo': 'No connection to the weather service.',
+  'detExploracao.editeParaLocalizar':
+    'Edit the farm and type the location, or mark on the map where it is.',
+  'detExploracao.dados': 'Farm details',
+  'detExploracao.adicionarTerreno': 'Add a plot',
+  'detExploracao.adicionar': 'Add',
+  'detExploracao.editarDados': 'Edit the farm details',
+  'detExploracao.gerirEquipa': 'Manage the team and invitations',
+
+  /* ---- Formulário do movimento (despesa / receita) ---- */
+  'formMovimento.movimento': 'Entry',
+  'formMovimento.editar': 'Edit entry',
+  'formMovimento.registarReceita': 'Record income',
+  'formMovimento.guardarMovimento': 'Save entry',
+  'formMovimento.guardado': 'Entry saved',
+  'formMovimento.receitaRegistada': 'Income recorded',
+  'formMovimento.despesaRegistada': 'Expense recorded',
+  'formMovimento.semGuardar': 'Entry not saved',
+  'formMovimento.receitaSemRegistar': 'Income not recorded',
+  'formMovimento.despesaSemRegistar': 'Expense not recorded',
+  'formMovimento.eliminado': 'Entry deleted',
+  'formMovimento.eliminarMovimento': 'Delete entry',
+  'formMovimento.naoEncontrado': 'Entry not found',
+  'formMovimento.naoEncontradoMensagem':
+    'This entry no longer exists, or it was deleted on another device.',
+  'formMovimento.naoESeuTitulo': 'This entry is not yours',
+  'formMovimento.naoESeuMensagem':
+    'Each person corrects what they entered. To change this one, talk to whoever runs the farm.',
+  'formMovimento.naoMudaExploracao':
+    'An entry does not move between farms. If it was on the other one, delete it and enter it again.',
+  'formMovimento.ha1Mes': 'A month ago',
+  'formMovimento.ouOutraData': 'Or another date (dd/mm/yyyy)',
+  'formMovimento.calendarioData': 'Pick the date on the calendar',
+  'formMovimento.comprador': 'Buyer',
+  'formMovimento.animalAjuda':
+    'Only if this entry really is about one animal. Leave it empty for costs of the whole farm.',
+  'formMovimento.soDespesas':
+    'You can record expenses. Income (sales, subsidies) is entered by whoever runs the farm.',
+  'formMovimento.entra': 'In',
+  'formMovimento.sai': 'Out',
+  'formMovimento.historicoAlteracoes': 'Change history',
+  'formMovimento.semHistorico': 'Could not load the history. Try again with an internet connection.',
+  'formMovimento.semAlteracoes':
+    'No changes recorded. Older entries, and those made without a server, have no history.',
 };
 
 const DICIONARIOS: Record<Idioma, Record<ChaveTexto, string>> = { pt, en };

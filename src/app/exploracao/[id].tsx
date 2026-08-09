@@ -25,6 +25,7 @@ import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
 import type { EstadoMeteo } from '@/data/useMeteorologia';
 import { useMeteorologia } from '@/data/useMeteorologia';
+import { t } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 export default function ExploracaoDetalheScreen() {
@@ -49,8 +50,8 @@ export default function ExploracaoDetalheScreen() {
   if (!exploracao) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Exploração" />
-        <EmptyState icon="barn" title="Exploração não encontrada" message="Este registo já não existe." />
+        <Header title={t('formAnimal.exploracao')} />
+        <EmptyState icon="barn" title={t('formExploracao.naoEncontrada')} message={t('ficha.jaNaoExiste')} />
       </View>
     );
   }
@@ -106,7 +107,7 @@ export default function ExploracaoDetalheScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Icon name="map-marker" size={14} color={colors.textOnDarkMuted} />
                 <Text variant="secondary" color={colors.textOnDarkMuted} numberOfLines={1}>
-                  {exploracao.localizacao ?? 'Sem localização'}
+                  {exploracao.localizacao ?? t('detExploracao.semLocalizacao')}
                 </Text>
               </View>
             </View>
@@ -120,9 +121,9 @@ export default function ExploracaoDetalheScreen() {
               borderTopWidth: 1,
               borderTopColor: 'rgba(255,255,255,0.18)',
             }}>
-            <HeroStat value={animais.length} label="Animais" />
-            <HeroStat value={terrenos.length} label="Terrenos" />
-            <HeroStat value={`${areaTotal.toFixed(1)} ha`} label="Área total" />
+            <HeroStat value={animais.length} label={t('nav.animais')} />
+            <HeroStat value={terrenos.length} label={t('nav.terrenos')} />
+            <HeroStat value={`${areaTotal.toFixed(1)} ha`} label={t('detExploracao.areaTotal')} />
           </View>
         </LinearGradient>
 
@@ -133,14 +134,14 @@ export default function ExploracaoDetalheScreen() {
             <Badge
               tone="info"
               icon={meuRole === 'veterinario' ? 'medical-bag' : 'account-hard-hat'}
-              label={`Entrou como ${legendaRole(meuRole).toLowerCase()}`}
+              label={t('detExploracao.entrouComo', { papel: legendaRole(meuRole).toLowerCase() })}
             />
           </View>
         ) : null}
 
         {/* Meteorologia local */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-          Meteorologia local
+          {t('detExploracao.meteorologia')}
         </Text>
         {meteo ? (
           <WeatherCard meteo={meteo} estado={mapEstado(estado)} onRecarregar={recarregar} />
@@ -155,14 +156,14 @@ export default function ExploracaoDetalheScreen() {
               <View style={{ flex: 1 }}>
                 <Text variant="body">
                   {estado === 'a-carregar'
-                    ? 'A obter meteorologia…'
+                    ? t('detExploracao.aObter')
                     : estado === 'sem-local'
-                    ? 'Sem localização definida.'
-                    : 'Sem ligação à meteorologia.'}
+                    ? t('detExploracao.semLocalizacaoDefinida')
+                    : t('detExploracao.semLigacaoMeteo')}
                 </Text>
                 {estado === 'sem-local' ? (
                   <Text variant="secondary" color={colors.textSecondary}>
-                    Edite a exploração e escreva a localização, ou marque no mapa onde ela fica.
+                    {t('detExploracao.editeParaLocalizar')}
                   </Text>
                 ) : null}
               </View>
@@ -172,17 +173,17 @@ export default function ExploracaoDetalheScreen() {
 
         {/* Dados oficiais */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-          Dados da exploração
+          {t('detExploracao.dados')}
         </Text>
         <Card>
-          <InfoField icon="barcode" label="Marca de exploração" value={exploracao.marcaExploracao} />
-          <InfoField icon="card-account-details-outline" label="NIF do detentor" value={exploracao.nifDetentor} last />
+          <InfoField icon="barcode" label={t('formExploracao.marca')} value={exploracao.marcaExploracao} />
+          <InfoField icon="card-account-details-outline" label={t('formExploracao.nif')} value={exploracao.nifDetentor} last />
         </Card>
 
         {/* Terrenos */}
         <TituloSeccao
-          titulo={`Terrenos (${terrenos.length})`}
-          rotuloAdicionar={podeGerirTerrenos ? 'Adicionar terreno' : undefined}
+          titulo={`${t('nav.terrenos')} (${terrenos.length})`}
+          rotuloAdicionar={podeGerirTerrenos ? t('detExploracao.adicionarTerreno') : undefined}
           onAdicionar={() =>
             router.push({ pathname: '/terreno/novo', params: { exploracaoId: exploracao.id } })
           }
@@ -191,7 +192,7 @@ export default function ExploracaoDetalheScreen() {
         {terrenos.length === 0 ? (
           <Card>
             <Text variant="body" color={colors.textSecondary}>
-              Ainda não há terrenos nesta exploração.
+              {t('terrenos.grupoVazio')}
             </Text>
           </Card>
         ) : (
@@ -263,7 +264,7 @@ export default function ExploracaoDetalheScreen() {
         {/* Animais */}
         <TituloSeccao
           titulo={`Animais (${animais.length})`}
-          rotuloAdicionar={podeRegistarAnimais ? 'Registar animal' : undefined}
+          rotuloAdicionar={podeRegistarAnimais ? t('animais.registarAnimal') : undefined}
           onAdicionar={() =>
             router.push({ pathname: '/animal/novo', params: { exploracaoId: exploracao.id } })
           }
@@ -271,7 +272,7 @@ export default function ExploracaoDetalheScreen() {
         {animais.length === 0 ? (
           <Card>
             <Text variant="body" color={colors.textSecondary}>
-              Ainda não há animais nesta exploração.
+              {t('associar.semAnimais')}
             </Text>
           </Card>
         ) : (
@@ -314,7 +315,7 @@ export default function ExploracaoDetalheScreen() {
                 quem não anda em apps todos os dias. */}
             {podeEditar ? (
               <Button
-                label="Editar dados da exploração"
+                label={t('detExploracao.editarDados')}
                 icon="pencil-outline"
                 variant="secondary"
                 onPress={() => router.push(`/exploracao/editar/${exploracao.id}`)}
@@ -323,7 +324,7 @@ export default function ExploracaoDetalheScreen() {
             {/* Equipa (só admin desta exploração) */}
             {podeGerirEquipa ? (
               <Button
-                label="Gerir equipa e convites"
+                label={t('detExploracao.gerirEquipa')}
                 icon="account-multiple-plus"
                 variant="secondary"
                 onPress={() => router.push(`/exploracao/equipa/${exploracao.id}`)}
@@ -383,7 +384,7 @@ function TituloSeccao({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Icon name="plus-circle" size="md" color={colors.primary} />
             <Text variant="bodyStrong" color={colors.primary}>
-              Adicionar
+              {t('detExploracao.adicionar')}
             </Text>
           </View>
         </Pressable>
