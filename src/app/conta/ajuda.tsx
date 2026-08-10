@@ -27,10 +27,7 @@ export default function AjudaScreen() {
     // Também as apresentações dos separadores: quem pede para rever o guia está
     // a pedir que lhe expliquem a app, não só o Início.
     reporIntroducoes();
-    toast.info(
-      'Guia reposto',
-      'Os primeiros passos voltam ao Início e os separadores voltam a apresentar-se.',
-    );
+    toast.info(t('ajuda.guiaReposto'), t('ajuda.guiaRepostoDetalhe'));
     router.navigate('/');
   }
 
@@ -59,12 +56,11 @@ export default function AjudaScreen() {
               variant="label"
               color={colors.textSecondary}
               style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-              PRECISA DE FALAR CONNOSCO?
+              {t('ajuda.grupoContacto')}
             </Text>
             <Card>
               <Text variant="body" style={{ marginBottom: spacing.sm }}>
-                Escreva-nos com a sua dúvida ou o que aconteceu. Costumamos
-                responder no mesmo dia útil.
+                {t('ajuda.escrevaNos')}
               </Text>
               {/* O botão abre um formulário aqui dentro, e não o `mailto:` do
                   aparelho: num Android sem conta de correio configurada, o
@@ -80,7 +76,7 @@ export default function AjudaScreen() {
                 color={colors.textMuted}
                 center
                 style={{ marginTop: spacing.sm }}>
-                Vai para {EMAIL_APOIO}
+                {t('apoio.vaiPara', { email: EMAIL_APOIO })}
               </Text>
             </Card>
           </View>
@@ -94,15 +90,13 @@ export default function AjudaScreen() {
               variant="label"
               color={colors.textSecondary}
               style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-              ALGUMA COISA NÃO FUNCIONA?
+              {t('ajuda.grupoProblema')}
             </Text>
             <Card>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <Icon name="bug-outline" size="lg" color={colors.warning} />
                 <Text variant="body" style={{ flex: 1 }}>
-                  Se a app fez algo que não devia (fechou-se, não gravou, mostrou
-                  um erro), conte-nos o que estava a fazer. A versão da app e o
-                  aparelho seguem sozinhos.
+                  {t('apoio.explicacaoBug')}
                 </Text>
               </View>
               <Button
@@ -120,9 +114,9 @@ export default function AjudaScreen() {
               variant="label"
               color={colors.textSecondary}
               style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-              PERGUNTAS FREQUENTES
+              {t('ajuda.grupoFaq')}
             </Text>
-            {PERGUNTAS.map((p, i) => (
+            {perguntas().map((p, i) => (
               <Pergunta key={i} titulo={p.titulo} resposta={p.resposta} />
             ))}
           </View>
@@ -134,14 +128,13 @@ export default function AjudaScreen() {
               variant="label"
               color={colors.textSecondary}
               style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-              COMEÇAR DE NOVO
+              {t('ajuda.grupoRecomecar')}
             </Text>
             <Card>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <Icon name="flag-checkered" size="lg" color={colors.primary} />
                 <Text variant="body" style={{ flex: 1 }}>
-                  Voltar a ver o guia de primeiros passos no ecrã inicial e as
-                  explicações de cada separador.
+                  {t('ajuda.reverExplicacao')}
                 </Text>
               </View>
               <Button
@@ -287,35 +280,19 @@ function Pergunta({ titulo, resposta }: { titulo: string; resposta: string }) {
   );
 }
 
-const PERGUNTAS = [
-  {
-    titulo: 'Posso usar a app sem internet?',
-    resposta:
-      'Sim. Todos os dados ficam guardados no dispositivo e a app funciona igual sem rede. Quando a ligação voltar, as alterações são enviadas para o servidor sozinhas.',
-  },
-  {
-    titulo: 'Como identifico um animal (brinco)?',
-    resposta:
-      'Ao criar ou editar o animal, preencha o campo "Número de identificação". A partir daí a app deixa de mostrar o alerta de identificação em atraso.',
-  },
-  {
-    titulo: 'A app comunica ao SNIRA por mim?',
-    resposta:
-      'Não. O envio ao SNIRA continua a ser feito no portal oficial. A app avisa-o dos prazos e marca o animal como comunicado quando confirmar.',
-  },
-  {
-    titulo: 'Onde posso descarregar um relatório?',
-    resposta:
-      'Em Perfil → Descarregar relatório (PDF). Na app de computador é guardado logo em PDF; no browser é guardado como página HTML que pode imprimir para PDF.',
-  },
-  {
-    titulo: 'Onde é que os dados são guardados?',
-    resposta:
-      'No próprio dispositivo, para funcionar offline. Se tiver sessão iniciada, uma cópia é sincronizada para a sua conta no servidor. Pode descarregar uma cópia de segurança em Perfil → Sincronização e cópia.',
-  },
-  {
-    titulo: 'Como termino a sessão ou apago a conta?',
-    resposta:
-      'Ambos em Perfil, no fim do ecrã. Terminar sessão volta ao ecrã de entrada e não apaga nada do servidor. Apagar a minha conta abre um ecrã à parte que mostra o que vai desaparecer (se for dono, a exploração vai com a conta, com os animais e o histórico lá dentro) e só avança depois de escrever APAGAR. É definitivo: nem quem gere a aplicação consegue recuperar.',
-  },
-];
+/**
+ * As perguntas frequentes.
+ *
+ * FUNÇÃO e não constante: as respostas passam pelo `t()`, e uma tabela criada no
+ * import ficava congelada na língua de arranque (ver AGENTS.md).
+ */
+function perguntas(): { titulo: string; resposta: string }[] {
+  return [
+    { titulo: t('faq.offlineP'), resposta: t('faq.offlineR') },
+    { titulo: t('faq.brincoP'), resposta: t('faq.brincoR') },
+    { titulo: t('faq.sniraP'), resposta: t('faq.sniraR') },
+    { titulo: t('faq.relatorioP'), resposta: t('faq.relatorioR') },
+    { titulo: t('faq.dadosP'), resposta: t('faq.dadosR') },
+    { titulo: t('faq.sessaoP'), resposta: t('faq.sessaoR') },
+  ];
+}

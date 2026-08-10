@@ -1587,6 +1587,137 @@ const pt = {
   'alertas.dispensarAjuda': 'Deixa de mostrar este aviso. Volta se a situação se agravar.',
   'erro.tentarDeNovo': 'Tentar de novo',
   'erro.enviarDetalhes': 'Enviar detalhes do erro',
+
+  /* ---- Ecrã da Ajuda ---- */
+  'ajuda.grupoContacto': 'PRECISA DE FALAR CONNOSCO?',
+  'ajuda.escrevaNos':
+    'Escreva-nos com a sua dúvida ou o que aconteceu. Costumamos responder no mesmo dia útil.',
+  'ajuda.grupoProblema': 'ALGUMA COISA NÃO FUNCIONA?',
+  'ajuda.grupoFaq': 'PERGUNTAS FREQUENTES',
+  'ajuda.grupoRecomecar': 'COMEÇAR DE NOVO',
+  'ajuda.reverExplicacao':
+    'Voltar a ver o guia de primeiros passos no ecrã inicial e as explicações de cada separador.',
+  'ajuda.guiaReposto': 'Guia reposto',
+  'ajuda.guiaRepostoDetalhe':
+    'Os primeiros passos voltam ao Início e os separadores voltam a apresentar-se.',
+
+  /* ---- Perguntas frequentes ---- */
+  'faq.offlineP': 'Posso usar a app sem internet?',
+  'faq.offlineR':
+    'Sim. Todos os dados ficam guardados no dispositivo e a app funciona igual sem rede. Quando a ligação voltar, as alterações são enviadas para o servidor sozinhas.',
+  'faq.brincoP': 'Como identifico um animal (brinco)?',
+  'faq.brincoR':
+    'Ao criar ou editar o animal, preencha o campo "Número de identificação". A partir daí a app deixa de mostrar o alerta de identificação em atraso.',
+  'faq.sniraP': 'A app comunica ao SNIRA por mim?',
+  'faq.sniraR':
+    'Não. O envio ao SNIRA continua a ser feito no portal oficial. A app avisa-o dos prazos e marca o animal como comunicado quando confirmar.',
+  'faq.relatorioP': 'Onde posso descarregar um relatório?',
+  'faq.relatorioR':
+    'Em Documentos, no relatório de prazos. Na app de computador é guardado logo em PDF; no navegador é guardado como página que pode imprimir para PDF.',
+  'faq.dadosP': 'Onde é que os dados são guardados?',
+  'faq.dadosR':
+    'No próprio dispositivo, para funcionar offline. Se tiver sessão iniciada, uma cópia é sincronizada para a sua conta no servidor. Pode descarregar uma cópia de segurança em Definições, Sincronização e cópia.',
+  'faq.sessaoP': 'Como termino a sessão ou apago a conta?',
+  'faq.sessaoR':
+    'Ambos em Perfil, no fim do ecrã. Terminar sessão volta ao ecrã de entrada e não apaga nada do servidor. Apagar a minha conta abre um ecrã à parte que mostra o que vai desaparecer (se for dono, a exploração vai com a conta, com os animais e o histórico lá dentro) e só avança depois de escrever APAGAR. É definitivo: nem quem gere a aplicação consegue recuperar.',
+
+  /* ---- Apagar a conta ---- */
+  'apagar.intro':
+    'Apagar a conta é definitivo. Ninguém, nem sequer quem gere a aplicação, consegue recuperar o que se perde aqui. Leia o que vai desaparecer antes de continuar.',
+  'apagar.comCadaExploracao':
+    'Com cada exploração caem os terrenos, os animais, os eventos, os documentos e o histórico.',
+  'apagar.equipaPerdeAcesso': 'Quem trabalha consigo perde o acesso.',
+  'apagar.nPessoasPerdem':
+    '{n} pessoa da sua equipa perde o acesso.|{n} pessoas da sua equipa perdem o acesso.',
+  'apagar.maisNinguem': 'Não há mais ninguém com acesso a estas explorações.',
+  'apagar.deOutraPessoa':
+    'Estas explorações são de outra pessoa: os animais e os registos ficam lá. O que se perde é a sua entrada: para voltar precisa de um código de convite novo.',
+  'apagar.porSincronizar':
+    '{n} alteração guardada neste aparelho ainda não chegou ao servidor. Se apagar a conta agora, perde-se também.|{n} alterações guardadas neste aparelho ainda não chegaram ao servidor. Se apagar a conta agora, perdem-se também.',
+  'apagar.escrevaParaConfirmar': 'Escreva {palavra} para confirmar',
+  'apagar.modoOffline':
+    'Esta app está em modo offline. Para apagar a conta é preciso ter sessão iniciada.',
+  'apagar.perguntaTitulo': 'Apagar a conta?',
+  'apagar.perguntaComDados': 'Vai apagar a sua conta, {exploracoes} e {animais}.',
+  'apagar.semRecuperar': 'Não há forma de recuperar isto: nem sua, nem de quem gere a aplicação.',
+  'apagar.perguntaSemDados':
+    'Vai apagar a sua conta e perder o acesso à aplicação. Não há forma de voltar atrás.',
+  'apagar.definitivamente': 'Apagar definitivamente',
+  'apagar.apagada': 'Conta apagada',
+  'apagar.apagadaDetalhe':
+    'Os seus dados foram removidos do servidor. Obrigado por ter usado a Terrabovina.',
+
+  /* ---- Importar animais de Excel ---- */
+  'importar.soNoComputador':
+    'Para escolher um ficheiro Excel é preciso o computador ou o site da app. No telemóvel, registe os animais um a um com o botão de registar.',
+  'importar.explicacao':
+    'Descarregue o modelo, preencha-o no Excel (um animal por linha) e volte aqui para o carregar. Mostramos o que vai entrar antes de gravar. Os animais que a app já tem não entram outra vez, mesmo que o ficheiro os traga.',
+  'importar.contaSuspensa':
+    'A conta está suspensa ou por aprovar: não é possível gravar animais.',
+  'importar.semExploracoes':
+    'Não tem nenhuma exploração onde possa registar animais. Crie uma exploração primeiro, ou peça acesso ao dono.',
+  'importar.modeloExplicacao':
+    'Traz os cabeçalhos certos e uma folha de instruções com o que cada coluna aceita.',
+  'importar.modeloDescarregado': 'Modelo descarregado',
+  'importar.modeloOnde': 'Procure na pasta das transferências.',
+  'importar.aLer': 'A ler…',
+  'importar.escolherFicheiro': 'Escolher ficheiro Excel',
+  'importar.escolherOutro': 'Escolher outro ficheiro',
+  'importar.semLer': 'Ficheiro não lido',
+  'importar.semLerTitulo': 'Não conseguimos ler o ficheiro',
+  'importar.detalheTecnico': 'Detalhe técnico: {detalhe}',
+  'importar.aImportar': 'A importar…',
+  'importar.importarN': 'Importar {n} animal|Importar {n} animais',
+  'importar.nImportados': '{n} animal importado|{n} animais importados',
+  'importar.semImportar': 'Não foi possível importar',
+  'importar.parcialTitulo': 'Importação parcial',
+  'importar.parcial': 'Entraram {entraram}. O servidor recusou {recusados}{quais}.',
+  'importar.motivo': 'Motivo: {motivo}',
+  'importar.nProntos': '{n} animal pronto a importar|{n} animais prontos a importar',
+  'importar.nenhumPronto': 'Nenhum animal pronto a importar',
+  'importar.nComErro': '{n} com erro|{n} com erro',
+  'importar.nJaExistem': '{n} já existe|{n} já existem',
+  'importar.ficheiroVazio': 'O ficheiro não tinha linhas de animais.',
+  'importar.tudoCerto': 'Tudo certo, sem problemas.',
+  'importar.faltamColunas': 'Faltam colunas no ficheiro',
+  'importar.faltamColunasDetalhe':
+    'Não encontrámos: {colunas}. Use o modelo descarregado sem apagar a linha de cabeçalhos.',
+  'importar.naoVaoEntrar': 'NÃO VÃO ENTRAR',
+  'importar.jaExistem': 'JÁ EXISTEM (NÃO IMPORTADOS)',
+  'importar.entramMasRepare': 'ENTRAM, MAS REPARE',
+  'importar.linha': 'Linha {n}',
+  'importar.dupIdNaConta':
+    'Este animal já está na app: veio deste mesmo ficheiro exportado. Não foi importado outra vez.',
+  'importar.dupIdNoFicheiro': 'Esta linha repete outra do ficheiro (mesmo ID).',
+  'importar.dupNomeNaConta':
+    'Já existe um animal com este nome e data de nascimento: não foi importado. Se for outro animal, mude-lhe o nome ou dê-lhe brinco.',
+  'importar.dupNomeNoFicheiro': 'Outra linha do ficheiro tem o mesmo nome e data de nascimento.',
+  'importar.dupBrincoNaConta': 'Já existe um animal com este brinco: não foi importado.',
+  'importar.dupBrincoNoFicheiro': 'Este brinco aparece mais do que uma vez no ficheiro.',
+  'importar.noComputador': 'Faça a importação no computador',
+  'importar.modeloExcel': 'Modelo Excel',
+
+  /* ---- O que cada linha do Excel tem de errado (`data/animalExcel.ts`) ----
+     Os NOMES das colunas e os valores que elas aceitam (Bovino, Fêmea) ficam
+     em português: são o que está escrito no ficheiro, e traduzi-los fazia a app
+     deixar de saber ler um modelo preenchido na outra língua. ---- */
+  'excel.faltaEspecie': 'Falta a espécie.',
+  'excel.especieInvalida': 'Espécie "{valor}" não é válida. Use: {lista}.',
+  'excel.faltaSexo': 'Falta o sexo.',
+  'excel.sexoInvalido': 'Sexo "{valor}" não é válido. Use Macho ou Fêmea.',
+  'excel.faltaNascimento': 'Falta a data de nascimento.',
+  'excel.nascimentoInvalido':
+    'Data de nascimento "{valor}" inválida. Use dd/mm/aaaa e uma data não futura.',
+  'excel.finalidadeDesconhecida': 'Finalidade "{valor}" não reconhecida, por isso ignorada.',
+  'excel.finalidadeSoBovinos': 'Finalidade só se aplica a bovinos, por isso ignorada.',
+  'excel.finalidadeAtipica':
+    'Finalidade "{valor}" não é típica de {sexo}, mas foi guardada na mesma.',
+  'excel.identificacaoInvalida': 'Data de identificação "{valor}" inválida, por isso ignorada.',
+  'excel.sniraInvalido': '"{valor}" não é Sim nem Não, por isso ficou Sim.',
+  'excel.partoInvalido': 'Data prevista de parto "{valor}" inválida, por isso ignorada.',
+  'excel.partoNumMacho': 'Data de parto indicada num macho, por isso ignorada.',
+  'excel.semBrincoNemNome':
+    'Sem brinco nem nome, não conseguimos confirmar se este animal já existe na app. Confira que não o está a registar duas vezes.',
 } as const;
 
 export type ChaveTexto = keyof typeof pt;
@@ -3138,6 +3269,132 @@ const en: Record<ChaveTexto, string> = {
   'alertas.dispensarAjuda': 'Stops showing this alert. It comes back if things get worse.',
   'erro.tentarDeNovo': 'Try again',
   'erro.enviarDetalhes': 'Send the error details',
+
+  /* ---- Ecrã da Ajuda ---- */
+  'ajuda.grupoContacto': 'NEED TO TALK TO US?',
+  'ajuda.escrevaNos':
+    'Write to us with your question or with what happened. We usually reply the same working day.',
+  'ajuda.grupoProblema': 'SOMETHING NOT WORKING?',
+  'ajuda.grupoFaq': 'COMMON QUESTIONS',
+  'ajuda.grupoRecomecar': 'START OVER',
+  'ajuda.reverExplicacao':
+    'See the getting started guide on the home screen again, along with the explanation of each tab.',
+  'ajuda.guiaReposto': 'Guide reset',
+  'ajuda.guiaRepostoDetalhe':
+    'The first steps are back on the home screen and the tabs introduce themselves again.',
+
+  /* ---- Perguntas frequentes ---- */
+  'faq.offlineP': 'Can I use the app without internet?',
+  'faq.offlineR':
+    'Yes. All the data is kept on the device and the app works the same with no network. Once the connection is back, the changes are sent to the server on their own.',
+  'faq.brincoP': 'How do I tag an animal?',
+  'faq.brincoR':
+    'When you create or edit the animal, fill in the "Ear tag number" field. From then on the app stops showing the overdue tagging alert.',
+  'faq.sniraP': 'Does the app report to SNIRA for me?',
+  'faq.sniraR':
+    'No. Reporting to SNIRA is still done on the official portal. The app warns you about the deadlines and marks the animal as reported once you confirm.',
+  'faq.relatorioP': 'Where can I download a report?',
+  'faq.relatorioR':
+    'Under Documents, in the deadline report. In the desktop app it is saved straight to PDF; in a browser it is saved as a page you can print to PDF.',
+  'faq.dadosP': 'Where is the data kept?',
+  'faq.dadosR':
+    'On the device itself, so it works offline. If you are signed in, a copy is synced to your account on the server. You can download a backup under Settings, Sync and backup.',
+  'faq.sessaoP': 'How do I sign out or delete my account?',
+  'faq.sessaoR':
+    'Both are in Profile, at the bottom of the screen. Signing out returns to the entry screen and deletes nothing from the server. Delete my account opens a separate screen showing what will disappear (if you are the owner, the farm goes with the account, and the animals and history inside it) and only goes ahead after you type APAGAR. It is final: not even whoever runs the app can bring it back.',
+
+  /* ---- Apagar a conta ---- */
+  'apagar.intro':
+    'Deleting the account is final. Nobody, not even whoever runs the app, can bring back what is lost here. Read what will disappear before carrying on.',
+  'apagar.comCadaExploracao':
+    'With each farm go the land, the animals, the records, the documents and the history.',
+  'apagar.equipaPerdeAcesso': 'Whoever works with you loses their access.',
+  'apagar.nPessoasPerdem':
+    '{n} person on your team loses their access.|{n} people on your team lose their access.',
+  'apagar.maisNinguem': 'Nobody else has access to these farms.',
+  'apagar.deOutraPessoa':
+    'These farms belong to someone else: the animals and the records stay there. What you lose is your way in: to come back you need a new invite code.',
+  'apagar.porSincronizar':
+    '{n} change saved on this device has not reached the server. If you delete the account now, it is lost too.|{n} changes saved on this device have not reached the server. If you delete the account now, they are lost too.',
+  'apagar.escrevaParaConfirmar': 'Type {palavra} to confirm',
+  'apagar.modoOffline':
+    'This app is in offline mode. Deleting the account needs you to be signed in.',
+  'apagar.perguntaTitulo': 'Delete the account?',
+  'apagar.perguntaComDados': 'This will delete your account, {exploracoes} and {animais}.',
+  'apagar.semRecuperar': 'There is no way to get this back: not for you, not for whoever runs the app.',
+  'apagar.perguntaSemDados':
+    'This will delete your account and you lose access to the app. There is no way back.',
+  'apagar.definitivamente': 'Delete for good',
+  'apagar.apagada': 'Account deleted',
+  'apagar.apagadaDetalhe':
+    'Your data has been removed from the server. Thank you for using Terrabovina.',
+
+  /* ---- Importar animais de Excel ---- */
+  'importar.soNoComputador':
+    'Choosing an Excel file needs a computer or the app website. On the phone, record the animals one by one with the add button.',
+  'importar.explicacao':
+    'Download the template, fill it in on Excel (one animal per row) and come back here to upload it. We show you what will go in before saving. Animals the app already has do not go in again, even if the file brings them.',
+  'importar.contaSuspensa': 'The account is suspended or awaiting approval: animals cannot be saved.',
+  'importar.semExploracoes':
+    'You have no farm where you can record animals. Create a farm first, or ask the owner for access.',
+  'importar.modeloExplicacao':
+    'It comes with the right headings and an instructions sheet saying what each column accepts.',
+  'importar.modeloDescarregado': 'Template downloaded',
+  'importar.modeloOnde': 'Look in your downloads folder.',
+  'importar.aLer': 'Reading…',
+  'importar.escolherFicheiro': 'Choose an Excel file',
+  'importar.escolherOutro': 'Choose another file',
+  'importar.semLer': 'File not read',
+  'importar.semLerTitulo': 'We could not read the file',
+  'importar.detalheTecnico': 'Technical detail: {detalhe}',
+  'importar.aImportar': 'Importing…',
+  'importar.importarN': 'Import {n} animal|Import {n} animals',
+  'importar.nImportados': '{n} animal imported|{n} animals imported',
+  'importar.semImportar': 'Could not import',
+  'importar.parcialTitulo': 'Partial import',
+  'importar.parcial': '{entraram} went in. The server refused {recusados}{quais}.',
+  'importar.motivo': 'Reason: {motivo}',
+  'importar.nProntos': '{n} animal ready to import|{n} animals ready to import',
+  'importar.nenhumPronto': 'No animal ready to import',
+  'importar.nComErro': '{n} with an error|{n} with errors',
+  'importar.nJaExistem': '{n} already there|{n} already there',
+  'importar.ficheiroVazio': 'The file had no animal rows.',
+  'importar.tudoCerto': 'All good, no problems.',
+  'importar.faltamColunas': 'Columns missing from the file',
+  'importar.faltamColunasDetalhe':
+    'We could not find: {colunas}. Use the downloaded template without deleting the heading row.',
+  'importar.naoVaoEntrar': 'WILL NOT GO IN',
+  'importar.jaExistem': 'ALREADY THERE (NOT IMPORTED)',
+  'importar.entramMasRepare': 'GOING IN, BUT NOTE THIS',
+  'importar.linha': 'Row {n}',
+  'importar.dupIdNaConta':
+    'This animal is already in the app: it came from this same exported file. It was not imported again.',
+  'importar.dupIdNoFicheiro': 'This row repeats another one in the file (same ID).',
+  'importar.dupNomeNaConta':
+    'There is already an animal with this name and date of birth: it was not imported. If it is a different animal, change its name or give it an ear tag.',
+  'importar.dupNomeNoFicheiro': 'Another row in the file has the same name and date of birth.',
+  'importar.dupBrincoNaConta': 'There is already an animal with this ear tag: it was not imported.',
+  'importar.dupBrincoNoFicheiro': 'This ear tag appears more than once in the file.',
+  'importar.noComputador': 'Do the import on a computer',
+  'importar.modeloExcel': 'Excel template',
+
+  /* ---- O que cada linha do Excel tem de errado ---- */
+  'excel.faltaEspecie': 'The species is missing.',
+  'excel.especieInvalida': 'Species "{valor}" is not valid. Use: {lista}.',
+  'excel.faltaSexo': 'The sex is missing.',
+  'excel.sexoInvalido': 'Sex "{valor}" is not valid. Use Macho or Fêmea.',
+  'excel.faltaNascimento': 'The date of birth is missing.',
+  'excel.nascimentoInvalido':
+    'Date of birth "{valor}" is not valid. Use dd/mm/yyyy, and not a date in the future.',
+  'excel.finalidadeDesconhecida': 'Purpose "{valor}" was not recognised, so it was ignored.',
+  'excel.finalidadeSoBovinos': 'Purpose only applies to cattle, so it was ignored.',
+  'excel.finalidadeAtipica': 'Purpose "{valor}" is unusual for {sexo}, but it was saved anyway.',
+  'excel.identificacaoInvalida': 'Tagging date "{valor}" is not valid, so it was ignored.',
+  'excel.sniraInvalido': '"{valor}" is neither Sim nor Não, so it was left as Sim.',
+  'excel.partoInvalido': 'Expected calving date "{valor}" is not valid, so it was ignored.',
+  'excel.partoNumMacho': 'A calving date was given for a male, so it was ignored.',
+  'excel.semBrincoNemNome':
+    'With no ear tag and no name we cannot tell whether this animal is already in the app. Check that you are not recording it twice.',
 };
 
 const DICIONARIOS: Record<Idioma, Record<ChaveTexto, string>> = { pt, en };
