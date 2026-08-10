@@ -13,6 +13,7 @@ import {
 import type { FicheiroEscolhido } from '@/data/ficheiroDocumento';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { UseDocumentos } from '@/data/useDocumentos';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /** O que está a ser guardado, enquanto a folha está aberta. */
@@ -61,7 +62,7 @@ export function FolhaGuardarDocumento({
       return;
     }
     if (!rascunho.exploracaoId) {
-      setErro('Escolha a exploração a que este documento pertence.');
+      setErro(t('guardarDoc.escolhaExploracao'));
       return;
     }
     setAGuardar(true);
@@ -74,12 +75,12 @@ export function FolhaGuardarDocumento({
         publico: rascunho.publico,
         ficheiro: rascunho.ficheiro,
       });
-      toast.sucesso('Documento guardado', rascunho.titulo.trim());
+      toast.sucesso(t('guardarDoc.guardado'), rascunho.titulo.trim());
       onFechar();
     } catch (e) {
       const razao = mensagemDeErro(e);
       setErro(razao);
-      toast.erro('Documento não guardado', razao);
+      toast.erro(t('guardarDoc.semGuardar'), razao);
     } finally {
       setAGuardar(false);
     }
@@ -88,7 +89,7 @@ export function FolhaGuardarDocumento({
   return (
     <Modal visible={rascunho !== null} animationType="slide" transparent onRequestClose={onFechar}>
       <FolhaComTeclado>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel="Fechar" />
+        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
         <View
           style={{
             backgroundColor: colors.background,
@@ -105,13 +106,13 @@ export function FolhaGuardarDocumento({
               marginBottom: spacing.sm,
             }}>
             <Text variant="h3" style={{ flex: 1 }}>
-              Guardar documento
+              {t('guardarDoc.titulo')}
             </Text>
             <Pressable
               onPress={onFechar}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Fechar">
+              accessibilityLabel={t('comum.fechar')}>
               <Icon name="close" size="lg" color={colors.textSecondary} />
             </Pressable>
           </View>
@@ -128,20 +129,21 @@ export function FolhaGuardarDocumento({
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <Icon name="image-check-outline" size="lg" color={colors.success} />
                 <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
-                  Imagem pronta{rascunho ? ` · ${tamanhoLegivel(rascunho.ficheiro.tamanho)}` : ''}.
-                  Falta dizer o que é e quem a pode ver.
+                  {t('guardarDoc.imagemPronta')}
+                  {rascunho ? ` · ${tamanhoLegivel(rascunho.ficheiro.tamanho)}` : ''}
+                  {`. ${t('guardarDoc.faltaDizer')}`}
                 </Text>
               </View>
             </Card>
 
             <View>
               <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                O que é
+                {t('guardarDoc.oQueE')}
               </Text>
               <TextField
                 value={rascunho?.titulo ?? ''}
                 onChangeText={(t) => onMudar(rascunho ? { ...rascunho, titulo: t } : rascunho)}
-                placeholder="Ex: Fatura da ração de julho"
+                placeholder={t('gaveta.exTitulo')}
                 icon="file-document-outline"
               />
             </View>
@@ -153,7 +155,7 @@ export function FolhaGuardarDocumento({
 
             <View>
               <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                Gaveta
+                {t('gaveta.gaveta')}
               </Text>
               <View style={{ gap: spacing.xs }}>
                 {CATEGORIAS_DOCUMENTO.map((c) => (
@@ -203,7 +205,7 @@ export function FolhaGuardarDocumento({
             {exploracoes.length > 1 ? (
               <View>
                 <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                  Exploração
+                  {t('formAnimal.exploracao')}
                 </Text>
                 <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
                   {exploracoes.map((e) => (
@@ -233,7 +235,7 @@ export function FolhaGuardarDocumento({
             ) : null}
 
             <Button
-              label={aGuardar ? 'A guardar…' : 'Guardar documento'}
+              label={aGuardar ? t('comum.aGuardar') : t('guardarDoc.titulo')}
               icon="check"
               loading={aGuardar}
               disabled={aGuardar}
@@ -242,7 +244,7 @@ export function FolhaGuardarDocumento({
 
             {Platform.OS !== 'web' ? (
               <Text variant="caption" color={colors.textMuted} center>
-                Guardar um documento precisa de ligação: a imagem sobe para a sua conta.
+                {t('guardarDoc.precisaLigacao')}
               </Text>
             ) : null}
           </ScrollView>
@@ -270,20 +272,20 @@ export function EscolhaVisibilidade({
   return (
     <View>
       <Text variant="label" style={{ marginBottom: spacing.xs }}>
-        Quem vê
+        {t('guardarDoc.quemVe')}
       </Text>
       <View style={{ gap: spacing.sm }}>
         <Opcao
           icone="account-group"
-          titulo="Toda a equipa"
-          descricao="Quem trabalha nesta exploração pode abrir este documento."
+          titulo={t('guardarDoc.todaEquipa')}
+          descricao={t('guardarDoc.todaEquipaDescricao')}
           escolhida={publico}
           onPress={() => onMudar(true)}
         />
         <Opcao
           icone="lock-outline"
-          titulo="Só eu"
-          descricao="Mais ninguém o vê, nem o dono da exploração."
+          titulo={t('guardarDoc.soEu')}
+          descricao={t('guardarDoc.soEuDescricao')}
           escolhida={!publico}
           onPress={() => onMudar(false)}
         />
@@ -291,7 +293,7 @@ export function EscolhaVisibilidade({
       {/* Dito uma vez, aqui, e não em cada documento: o veterinário nunca vê
           NENHUM, e isso não é a escolha que se está a fazer nesta linha. */}
       <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.xs }}>
-        Em qualquer dos casos, os veterinários não veem documentos nenhuns.
+        {t('guardarDoc.vetsNaoVeem')}
       </Text>
     </View>
   );

@@ -12,6 +12,7 @@ import {
 } from '@/data/apoio';
 import { useToasts } from '@/data/toasts';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 /**
@@ -67,12 +68,12 @@ export function ModalMensagemApoio({
     const razao = await enviarMensagemApoio(tipo, assunto, texto);
     setAEnviar(false);
     if (razao) {
-      toast.erro(eBug ? 'Problema não enviado' : 'Mensagem não enviada', razao);
+      toast.erro(eBug ? t('apoio.problemaSemEnviar') : t('apoio.mensagemSemEnviar'), razao);
       return;
     }
     toast.sucesso(
-      eBug ? 'Problema enviado' : 'Mensagem enviada',
-      'Recebemos. Costumamos responder no mesmo dia útil.',
+      eBug ? t('apoio.problemaEnviado') : t('apoio.mensagemEnviada'),
+      t('apoio.recebemos'),
     );
     onFechar();
   }
@@ -96,7 +97,7 @@ export function ModalMensagemApoio({
         <Pressable
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           onPress={onFechar}
-          accessibilityLabel="Fechar"
+          accessibilityLabel={t('comum.fechar')}
         />
         <View
           style={{
@@ -132,16 +133,16 @@ export function ModalMensagemApoio({
               color={eBug ? colors.warning : colors.primary}
             />
             <View style={{ flex: 1 }}>
-              <Text variant="h3">{eBug ? 'Reportar um problema' : 'Escrever ao apoio'}</Text>
+              <Text variant="h3">{eBug ? t('apoio.reportar') : t('apoio.escrever')}</Text>
               <Text variant="caption" color={colors.textSecondary}>
-                Vai para {EMAIL_APOIO}
+                {t('apoio.vaiPara', { email: EMAIL_APOIO })}
               </Text>
             </View>
             <Pressable
               onPress={onFechar}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Fechar">
+              accessibilityLabel={t('comum.fechar')}>
               <Icon name="close" size="md" color={colors.textMuted} />
             </Pressable>
           </View>
@@ -152,26 +153,26 @@ export function ModalMensagemApoio({
             contentContainerStyle={{ padding: spacing.lg }}>
             <Text variant="body" color={colors.textSecondary} style={{ marginBottom: spacing.lg }}>
               {eBug
-                ? 'Conte o que estava a fazer e o que aconteceu. Não precisa de saber termos técnicos: a versão da app e o aparelho seguem sozinhos.'
-                : 'Escreva-nos com a sua dúvida ou com o que precisa. Respondemos para o email da sua conta.'}
+                ? t('apoio.explicacaoBug')
+                : t('apoio.explicacaoMensagem')}
             </Text>
 
-            <Field label="Assunto" obrigatorio ajuda="Uma linha a dizer do que se trata.">
+            <Field label={t('apoio.assunto')} obrigatorio ajuda={t('apoio.assuntoAjuda')}>
               <TextField
                 value={assunto}
                 onChangeText={setAssunto}
-                placeholder={eBug ? 'A app fecha ao abrir os animais' : 'Dúvida sobre os alertas'}
+                placeholder={eBug ? t('apoio.exAssuntoBug') : t('apoio.exAssuntoDuvida')}
                 icon="format-title"
               />
             </Field>
 
             <Field
-              label={eBug ? 'O que aconteceu' : 'A sua mensagem'}
+              label={eBug ? t('apoio.oQueAconteceu') : t('apoio.aSuaMensagem')}
               obrigatorio
               ajuda={
                 eBug
-                  ? 'O que estava a fazer, o que esperava e o que apareceu no ecrã.'
-                  : 'Quanto mais concreto, mais depressa lhe respondemos.'
+                  ? t('apoio.ajudaBug')
+                  : t('apoio.ajudaMensagem')
               }>
               <View
                 style={{
@@ -187,8 +188,8 @@ export function ModalMensagemApoio({
                   onChangeText={setTexto}
                   placeholder={
                     eBug
-                      ? 'Carreguei em Animais e a app fechou-se sozinha. Aconteceu três vezes esta manhã.'
-                      : 'Gostava de saber como…'
+                      ? t('apoio.exTextoBug')
+                      : t('apoio.exTextoDuvida')
                   }
                   placeholderTextColor={colors.textMuted}
                   multiline
@@ -206,7 +207,7 @@ export function ModalMensagemApoio({
 
             {eBug ? (
               <Text variant="caption" color={colors.textMuted} style={{ marginBottom: spacing.md }}>
-                Vai junto: {contextoDoAparelho()}
+                {t('apoio.vaiJunto', { contexto: contextoDoAparelho() })}
               </Text>
             ) : null}
 
@@ -229,13 +230,13 @@ export function ModalMensagemApoio({
             ) : null}
 
             <Button
-              label={eBug ? 'Enviar o problema' : 'Enviar mensagem'}
+              label={eBug ? t('apoio.enviarProblema') : t('apoio.enviarMensagem')}
               icon="send"
               onPress={enviar}
               loading={aEnviar}
             />
             <Button
-              label="Cancelar"
+              label={t('comum.cancelar')}
               variant="secondary"
               onPress={onFechar}
               style={{ marginTop: spacing.sm }}

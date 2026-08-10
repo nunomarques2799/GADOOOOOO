@@ -20,6 +20,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Pressable, ScrollView, Share, Text, View } from 'react-native';
 
 import { VERSAO_APP } from '@/data/versao';
+import { t } from '@/i18n';
 
 type Props = { children: ReactNode };
 type State = { erro: Error | null };
@@ -91,12 +92,12 @@ export class LimiteDeErro extends Component<Props, State> {
               color: '#15200F',
               textAlign: 'center',
             }}>
-            Alguma coisa correu mal
+            {t('erro.titulo')}
           </Text>
 
           {/* A primeira pergunta de quem vê isto é "perdi os meus animais?". */}
           <Text style={{ fontSize: 17, lineHeight: 25, color: '#3C4A34', textAlign: 'center' }}>
-            Os seus dados continuam guardados neste aparelho: não se perdeu nada.
+            {t('erro.dadosSeguros')}
             Toque em "Tentar de novo" para voltar à app.
           </Text>
 

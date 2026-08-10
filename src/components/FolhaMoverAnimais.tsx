@@ -8,6 +8,7 @@ import { tipoTerrenoMeta } from '@/data/constants';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { Animal, Terreno } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 /**
@@ -47,10 +48,10 @@ export function FolhaMoverAnimais({
 
   function pedirParaMover(destino: Terreno) {
     confirmar(
-      'Mudar o gado de terreno?',
+      t('mover.titulo'),
       `${total} ${total === 1 ? 'animal passa' : 'animais passam'} de ${origem.nome} para ${destino.nome}.`,
       () => void mover(destino),
-      { rotuloConfirmar: 'Mudar' },
+      { rotuloConfirmar: t('aspeto.mudar') },
     );
   }
 
@@ -73,9 +74,9 @@ export function FolhaMoverAnimais({
         await updateAnimal(a.id, { terrenoId: destino.id });
         movidos++;
       } catch (e) {
-        falhados.push(a.nome ?? a.numeroIdentificacao ?? 'Sem nome');
+        falhados.push(a.nome ?? a.numeroIdentificacao ?? t('animais.semNome'));
         // A razão do primeiro erro chega para explicar; guardar as 400 não.
-        if (falhados.length === 1) toast.erro('Não foi possível mudar tudo', mensagemDeErro(e));
+        if (falhados.length === 1) toast.erro(t('mover.semMudarTudo'), mensagemDeErro(e));
       }
     }
 
@@ -98,7 +99,7 @@ export function FolhaMoverAnimais({
   return (
     <Modal visible={aberto} animationType="slide" transparent onRequestClose={onFechar}>
       <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel="Fechar" />
+        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
         <View
           style={[
             {
@@ -114,13 +115,13 @@ export function FolhaMoverAnimais({
           ]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
             <Text variant="h3" style={{ flex: 1 }}>
-              Mudar para que terreno?
+              {t('mover.paraQueTerreno')}
             </Text>
             <Pressable
               onPress={onFechar}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Fechar">
+              accessibilityLabel={t('comum.fechar')}>
               <Icon name="close" size="lg" color={colors.textSecondary} />
             </Pressable>
           </View>

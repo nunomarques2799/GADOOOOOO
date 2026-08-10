@@ -1407,6 +1407,69 @@ const pt = {
   'selAnimais.semAnimaisNoTerreno': 'Não há animais neste terreno.',
   'selAnimais.trocarAnimal': 'Trocar animal',
   'selAnimais.trocar': 'Trocar',
+
+  /* ---- Mudar o gado de terreno ---- */
+  'mover.titulo': 'Mudar o gado de terreno?',
+  'mover.paraQueTerreno': 'Mudar para que terreno?',
+  'mover.semMudarTudo': 'Não foi possível mudar tudo',
+
+  /* ---- Guardar um documento ---- */
+  'guardarDoc.titulo': 'Guardar documento',
+  'guardarDoc.guardado': 'Documento guardado',
+  'guardarDoc.semGuardar': 'Documento não guardado',
+  'guardarDoc.escolhaExploracao': 'Escolha a exploração a que este documento pertence.',
+  'guardarDoc.imagemPronta': 'Imagem pronta',
+  'guardarDoc.faltaDizer': 'Falta dizer o que é e quem a pode ver.',
+  'guardarDoc.oQueE': 'O que é',
+  'guardarDoc.precisaLigacao':
+    'Guardar um documento precisa de ligação: a imagem sobe para a sua conta.',
+  'guardarDoc.quemVe': 'Quem vê',
+  'guardarDoc.todaEquipa': 'Toda a equipa',
+  'guardarDoc.todaEquipaDescricao': 'Quem trabalha nesta exploração pode abrir este documento.',
+  'guardarDoc.soEu': 'Só eu',
+  'guardarDoc.soEuDescricao': 'Mais ninguém o vê, nem o dono da exploração.',
+  'guardarDoc.vetsNaoVeem': 'Em qualquer dos casos, os veterinários não veem documentos nenhuns.',
+
+  /* ---- Secção dos documentos ---- */
+  'seccaoDocs.vazia': 'Vazia.',
+  'seccaoDocs.vaziaCurto': 'Vazia',
+  'seccaoDocs.nDocumentos': '{n} documento|{n} documentos',
+  'seccaoDocs.contaSuspensa':
+    'Com a conta por regularizar pode consultar os documentos, mas não guardar novos.',
+  'seccaoDocs.semPermissao': 'Guardar documentos é de quem tem uma exploração a cargo.',
+
+  /* ---- Escrever ao apoio ---- */
+  'apoio.reportar': 'Reportar um problema',
+  'apoio.escrever': 'Escrever ao apoio',
+  'apoio.vaiPara': 'Vai para {email}',
+  'apoio.explicacaoBug':
+    'Conte o que estava a fazer e o que aconteceu. Não precisa de saber termos técnicos: a versão da app e o aparelho seguem sozinhos.',
+  'apoio.explicacaoMensagem':
+    'Escreva-nos com a sua dúvida ou com o que precisa. Respondemos para o email da sua conta.',
+  'apoio.assunto': 'Assunto',
+  'apoio.assuntoAjuda': 'Uma linha a dizer do que se trata.',
+  'apoio.exAssuntoBug': 'A app fecha ao abrir os animais',
+  'apoio.exAssuntoDuvida': 'Dúvida sobre os alertas',
+  'apoio.oQueAconteceu': 'O que aconteceu',
+  'apoio.aSuaMensagem': 'A sua mensagem',
+  'apoio.ajudaBug': 'O que estava a fazer, o que esperava e o que apareceu no ecrã.',
+  'apoio.ajudaMensagem': 'Quanto mais concreto, mais depressa lhe respondemos.',
+  'apoio.exTextoBug':
+    'Carreguei em Animais e a app fechou-se sozinha. Aconteceu três vezes esta manhã.',
+  'apoio.exTextoDuvida': 'Gostava de saber como…',
+  'apoio.vaiJunto': 'Vai junto: {contexto}',
+  'apoio.enviarProblema': 'Enviar o problema',
+  'apoio.enviarMensagem': 'Enviar mensagem',
+  'apoio.problemaEnviado': 'Problema enviado',
+  'apoio.mensagemEnviada': 'Mensagem enviada',
+  'apoio.problemaSemEnviar': 'Problema não enviado',
+  'apoio.mensagemSemEnviar': 'Mensagem não enviada',
+  'apoio.recebemos': 'Recebemos. Costumamos responder no mesmo dia útil.',
+
+  /* ---- Avisos e erros ---- */
+  'avisos.entendido': 'Entendido',
+  'erro.titulo': 'Alguma coisa correu mal',
+  'erro.dadosSeguros': 'Os seus dados continuam guardados neste aparelho: não se perdeu nada.',
 } as const;
 
 export type ChaveTexto = keyof typeof pt;
@@ -2781,6 +2844,69 @@ const en: Record<ChaveTexto, string> = {
   'selAnimais.semAnimaisNoTerreno': 'No animals on this plot.',
   'selAnimais.trocarAnimal': 'Change animal',
   'selAnimais.trocar': 'Change',
+
+  /* ---- Mudar o gado de terreno ---- */
+  'mover.titulo': 'Move the herd to another plot?',
+  'mover.paraQueTerreno': 'Move to which plot?',
+  'mover.semMudarTudo': 'Could not move them all',
+
+  /* ---- Guardar um documento ---- */
+  'guardarDoc.titulo': 'Keep document',
+  'guardarDoc.guardado': 'Document kept',
+  'guardarDoc.semGuardar': 'Document not kept',
+  'guardarDoc.escolhaExploracao': 'Choose the farm this document belongs to.',
+  'guardarDoc.imagemPronta': 'Image ready',
+  'guardarDoc.faltaDizer': 'Now say what it is and who can see it.',
+  'guardarDoc.oQueE': 'What it is',
+  'guardarDoc.precisaLigacao':
+    'Keeping a document needs a connection: the image goes up to your account.',
+  'guardarDoc.quemVe': 'Who sees it',
+  'guardarDoc.todaEquipa': 'The whole team',
+  'guardarDoc.todaEquipaDescricao': 'Anyone who works on this farm can open this document.',
+  'guardarDoc.soEu': 'Only me',
+  'guardarDoc.soEuDescricao': 'Nobody else sees it, not even the farm owner.',
+  'guardarDoc.vetsNaoVeem': 'Either way, vets see no documents at all.',
+
+  /* ---- Secção dos documentos ---- */
+  'seccaoDocs.vazia': 'Empty.',
+  'seccaoDocs.vaziaCurto': 'Empty',
+  'seccaoDocs.nDocumentos': '{n} document|{n} documents',
+  'seccaoDocs.contaSuspensa':
+    'With the account unsettled you can look at the documents, but not keep new ones.',
+  'seccaoDocs.semPermissao': 'Keeping documents is for whoever has a farm in their charge.',
+
+  /* ---- Escrever ao apoio ---- */
+  'apoio.reportar': 'Report a problem',
+  'apoio.escrever': 'Write to support',
+  'apoio.vaiPara': 'Goes to {email}',
+  'apoio.explicacaoBug':
+    'Tell us what you were doing and what happened. You do not need technical words: the app version and the device go along on their own.',
+  'apoio.explicacaoMensagem':
+    'Write to us with your question or what you need. We reply to your account email.',
+  'apoio.assunto': 'Subject',
+  'apoio.assuntoAjuda': 'One line saying what it is about.',
+  'apoio.exAssuntoBug': 'The app closes when I open the animals',
+  'apoio.exAssuntoDuvida': 'Question about the alerts',
+  'apoio.oQueAconteceu': 'What happened',
+  'apoio.aSuaMensagem': 'Your message',
+  'apoio.ajudaBug': 'What you were doing, what you expected and what showed up on screen.',
+  'apoio.ajudaMensagem': 'The more specific you are, the faster we can answer.',
+  'apoio.exTextoBug':
+    'I tapped Animals and the app closed on its own. It happened three times this morning.',
+  'apoio.exTextoDuvida': 'I would like to know how to…',
+  'apoio.vaiJunto': 'Sent along: {contexto}',
+  'apoio.enviarProblema': 'Send the problem',
+  'apoio.enviarMensagem': 'Send message',
+  'apoio.problemaEnviado': 'Problem sent',
+  'apoio.mensagemEnviada': 'Message sent',
+  'apoio.problemaSemEnviar': 'Problem not sent',
+  'apoio.mensagemSemEnviar': 'Message not sent',
+  'apoio.recebemos': 'We got it. We usually reply the same working day.',
+
+  /* ---- Avisos e erros ---- */
+  'avisos.entendido': 'Understood',
+  'erro.titulo': 'Something went wrong',
+  'erro.dadosSeguros': 'Your data is still saved on this device: nothing was lost.',
 };
 
 const DICIONARIOS: Record<Idioma, Record<ChaveTexto, string>> = { pt, en };

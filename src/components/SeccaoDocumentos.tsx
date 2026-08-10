@@ -21,6 +21,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { UseDocumentos } from '@/data/useDocumentos';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /**
@@ -59,10 +60,10 @@ export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
       const r = comCamera ? await fotografarDocumento() : await escolherDocumento();
       if (r.estado === 'sem-permissao') {
         avisar(
-          'Sem acesso',
+          t('gaveta.semAcesso'),
           comCamera
-            ? 'A app precisa de autorização para usar a câmara. Pode dá-la nas definições do telemóvel.'
-            : 'A app precisa de autorização para ver as suas fotografias.',
+            ? t('gaveta.semCamara')
+            : t('gaveta.semGaleria'),
         );
         return;
       }
@@ -78,7 +79,7 @@ export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
         exploracaoId: disponiveis[0]?.id,
       });
     } catch (e) {
-      toast.erro('Não foi possível preparar a imagem', mensagemDeErro(e));
+      toast.erro(t('gaveta.semImagem'), mensagemDeErro(e));
     }
   }
 
@@ -133,7 +134,7 @@ export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
         <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
           {suportaCamera ? (
             <Button
-              label="Fotografar"
+              label={t('gaveta.fotografar')}
               icon="camera-outline"
               variant="secondary"
               style={{ flex: 1 }}
@@ -141,7 +142,7 @@ export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
             />
           ) : null}
           <Button
-            label={suportaCamera ? 'Da galeria' : 'Guardar documento'}
+            label={suportaCamera ? t('gaveta.daGaleria') : t('guardarDoc.titulo')}
             icon={suportaCamera ? 'image-outline' : 'plus'}
             variant="secondary"
             style={{ flex: 1 }}
@@ -151,8 +152,8 @@ export function SeccaoDocumentos({ api }: { api: UseDocumentos }) {
       ) : (
         <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm }}>
           {contaSuspensa
-            ? 'Com a conta por regularizar pode consultar os documentos, mas não guardar novos.'
-            : 'Guardar documentos é de quem tem uma exploração a cargo.'}
+            ? t('seccaoDocs.contaSuspensa')
+            : t('seccaoDocs.semPermissao')}
         </Text>
       )}
 
@@ -189,7 +190,7 @@ function Pasta({
       accessibilityRole="button"
       accessibilityLabel={`${categoria}. ${
         quantos === 0
-          ? 'Vazia.'
+          ? t('seccaoDocs.vazia')
           : `${quantos} ${quantos === 1 ? 'documento' : 'documentos'}.`
       } ${explicacaoCategoria(categoria)}`}
       style={({ pressed }) => [
@@ -229,7 +230,7 @@ function Pasta({
         {categoria}
       </Text>
       <Text variant="caption" color={quantos > 0 ? colors.textSecondary : colors.textMuted}>
-        {quantos === 0 ? 'Vazia' : `${quantos} ${quantos === 1 ? 'documento' : 'documentos'}`}
+        {quantos === 0 ? t('seccaoDocs.vaziaCurto') : t('seccaoDocs.nDocumentos', { n: quantos })}
       </Text>
     </Pressable>
   );
