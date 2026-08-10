@@ -104,7 +104,7 @@ export class LimiteDeErro extends Component<Props, State> {
           <Pressable
             onPress={this.tentarDeNovo}
             accessibilityRole="button"
-            accessibilityLabel="Tentar de novo"
+            accessibilityLabel={t('erro.tentarDeNovo')}
             style={({ pressed }) => ({
               minHeight: 56,
               borderRadius: 999,
@@ -122,7 +122,7 @@ export class LimiteDeErro extends Component<Props, State> {
           <Pressable
             onPress={this.enviarDetalhes}
             accessibilityRole="button"
-            accessibilityLabel="Enviar detalhes do erro"
+            accessibilityLabel={t('erro.enviarDetalhes')}
             style={({ pressed }) => ({
               minHeight: 56,
               borderRadius: 999,

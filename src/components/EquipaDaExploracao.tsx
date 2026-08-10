@@ -8,6 +8,7 @@ import { legendaRole } from '@/data/permissoes';
 import { listarMembrosDaExploracao, type MembroDaExploracao } from '@/data/superadminApi';
 import { iniciais } from '@/data/trabalhadores';
 import type { RoleMembro } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, spacing } from '@/theme';
 
 const ICONE_PAPEL: Record<RoleMembro, IconName> = {
@@ -177,7 +178,7 @@ function LinhaMembro({ membro, ultimo }: { membro: MembroDaExploracao; ultimo: b
           </View>
         ) : null}
       </View>
-      {terminou ? <Badge tone="danger" icon="lock-outline" label="Sem acesso" /> : null}
+      {terminou ? <Badge tone="danger" icon="lock-outline" label={t('gaveta.semAcesso')} /> : null}
     </View>
   );
 }

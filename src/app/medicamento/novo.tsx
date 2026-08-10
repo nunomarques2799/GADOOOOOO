@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { FormularioMedicamento } from '@/components/FormularioMedicamento';
 import { EmptyState, Header } from '@/components/ui';
 import { useGado } from '@/data/store';
+import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 export default function NovoMedicamentoScreen() {
@@ -18,11 +19,11 @@ export default function NovoMedicamentoScreen() {
   if (!alvo) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Dar entrada" />
+        <Header title={t('existencias.darEntrada')} />
         <EmptyState
           icon="barn"
-          title="Sem explorações"
-          message="Os medicamentos pertencem a uma exploração. Crie primeiro a sua exploração."
+          title={t('formTerreno.semExploracoesTitulo')}
+          message={t('formLote.semExploracoesMensagem')}
         />
       </View>
     );

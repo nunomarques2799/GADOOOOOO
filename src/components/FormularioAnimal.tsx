@@ -377,7 +377,7 @@ export function FormularioAnimal({
           foto={foto}
           onMudar={setFoto}
           icone={especieMeta[especie].icon}
-          assunto="do animal"
+          assunto={t('formAnimal.assuntoFoto')}
         />
 
         {/* Espécie */}

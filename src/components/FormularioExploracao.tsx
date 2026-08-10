@@ -181,7 +181,7 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
           {t('formExploracao.ajuda')}
         </Text>
 
-        <SeletorFoto foto={foto} onMudar={setFoto} icone="barn" assunto="da exploração" forma="cartao" />
+        <SeletorFoto foto={foto} onMudar={setFoto} icone="barn" assunto={t('formExploracao.assuntoFoto')} forma="cartao" />
 
         <Field label={t('formAnimal.nome')} obrigatorio>
           <TextField

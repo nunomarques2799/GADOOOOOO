@@ -3,6 +3,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { Icon, Text } from '@/components/ui';
 import { MINIMO_LETRAS, procurarLocalidades, type Localidade } from '@/data/localidades';
+import { t } from '@/i18n';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 /** Tempo de espera depois da última letra, para não perguntar a cada tecla. */
@@ -123,7 +124,7 @@ export function CampoLocalidade({
             }}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Limpar localização">
+            accessibilityLabel={t('formTerreno.limparLocalizacao')}>
             <Icon name="close-circle" size="md" color={colors.textMuted} />
           </Pressable>
         ) : null}

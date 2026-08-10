@@ -339,7 +339,7 @@ export function FormularioMovimento({
             </Field>
           ) : null
         ) : exploracoes.length > 1 ? (
-          <Field label="Exploração" obrigatorio>
+          <Field label={t('formAnimal.exploracao')} obrigatorio>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               {exploracoes.map((e) => (
                 <Chip

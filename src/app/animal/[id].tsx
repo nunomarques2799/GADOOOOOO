@@ -636,7 +636,7 @@ function FormularioSaida({
         <CampoData
           value={data}
           onChangeText={onChangeData}
-          placeholder="dd/mm/aaaa"
+          placeholder={t('agenda.exDia')}
           icon="calendar"
           rotuloCalendario={t('ficha.calendarioSaida')}
         />

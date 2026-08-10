@@ -148,7 +148,7 @@ export function SeletorFoto({
           onPress={() => onMudar(undefined)}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Remover a fotografia"
+          accessibilityLabel={t('foto.remover')}
           style={({ pressed }) => [{ marginTop: spacing.xs, padding: 4 }, pressed && { opacity: 0.6 }]}>
           <Text variant="secondary" color={colors.danger}>
             Remover fotografia

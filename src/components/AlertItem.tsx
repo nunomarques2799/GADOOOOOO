@@ -107,7 +107,7 @@ export function AlertItem({
           onPress={() => onDispensar?.(alerta)}
           accessibilityRole="button"
           accessibilityLabel={`Dispensar aviso: ${alerta.titulo}`}
-          accessibilityHint="Deixa de mostrar este aviso. Volta se a situação se agravar."
+          accessibilityHint={t('alertas.dispensarAjuda')}
           hitSlop={spacing.xs}
           style={({ pressed }) => [
             {

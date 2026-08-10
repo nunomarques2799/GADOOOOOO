@@ -1573,6 +1573,20 @@ const pt = {
     'Quando o prazo de um veterinário acabar, ou quando remover alguém da equipa, fica aqui registado quem era, com que função e quando.',
   'histEquipa.toqueParaEquipa':
     'Toque para abrir a equipa desta exploração e dar-lhe mais tempo',
+
+  /* ---- Últimos rótulos soltos ---- */
+  'formLote.naoEncontrado': 'Lote não encontrado',
+  'formLote.naoEncontradoMensagem': 'Este lote pode ter sido eliminado noutro aparelho.',
+  'formLote.semExploracoesMensagem':
+    'Os medicamentos pertencem a uma exploração. Crie primeiro a sua exploração.',
+  'formAnimal.assuntoFoto': 'do animal',
+  'formExploracao.assuntoFoto': 'da exploração',
+  'foto.remover': 'Remover a fotografia',
+  'agenda.toqueParaVer': 'Toque para ver ou alterar',
+  'avisos.toqueParaFechar': 'Toque para fechar este aviso',
+  'alertas.dispensarAjuda': 'Deixa de mostrar este aviso. Volta se a situação se agravar.',
+  'erro.tentarDeNovo': 'Tentar de novo',
+  'erro.enviarDetalhes': 'Enviar detalhes do erro',
 } as const;
 
 export type ChaveTexto = keyof typeof pt;
@@ -3111,6 +3125,19 @@ const en: Record<ChaveTexto, string> = {
   'histEquipa.vazioMensagem':
     'When a vet time runs out, or when you remove someone from the team, it is recorded here who they were, in what role and when.',
   'histEquipa.toqueParaEquipa': 'Tap to open this farm team and give them more time',
+
+  /* ---- Últimos rótulos soltos ---- */
+  'formLote.naoEncontrado': 'Batch not found',
+  'formLote.naoEncontradoMensagem': 'This batch may have been deleted on another device.',
+  'formLote.semExploracoesMensagem': 'Medicines belong to a farm. Create your farm first.',
+  'formAnimal.assuntoFoto': 'of the animal',
+  'formExploracao.assuntoFoto': 'of the farm',
+  'foto.remover': 'Remove the photo',
+  'agenda.toqueParaVer': 'Tap to see it or change it',
+  'avisos.toqueParaFechar': 'Tap to close this message',
+  'alertas.dispensarAjuda': 'Stops showing this alert. It comes back if things get worse.',
+  'erro.tentarDeNovo': 'Try again',
+  'erro.enviarDetalhes': 'Send the error details',
 };
 
 const DICIONARIOS: Record<Idioma, Record<ChaveTexto, string>> = { pt, en };

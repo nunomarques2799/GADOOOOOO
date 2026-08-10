@@ -4,6 +4,7 @@ import DateTimePicker, {
 import { useState } from 'react';
 import { Modal, Platform, Pressable, TextInput, View } from 'react-native';
 
+import { t } from '@/i18n';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 import { Button } from './Button';
@@ -110,7 +111,7 @@ export function CampoData({
           <Pressable
             style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}
             onPress={() => setAberto(false)}
-            accessibilityLabel="Fechar">
+            accessibilityLabel={t('comum.fechar')}>
             <Pressable
               onPress={() => {}}
               style={[
@@ -134,7 +135,7 @@ export function CampoData({
                 themeVariant="light"
                 accentColor={colors.primary}
               />
-              <Button label="Concluído" icon="check" onPress={() => setAberto(false)} style={{ marginTop: spacing.sm }} />
+              <Button label={t('comum.concluido')} icon="check" onPress={() => setAberto(false)} style={{ marginTop: spacing.sm }} />
             </Pressable>
           </Pressable>
         </Modal>

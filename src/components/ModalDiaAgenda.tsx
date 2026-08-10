@@ -249,7 +249,7 @@ function LinhaEvento({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${evento.titulo}${evento.hora ? `, às ${evento.hora}` : ', todo o dia'}`}
-      accessibilityHint="Toque para ver ou alterar"
+      accessibilityHint={t('agenda.toqueParaVer')}
       style={({ pressed }) => [
         {
           flexDirection: 'row',
