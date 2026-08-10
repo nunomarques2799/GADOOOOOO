@@ -360,17 +360,17 @@ export function FormularioMovimento({
 
         {/* Despesa ou receita — só quem pode lançar receitas vê a escolha */}
         {podeReceita ? (
-          <Field label="Tipo de movimento" obrigatorio>
+          <Field label={t('formMovimento.tipo')} obrigatorio>
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               <BigToggle
-                label="Despesa"
+                label={t('formMovimento.despesa')}
                 icon="cash-minus"
                 cor={colors.danger}
                 selected={direcaoEfetiva === 'despesa'}
                 onPress={() => setDirecao('despesa')}
               />
               <BigToggle
-                label="Receita"
+                label={t('formMovimento.receita')}
                 icon="cash-plus"
                 cor={colors.success}
                 selected={direcaoEfetiva === 'receita'}
@@ -380,7 +380,7 @@ export function FormularioMovimento({
           </Field>
         ) : null}
 
-        <Field label="Categoria" obrigatorio>
+        <Field label={t('formMovimento.categoria')} obrigatorio>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
             {categorias.map((c) => (
               <Chip
@@ -394,26 +394,26 @@ export function FormularioMovimento({
           </View>
         </Field>
 
-        <Field label="Valor (€)" obrigatorio>
+        <Field label={t('formMovimento.valor')} obrigatorio>
           <CampoTexto
             value={valor}
             onChangeText={setValor}
-            placeholder="Ex: 860"
+            placeholder={t('formMovimento.exValor')}
             icon="cash"
             keyboardType="decimal-pad"
           />
         </Field>
 
-        <Field label="Descrição" obrigatorio>
+        <Field label={t('formTerreno.descricao')} obrigatorio>
           <CampoTexto
             value={descricao}
             onChangeText={setDescricao}
-            placeholder="Ex: Ração, 40 sacos"
+            placeholder={t('formMovimento.exDescricao')}
             icon="note-text-outline"
           />
         </Field>
 
-        <Field label="Data" obrigatorio>
+        <Field label={t('formMovimento.data')} obrigatorio>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
             {opcoesData.map((o) => (
               <Chip
@@ -435,7 +435,7 @@ export function FormularioMovimento({
           <CampoData
             value={dataManual}
             onChangeText={setDataManual}
-            placeholder="Ex: 15/03/2026"
+            placeholder={t('formLote.exDataCompra')}
             rotuloCalendario={t('formMovimento.calendarioData')}
           />
           {dataManualInvalida ? (

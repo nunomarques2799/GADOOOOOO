@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Modal, Platform, Pressable, TextInput, View } from 'react-native';
 
 import { mascaraHora, minutosDaHora } from '@/data/acessoTemporario';
+import { t } from '@/i18n';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 import { Button } from './Button';
@@ -101,7 +102,7 @@ export function CampoHora({
           <Pressable
             style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}
             onPress={() => setAberto(false)}
-            accessibilityLabel="Fechar">
+            accessibilityLabel={t('comum.fechar')}>
             <Pressable
               onPress={() => {}}
               style={[
@@ -126,7 +127,7 @@ export function CampoHora({
                 accentColor={colors.primary}
               />
               <Button
-                label="Concluído"
+                label={t('comum.concluido')}
                 icon="check"
                 onPress={() => setAberto(false)}
                 style={{ marginTop: spacing.sm }}

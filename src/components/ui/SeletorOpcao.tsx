@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { t } from '@/i18n';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 import { FolhaComTeclado } from './EcraComTeclado';
@@ -142,7 +143,7 @@ export function SeletorOpcao({
         // em vez da folha.
         accessibilityViewIsModal>
         <FolhaComTeclado>
-          <Pressable style={{ flex: 1 }} onPress={fechar} accessibilityLabel="Fechar" />
+          <Pressable style={{ flex: 1 }} onPress={fechar} accessibilityLabel={t('comum.fechar')} />
           <View
             style={[
               {
@@ -169,7 +170,7 @@ export function SeletorOpcao({
                 onPress={fechar}
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel="Fechar">
+                accessibilityLabel={t('comum.fechar')}>
                 <Icon name="close" size="lg" color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -191,7 +192,7 @@ export function SeletorOpcao({
                 <TextInput
                   value={procura}
                   onChangeText={setProcura}
-                  placeholder="Procurar ou escrever uma nova"
+                  placeholder={t('seletor.procurarOuEscrever')}
                   placeholderTextColor={colors.textMuted}
                   autoCapitalize="words"
                   style={{
@@ -231,7 +232,7 @@ export function SeletorOpcao({
                   variant="secondary"
                   color={colors.textMuted}
                   style={{ paddingVertical: spacing.lg, textAlign: 'center' }}>
-                  Nada encontrado.
+                  {t('seletor.nadaEncontrado')}
                 </Text>
               ) : null}
             </ScrollView>

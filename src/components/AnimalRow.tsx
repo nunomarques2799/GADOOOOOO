@@ -116,13 +116,13 @@ export const AnimalRow = memo(function AnimalRow({
             </Text>
             <Icon name={sexoIcon} size={16} color={sexoCor} />
             {animal.estado === 'falecido' ? (
-              <Badge tone="neutral" icon="grave-stone" label="Falecido" />
+              <Badge tone="neutral" icon="grave-stone" label={t('ficha.falecido')} />
             ) : null}
             {animal.estado === 'vendido' ? (
-              <Badge tone="info" icon="cash" label="Vendido" />
+              <Badge tone="info" icon="cash" label={t('ficha.vendido')} />
             ) : null}
             {animal.estado === 'eliminado' ? (
-              <Badge tone="danger" icon="trash-can-outline" label="Eliminado" />
+              <Badge tone="danger" icon="trash-can-outline" label={t('ficha.eliminado')} />
             ) : null}
             {porCompletar ? (
               <Badge tone="warning" icon="pencil-outline" label={t('animais.porCompletar')} />

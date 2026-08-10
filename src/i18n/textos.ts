@@ -1470,6 +1470,62 @@ const pt = {
   'avisos.entendido': 'Entendido',
   'erro.titulo': 'Alguma coisa correu mal',
   'erro.dadosSeguros': 'Os seus dados continuam guardados neste aparelho: não se perdeu nada.',
+
+  /* ---- Marcar um evento na agenda ---- */
+  'agenda.semPermissaoTitulo': 'O calendário é de quem trabalha na exploração',
+  'agenda.semPermissaoMensagem':
+    'Marcar eventos é de quem tem a exploração a cargo e de quem lá trabalha todos os dias. Pode continuar a registar o que fizer a cada animal.',
+  'agenda.semExploracoesMensagem': 'Os eventos pertencem a uma exploração. Crie primeiro a sua.',
+  'agenda.exTitulo': 'Ex: Feira de Idanha',
+  'agenda.dia': 'Dia',
+  'agenda.exDia': 'dd/mm/aaaa',
+  'agenda.calendarioDia': 'Escolher o dia do evento',
+  'agenda.horas': 'Horas',
+  'agenda.marcarHora': 'Marcar uma hora',
+  'agenda.todaEquipaDescricao': 'Quem trabalha nesta exploração vê este evento no calendário.',
+  'agenda.soEuDescricao':
+    'Fica guardado na sua conta. Mais ninguém o vê, nem o dono da exploração.',
+  'agenda.notasAjuda': 'O que mais precisar de ter à mão nesse dia.',
+  'agenda.exNotas': 'Ex: levar a guia de circulação e os brincos de substituição',
+  'agenda.eliminarEvento': 'Eliminar evento',
+
+  /* ---- Campos do movimento ---- */
+  'formMovimento.tipo': 'Tipo de movimento',
+  'formMovimento.despesa': 'Despesa',
+  'formMovimento.receita': 'Receita',
+  'formMovimento.categoria': 'Categoria',
+  'formMovimento.valor': 'Valor (€)',
+  'formMovimento.exValor': 'Ex: 860',
+  'formMovimento.exDescricao': 'Ex: Ração, 40 sacos',
+  'formMovimento.data': 'Data',
+
+  /* ---- Meteorologia ---- */
+  'meteo.humidade': 'Humidade',
+  'meteo.vento': 'Vento',
+  'meteo.precipitacao': 'Precip.',
+  'meteo.amanha': 'Amanhã',
+  'meteo.atualizar': 'Atualizar meteorologia',
+  'meteo.grausC': '°C',
+  'meteo.chuva': 'Chuva {chuva}',
+  'meteo.semLigacao': 'Sem ligação',
+  'meteo.esconderDias': 'Esconder os próximos dias',
+  'meteo.verProximosDias': 'Ver o próximo dia|Ver os próximos {n} dias',
+  'meteo.mostrarMenos': 'Mostrar menos',
+  'meteo.proximosDias': 'Próximo dia|Próximos {n} dias',
+  'dia.domingo': 'Domingo',
+  'dia.segunda': 'Segunda',
+  'dia.terca': 'Terça',
+  'dia.quarta': 'Quarta',
+  'dia.quinta': 'Quinta',
+  'dia.sexta': 'Sexta',
+  'dia.sabado': 'Sábado',
+
+  /* ---- Peças soltas da interface ---- */
+  'comum.voltar': 'Voltar',
+  'comum.acao': 'Ação',
+  'comum.concluido': 'Concluído',
+  'seletor.procurarOuEscrever': 'Procurar ou escrever uma nova',
+  'seletor.nadaEncontrado': 'Nada encontrado.',
 } as const;
 
 export type ChaveTexto = keyof typeof pt;
@@ -2907,6 +2963,61 @@ const en: Record<ChaveTexto, string> = {
   'avisos.entendido': 'Understood',
   'erro.titulo': 'Something went wrong',
   'erro.dadosSeguros': 'Your data is still saved on this device: nothing was lost.',
+
+  /* ---- Marcar um evento na agenda ---- */
+  'agenda.semPermissaoTitulo': 'The calendar belongs to whoever works on the farm',
+  'agenda.semPermissaoMensagem':
+    'Scheduling events is for whoever runs the farm and whoever works there day to day. You can still record what you do to each animal.',
+  'agenda.semExploracoesMensagem': 'Events belong to a farm. Create yours first.',
+  'agenda.exTitulo': 'e.g. Idanha livestock fair',
+  'agenda.dia': 'Day',
+  'agenda.exDia': 'dd/mm/yyyy',
+  'agenda.calendarioDia': 'Pick the day of the event',
+  'agenda.horas': 'Time',
+  'agenda.marcarHora': 'Set a time',
+  'agenda.todaEquipaDescricao': 'Anyone who works on this farm sees this event on the calendar.',
+  'agenda.soEuDescricao': 'It stays on your account. Nobody else sees it, not even the farm owner.',
+  'agenda.notasAjuda': 'Anything else you need to hand that day.',
+  'agenda.exNotas': 'e.g. bring the movement document and spare ear tags',
+  'agenda.eliminarEvento': 'Delete event',
+
+  /* ---- Campos do movimento ---- */
+  'formMovimento.tipo': 'Type of entry',
+  'formMovimento.despesa': 'Expense',
+  'formMovimento.receita': 'Income',
+  'formMovimento.categoria': 'Category',
+  'formMovimento.valor': 'Amount (€)',
+  'formMovimento.exValor': 'e.g. 860',
+  'formMovimento.exDescricao': 'e.g. Feed, 40 bags',
+  'formMovimento.data': 'Date',
+
+  /* ---- Meteorologia ---- */
+  'meteo.humidade': 'Humidity',
+  'meteo.vento': 'Wind',
+  'meteo.precipitacao': 'Rain',
+  'meteo.amanha': 'Tomorrow',
+  'meteo.atualizar': 'Refresh the weather',
+  'meteo.grausC': '°C',
+  'meteo.chuva': 'Rain {chuva}',
+  'meteo.semLigacao': 'No connection',
+  'meteo.esconderDias': 'Hide the coming days',
+  'meteo.verProximosDias': 'See the next day|See the next {n} days',
+  'meteo.mostrarMenos': 'Show less',
+  'meteo.proximosDias': 'Next day|Next {n} days',
+  'dia.domingo': 'Sunday',
+  'dia.segunda': 'Monday',
+  'dia.terca': 'Tuesday',
+  'dia.quarta': 'Wednesday',
+  'dia.quinta': 'Thursday',
+  'dia.sexta': 'Friday',
+  'dia.sabado': 'Saturday',
+
+  /* ---- Peças soltas da interface ---- */
+  'comum.voltar': 'Back',
+  'comum.acao': 'Action',
+  'comum.concluido': 'Done',
+  'seletor.procurarOuEscrever': 'Search, or type a new one',
+  'seletor.nadaEncontrado': 'Nothing found.',
 };
 
 const DICIONARIOS: Record<Idioma, Record<ChaveTexto, string>> = { pt, en };

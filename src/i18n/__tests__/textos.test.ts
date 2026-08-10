@@ -96,6 +96,8 @@ describe('o dicionário está completo', () => {
     // "Offline" é a mesma palavra nas duas línguas, e é a que se usa em
     // português corrente.
     'sinc.offline',
+    // Símbolo da unidade, não uma palavra.
+    'meteo.grausC',
   ];
 
   it('e nenhuma tradução ficou igual ao português por esquecimento', () => {
