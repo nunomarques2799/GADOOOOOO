@@ -22,6 +22,7 @@ import {
 import { useToasts } from '@/data/toasts';
 import type { Alerta, AlertaGravidade, Exploracao } from '@/data/types';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 const TITULO = 'Relatório de prazos · Terrabovina';
@@ -129,7 +130,7 @@ export function ModalRelatorioPrazos({
         <Pressable
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           onPress={onFechar}
-          accessibilityLabel="Fechar"
+          accessibilityLabel={t('comum.fechar')}
         />
         <View
           style={{
@@ -174,7 +175,7 @@ export function ModalRelatorioPrazos({
               onPress={onFechar}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Fechar">
+              accessibilityLabel={t('comum.fechar')}>
               <Icon name="close" size="lg" color={colors.textSecondary} />
             </Pressable>
           </View>
@@ -189,9 +190,9 @@ export function ModalRelatorioPrazos({
               gap: spacing.md,
             }}>
             {podeEscolherExploracao ? (
-              <Grupo titulo="Exploração">
+              <Grupo titulo={t('formAnimal.exploracao')}>
                 <Chip
-                  label="Todas"
+                  label={t('comum.todas')}
                   icon="barn"
                   selected={filtro.exploracaoId === undefined}
                   onPress={() => setFiltro({ ...filtro, exploracaoId: undefined })}
@@ -212,7 +213,7 @@ export function ModalRelatorioPrazos({
               </Grupo>
             ) : null}
 
-            <Grupo titulo="Prazo">
+            <Grupo titulo={t('relatorio.prazo')}>
               {JANELAS.map((j) => (
                 <Chip
                   key={String(j)}
@@ -223,7 +224,7 @@ export function ModalRelatorioPrazos({
               ))}
             </Grupo>
 
-            <Grupo titulo="Importância" nota="todas, se não escolher">
+            <Grupo titulo={t('relatorio.importancia')} nota="todas, se não escolher">
               {GRAVIDADES.map((g) => (
                 <Chip
                   key={g}
@@ -236,7 +237,7 @@ export function ModalRelatorioPrazos({
               ))}
             </Grupo>
 
-            <Grupo titulo="Assunto" nota="todos, se não escolher">
+            <Grupo titulo={t('apoio.assunto')} nota="todos, se não escolher">
               {CATEGORIAS.map((c) => (
                 <Chip
                   key={c}
@@ -253,7 +254,7 @@ export function ModalRelatorioPrazos({
               <Pressable
                 onPress={() => setFiltro(FILTRO_PRAZOS_TUDO)}
                 accessibilityRole="button"
-                accessibilityLabel="Levar todos os prazos"
+                accessibilityLabel={t('relatorio.levarTodos')}
                 style={({ pressed }) => [
                   { alignSelf: 'flex-start', paddingVertical: spacing.xs },
                   pressed && { opacity: 0.6 },
@@ -299,7 +300,7 @@ export function ModalRelatorioPrazos({
             <View style={{ flexDirection: desktop ? 'row' : 'column', gap: spacing.sm }}>
               <View style={{ flex: desktop ? 1 : undefined }}>
                 <Button
-                  label="Imprimir"
+                  label={t('relatorio.imprimir')}
                   icon="printer-outline"
                   disabled={escolhidos.length === 0}
                   onPress={imprimir}
@@ -307,7 +308,7 @@ export function ModalRelatorioPrazos({
               </View>
               <View style={{ flex: desktop ? 1 : undefined }}>
                 <Button
-                  label="Descarregar PDF"
+                  label={t('relatorio.descarregarPdf')}
                   icon="file-download-outline"
                   variant="secondary"
                   disabled={escolhidos.length === 0}

@@ -10,6 +10,7 @@ import { reporIntroducoes } from '@/data/introducoes';
 import { useToasts } from '@/data/toasts';
 import { reporTutorial } from '@/data/tutorial';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, layout, radii, spacing } from '@/theme';
 
 /** Perguntas frequentes e formas de contactar o apoio. */
@@ -43,7 +44,7 @@ export default function AjudaScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Ajuda e apoio" />
+      <Header title={t('definicoes.ajuda')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -70,7 +71,7 @@ export default function AjudaScreen() {
                   `mailto:` não abre, não falha e não diz nada — quem o carregava
                   ficava convencido de que tinha escrito. */}
               <Button
-                label="Enviar mensagem"
+                label={t('apoio.enviarMensagem')}
                 icon="email-fast-outline"
                 onPress={() => setAEscrever('apoio')}
               />
@@ -105,7 +106,7 @@ export default function AjudaScreen() {
                 </Text>
               </View>
               <Button
-                label="Reportar um problema"
+                label={t('apoio.reportar')}
                 icon="bug-outline"
                 variant="secondary"
                 onPress={() => setAEscrever('bug')}
@@ -144,7 +145,7 @@ export default function AjudaScreen() {
                 </Text>
               </View>
               <Button
-                label="Rever os primeiros passos"
+                label={t('ajuda.reverPrimeirosPassos')}
                 icon="flag-checkered"
                 variant="secondary"
                 onPress={reverGuia}

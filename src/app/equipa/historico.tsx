@@ -22,6 +22,7 @@ import { useGado } from '@/data/store';
 import { iniciais } from '@/data/trabalhadores';
 import type { RoleMembro } from '@/data/types';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, layout, spacing } from '@/theme';
 
 const ICONE_PAPEL: Record<RoleMembro, IconName> = {
@@ -156,7 +157,7 @@ export default function HistoricoEquipaScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Histórico da equipa" actionIcon="refresh" onAction={carregar} />
+      <Header title={t('histEquipa.titulo')} actionIcon="refresh" onAction={carregar} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={aCarregar} onRefresh={() => void carregar()} />}
@@ -223,8 +224,8 @@ export default function HistoricoEquipaScreen() {
           {minhas.length === 0 ? (
             <EmptyState
               icon="account-off-outline"
-              title="Sem equipa para gerir"
-              message="Só o dono de uma exploração vê quem lá passou. Se entrou por convite, fale com quem o convidou."
+              title={t('equipa.semEquipaTitulo')}
+              message={t('histEquipa.semEquipaMensagem')}
             />
           ) : aCarregar && entradas.length === 0 ? (
             <Card>
@@ -235,8 +236,8 @@ export default function HistoricoEquipaScreen() {
           ) : entradas.length === 0 ? (
             <EmptyState
               icon="account-clock-outline"
-              title="Ainda não saiu ninguém"
-              message="Quando o prazo de um veterinário acabar, ou quando remover alguém da equipa, fica aqui registado quem era, com que função e quando."
+              title={t('histEquipa.vazioTitulo')}
+              message={t('histEquipa.vazioMensagem')}
             />
           ) : (
             <Card padded={false}>
@@ -353,7 +354,7 @@ function Linha({
       onPress={onReabrir}
       accessibilityRole="button"
       accessibilityLabel={`${entrada.nome}, ${rotuloFim(entrada, formatDataHora).toLowerCase()}`}
-      accessibilityHint="Toque para abrir a equipa desta exploração e dar-lhe mais tempo"
+      accessibilityHint={t('histEquipa.toqueParaEquipa')}
       style={({ pressed }) => [estilo, pressed && { opacity: 0.6 }]}>
       {conteudo}
     </Pressable>

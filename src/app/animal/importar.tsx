@@ -16,6 +16,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, layout, radii, spacing } from '@/theme';
 
 /**
@@ -147,7 +148,7 @@ export default function ImportarAnimaisScreen() {
   if (!excelDisponivel) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Importar de Excel" />
+        <Header title={t('importar.titulo')} />
         <View style={{ ...conteudo, paddingTop: spacing.xl }}>
           <Card>
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
@@ -168,7 +169,7 @@ export default function ImportarAnimaisScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Importar de Excel" />
+      <Header title={t('importar.titulo')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -184,7 +185,7 @@ export default function ImportarAnimaisScreen() {
           </Text>
 
           {/* Passo 1 — exploração de destino */}
-          <PassoTitulo numero={1} texto="Para que exploração?" />
+          <PassoTitulo numero={1} texto={t('importar.paraQueExploracao')} />
           {contaSuspensa ? (
             <Card>
               <Text variant="secondary" color={colors.danger}>
@@ -213,7 +214,7 @@ export default function ImportarAnimaisScreen() {
           )}
 
           {/* Passo 2 — modelo */}
-          <PassoTitulo numero={2} texto="Descarregar o modelo" />
+          <PassoTitulo numero={2} texto={t('importar.descarregarModelo')} />
           <Card>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <Icon name="microsoft-excel" size="lg" color={colors.primary} />
@@ -226,7 +227,7 @@ export default function ImportarAnimaisScreen() {
               </View>
             </View>
             <Button
-              label="Descarregar modelo"
+              label={t('importar.descarregarModeloBotao')}
               icon="tray-arrow-down"
               variant="secondary"
               onPress={() => {
@@ -242,7 +243,7 @@ export default function ImportarAnimaisScreen() {
           </Card>
 
           {/* Passo 3 — carregar o ficheiro preenchido */}
-          <PassoTitulo numero={3} texto="Carregar o ficheiro preenchido" />
+          <PassoTitulo numero={3} texto={t('importar.carregarFicheiro')} />
           <Button
             label={aLer ? 'A ler…' : resultado ? 'Escolher outro ficheiro' : 'Escolher ficheiro Excel'}
             icon="microsoft-excel"

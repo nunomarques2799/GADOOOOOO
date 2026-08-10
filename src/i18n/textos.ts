@@ -1526,6 +1526,53 @@ const pt = {
   'comum.concluido': 'Concluído',
   'seletor.procurarOuEscrever': 'Procurar ou escrever uma nova',
   'seletor.nadaEncontrado': 'Nada encontrado.',
+
+  /* ---- Equipa de uma exploração ---- */
+  'equipaExp.titulo': 'Equipa',
+  'equipaExp.semPermissao': 'Só o administrador desta exploração pode gerir a equipa.',
+  'equipaExp.gerarCodigo': 'Gerar código',
+  'equipaExp.apagarConvite': 'Apagar convite',
+  'permissoes.reporPapel': 'Repor o que o papel dá',
+
+  /* ---- Prazo de acesso de um convidado ---- */
+  'acesso.duranteUmTempo': 'Durante um tempo',
+  'acesso.ateDiaEHora': 'Até dia e hora',
+  'acesso.terminarJa': 'Terminar já',
+  'acesso.tirarPrazo': 'Tirar o prazo',
+  'acesso.marcarEstaHora': 'Marcar esta hora',
+
+  /* ---- Relatório de prazos ---- */
+  'relatorio.prazo': 'Prazo',
+  'relatorio.importancia': 'Importância',
+  'relatorio.levarTodos': 'Levar todos os prazos',
+  'relatorio.imprimir': 'Imprimir',
+  'relatorio.descarregarPdf': 'Descarregar PDF',
+
+  /* ---- Ajuda, apagar conta, importar, genealogia, atividade ---- */
+  'ajuda.reverPrimeirosPassos': 'Rever os primeiros passos',
+  'apagar.vaiSerApagado': 'Isto vai ser apagado',
+  'apagar.continuaAExistir': 'Isto continua a existir, sem si',
+  'apagar.ajudaEscrever': 'É de propósito: um botão vermelho sozinho carrega-se sem ler.',
+  'apagar.afinalNao': 'Afinal não',
+  'importar.titulo': 'Importar de Excel',
+  'importar.paraQueExploracao': 'Para que exploração?',
+  'importar.descarregarModelo': 'Descarregar o modelo',
+  'importar.descarregarModeloBotao': 'Descarregar modelo',
+  'importar.carregarFicheiro': 'Carregar o ficheiro preenchido',
+  'genealogia.titulo': 'Árvore genealógica',
+  'genealogia.naoEncontrado': 'Animal não encontrado',
+  'genealogia.indicarPais': 'Indicar mãe e pai',
+  'atividade.titulo': 'Registo de alterações',
+  'atividade.aEquipa': 'A equipa',
+  'atividade.incluirMinhas': 'Incluir as minhas',
+  'histEquipa.titulo': 'Histórico da equipa',
+  'histEquipa.semEquipaMensagem':
+    'Só o dono de uma exploração vê quem lá passou. Se entrou por convite, fale com quem o convidou.',
+  'histEquipa.vazioTitulo': 'Ainda não saiu ninguém',
+  'histEquipa.vazioMensagem':
+    'Quando o prazo de um veterinário acabar, ou quando remover alguém da equipa, fica aqui registado quem era, com que função e quando.',
+  'histEquipa.toqueParaEquipa':
+    'Toque para abrir a equipa desta exploração e dar-lhe mais tempo',
 } as const;
 
 export type ChaveTexto = keyof typeof pt;
@@ -3018,6 +3065,52 @@ const en: Record<ChaveTexto, string> = {
   'comum.concluido': 'Done',
   'seletor.procurarOuEscrever': 'Search, or type a new one',
   'seletor.nadaEncontrado': 'Nothing found.',
+
+  /* ---- Equipa de uma exploração ---- */
+  'equipaExp.titulo': 'Team',
+  'equipaExp.semPermissao': 'Only the administrator of this farm can manage the team.',
+  'equipaExp.gerarCodigo': 'Generate a code',
+  'equipaExp.apagarConvite': 'Delete invitation',
+  'permissoes.reporPapel': 'Back to what the role gives',
+
+  /* ---- Prazo de acesso de um convidado ---- */
+  'acesso.duranteUmTempo': 'For a while',
+  'acesso.ateDiaEHora': 'Until a day and time',
+  'acesso.terminarJa': 'End it now',
+  'acesso.tirarPrazo': 'Remove the time limit',
+  'acesso.marcarEstaHora': 'Set this time',
+
+  /* ---- Relatório de prazos ---- */
+  'relatorio.prazo': 'Deadline',
+  'relatorio.importancia': 'Importance',
+  'relatorio.levarTodos': 'Take every deadline',
+  'relatorio.imprimir': 'Print',
+  'relatorio.descarregarPdf': 'Download PDF',
+
+  /* ---- Ajuda, apagar conta, importar, genealogia, atividade ---- */
+  'ajuda.reverPrimeirosPassos': 'Go through the first steps again',
+  'apagar.vaiSerApagado': 'This will be deleted',
+  'apagar.continuaAExistir': 'This carries on without you',
+  'apagar.ajudaEscrever': 'On purpose: a red button on its own gets pressed without reading.',
+  'apagar.afinalNao': 'Actually, no',
+  'importar.titulo': 'Import from Excel',
+  'importar.paraQueExploracao': 'Which farm is it for?',
+  'importar.descarregarModelo': 'Download the template',
+  'importar.descarregarModeloBotao': 'Download template',
+  'importar.carregarFicheiro': 'Upload the filled-in file',
+  'genealogia.titulo': 'Family tree',
+  'genealogia.naoEncontrado': 'Animal not found',
+  'genealogia.indicarPais': 'Set the dam and sire',
+  'atividade.titulo': 'Change log',
+  'atividade.aEquipa': 'The team',
+  'atividade.incluirMinhas': 'Include mine',
+  'histEquipa.titulo': 'Team history',
+  'histEquipa.semEquipaMensagem':
+    'Only a farm owner sees who has been there. If you came in by invitation, speak to whoever invited you.',
+  'histEquipa.vazioTitulo': 'Nobody has left yet',
+  'histEquipa.vazioMensagem':
+    'When a vet time runs out, or when you remove someone from the team, it is recorded here who they were, in what role and when.',
+  'histEquipa.toqueParaEquipa': 'Tap to open this farm team and give them more time',
 };
 
 const DICIONARIOS: Record<Idioma, Record<ChaveTexto, string>> = { pt, en };

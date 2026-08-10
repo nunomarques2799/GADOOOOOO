@@ -16,6 +16,7 @@ import { useMembros } from '@/data/membros';
 import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, layout, radii, shadow, spacing } from '@/theme';
 
 /**
@@ -126,7 +127,7 @@ export default function ApagarContaScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Apagar a minha conta" />
+      <Header title={t('perfil.apagarConta')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -147,7 +148,7 @@ export default function ApagarContaScreen() {
           {consequencias.apagaDados ? (
             <Card>
               <View style={{ gap: spacing.sm }}>
-                <Titulo icone="alert-octagon" texto="Isto vai ser apagado" tom={colors.danger} />
+                <Titulo icone="alert-octagon" texto={t('apagar.vaiSerApagado')} tom={colors.danger} />
                 {consequencias.exploracoesApagadas.map((e) => (
                   <Item
                     key={e.id}
@@ -177,7 +178,7 @@ export default function ApagarContaScreen() {
               <View style={{ gap: spacing.sm }}>
                 <Titulo
                   icone="account-off-outline"
-                  texto="Isto continua a existir, sem si"
+                  texto={t('apagar.continuaAExistir')}
                   tom={colors.warning}
                 />
                 {consequencias.acessosPerdidos.map((a) => (
@@ -210,7 +211,7 @@ export default function ApagarContaScreen() {
 
           <Field
             label={`Escreva ${PALAVRA_CONFIRMACAO} para confirmar`}
-            ajuda="É de propósito: um botão vermelho sozinho carrega-se sem ler.">
+            ajuda={t('apagar.ajudaEscrever')}>
             <TextField
               value={texto}
               onChangeText={setTexto}
@@ -261,7 +262,7 @@ export default function ApagarContaScreen() {
             gap: spacing.sm,
           }}>
           <Button
-            label="Apagar a minha conta"
+            label={t('perfil.apagarConta')}
             icon="delete-forever"
             variant="danger"
             onPress={perguntarPelaUltimaVez}
@@ -269,7 +270,7 @@ export default function ApagarContaScreen() {
             loading={aApagar}
           />
           <Button
-            label="Afinal não"
+            label={t('apagar.afinalNao')}
             variant="ghost"
             onPress={() => router.back()}
             disabled={aApagar}

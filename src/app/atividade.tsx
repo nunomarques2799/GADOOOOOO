@@ -21,6 +21,7 @@ import { useNomesEquipa } from '@/data/nomesEquipa';
 import { useGado } from '@/data/store';
 import { iniciais } from '@/data/trabalhadores';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, layout, radii, spacing } from '@/theme';
 
 /**
@@ -115,7 +116,7 @@ export default function AtividadeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Registo de alterações" actionIcon="refresh" onAction={carregar} />
+      <Header title={t('atividade.titulo')} actionIcon="refresh" onAction={carregar} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={aCarregar} onRefresh={() => void carregar()} />}
@@ -160,7 +161,7 @@ export default function AtividadeScreen() {
           {pessoas.length > 0 || meuId ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               <Chip
-                label="A equipa"
+                label={t('atividade.aEquipa')}
                 icon="account-multiple-outline"
                 selected={autorId === undefined && !incluirMe}
                 onPress={() => {
@@ -177,7 +178,7 @@ export default function AtividadeScreen() {
                 />
               ))}
               <Chip
-                label="Incluir as minhas"
+                label={t('atividade.incluirMinhas')}
                 icon="account-outline"
                 selected={autorId === undefined && incluirMe}
                 onPress={() => {
