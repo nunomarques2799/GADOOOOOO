@@ -14,7 +14,7 @@ import type { Intencao } from './intencao';
 import { supabase, supabaseConfigurado } from './supabase';
 
 /** Destino do link de recuperação de palavra-passe (página no site). */
-const URL_RECUPERACAO = 'https://gestaogado.netlify.app/recuperar';
+const URL_RECUPERACAO = 'https://terrabovina.pt/recuperar';
 
 /** Traduz as mensagens de erro mais comuns do Supabase para PT-PT. */
 function traduzErro(msg: string): string {

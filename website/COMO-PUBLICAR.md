@@ -1,22 +1,19 @@
 # Publicar e atualizar — como funciona
 
-> ⚠️ **Em migração.** O plano grátis do Netlify passou a créditos (300/mês, 15
-> por publicação) e suspende os sites quando acabam. A mudança para o Cloudflare
-> Pages, com o domínio `terrabovina.pt`, está preparada e descrita em
-> [`../MIGRAR_CLOUDFLARE.md`](../MIGRAR_CLOUDFLARE.md). **Este documento
-> descreve o que está no ar hoje** e continua válido até a migração estar
-> feita — é também o caminho de recuo se ela correr mal.
-
-São **dois sites Netlify** (ambos no plano grátis), a partir deste mesmo
+São **dois projetos do Cloudflare Pages** (plano grátis), a partir deste mesmo
 repositório:
 
-| Site | O que é | Base directory | Que ficheiro o configura |
+| Endereço | O que é | Root directory | Build |
 | --- | --- | --- | --- |
-| `gestaogado.netlify.app` | A página de apresentação | `website` | `website/netlify.toml` |
-| `app-gestaogado.netlify.app` | A app propriamente dita | *(vazia)* | `netlify.toml` (na raiz) |
+| `terrabovina.pt` | A página de apresentação | `website` | nenhum |
+| `app.terrabovina.pt` | A app propriamente dita | *(vazia — a raiz)* | `npx expo export --platform web` → `dist` |
 
-**A *base directory* é o que separa os dois.** É ela que decide qual dos dois
-`netlify.toml` o Netlify lê, e trocá-la põe um site a servir o conteúdo do outro.
+Os projetos chamam-se `terrabovina-site` e `terrabovina-app`, e respondem também
+nos endereços `*.pages.dev` com esses nomes.
+
+**A *root directory* é o que separa os dois.** É ela que decide o que cada
+projeto constrói, e trocá-la põe um projeto a servir o conteúdo do outro. Sinal
+de que ficou mal: um build a correr `npx expo export` no site da apresentação.
 
 **Porque não é tudo o mesmo site:** a app tem de ficar na raiz do seu próprio
 endereço. O build do Expo referencia tudo por caminhos absolutos (`/_expo/...`)
@@ -25,60 +22,55 @@ e numa subpasta (`/app`) não encontraria nada.
 **E o endereço da app não deve mudar depois de alguém a instalar.** Uma app
 instalada é identificada pelo endereço: os dados offline e a sessão ficam
 guardados por origem. Mudar de endereço deixa quem a tinha instalada com uma
-app vazia e sem sessão.
+app vazia e sem sessão. Foi essa a razão de a mudança de alojamento e a de
+domínio se terem feito de uma só vez, em 2026-08-11.
 
-## A página de apresentação
+## O que o Cloudflare reconstrói, e quando
 
-Também é construída a cada `push`, tal como a app. **Os dois sites saem do mesmo
-repositório e é a *base directory* que os distingue** — é a única definição que
-não se pode errar aqui.
+Cada `push` para o `main` reconstrói o que lhe disser respeito. Quem decide são
+os **Build watch paths** de cada projeto (*Settings* → *Build*), que substituem
+a antiga regra `ignore` do Netlify:
 
-### Ligar ao GitHub (uma vez só)
+| Projeto | Watch paths |
+| --- | --- |
+| `terrabovina-app` | `src/*`, `public/*`, `assets/*`, `app.json`, `package.json`, `package-lock.json`, `tsconfig.json`, `.node-version` |
+| `terrabovina-site` | `website/*` |
 
-O site nasceu por *drag and drop*, o que obrigava a repetir o arrasto a cada
-alteração — e era o passo que se esquecia, porque o site continuava a servir a
-versão antiga sem nada avisar. Para acabar com isso, liga-o ao repositório:
+Um push que não toque em nenhum deles aparece como **Skipped** — é o esperado,
+não é uma avaria. As duas linhas que não se adivinham na lista da app são o
+`tsconfig.json` (onde vive o atalho `@/` que o Metro lê) e o `.node-version`
+(que fixa o Node 22).
 
-1. Em <https://app.netlify.com> → o site **`gestaogado`** → **Site
-   configuration** → **Build & deploy** → **Continuous deployment** →
-   **Link repository** → **GitHub** → o repositório `GADOOOOOO`.
-2. **Branch to deploy: `main`.** É o branch de produção; o `dev` não deve
-   publicar a página real.
-3. **Base directory: `website`** ← **é esta que importa.** Com ela vazia o
-   Netlify lê o `netlify.toml` da RAIZ e constrói a **app** em cima do endereço
-   da apresentação, deixando os dois sites a servir a mesma coisa.
-4. *Build command* e *publish directory*: **deixar vazios**. Vêm do
-   `website/netlify.toml`, e o site é estático — não há build nenhum.
+**Não há `_redirects` em lado nenhum, e é de propósito.** No Cloudflare *"os
+redirects são sempre seguidos"*: um `/* /index.html 200` engolia o bundle, o
+`sw.js` e as fontes. O encaminhamento da app (abrir `/animais` diretamente) e os
+URLs sem extensão da apresentação (`/privacidade`, `/termos`, `/recuperar`)
+funcionam **sozinhos**. Se um deles der 404, apareceu um `404.html` dentro do
+`dist/` — é essa a causa, não falta de configuração.
 
-A partir daqui, cada `push` para o `main` que mexa em `website/` republica a
-página sozinho. Um push que não lhe toque é cancelado pela regra `ignore` do
-`website/netlify.toml`, para não gastar builds do plano grátis.
+Os cabeçalhos de cache vêm de `public/_headers` (app) e `website/_headers`
+(apresentação). São eles que mantêm o `sw.js` e o `manifest.json` em
+`no-cache` — sem isso, a app instalada fica presa numa versão antiga.
 
-### Confirmar que ficou bem ligado
+## Os dois ambientes
 
-O primeiro deploy depois de ligar deve aparecer em **Deploys** com origem no
-commit do GitHub (e não como *manual deploy*). Se aparecer um build a correr
-`npx expo export`, a *base directory* ficou vazia — é a app a ser construída no
-site errado. Corrige o passo 3 e volta a fazer *Trigger deploy*.
+O projeto da app tem variáveis separadas por ambiente (*Settings* → *Variables
+and Secrets*), e é isso que impede um build de teste de falar com os dados
+reais do criador:
 
-## O site da app (uma vez só)
+| Ambiente | Quando se aplica | Supabase |
+| --- | --- | --- |
+| *Production* | branch `main` | produção |
+| *Preview* | **todos** os outros branches | testes, com `EXPO_PUBLIC_AMBIENTE=dev` |
 
-Este tem de ser ligado ao GitHub, porque é construído a cada publicação:
+O `dev` fica em `dev.terrabovina-app.pages.dev`. O projeto da apresentação não
+leva variáveis nenhumas.
 
-1. Em <https://app.netlify.com> → **Add new site** → **Import an existing
-   project** → **GitHub** → escolhe o repositório `GADOOOOOO`.
-2. **Base directory: deixa vazio** (a raiz). É isso que faz o Netlify ler o
-   `netlify.toml` da raiz — o da app — e não o da página de apresentação.
-3. O *build command* e o *publish directory* já vêm do `netlify.toml`. Não
-   preencher nada. As chaves do Supabase também lá estão, não há variáveis de
-   ambiente a configurar.
-4. **Site configuration → Change site name → `app-gestaogado`.** Tem de ser
-   exatamente este nome: é o endereço para onde o botão "Abrir no computador"
-   aponta (`website/index.html`). Se usares outro, muda também lá o botão.
+> ⚠️ **Sem estas variáveis a app sai em modo demo** — dados de exemplo, sem
+> login, e sem nada no ecrã a explicar porquê. É o primeiro sintoma a
+> reconhecer se um build parecer "vazio".
 
-A partir daqui, cada `push` para o `main` reconstrói a app sozinho.
-
-### O que o utilizador vê
+## O que o utilizador vê
 
 Abre o site, carrega em **Abrir no computador** e a app abre já a funcionar no
 navegador. Se carregar em **Instalar** na barra de endereços, fica com ícone no
@@ -133,6 +125,11 @@ Windows, e sem instalador não havia auto-update nenhum.
 
 ## Notas
 
-- **Custo:** o build corre no GitHub Actions (grátis e ilimitado em repositório
-  público) e o download é servido pelo GitHub — **não pesa no Netlify**.
+- **Custo:** o plano grátis do Cloudflare dá 500 builds/mês e largura de banda
+  sem limite. O build do Windows corre no GitHub Actions (grátis e ilimitado em
+  repositório público) e o download é servido pelo GitHub.
+- **Os `netlify.toml` ainda cá estão** e são o caminho de recuo: enquanto os
+  sites `netlify.app` existirem, voltar atrás é apontar o DNS. Só se apagam
+  depois de umas semanas sem sobressaltos — ver
+  [`../MIGRAR_CLOUDFLARE.md`](../MIGRAR_CLOUDFLARE.md).
 - **Reconstruir localmente** (opcional): ver [`../desktop/README.md`](../desktop/README.md).

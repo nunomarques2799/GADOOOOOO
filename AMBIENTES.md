@@ -13,7 +13,7 @@ Este documento existe para que experimentar deixe de ser arriscado.
 | --- | --- | --- |
 | Quem usa | o criador | tu |
 | Base de dados | projeto Supabase `qmkafibxlmgouslybafy` | projeto Supabase próprio |
-| Site da app | `app-gestaogado.netlify.app` | `localhost` (ver abaixo) |
+| Site da app | `app.terrabovina.pt` | `localhost` (ver abaixo) |
 | Branch | `main` | `dev` |
 | Faixa roxa no topo | não | **sim** |
 | Se partires isto | mau dia | não acontece nada |
@@ -88,25 +88,22 @@ identidade da app de produção por se ter esquecido um passo. E o script
 `.env` apontado a produção dava uma app ligada aos dados reais a ostentar o
 nome "DEV".
 
-### E o site de testes no Netlify?
+### E o site de testes?
 
-A configuração já está no [`netlify.toml`](netlify.toml) e não custa nada
-enquanto ninguém a ativar, mas **os branch deploys estão desligados de
-propósito**. A 2026-07-22 a conta tinha 44 dos 300 créditos mensais e faltavam
-15 dias para renovar — a um ritmo de ~17/dia. Um segundo alvo de build gastava
-em testes a quota necessária para publicar em produção, que é o contrário do
-que este documento existe para garantir.
+Existe, e não custa quota nenhuma: o Cloudflare Pages constrói **todos** os
+branches. O `dev` fica em `dev.terrabovina-app.pages.dev`, já com as chaves
+certas — o Cloudflare aplica o ambiente *Preview* (Supabase de testes +
+`EXPO_PUBLIC_AMBIENTE=dev`) a tudo o que não seja o branch de produção.
 
-Para ativar quando houver folga: Netlify → `app-gestaogado` → *Site
-configuration* → *Build & deploy* → *Branches and deploy contexts* → *Configure*
-→ **Branch deploys: Let me add individual branches** → `dev`. Fica em
-`dev--app-gestaogado.netlify.app`, já com as chaves certas.
+Era esta a razão de os branch deploys estarem desligados no Netlify: lá cada
+build de teste gastava dos mesmos 300 créditos mensais que publicar em produção.
+No plano grátis do Cloudflare são 500 builds/mês e não há créditos partilhados.
 
 ## O que o merge para `main` dispara (e o que não dispara)
 
 | Canal | Como chega ao criador | Automático? |
 | --- | --- | --- |
-| App web / PWA instalada | build do Netlify → service worker anuncia versão nova | **sim, no merge** |
+| App web / PWA instalada | build do Cloudflare Pages → service worker anuncia versão nova | **sim, no merge** |
 | App Windows (.exe) | GitHub Actions → Release → electron-updater | **sim, no merge** |
 | Telemóvel (Android) | `eas update --branch preview` | não — só quando o corres |
 

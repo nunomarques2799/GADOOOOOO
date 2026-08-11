@@ -129,7 +129,7 @@ export default function DefinicoesScreen() {
             <Linha
               icon="shield-account-outline"
               label={t('definicoes.privacidade')}
-              onPress={() => void Linking.openURL('https://gestaogado.netlify.app/privacidade')}
+              onPress={() => void Linking.openURL('https://terrabovina.pt/privacidade')}
               last
             />
           </Grupo>
