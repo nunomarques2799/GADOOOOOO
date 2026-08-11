@@ -15,17 +15,17 @@
     Key ID sai do próprio nome do ficheiro (a Apple chama-lhe AuthKey_<ID>.p8)
     — assim há um valor a menos para copiar à mão e enganar.
 
-    Trabalha sobre a pasta ONDE É CORRIDO, não sobre onde o ficheiro está. É de
-    propósito: o script exige o branch `main`, e enquanto ele só existir no
-    `dev` o `git checkout main` apagava-o a meio da execução. Guarda-se uma
-    cópia fora do repositório e corre-se essa, de dentro do repositório:
+    Trabalha sobre a pasta ONDE É CORRIDO, não sobre onde o ficheiro está. Era
+    de propósito: o script exige o branch `main`, e enquanto só existia no
+    `dev` o `git checkout main` apagava-o a meio da execução, por isso corria-se
+    uma cópia guardada fora do repositório.
 
-        Copy-Item scripts/build-ios.ps1 $env:USERPROFILE\.appstoreconnect\
+    Desde 2026-08-11 já está no `main`, e corre-se de `scripts/` como os outros:
+
         git checkout main
-        powershell $env:USERPROFILE\.appstoreconnect\build-ios.ps1 -IssuerId "..." -Enviar
+        powershell scripts/build-ios.ps1 -IssuerId "..." -Enviar
 
-    Quando este ficheiro chegar ao `main` por um merge normal, passa a poder
-    correr-se de `scripts/` como os outros.
+    A cópia em ~/.appstoreconnect/ pode ficar, mas é a de `scripts/` que vale.
 
 .EXAMPLE
     powershell $env:USERPROFILE\.appstoreconnect\build-ios.ps1 -IssuerId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -136,7 +136,15 @@ try {
     }
 
     if ($Enviar) {
-        npx eas submit --platform ios --profile production @extra
+        # `--latest` nao e opcional em modo nao interativo: sem ele o eas submit
+        # morre com "You need to specify the archive source when running in
+        # non-interactive mode" -- ele nao adivinha qual dos builds enviar.
+        # Como e limitado a --platform ios, apanha o que acabou de sair daqui.
+        #
+        # E a chave da App Store Connect TEM de estar no `submit` do eas.json:
+        # o submit ignora as EXPO_ASC_* definidas acima e, sem ela, diz que
+        # "API Keys cannot be set up in --non-interactive mode".
+        npx eas submit --platform ios --profile production --latest @extra
         if ($LASTEXITCODE -ne 0) {
             throw "O envio falhou (codigo $LASTEXITCODE). O build esta feito — podes repetir so o submit."
         }
@@ -145,7 +153,7 @@ try {
     } else {
         Write-Host ""
         Write-Host "Para enviar para o TestFlight: powershell scripts/build-ios.ps1 -IssuerId '$IssuerId' -Enviar"
-        Write-Host "(ou so o envio: npx eas submit --platform ios --profile production)"
+        Write-Host "(ou so o envio: npx eas submit --platform ios --profile production --latest)"
     }
 } finally {
     Pop-Location

@@ -54,7 +54,10 @@
         "ascAppId": "6799063195",
         "appleTeamId": "8785V5WL8W",
         "appName": "Terrabovina",
-        "language": "pt-PT"
+        "language": "pt-PT",
+        "ascApiKeyPath": "C:\\Users\\nuno_\\.appstoreconnect\\private_keys\\AuthKey_7UFHT59KB3.p8",
+        "ascApiKeyId": "7UFHT59KB3",
+        "ascApiKeyIssuerId": "5d643210-f462-49b4-a7a7-5fff4a1b4742"
       }
     }
   }
