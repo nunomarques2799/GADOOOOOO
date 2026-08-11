@@ -17,7 +17,8 @@
       "infoPlist": {
         "CFBundleDevelopmentRegion": "pt-PT",
         "CFBundleLocalizations": [
-          "pt-PT"
+          "pt-PT",
+          "en"
         ],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false,
