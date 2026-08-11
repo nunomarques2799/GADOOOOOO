@@ -43,15 +43,21 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { Animal, Especie, Finalidade, Sexo } from '@/data/types';
+import { t, type ChaveTexto } from '@/i18n';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
-const opcoesData = [
-  { label: 'Hoje', dias: 0 },
-  { label: 'Ontem', dias: 1 },
-  { label: 'Há 1 semana', dias: 7 },
-  { label: '~1 ano', dias: 365 },
-  { label: '~2 anos', dias: 730 },
-  { label: '~5 anos', dias: 1826 },
+/**
+ * Os atalhos da data de nascimento. Guardam a CHAVE do rótulo, não o rótulo:
+ * esta tabela nasce no import, e um texto resolvido aqui ficava congelado na
+ * língua de arranque (ver AGENTS.md).
+ */
+const opcoesData: { chave: ChaveTexto; dias: number }[] = [
+  { chave: 'formAnimal.hoje', dias: 0 },
+  { chave: 'formAnimal.ontem', dias: 1 },
+  { chave: 'formAnimal.ha1Semana', dias: 7 },
+  { chave: 'formAnimal.cerca1Ano', dias: 365 },
+  { chave: 'formAnimal.cerca2Anos', dias: 730 },
+  { chave: 'formAnimal.cerca5Anos', dias: 1826 },
 ];
 
 const MS_MES = 30.44 * 86_400_000;
@@ -228,7 +234,7 @@ export function FormularioAnimal({
   async function guardar() {
     if (dataManualInvalida || cobricaoInvalida || partoManualInvalido || aGuardar) return;
     if (!exploracaoId) {
-      setErroGuardar('Escolha uma exploração para o animal.');
+      setErroGuardar(t('formAnimal.escolhaExploracao'));
       return;
     }
     setErroGuardar(null);
@@ -262,11 +268,11 @@ export function FormularioAnimal({
       };
       if (animal) {
         await updateAnimal(animal.id, dados);
-        toast.sucesso('Animal guardado', rotuloAnimal({ ...animal, ...dados }));
+        toast.sucesso(t('formAnimal.guardado'), rotuloAnimal({ ...animal, ...dados }));
         router.back();
       } else {
         const novo = await addAnimal(dados);
-        toast.sucesso('Animal registado', rotuloAnimal(novo));
+        toast.sucesso(t('formAnimal.registado'), rotuloAnimal(novo));
         router.replace(`/animal/${novo.id}`);
       }
     } catch (e) {
@@ -274,7 +280,7 @@ export function FormularioAnimal({
       // erro em vez de deixar o animal só no estado local (que nunca sincroniza).
       const razao = mensagemDeErro(e);
       setErroGuardar(razao);
-      toast.erro(animal ? 'Animal não guardado' : 'Animal não registado', razao);
+      toast.erro(animal ? t('formAnimal.semGuardar') : t('formAnimal.semRegistar'), razao);
     } finally {
       setAGuardar(false);
     }
@@ -288,10 +294,10 @@ export function FormularioAnimal({
     const executar = async () => {
       try {
         await deleteAnimal(animal.id);
-        toast.sucesso('Animal eliminado', rotulo);
+        toast.sucesso(t('formAnimal.eliminado'), rotulo);
         router.dismissTo('/(tabs)/animais');
       } catch (e) {
-        avisar('Não foi possível eliminar', mensagemDeErro(e));
+        avisar(t('comum.semEliminar'), mensagemDeErro(e));
       }
     };
     // A confirmação diz três coisas, e nenhuma é dispensável: que não há como
@@ -300,14 +306,11 @@ export function FormularioAnimal({
     // acontece aos OUTROS animais que dependem deste.
     const avisos = avisosDeEliminacao(animal, eventos, animais);
     confirmar(
-      'Eliminar animal',
-      `Eliminar "${rotulo}"? Esta ação não pode ser anulada.\n\n`
-        + 'O animal sai da lista e da árvore genealógica: eliminar quer dizer que foi '
-        + 'registado por engano. O registo fica guardado no histórico do efetivo, com o '
-        + 'dia e o nome de quem o eliminou.'
+      t('formAnimal.eliminarAnimal'),
+      `${t('formAnimal.eliminarPergunta', { rotulo })}\n\n${t('formAnimal.eliminarExplicacao')}`
         + (avisos.length > 0 ? `\n\n${avisos.join('\n')}` : ''),
       () => void executar(),
-      { rotuloConfirmar: 'Eliminar', destrutivo: true },
+      { rotuloConfirmar: t('comum.eliminar'), destrutivo: true },
     );
   }
 
@@ -327,11 +330,11 @@ export function FormularioAnimal({
   if (animal?.estado === 'eliminado') {
     return (
       <EcraComTeclado>
-        <Header title="Animal eliminado" />
+        <Header title={t('formAnimal.animalEliminado')} />
         <EmptyState
           icon="trash-can-outline"
-          title="Este registo já não se altera"
-          message="O animal foi eliminado da lista, e o registo fica como está — com o dia e o nome de quem o eliminou. Pode vê-lo no Histórico do efetivo."
+          title={t('formAnimal.naoSeAltera')}
+          message={t('formAnimal.eliminadoMensagem')}
         />
       </EcraComTeclado>
     );
@@ -345,14 +348,12 @@ export function FormularioAnimal({
   if (!pode(animal?.exploracaoId ?? exploracaoId, 'editarAnimais')) {
     return (
       <EcraComTeclado>
-        <Header title={editar ? 'Editar animal' : 'Novo animal'} />
+        <Header title={editar ? t('formAnimal.editar') : t('formAnimal.novo')} />
         <EmptyState
           icon="lock-outline"
-          title="A ficha é de quem gere o efetivo"
+          title={t('formAnimal.fichaDoGestor')}
           message={
-            editar
-              ? 'Pode registar o que fizer a este animal — uma vacina, um medicamento, um parto — mas os dados da ficha são alterados por quem tem a exploração a cargo.'
-              : 'Registar animais novos é de quem tem a exploração a cargo. Pode registar tratamentos nos animais que já lá estão.'
+            editar ? t('formAnimal.fichaDoGestorEditar') : t('formAnimal.fichaDoGestorNovo')
           }
         />
       </EcraComTeclado>
@@ -361,15 +362,13 @@ export function FormularioAnimal({
 
   return (
     <EcraComTeclado>
-      <Header title={editar ? 'Editar animal' : 'Novo animal'} />
+      <Header title={editar ? t('formAnimal.editar') : t('formAnimal.novo')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.huge * 2 }}>
         <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
-          {editar
-            ? 'Altere o que precisar e guarde no fim.'
-            : 'Preencha o essencial. Pode completar os restantes dados mais tarde.'}
+          {editar ? t('formAnimal.ajudaEditar') : t('formAnimal.ajudaNovo')}
         </Text>
 
         {/* Fotografia — o rosto do animal, para se reconhecer de relance na
@@ -378,11 +377,11 @@ export function FormularioAnimal({
           foto={foto}
           onMudar={setFoto}
           icone={especieMeta[especie].icon}
-          assunto="do animal"
+          assunto={t('formAnimal.assuntoFoto')}
         />
 
         {/* Espécie */}
-        <Field label="Espécie" obrigatorio>
+        <Field label={t('filtro.especie')} obrigatorio>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
             {especies.map((e) => (
               <Chip key={e} label={e} icon={especieMeta[e].icon} selected={especie === e} onPress={() => setEspecie(e)} />
@@ -391,7 +390,7 @@ export function FormularioAnimal({
         </Field>
 
         {/* Sexo */}
-        <Field label="Sexo" obrigatorio>
+        <Field label={t('filtro.sexo')} obrigatorio>
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             {sexos.map((s) => (
               <BigToggle
@@ -406,12 +405,12 @@ export function FormularioAnimal({
         </Field>
 
         {/* Data de nascimento */}
-        <Field label="Data de nascimento" obrigatorio>
+        <Field label={t('formAnimal.dataNascimento')} obrigatorio>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
             {opcoesData.map((o) => (
               <Chip
                 key={o.dias}
-                label={o.label}
+                label={t(o.chave)}
                 selected={!dataManualIso && diasNasc === o.dias}
                 onPress={() => {
                   setDiasNasc(o.dias);
@@ -422,7 +421,7 @@ export function FormularioAnimal({
           </View>
 
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm, marginBottom: 4 }}>
-            Ou data exata (dd/mm/aaaa), útil para animais já crescidos
+            {t('formAnimal.ouDataExata')}
           </Text>
           <CampoData
             value={dataManual}
@@ -433,12 +432,12 @@ export function FormularioAnimal({
               if (m.trim()) setDiasNasc(null);
               else setDiasNasc(0);
             }}
-            placeholder="Ex: 15/03/2021"
-            rotuloCalendario="Escolher a data de nascimento no calendário"
+            placeholder={t('formAnimal.exData')}
+            rotuloCalendario={t('formAnimal.calendarioNascimento')}
           />
           {dataManualInvalida ? (
             <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
-              Data inválida. Use o formato dd/mm/aaaa e uma data não futura.
+              {t('formAnimal.dataInvalidaNaoFutura')}
             </Text>
           ) : null}
 
@@ -451,36 +450,36 @@ export function FormularioAnimal({
         </Field>
 
         {/* Nome */}
-        <Field label="Nome" opcional>
-          <TextField value={nome} onChangeText={setNome} placeholder="Ex: Mimosa" icon="tag-heart-outline" />
+        <Field label={t('formAnimal.nome')} opcional>
+          <TextField value={nome} onChangeText={setNome} placeholder={t('formAnimal.exNome')} icon="tag-heart-outline" />
         </Field>
 
         {/* Brinco */}
-        <Field label="Nº de brinco (SIA)" opcional>
+        <Field label={t('formAnimal.brinco')} opcional>
           <TextField
             value={brinco}
             onChangeText={setBrinco}
-            placeholder="PT 0000 0000 0000"
+            placeholder={t('formAnimal.exBrinco')}
             icon="tag-outline"
             autoCapitalize="characters"
           />
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-            Se deixar vazio, criamos um alerta para identificar até aos 20 dias.
+            {t('formAnimal.semBrincoAviso')}
           </Text>
         </Field>
 
         {/* SNIRA — só faz sentido com brinco atribuído */}
         {temBrinco ? (
-          <Field label="Nascimento comunicado ao SNIRA?">
+          <Field label={t('formAnimal.comunicadoSnira')}>
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               <BigToggle
-                label="Já comunicado"
+                label={t('formAnimal.jaComunicado')}
                 icon="cloud-check-outline"
                 selected={sniraComunicado}
                 onPress={() => setSniraManual(true)}
               />
               <BigToggle
-                label="Por comunicar"
+                label={t('formAnimal.porComunicar')}
                 icon="cloud-alert"
                 selected={!sniraComunicado}
                 onPress={() => setSniraManual(false)}
@@ -491,16 +490,16 @@ export function FormularioAnimal({
 
         {/* Prenhez — só a fêmeas com idade para procriar */}
         {mostrarPrenhez ? (
-          <Field label="Está prenhe?" opcional>
+          <Field label={t('formAnimal.estaPrenhe')} opcional>
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               <BigToggle
-                label="Não"
+                label={t('formAnimal.nao')}
                 icon="close"
                 selected={!prenhe}
                 onPress={() => setPrenhe(false)}
               />
               <BigToggle
-                label="Sim"
+                label={t('formAnimal.sim')}
                 icon="baby-bottle-outline"
                 selected={prenhe}
                 onPress={() => setPrenhe(true)}
@@ -510,18 +509,18 @@ export function FormularioAnimal({
             {prenhe ? (
               <View style={{ marginTop: spacing.md }}>
                 <Text variant="caption" color={colors.textMuted} style={{ marginBottom: 4 }}>
-                  Data da cobrição (dd/mm/aaaa): calculamos o parto por si
+                  {t('formAnimal.dataCobricaoAjuda')}
                 </Text>
                 <CampoData
                   value={dataCobricao}
                   onChangeText={setDataCobricao}
-                  placeholder="Ex: 10/02/2026"
+                  placeholder={t('formAnimal.exDataCobricao')}
                   icon="calendar-heart"
-                  rotuloCalendario="Escolher a data da cobrição no calendário"
+                  rotuloCalendario={t('formAnimal.calendarioCobricao')}
                 />
                 {cobricaoInvalida ? (
                   <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
-                    Data inválida. Use o formato dd/mm/aaaa e uma data não futura.
+                    {t('formAnimal.dataInvalidaNaoFutura')}
                   </Text>
                 ) : null}
 
@@ -529,18 +528,18 @@ export function FormularioAnimal({
                   variant="caption"
                   color={colors.textMuted}
                   style={{ marginTop: spacing.sm, marginBottom: 4 }}>
-                  Ou, se já souber a data do parto, escreva-a aqui
+                  {t('formAnimal.ouDataParto')}
                 </Text>
                 <CampoData
                   value={dataPartoManual}
                   onChangeText={setDataPartoManual}
-                  placeholder="Ex: 20/11/2026"
+                  placeholder={t('formAnimal.exDataParto')}
                   permitirFuturo
-                  rotuloCalendario="Escolher a data prevista do parto no calendário"
+                  rotuloCalendario={t('formAnimal.calendarioParto')}
                 />
                 {partoManualInvalido ? (
                   <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
-                    Data inválida. Use o formato dd/mm/aaaa.
+                    {t('formAnimal.dataInvalida')}
                   </Text>
                 ) : null}
 
@@ -554,13 +553,15 @@ export function FormularioAnimal({
                     }}>
                     <Icon name="baby-bottle-outline" size="sm" color={colors.primary} />
                     <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
-                      Parto previsto: {formatDataPt(partoPrevisto)}
-                      {diasAte(partoPrevisto) >= 0 ? ` · daqui a ${diasAte(partoPrevisto)} dias` : ''}
+                      {t('formAnimal.partoPrevisto', { data: formatDataPt(partoPrevisto) })}
+                      {diasAte(partoPrevisto) >= 0
+                        ? ` · ${t('formAnimal.daquiA', { n: diasAte(partoPrevisto) })}`
+                        : ''}
                     </Text>
                   </View>
                 ) : (
                   <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm }}>
-                    Indique uma das datas para o podermos avisar do parto.
+                    {t('formAnimal.indiqueUmaData')}
                   </Text>
                 )}
               </View>
@@ -570,7 +571,7 @@ export function FormularioAnimal({
 
         {/* Finalidade — só a bovinos, e só as que fazem sentido para o sexo */}
         {especie === 'Bovino' ? (
-          <Field label="Finalidade" opcional>
+          <Field label={t('filtro.finalidade')} opcional>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               {finalidadesPara(sexo).map((f) => (
                 <Chip
@@ -591,28 +592,28 @@ export function FormularioAnimal({
         ) : null}
 
         {/* Raça e pelagem — de lista, para os filtros poderem contar com elas */}
-        <Field label="Raça" opcional>
+        <Field label={t('filtro.raca')} opcional>
           <SeletorOpcao
-            titulo="Raça"
+            titulo={t('filtro.raca')}
             valor={raca}
             opcoes={opcoesRaca}
             onEscolher={setRaca}
-            placeholder="Escolher raça"
+            placeholder={t('formAnimal.escolherRaca')}
             icon="palette-outline"
-            rotuloAdicionar="Usar a raça"
+            rotuloAdicionar={t('formAnimal.usarRaca')}
             normalizar={normalizar}
           />
         </Field>
 
-        <Field label="Cor da pelagem" opcional>
+        <Field label={t('filtro.cor')} opcional>
           <SeletorOpcao
-            titulo="Cor da pelagem"
+            titulo={t('filtro.cor')}
             valor={corPelagem}
             opcoes={opcoesCor}
             onEscolher={setCorPelagem}
-            placeholder="Escolher cor"
+            placeholder={t('formAnimal.escolherCor')}
             icon="format-color-fill"
-            rotuloAdicionar="Usar a cor"
+            rotuloAdicionar={t('formAnimal.usarCor')}
             normalizar={normalizar}
           />
         </Field>
@@ -622,11 +623,11 @@ export function FormularioAnimal({
             interruptor nas Definições, e o nome da casa não acrescentava nada
             a quem numera o gado de um a duzentos. Quem não numera deixa o
             campo vazio e não perde nada por ele estar à vista. */}
-        <Field label="Número" opcional>
+        <Field label={t('formAnimal.numero')} opcional>
           <TextField
             value={numeroCasa}
             onChangeText={setNumeroCasa}
-            placeholder="Ex: 12"
+            placeholder={t('formAnimal.exNumero')}
             icon="numeric"
           />
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
@@ -640,13 +641,13 @@ export function FormularioAnimal({
             perguntar uma coisa sem alternativa. O `exploracaoId` continua
             preenchido pelo efeito lá acima. */}
         {exploracoes.length === 0 ? (
-          <Field label="Exploração" obrigatorio>
+          <Field label={t('formAnimal.exploracao')} obrigatorio>
             <Text variant="secondary" color={colors.danger}>
-              Ainda não tem explorações. Crie uma exploração antes de registar animais.
+              {t('formAnimal.semExploracoes')}
             </Text>
           </Field>
         ) : exploracoes.length > 1 ? (
-          <Field label="Exploração" obrigatorio>
+          <Field label={t('formAnimal.exploracao')} obrigatorio>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               {exploracoes.map((e) => (
                 <Chip
@@ -663,7 +664,7 @@ export function FormularioAnimal({
 
         {/* Terreno */}
         {terrenos.length > 0 ? (
-          <Field label="Terreno" opcional>
+          <Field label={t('filtro.terreno')} opcional>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               {terrenos.map((t) => (
                 <Chip
@@ -680,41 +681,39 @@ export function FormularioAnimal({
 
         {/* Genealogia */}
         <Text variant="label" style={{ marginBottom: spacing.xs }}>
-          Genealogia
+          {t('formAnimal.genealogia')}
         </Text>
         <Text variant="caption" color={colors.textMuted} style={{ marginBottom: spacing.sm }}>
-          Só aparecem animais da mesma exploração e espécie com idade suficiente à data do nascimento.
+          {t('formAnimal.genealogiaAjuda')}
         </Text>
 
         <SeletorProgenitor
-          label="Mãe"
+          label={t('formAnimal.mae')}
           icone="gender-female"
           candidatos={maes}
           selecionadoId={maeValida}
           onSelecionar={setMaeId}
-          vazio="Não há fêmeas elegíveis registadas."
+          vazio={t('formAnimal.semFemeas')}
         />
         <SeletorProgenitor
-          label="Pai"
+          label={t('formAnimal.pai')}
           icone="gender-male"
           candidatos={pais}
           selecionadoId={paiValido}
           onSelecionar={setPaiId}
-          vazio="Não há machos elegíveis registados."
+          vazio={t('formAnimal.semMachos')}
         />
 
         {editar && podeEliminar ? (
           <View style={{ marginTop: spacing.xl, gap: spacing.sm }}>
             <Button
-              label="Eliminar animal"
+              label={t('formAnimal.eliminarAnimal')}
               icon="trash-can-outline"
               variant="danger"
               onPress={confirmarEliminar}
             />
             <Text variant="caption" color={colors.textMuted}>
-              Para registos feitos por engano. Tira o animal da lista e da árvore
-              genealógica, para sempre. Se o animal existiu mesmo, marque a saída
-              (falecido ou vendido) em vez de eliminar.
+              {t('formAnimal.eliminarAjuda')}
               {avisosEliminar.length > 0 ? ` ${avisosEliminar.join(' ')}` : ''}
             </Text>
           </View>
@@ -747,7 +746,7 @@ export function FormularioAnimal({
           </View>
         ) : null}
         <Button
-          label={editar ? 'Guardar alterações' : 'Guardar animal'}
+          label={editar ? t('formAnimal.guardarAlteracoes') : t('formAnimal.guardarAnimal')}
           icon="check"
           onPress={guardar}
           disabled={
@@ -808,7 +807,7 @@ function SeletorProgenitor({
             accessibilityRole="button"
             accessibilityLabel={`Limpar ${label}`}>
             <Text variant="bodyStrong" color={colors.danger}>
-              Limpar
+              {t('comum.limpar')}
             </Text>
           </Pressable>
         ) : (
@@ -826,7 +825,7 @@ function SeletorProgenitor({
         <>
           {candidatos.length > LIMITE ? (
             <View style={{ marginBottom: spacing.xs }}>
-              <TextField value={procura} onChangeText={setProcura} placeholder="Procurar por nome ou brinco" icon="magnify" />
+              <TextField value={procura} onChangeText={setProcura} placeholder={t('formAnimal.procurarAnimal')} icon="magnify" />
             </View>
           ) : null}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
@@ -842,12 +841,12 @@ function SeletorProgenitor({
           </View>
           {filtrados.length > visiveis.length ? (
             <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-              Mais {filtrados.length - visiveis.length}. Use a procura para encontrar.
+              {t('formAnimal.maisNaProcura', { n: filtrados.length - visiveis.length })}
             </Text>
           ) : null}
           {filtrados.length === 0 ? (
             <Text variant="caption" color={colors.textMuted}>
-              Nenhum animal corresponde a “{procura.trim()}”.
+              {t('formAnimal.nenhumCorresponde', { procura: procura.trim() })}
             </Text>
           ) : null}
         </>

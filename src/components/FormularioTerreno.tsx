@@ -12,6 +12,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { Terreno, TipoTerreno } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 /** Formulário reutilizável para criar/editar terreno de uma exploração. */
@@ -88,7 +89,7 @@ export function FormularioTerreno({
       // ao `router.back()` desta linha — este ecrã já não existe quando ele
       // aparece, e é esse o objetivo: confirma-se em cima da lista.
       toast.sucesso(
-        editar ? 'Terreno guardado' : 'Terreno adicionado',
+        editar ? t('formTerreno.guardado') : t('formTerreno.adicionado'),
         `${dados.nome}${exploracao ? ` · ${exploracao.nome}` : ''}`,
       );
       router.back();
@@ -97,7 +98,7 @@ export function FormularioTerreno({
       // linha por baixo do botão fica lá para se poder ler com calma.
       const razao = mensagemDeErro(e);
       setErroGuardar(razao);
-      toast.erro(editar ? 'Terreno não guardado' : 'Terreno não adicionado', razao);
+      toast.erro(editar ? t('formTerreno.semGuardar') : t('formTerreno.semAdicionar'), razao);
       setAGravar(false);
     }
   }
@@ -107,10 +108,10 @@ export function FormularioTerreno({
     const executar = async () => {
       try {
         await deleteTerreno(terreno.id);
-        toast.sucesso('Terreno eliminado', terreno.nome);
+        toast.sucesso(t('formTerreno.eliminado'), terreno.nome);
         router.back();
       } catch (e) {
-        avisar('Não foi possível eliminar', mensagemDeErro(e));
+        avisar(t('comum.semEliminar'), mensagemDeErro(e));
       }
     };
     // Ao contrário da exploração, apagar um terreno NÃO apaga nada em cascata:
@@ -119,15 +120,14 @@ export function FormularioTerreno({
     // o que faz alguém deixar terrenos velhos na lista para sempre.
     const quantos = animais.filter((a) => a.terrenoId === terreno.id).length;
     confirmar(
-      'Eliminar terreno',
-      `Vai eliminar "${terreno.nome}". `
+      t('formTerreno.eliminarTerreno'),
+      `${t('formTerreno.vaiEliminar', { nome: terreno.nome })} `
         + (quantos > 0
-          ? `Os ${quantos} ${quantos === 1 ? 'animal fica' : 'animais ficam'} sem terreno — `
-          : 'Nenhum animal se perde — ')
-        + 'nada é apagado além do próprio terreno. As despesas que lhe estavam '
-        + 'imputadas continuam nas contas da exploração.',
+          ? `${t('formTerreno.ficamSemTerreno', { n: quantos })} `
+          : `${t('formTerreno.nenhumSePerde')} `)
+        + t('formTerreno.eliminarDetalhe'),
       () => void executar(),
-      { rotuloConfirmar: 'Eliminar', destrutivo: true },
+      { rotuloConfirmar: t('comum.eliminar'), destrutivo: true },
     );
   }
 
@@ -140,14 +140,14 @@ export function FormularioTerreno({
   if (!podeGerir) {
     return (
       <EcraComTeclado>
-        <Header title={editar ? 'Editar terreno' : 'Novo terreno'} />
+        <Header title={editar ? t('formTerreno.editar') : t('terrenos.novo')} />
         <EmptyState
           icon="lock-outline"
-          title="Os terrenos são de quem gere a exploração"
+          title={t('formTerreno.semPermissaoTitulo')}
           message={
             editar
-              ? 'Pode ver este terreno e os animais que lá andam, mas alterá-lo é de quem tem a exploração a cargo.'
-              : 'Registar terrenos novos é de quem tem a exploração a cargo.'
+              ? t('formTerreno.semPermissaoEditar')
+              : t('formTerreno.semPermissaoNovo')
           }
         />
       </EcraComTeclado>
@@ -156,34 +156,34 @@ export function FormularioTerreno({
 
   return (
     <EcraComTeclado>
-      <Header title={editar ? 'Editar terreno' : 'Novo terreno'} />
+      <Header title={editar ? t('formTerreno.editar') : t('terrenos.novo')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.huge * 2 }}>
         <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
-          Exploração: {exploracao?.nome ?? 'Sem exploração'}
+          {t('formTerreno.exploracaoE', { nome: exploracao?.nome ?? t('ficha.semExploracao') })}
         </Text>
 
         <SeletorFoto
           foto={foto}
           onMudar={setFoto}
           icone={tipoTerrenoMeta[tipo].icon}
-          assunto="do terreno"
+          assunto={t('formTerreno.assuntoFoto')}
           forma="cartao"
         />
 
-        <Field label="Nome" obrigatorio>
+        <Field label={t('formAnimal.nome')} obrigatorio>
           <TextField
             value={nome}
             onChangeText={setNome}
-            placeholder="Ex: Lameiro Grande"
+            placeholder={t('formTerreno.exNome')}
             icon="map-marker"
             autoCapitalize="words"
           />
         </Field>
 
-        <Field label="Tipo" obrigatorio>
+        <Field label={t('formTerreno.tipo')} obrigatorio>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
             {tiposTerreno.map((t) => (
               <Chip
@@ -197,28 +197,28 @@ export function FormularioTerreno({
           </View>
         </Field>
 
-        <Field label="Área (hectares)" opcional>
+        <Field label={t('formTerreno.area')} opcional>
           <TextField
             value={area}
             onChangeText={setArea}
-            placeholder="Ex: 4.2"
+            placeholder={t('formTerreno.exArea')}
             icon="ruler-square"
             keyboardType="decimal-pad"
           />
         </Field>
 
-        <Field label="Descrição" opcional>
+        <Field label={t('formTerreno.descricao')} opcional>
           <TextField
             value={descricao}
             onChangeText={setDescricao}
-            placeholder="Ex: Poço e bebedouro a norte"
+            placeholder={t('formTerreno.exDescricao')}
             icon="note-text-outline"
             multiline
           />
         </Field>
 
         <Text variant="label" style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
-          Localização no mapa{' '}
+          {t('formTerreno.localizacaoNoMapa')}{' '}
           <Text variant="caption" color={colors.textMuted}>opcional, para direções e meteorologia</Text>
         </Text>
         <MapaLocalizacao
@@ -243,10 +243,10 @@ export function FormularioTerreno({
           <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
             {temCoords
               ? `Marcado: ${latNum!.toFixed(5)}, ${lngNum!.toFixed(5)}`
-              : 'Toque no mapa para marcar o terreno.'}
+              : t('formTerreno.toqueNoMapa')}
           </Text>
           {temCoords ? (
-            <Pressable onPress={limparLocalizacao} hitSlop={8} accessibilityRole="button" accessibilityLabel="Limpar localização">
+            <Pressable onPress={limparLocalizacao} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('formTerreno.limparLocalizacao')}>
               <Text variant="bodyStrong" color={colors.danger}>Limpar</Text>
             </Pressable>
           ) : null}
@@ -288,7 +288,7 @@ export function FormularioTerreno({
 
         {editar && podeEliminar ? (
           <Button
-            label="Eliminar terreno"
+            label={t('formTerreno.eliminarTerreno')}
             icon="trash-can-outline"
             variant="danger"
             onPress={confirmarEliminar}
@@ -328,7 +328,7 @@ export function FormularioTerreno({
           </View>
         ) : null}
         <Button
-          label={editar ? 'Guardar alterações' : 'Criar terreno'}
+          label={editar ? t('formAnimal.guardarAlteracoes') : t('formTerreno.criar')}
           icon="check"
           onPress={guardar}
           disabled={!valido || aGravar}

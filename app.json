@@ -10,14 +10,15 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.gestaogado.app",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "config": {
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
         "CFBundleDevelopmentRegion": "pt-PT",
         "CFBundleLocalizations": [
-          "pt-PT"
+          "pt-PT",
+          "en"
         ],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false,

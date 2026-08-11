@@ -32,6 +32,7 @@ import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
 import type { EstadoAnimal, EventoTipo } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 const eventoIcone: Record<EventoTipo, IconName> = {
@@ -111,8 +112,8 @@ export default function AnimalDetalheScreen() {
   if (!animal) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Animal" />
-        <EmptyState icon="cow-off" title="Animal não encontrado" message="Este registo já não existe." />
+        <Header title={t('ficha.animal')} />
+        <EmptyState icon="cow-off" title={t('ficha.naoEncontrado')} message={t('ficha.jaNaoExiste')} />
       </View>
     );
   }
@@ -137,7 +138,7 @@ export default function AnimalDetalheScreen() {
   async function confirmarSaida() {
     const iso = parseDataPt(saidaData);
     if (!iso) {
-      setSaidaErro('Data inválida: use o formato dd/mm/aaaa.');
+      setSaidaErro(t('ficha.dataInvalida'));
       return;
     }
     setSaidaErro(null);
@@ -150,13 +151,13 @@ export default function AnimalDetalheScreen() {
       setSaidaMotivo('');
       setSaidaPreco('');
       toast.sucesso(
-        saidaTipo === 'vendido' ? 'Venda registada' : 'Morte registada',
+        saidaTipo === 'vendido' ? t('ficha.vendaRegistada') : t('ficha.morteRegistada'),
         rotuloAnimal(animal!),
       );
     } catch (e) {
       const razao = mensagemDeErro(e);
       setSaidaErro(razao);
-      toast.erro('Saída não registada', razao);
+      toast.erro(t('ficha.saidaNaoRegistada'), razao);
     } finally {
       setAGuardar(false);
     }
@@ -164,29 +165,29 @@ export default function AnimalDetalheScreen() {
 
   function pedirReativar() {
     confirmar(
-      'Voltar a ativar?',
-      'O animal vai voltar a aparecer no efetivo. O evento anterior (Morte/Venda) permanece no histórico.',
+      t('ficha.reativarTitulo'),
+      t('ficha.reativarMensagem'),
       () => {
         void (async () => {
           try {
             await reativarAnimal(animal!.id);
-            toast.sucesso('Animal reativado', rotuloAnimal(animal!));
+            toast.sucesso(t('ficha.reativado'), rotuloAnimal(animal!));
           } catch (e) {
             // A reposição era feita sem ninguém olhar para o resultado: se o
             // servidor recusasse, o animal voltava ao efetivo no ecrã e saía
             // outra vez na sincronização seguinte, sem uma palavra.
-            toast.erro('Não foi possível reativar', mensagemDeErro(e));
+            toast.erro(t('ficha.semReativar'), mensagemDeErro(e));
           }
         })();
       },
-      { rotuloConfirmar: 'Reativar' },
+      { rotuloConfirmar: t('ficha.reativar') },
     );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Header
-        title={animal.nome ?? 'Animal'}
+        title={animal.nome ?? t('ficha.animal')}
         actionIcon={podeEditar ? 'pencil-outline' : undefined}
         onAction={podeEditar ? () => router.push(`/animal/editar/${animal.id}`) : undefined}
       />
@@ -220,22 +221,22 @@ export default function AnimalDetalheScreen() {
             )}
           </View>
           <Text variant="h1" color={colors.textOnDark}>
-            {animal.nome ?? 'Sem nome'}
+            {animal.nome ?? t('animais.semNome')}
           </Text>
           <Text variant="body" color={colors.textOnDarkMuted}>
-            {animal.numeroIdentificacao ?? 'Sem brinco'}
+            {animal.numeroIdentificacao ?? t('animais.semBrinco')}
           </Text>
           <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, flexWrap: 'wrap', justifyContent: 'center' }}>
             <HeroChip icon={meta.icon} label={animal.especie} />
             <HeroChip icon={animal.sexo === 'Fêmea' ? 'gender-female' : 'gender-male'} label={animal.sexo} />
             <HeroChip icon="cake-variant" label={idadeExtenso(animal.dataNascimento)} />
             {animal.estado === 'falecido' ? (
-              <HeroChip icon="grave-stone" label="Falecido" />
+              <HeroChip icon="grave-stone" label={t('ficha.falecido')} />
             ) : null}
             {animal.estado === 'vendido' ? (
-              <HeroChip icon="cash" label="Vendido" />
+              <HeroChip icon="cash" label={t('ficha.vendido')} />
             ) : null}
-            {eliminado ? <HeroChip icon="trash-can-outline" label="Eliminado" /> : null}
+            {eliminado ? <HeroChip icon="trash-can-outline" label={t('ficha.eliminado')} /> : null}
           </View>
         </LinearGradient>
 
@@ -243,7 +244,7 @@ export default function AnimalDetalheScreen() {
         {saiu ? (
           <>
             <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-              Saída do efetivo
+              {t('ficha.saidaDoEfetivo')}
             </Text>
             <Card>
               <InfoField
@@ -254,19 +255,19 @@ export default function AnimalDetalheScreen() {
                       ? 'cash'
                       : 'trash-can-outline'
                 }
-                label="Motivo"
+                label={t('ficha.motivo')}
                 value={
                   animal.estado === 'falecido'
-                    ? 'Falecimento'
+                    ? t('ficha.falecimento')
                     : animal.estado === 'vendido'
-                      ? 'Venda'
-                      : 'Eliminado da lista'
+                      ? t('ficha.venda')
+                      : t('ficha.eliminadoDaLista')
                 }
               />
               <InfoField
                 icon="calendar"
-                label="Data"
-                value={animal.dataSaida ? formatDataPt(animal.dataSaida) : 'Sem data'}
+                label={t('ficha.data')}
+                value={animal.dataSaida ? formatDataPt(animal.dataSaida) : t('ficha.semData')}
               />
               {/* Quem e quando: é o que faz do histórico uma auditoria. Só
                   aparece quando existe — um "registado por" em branco valia
@@ -274,9 +275,9 @@ export default function AnimalDetalheScreen() {
               {animal.saidaPor || animal.saidaEm ? (
                 <InfoField
                   icon="account-check-outline"
-                  label="Registado por"
+                  label={t('ficha.registadoPor')}
                   value={[
-                    nomeDe(animal.saidaPor) ?? (animal.saidaPor ? 'Alguém da equipa' : undefined),
+                    nomeDe(animal.saidaPor) ?? (animal.saidaPor ? t('ficha.alguemDaEquipa') : undefined),
                     animal.saidaEm ? formatDataHora(animal.saidaEm) : undefined,
                   ]
                     .filter(Boolean)
@@ -284,13 +285,13 @@ export default function AnimalDetalheScreen() {
                 />
               ) : null}
               {animal.motivoSaida ? (
-                <InfoField icon="note-text-outline" label="Nota" value={animal.motivoSaida} last />
+                <InfoField icon="note-text-outline" label={t('ficha.nota')} value={animal.motivoSaida} last />
               ) : null}
             </Card>
             <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
               {eliminado
-                ? 'O registo continua guardado: o histórico deste animal e a árvore genealógica dos descendentes ficam intactos. Só deixou de aparecer na lista de animais.'
-                : 'O registo permanece guardado para preservar a árvore genealógica dos descendentes.'}
+                ? t('ficha.eliminadoExplicacao')
+                : t('ficha.saidaExplicacao')}
             </Text>
           </>
         ) : null}
@@ -299,7 +300,7 @@ export default function AnimalDetalheScreen() {
         {meusAlertas.length > 0 ? (
           <>
             <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-              A precisar de atenção
+              {t('inicio.atencao')}
             </Text>
             <Card padded={false}>
               <View style={{ paddingHorizontal: spacing.md }}>
@@ -313,27 +314,27 @@ export default function AnimalDetalheScreen() {
 
         {/* Identificação */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-          Identificação
+          {t('ficha.identificacao')}
         </Text>
         <Card>
-          <InfoField icon="tag-outline" label="Nº de identificação (brinco)" value={animal.numeroIdentificacao ?? 'Sem brinco'} />
+          <InfoField icon="tag-outline" label={t('ficha.numeroIdentificacao')} value={animal.numeroIdentificacao ?? t('animais.semBrinco')} />
           {/* O número só aparece quando o animal o tem: uma linha com travessão
               a quem não numera o gado é ruído puro. */}
           {animal.numeroCasa ? (
-            <InfoField icon="numeric" label="Número" value={animal.numeroCasa} />
+            <InfoField icon="numeric" label={t('formAnimal.numero')} value={animal.numeroCasa} />
           ) : null}
           {animal.finalidade ? (
             <InfoField
               icon={finalidadeMeta[animal.finalidade].icon}
-              label="Finalidade"
+              label={t('filtro.finalidade')}
               value={animal.finalidade}
             />
           ) : null}
-          <InfoField icon="calendar-check" label="Data de identificação" value={animal.dataIdentificacao ? formatDataPt(animal.dataIdentificacao) : 'Não indicada'} />
+          <InfoField icon="calendar-check" label={t('ficha.dataIdentificacao')} value={animal.dataIdentificacao ? formatDataPt(animal.dataIdentificacao) : t('ficha.naoIndicada')} />
           <InfoField
             icon="cloud-upload-outline"
-            label="SNIRA"
-            value={animal.comunicadoSnira === false ? 'Por comunicar' : animal.comunicadoSnira ? 'Comunicado' : 'Não se aplica'}
+            label={t('categoria.snira')}
+            value={animal.comunicadoSnira === false ? t('formAnimal.porComunicar') : animal.comunicadoSnira ? t('ficha.comunicado') : t('ficha.naoSeAplica')}
             valueTone={animal.comunicadoSnira === false ? colors.danger : undefined}
             last
           />
@@ -341,30 +342,34 @@ export default function AnimalDetalheScreen() {
 
         {/* Nascimento e genealogia */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-          Nascimento e genealogia
+          {t('ficha.nascimentoEGenealogia')}
         </Text>
         <Card>
-          <InfoField icon="cake-variant" label="Data de nascimento" value={formatDataPt(animal.dataNascimento)} />
-          <InfoField icon="clock-outline" label="Idade" value={idadeExtenso(animal.dataNascimento)} />
-          <InfoField icon="palette-outline" label="Raça / pelagem" value={[animal.raca, animal.corPelagem].filter(Boolean).join(' · ') || 'Não indicada'} />
+          <InfoField icon="cake-variant" label={t('formAnimal.dataNascimento')} value={formatDataPt(animal.dataNascimento)} />
+          <InfoField icon="clock-outline" label={t('filtro.idade')} value={idadeExtenso(animal.dataNascimento)} />
+          <InfoField icon="palette-outline" label={t('ficha.racaPelagem')} value={[animal.raca, animal.corPelagem].filter(Boolean).join(' · ') || t('ficha.naoIndicada')} />
           {/* Só a fêmeas prenhes: sem esta linha, quem registasse a cobrição
               não tinha onde confirmar a data até o alerta tocar, 14 dias antes. */}
           {animal.dataPrevistaParto ? (
             <InfoField
               icon="baby-bottle-outline"
-              label="Parto previsto"
+              label={t('aviso.partoTitulo')}
               value={`${formatDataPt(animal.dataPrevistaParto)}${
                 diasAte(animal.dataPrevistaParto) >= 0
-                  ? ` · daqui a ${diasAte(animal.dataPrevistaParto)} dias`
+                  ? ` · ${t('formAnimal.daquiA', { n: diasAte(animal.dataPrevistaParto) })}`
                   : ''
               }`}
             />
           ) : null}
-          <GenealogiaRow label="Mãe" nome={mae ? rotuloAnimal(mae) : undefined} onPress={mae ? () => router.push(`/animal/${mae.id}`) : undefined} />
-          <GenealogiaRow label="Pai" nome={pai ? rotuloAnimal(pai) : undefined} onPress={pai ? () => router.push(`/animal/${pai.id}`) : undefined} last />
+          <GenealogiaRow label={t('formAnimal.mae')} nome={mae ? rotuloAnimal(mae) : undefined} onPress={mae ? () => router.push(`/animal/${mae.id}`) : undefined} />
+          <GenealogiaRow label={t('formAnimal.pai')} nome={pai ? rotuloAnimal(pai) : undefined} onPress={pai ? () => router.push(`/animal/${pai.id}`) : undefined} last />
         </Card>
         <Button
-          label={`Ver árvore genealógica${crias.length > 0 ? ` (${crias.length} cria${crias.length === 1 ? '' : 's'})` : ''}`}
+          label={
+            crias.length > 0
+              ? t('ficha.verArvoreComCrias', { n: crias.length })
+              : t('ficha.verArvore')
+          }
           icon="family-tree"
           variant="secondary"
           onPress={() => router.push(`/animal/genealogia/${animal.id}`)}
@@ -379,18 +384,18 @@ export default function AnimalDetalheScreen() {
         {reproducao && reproducao.fase !== 'nao-aplicavel' ? (
           <>
             <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-              Reprodução
+              {t('nav.reproducao')}
             </Text>
             <Card>
               <InfoField
                 icon="heart-pulse"
-                label="Estado"
-                value={`${faseMeta[reproducao.fase].label} · ${faseMeta[reproducao.fase].explicacao}`}
+                label={t('perfil.estado')}
+                value={`${faseMeta(reproducao.fase).label} · ${faseMeta(reproducao.fase).explicacao}`}
               />
               {reproducao.fase === 'coberta' || reproducao.fase === 'duvidosa' ? (
                 <InfoField
                   icon="calendar-clock"
-                  label={reproducao.fase === 'coberta' ? 'Coberta há' : 'Por confirmar há'}
+                  label={reproducao.fase === 'coberta' ? t('ficha.cobertaHa') : t('ficha.porConfirmarHa')}
                   value={`${reproducao.diasNaFase} dias${
                     reproducao.detalheCobricao ? ` · ${reproducao.detalheCobricao}` : ''
                   }`}
@@ -398,10 +403,10 @@ export default function AnimalDetalheScreen() {
               ) : null}
               <InfoField
                 icon="baby-bottle-outline"
-                label="Partos"
+                label={t('ficha.partos')}
                 value={
                   reproducao.partos === 0
-                    ? 'Ainda nenhum'
+                    ? t('ficha.aindaNenhum')
                     : `${reproducao.partos}${
                         reproducao.diasDesdeUltimoParto != null
                           ? ` · último há ${reproducao.diasDesdeUltimoParto} dias`
@@ -413,7 +418,7 @@ export default function AnimalDetalheScreen() {
               {reproducao.intervaloMedioPartos != null ? (
                 <InfoField
                   icon="chart-timeline-variant"
-                  label="Intervalo entre partos"
+                  label={t('repro.intervaloPartos')}
                   value={`${reproducao.intervaloMedioPartos} dias em média`}
                   last
                 />
@@ -424,11 +429,11 @@ export default function AnimalDetalheScreen() {
 
         {/* Localização */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-          Localização
+          {t('ficha.localizacao')}
         </Text>
         <Card>
-          <InfoField icon="barn" label="Exploração" value={exploracao?.nome ?? 'Sem exploração'} />
-          <InfoField icon="map-marker" label="Terreno atual" value={terreno?.nome ?? 'Sem terreno'} last />
+          <InfoField icon="barn" label={t('formAnimal.exploracao')} value={exploracao?.nome ?? t('ficha.semExploracao')} />
+          <InfoField icon="map-marker" label={t('ficha.terrenoAtual')} value={terreno?.nome ?? t('filtro.semTerreno')} last />
         </Card>
 
         {/* Balanço económico — só a quem pode consultar contas, e só quando há
@@ -437,12 +442,12 @@ export default function AnimalDetalheScreen() {
         {balanco.temDados && podeVerBalanco ? (
           <>
             <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-              Balanço
+              {t('ficha.balanco')}
             </Text>
             <Card>
               <View style={{ gap: spacing.xs }}>
-                <BalancoLinha label="Receita (venda)" valor={balanco.receita} cor={colors.success} sinal="+" />
-                <BalancoLinha label="Custos (compra, tratamentos)" valor={balanco.custos} cor={colors.danger} sinal="−" />
+                <BalancoLinha label={t('ficha.receitaVenda')} valor={balanco.receita} cor={colors.success} sinal="+" />
+                <BalancoLinha label={t('ficha.custos')} valor={balanco.custos} cor={colors.danger} sinal="−" />
                 <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 4 }} />
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text variant="bodyStrong">Resultado</Text>
@@ -459,12 +464,12 @@ export default function AnimalDetalheScreen() {
 
         {/* Histórico */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-          Histórico ({eventos.length})
+          {t('ficha.historico')} ({eventos.length})
         </Text>
         {eventos.length === 0 ? (
           <Card>
             <Text variant="body" color={colors.textSecondary}>
-              Ainda não há eventos registados para este animal.
+              {t('ficha.semEventos')}
             </Text>
           </Card>
         ) : (
@@ -510,7 +515,7 @@ export default function AnimalDetalheScreen() {
               ELIMINADO, e aí este botão nem aparece (ver `podeEditar`). */}
           {podeEditar ? (
             <Button
-              label="Editar dados do animal"
+              label={t('ficha.editarDados')}
               icon="pencil-outline"
               variant={saiu ? 'secondary' : 'ghost'}
               onPress={() => router.push(`/animal/editar/${animal.id}`)}
@@ -518,15 +523,14 @@ export default function AnimalDetalheScreen() {
           ) : null}
           {eliminado ? (
             <Text variant="secondary" color={colors.textMuted}>
-              Este registo foi eliminado e já não se altera. Fica guardado como
-              está, para o histórico e para a auditoria.
+              {t('ficha.eliminadoNaoSeAltera')}
             </Text>
           ) : null}
           {!saiu ? (
             <>
               {podeRegistarEvento ? (
                 <Button
-                  label="Registar evento"
+                  label={t('ficha.registarEvento')}
                   icon="plus"
                   variant="secondary"
                   onPress={() => router.push({ pathname: '/evento/novo', params: { animalId: animal.id } })}
@@ -534,7 +538,7 @@ export default function AnimalDetalheScreen() {
               ) : null}
               {!podeRegistarSaida ? null : !saidaOpen ? (
                 <Button
-                  label="Marcar como falecido / vendido"
+                  label={t('ficha.marcarSaida')}
                   icon="archive-outline"
                   variant="ghost"
                   onPress={() => setSaidaOpen(true)}
@@ -563,7 +567,7 @@ export default function AnimalDetalheScreen() {
             </>
           ) : podeRegistarSaida && !eliminado ? (
             <Button
-              label="Voltar a ativar o animal"
+              label={t('ficha.voltarAAtivar')}
               icon="restore"
               variant="secondary"
               onPress={pedirReativar}
@@ -609,44 +613,44 @@ function FormularioSaida({
   return (
     <Card>
       <Text variant="h3" style={{ marginBottom: spacing.sm }}>
-        Marcar saída do efetivo
+        {t('ficha.marcarSaidaTitulo')}
       </Text>
       <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
         <Chip
-          label="Vendido"
+          label={t('ficha.vendido')}
           icon="cash"
           selected={tipo === 'vendido'}
           onPress={() => onChangeTipo('vendido')}
         />
         <Chip
-          label="Falecido"
+          label={t('ficha.falecido')}
           icon="grave-stone"
           selected={tipo === 'falecido'}
           onPress={() => onChangeTipo('falecido')}
         />
       </View>
       <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 4 }}>
-        Data (dd/mm/aaaa)
+        {t('ficha.dataFormato')}
       </Text>
       <View style={{ marginBottom: spacing.md }}>
         <CampoData
           value={data}
           onChangeText={onChangeData}
-          placeholder="dd/mm/aaaa"
+          placeholder={t('agenda.exDia')}
           icon="calendar"
-          rotuloCalendario="Escolher a data da saída no calendário"
+          rotuloCalendario={t('ficha.calendarioSaida')}
         />
       </View>
       {tipo === 'vendido' && podeDefinirPreco ? (
         <>
           <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 4 }}>
-            Preço de venda (€), opcional
+            {t('ficha.precoVenda')}
           </Text>
           <View style={{ marginBottom: spacing.md }}>
             <TextField
               value={preco}
               onChangeText={onChangePreco}
-              placeholder="Ex.: 1350"
+              placeholder={t('ficha.exPreco')}
               icon="cash"
               keyboardType="decimal-pad"
             />
@@ -678,13 +682,13 @@ function FormularioSaida({
         </View>
       ) : null}
       <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 4 }}>
-        Nota (opcional): comprador, matadouro, causa, etc.
+        {t('ficha.notaOpcional')}
       </Text>
       <View style={{ marginBottom: spacing.md }}>
         <TextField
           value={motivo}
           onChangeText={onChangeMotivo}
-          placeholder={tipo === 'vendido' ? 'Ex.: vendido ao Sr. Silva' : 'Ex.: doença'}
+          placeholder={tipo === 'vendido' ? t('ficha.exNotaVenda') : t('ficha.exNotaMorte')}
           icon="note-text-outline"
         />
       </View>
@@ -695,11 +699,11 @@ function FormularioSaida({
       ) : null}
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         <View style={{ flex: 1 }}>
-          <Button label="Cancelar" variant="ghost" onPress={onCancelar} />
+          <Button label={t('comum.cancelar')} variant="ghost" onPress={onCancelar} />
         </View>
         <View style={{ flex: 1 }}>
           <Button
-            label={aGuardar ? 'A guardar…' : 'Confirmar'}
+            label={aGuardar ? t('comum.aGuardar') : t('ficha.confirmar')}
             icon="check"
             variant="primary"
             onPress={onConfirmar}
@@ -708,7 +712,7 @@ function FormularioSaida({
         </View>
       </View>
       <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm }}>
-        Fica um evento de {tipo === 'vendido' ? 'Venda' : 'Morte'} registado no histórico.
+        Fica um evento de {tipo === 'vendido' ? t('ficha.venda') : 'Morte'} registado no histórico.
       </Text>
     </Card>
   );
@@ -826,7 +830,7 @@ function GenealogiaRow({
         </View>
       ) : (
         <Text variant="bodyStrong" color={colors.textMuted}>
-          Sem registo
+          {t('ficha.semRegisto')}
         </Text>
       )}
     </View>

@@ -16,6 +16,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, layout, radii, spacing } from '@/theme';
 
 /**
@@ -106,7 +107,7 @@ export default function ImportarAnimaisScreen() {
       setErro({ mensagem, detalhe });
       // O motivo fica no ecrã (acima), por isso o aviso não precisa de exigir um
       // "OK" para se poder voltar ao Excel.
-      toast.erro('Ficheiro não lido', mensagem);
+      toast.erro(t('importar.semLer'), mensagem);
     } finally {
       setALer(false);
     }
@@ -120,23 +121,23 @@ export default function ImportarAnimaisScreen() {
       const { criados, falhas } = await importarAnimais(exploracaoId, dados);
       const exp = editaveis.find((e) => e.id === exploracaoId);
       if (falhas.length === 0) {
-        toast.sucesso(
-          `${criados} ${criados === 1 ? 'animal importado' : 'animais importados'}`,
-          exp?.nome,
-        );
+        toast.sucesso(t('importar.nImportados', { n: criados }), exp?.nome);
       } else {
         const nomes = falhas.slice(0, 5).map((f) => f.rotulo).join(', ');
         avisar(
-          'Importação parcial',
-          `Entraram ${criados}. O servidor recusou ${falhas.length}` +
-            `${nomes ? ` (${nomes}${falhas.length > 5 ? '…' : ''})` : ''}.` +
+          t('importar.parcialTitulo'),
+          t('importar.parcial', {
+            entraram: criados,
+            recusados: falhas.length,
+            quais: nomes ? ` (${nomes}${falhas.length > 5 ? '…' : ''})` : '',
+          })
             // O motivo do servidor, sem o qual sobra um "recusou" sem explicação.
-            `\n\nMotivo: ${falhas[0].erro}`,
+            + `\n\n${t('importar.motivo', { motivo: falhas[0].erro })}`,
         );
       }
       router.back();
     } catch (e) {
-      toast.erro('Não foi possível importar', mensagemDeErro(e));
+      toast.erro(t('importar.semImportar'), mensagemDeErro(e));
     } finally {
       setAImportar(false);
     }
@@ -147,16 +148,15 @@ export default function ImportarAnimaisScreen() {
   if (!excelDisponivel) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Importar de Excel" />
+        <Header title={t('importar.titulo')} />
         <View style={{ ...conteudo, paddingTop: spacing.xl }}>
           <Card>
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               <Icon name="laptop" size="lg" color={colors.info} />
               <View style={{ flex: 1 }}>
-                <Text variant="bodyStrong">Faça a importação no computador</Text>
+                <Text variant="bodyStrong">{t('importar.noComputador')}</Text>
                 <Text variant="secondary" color={colors.textSecondary}>
-                  Para escolher um ficheiro Excel é preciso o computador ou o site da app.
-                  No telemóvel, registe os animais um a um com o botão “Registar”.
+                  {t('importar.soNoComputador')}
                 </Text>
               </View>
             </View>
@@ -168,7 +168,7 @@ export default function ImportarAnimaisScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Importar de Excel" />
+      <Header title={t('importar.titulo')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -178,24 +178,21 @@ export default function ImportarAnimaisScreen() {
         }}>
         <View style={conteudo}>
           <Text variant="secondary" color={colors.textSecondary}>
-            Descarregue o modelo, preencha-o no Excel (um animal por linha) e volte aqui
-            para o carregar. Mostramos o que vai entrar antes de gravar. Os animais que a
-            app já tem não entram outra vez, mesmo que o ficheiro os traga.
+            {t('importar.explicacao')}
           </Text>
 
           {/* Passo 1 — exploração de destino */}
-          <PassoTitulo numero={1} texto="Para que exploração?" />
+          <PassoTitulo numero={1} texto={t('importar.paraQueExploracao')} />
           {contaSuspensa ? (
             <Card>
               <Text variant="secondary" color={colors.danger}>
-                A conta está suspensa ou por aprovar: não é possível gravar animais.
+                {t('importar.contaSuspensa')}
               </Text>
             </Card>
           ) : editaveis.length === 0 ? (
             <Card>
               <Text variant="secondary" color={colors.textSecondary}>
-                Não tem nenhuma exploração onde possa registar animais. Crie uma
-                exploração primeiro, ou peça acesso ao dono.
+                {t('importar.semExploracoes')}
               </Text>
             </Card>
           ) : (
@@ -213,28 +210,27 @@ export default function ImportarAnimaisScreen() {
           )}
 
           {/* Passo 2 — modelo */}
-          <PassoTitulo numero={2} texto="Descarregar o modelo" />
+          <PassoTitulo numero={2} texto={t('importar.descarregarModelo')} />
           <Card>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <Icon name="microsoft-excel" size="lg" color={colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text variant="bodyStrong">Modelo Excel</Text>
+                <Text variant="bodyStrong">{t('importar.modeloExcel')}</Text>
                 <Text variant="secondary" color={colors.textSecondary}>
-                  Traz os cabeçalhos certos e uma folha “Instruções” com o que cada
-                  coluna aceita.
+                  {t('importar.modeloExplicacao')}
                 </Text>
               </View>
             </View>
             <Button
-              label="Descarregar modelo"
+              label={t('importar.descarregarModeloBotao')}
               icon="tray-arrow-down"
               variant="secondary"
               onPress={() => {
                 try {
                   descarregarTemplate();
-                  toast.sucesso('Modelo descarregado', 'Procure na pasta das transferências.');
+                  toast.sucesso(t('importar.modeloDescarregado'), t('importar.modeloOnde'));
                 } catch (e) {
-                  toast.erro('Não foi possível descarregar', mensagemDeErro(e));
+                  toast.erro(t('docs.semDescarga'), mensagemDeErro(e));
                 }
               }}
               style={{ marginTop: spacing.md }}
@@ -242,9 +238,15 @@ export default function ImportarAnimaisScreen() {
           </Card>
 
           {/* Passo 3 — carregar o ficheiro preenchido */}
-          <PassoTitulo numero={3} texto="Carregar o ficheiro preenchido" />
+          <PassoTitulo numero={3} texto={t('importar.carregarFicheiro')} />
           <Button
-            label={aLer ? 'A ler…' : resultado ? 'Escolher outro ficheiro' : 'Escolher ficheiro Excel'}
+            label={
+              aLer
+                ? t('importar.aLer')
+                : resultado
+                  ? t('importar.escolherOutro')
+                  : t('importar.escolherFicheiro')
+            }
             icon="microsoft-excel"
             variant={resultado ? 'secondary' : 'primary'}
             loading={aLer}
@@ -258,7 +260,7 @@ export default function ImportarAnimaisScreen() {
                 <Icon name="file-alert-outline" size="lg" color={colors.danger} />
                 <View style={{ flex: 1 }}>
                   <Text variant="bodyStrong" color={colors.danger}>
-                    Não conseguimos ler o ficheiro
+                    {t('importar.semLerTitulo')}
                   </Text>
                   <Text variant="secondary" color={colors.textSecondary}>
                     {erro.mensagem}
@@ -268,7 +270,7 @@ export default function ImportarAnimaisScreen() {
                       variant="caption"
                       color={colors.textMuted}
                       style={{ marginTop: spacing.xs }}>
-                      Detalhe técnico: {erro.detalhe}
+                      {t('importar.detalheTecnico', { detalhe: erro.detalhe })}
                     </Text>
                   ) : null}
                 </View>
@@ -304,8 +306,8 @@ export default function ImportarAnimaisScreen() {
             <Button
               label={
                 aImportar
-                  ? 'A importar…'
-                  : `Importar ${prontos.length} animai${prontos.length > 1 ? 's' : 'l'}`
+                  ? t('importar.aImportar')
+                  : t('importar.importarN', { n: prontos.length })
               }
               icon="check"
               loading={aImportar}
@@ -329,16 +331,16 @@ function motivoDuplicado(l: LinhaImportacao): string {
   switch (l.duplicadoPor) {
     case 'id':
       return naConta
-        ? 'Este animal já está na app: veio deste mesmo ficheiro exportado. Não foi importado outra vez.'
-        : 'Esta linha repete outra do ficheiro (mesmo ID).';
+        ? t('importar.dupIdNaConta')
+        : t('importar.dupIdNoFicheiro');
     case 'nome-data':
       return naConta
-        ? 'Já existe um animal com este nome e data de nascimento: não foi importado. Se for outro animal, mude-lhe o nome ou dê-lhe brinco.'
-        : 'Outra linha do ficheiro tem o mesmo nome e data de nascimento.';
+        ? t('importar.dupNomeNaConta')
+        : t('importar.dupNomeNoFicheiro');
     default:
       return naConta
-        ? 'Já existe um animal com este brinco: não foi importado.'
-        : 'Este brinco aparece mais do que uma vez no ficheiro.';
+        ? t('importar.dupBrincoNaConta')
+        : t('importar.dupBrincoNoFicheiro');
   }
 }
 
@@ -384,8 +386,8 @@ function Previsualizacao({
 }) {
   const nada = prontos === 0 && comErro.length === 0 && comDuplicado.length === 0;
   const problemas: string[] = [];
-  if (comErro.length > 0) problemas.push(`${comErro.length} com erro`);
-  if (comDuplicado.length > 0) problemas.push(`${comDuplicado.length} já existem`);
+  if (comErro.length > 0) problemas.push(t('importar.nComErro', { n: comErro.length }));
+  if (comDuplicado.length > 0) problemas.push(t('importar.nJaExistem', { n: comDuplicado.length }));
 
   return (
     <View style={{ gap: spacing.md, marginTop: spacing.xs }}>
@@ -400,15 +402,15 @@ function Previsualizacao({
           <View style={{ flex: 1 }}>
             <Text variant="bodyStrong">
               {prontos > 0
-                ? `${prontos} animai${prontos > 1 ? 's' : 'l'} prontos a importar`
-                : 'Nenhum animal pronto a importar'}
+                ? t('importar.nProntos', { n: prontos })
+                : t('importar.nenhumPronto')}
             </Text>
             <Text variant="secondary" color={colors.textSecondary}>
               {problemas.length > 0
                 ? `${problemas.join(' · ')}.`
                 : nada
-                  ? 'O ficheiro não tinha linhas de animais.'
-                  : 'Tudo certo, sem problemas.'}
+                  ? t('importar.ficheiroVazio')
+                  : t('importar.tudoCerto')}
             </Text>
           </View>
         </View>
@@ -420,10 +422,11 @@ function Previsualizacao({
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <Icon name="table-alert" size="lg" color={colors.danger} />
             <View style={{ flex: 1 }}>
-              <Text variant="bodyStrong">Faltam colunas no ficheiro</Text>
+              <Text variant="bodyStrong">{t('importar.faltamColunas')}</Text>
               <Text variant="secondary" color={colors.textSecondary}>
-                Não encontrámos: {resultado.colunasEmFalta.join(', ')}. Use o modelo
-                descarregado sem apagar a linha de cabeçalhos.
+                {t('importar.faltamColunasDetalhe', {
+                  colunas: resultado.colunasEmFalta.join(', '),
+                })}
               </Text>
             </View>
           </View>
@@ -437,7 +440,7 @@ function Previsualizacao({
             variant="label"
             color={colors.textSecondary}
             style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-            NÃO VÃO ENTRAR
+            {t('importar.naoVaoEntrar')}
           </Text>
           <Card>
             <View style={{ gap: spacing.sm }}>
@@ -450,7 +453,7 @@ function Previsualizacao({
                     paddingTop: spacing.sm,
                   }}>
                   <Text variant="bodyStrong">
-                    Linha {l.numero} · {l.rotulo}
+                    {t('importar.linha', { n: l.numero })} · {l.rotulo}
                   </Text>
                   {l.erros.map((erro, i) => (
                     <View
@@ -478,7 +481,7 @@ function Previsualizacao({
             variant="label"
             color={colors.textSecondary}
             style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-            JÁ EXISTEM (NÃO IMPORTADOS)
+            {t('importar.jaExistem')}
           </Text>
           <Card>
             <View style={{ gap: spacing.sm }}>
@@ -491,7 +494,7 @@ function Previsualizacao({
                     paddingTop: spacing.sm,
                   }}>
                   <Text variant="bodyStrong">
-                    Linha {l.numero} · {l.rotulo}
+                    {t('importar.linha', { n: l.numero })} · {l.rotulo}
                   </Text>
                   <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
                     <Icon name="content-duplicate" size="sm" color={colors.textMuted} />
@@ -513,7 +516,7 @@ function Previsualizacao({
             variant="label"
             color={colors.textSecondary}
             style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-            ENTRAM, MAS REPARE
+            {t('importar.entramMasRepare')}
           </Text>
           <Card>
             <View style={{ gap: spacing.sm }}>
@@ -526,7 +529,7 @@ function Previsualizacao({
                     paddingTop: spacing.sm,
                   }}>
                   <Text variant="bodyStrong">
-                    Linha {l.numero} · {l.rotulo}
+                    {t('importar.linha', { n: l.numero })} · {l.rotulo}
                   </Text>
                   {l.avisos.map((aviso, i) => (
                     <View key={i} style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>

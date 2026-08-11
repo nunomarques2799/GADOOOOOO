@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { entraPorCodigo, INTENCOES, intencaoMeta, lerIntencao } from '../intencao';
+import { entraPorCodigo, intencoes, intencaoMeta, lerIntencao } from '../intencao';
 
 describe('lerIntencao', () => {
   it('devolve a intenção guardada na conta', () => {
@@ -36,12 +36,15 @@ describe('entraPorCodigo', () => {
   });
 });
 
-describe('INTENCOES', () => {
+describe('intencoes()', () => {
   it('cada opção diz o que lhe acontece a seguir', () => {
-    for (const op of INTENCOES) {
+    for (const op of intencoes()) {
       expect(op.rotulo.length).toBeGreaterThan(0);
       expect(op.descricao.length).toBeGreaterThan(0);
-      expect(intencaoMeta(op.id)).toBe(op);
+      // `toEqual` e não `toBe`: a lista passou a ser construída a cada chamada,
+      // para os rótulos serem traduzidos no render em vez de congelados no
+      // import (ver `intencao.ts`). São objetos iguais, não o mesmo objeto.
+      expect(intencaoMeta(op.id)).toEqual(op);
     }
   });
 });

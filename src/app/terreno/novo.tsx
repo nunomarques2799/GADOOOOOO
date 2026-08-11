@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { FormularioTerreno } from '@/components/FormularioTerreno';
 import { EmptyState, Header } from '@/components/ui';
 import { useGado } from '@/data/store';
+import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 export default function NovoTerrenoScreen() {
@@ -17,11 +18,11 @@ export default function NovoTerrenoScreen() {
   if (!alvo) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Novo terreno" />
+        <Header title={t('terrenos.novo')} />
         <EmptyState
           icon="barn"
-          title="Sem explorações"
-          message="Crie primeiro uma exploração para poder adicionar terrenos."
+          title={t('formTerreno.semExploracoesTitulo')}
+          message={t('formTerreno.semExploracoesMensagem')}
         />
       </View>
     );

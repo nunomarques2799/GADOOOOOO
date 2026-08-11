@@ -27,6 +27,7 @@ import {
 } from '@/data/permissoes';
 import type { Trabalhador, Vinculo } from '@/data/trabalhadores';
 import type { RoleMembro } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 const ICONE_CAPACIDADE: Record<Capacidade, IconName> = {
@@ -172,7 +173,7 @@ export function FolhaPermissoes({
   return (
     <Modal visible={aberto} animationType="slide" transparent onRequestClose={onFechar}>
       <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel="Fechar" />
+        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
         <View
           style={[
             {
@@ -205,7 +206,7 @@ export function FolhaPermissoes({
               onPress={onFechar}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Fechar">
+              accessibilityLabel={t('comum.fechar')}>
               <Icon name="close" size="lg" color={colors.textSecondary} />
             </Pressable>
           </View>
@@ -279,7 +280,7 @@ export function FolhaPermissoes({
 
                 {temAjustes ? (
                   <Button
-                    label="Repor o que o papel dá"
+                    label={t('permissoes.reporPapel')}
                     icon="restore"
                     variant="secondary"
                     onPress={reporPapel}
@@ -476,7 +477,7 @@ function SeccaoPrazo({
           />
         ))}
         <Chip
-          label="Até dia e hora"
+          label={t('acesso.ateDiaEHora')}
           icon="calendar-clock"
           selected={aMarcar}
           onPress={() => {
@@ -497,10 +498,10 @@ function SeccaoPrazo({
             dele com ele. Fechar a porta e apagar a fechadura não são a mesma
             coisa. */}
         {!terminou ? (
-          <Chip label="Terminar já" icon="clock-remove-outline" onPress={() => pedirEMudar(0)} />
+          <Chip label={t('acesso.terminarJa')} icon="clock-remove-outline" onPress={() => pedirEMudar(0)} />
         ) : null}
         {vinculo.expiraEm ? (
-          <Chip label="Tirar o prazo" icon="infinity" onPress={() => pedirEMudar(null)} />
+          <Chip label={t('acesso.tirarPrazo')} icon="infinity" onPress={() => pedirEMudar(null)} />
         ) : null}
       </View>
 
@@ -509,7 +510,7 @@ function SeccaoPrazo({
           <CampoData
             value={dia}
             onChangeText={setDia}
-            placeholder="dd/mm/aaaa"
+            placeholder={t('agenda.exDia')}
             permitirFuturo
             rotuloCalendario="Dia em que o acesso termina"
           />
@@ -525,7 +526,7 @@ function SeccaoPrazo({
             {problema ?? `Termina a ${formatDataHora(fimEscolhido as string)}.`}
           </Text>
           <Button
-            label="Marcar esta hora"
+            label={t('acesso.marcarEstaHora')}
             icon="calendar-clock"
             variant="secondary"
             disabled={!!problema || ocupado}

@@ -16,6 +16,8 @@
  * Uma linha inválida não trava as outras — é reportada e o resto importa.
  */
 
+import { t } from '@/i18n';
+
 import { chaveDia } from './calendario';
 import { especies, finalidades, finalidadesPara, sexos } from './constants';
 import { parseDataPt } from './helpers';
@@ -430,35 +432,35 @@ export function linhaParaAnimal(
   // ---- Espécie (obrigatória) ----
   const txtEspecie = texto(valores.especie);
   const especie = parseEspecie(valores.especie);
-  if (!txtEspecie) erros.push('Falta a espécie.');
+  if (!txtEspecie) erros.push(t('excel.faltaEspecie'));
   else if (!especie)
-    erros.push(`Espécie "${txtEspecie}" não é válida. Use: ${especies.join(', ')}.`);
+    erros.push(t('excel.especieInvalida', { valor: txtEspecie, lista: especies.join(', ') }));
 
   // ---- Sexo (obrigatório) ----
   const txtSexo = texto(valores.sexo);
   const sexo = parseSexo(valores.sexo);
-  if (!txtSexo) erros.push('Falta o sexo.');
-  else if (!sexo) erros.push(`Sexo "${txtSexo}" não é válido. Use Macho ou Fêmea.`);
+  if (!txtSexo) erros.push(t('excel.faltaSexo'));
+  else if (!sexo) erros.push(t('excel.sexoInvalido', { valor: txtSexo }));
 
   // ---- Data de nascimento (obrigatória) ----
   const txtNasc = textoData(valores.dataNascimento);
   const dataNascimento = txtNasc ? parseDataPt(txtNasc) : null;
-  if (!txtNasc) erros.push('Falta a data de nascimento.');
+  if (!txtNasc) erros.push(t('excel.faltaNascimento'));
   else if (!dataNascimento)
-    erros.push(`Data de nascimento "${txtNasc}" inválida. Use dd/mm/aaaa e uma data não futura.`);
+    erros.push(t('excel.nascimentoInvalido', { valor: txtNasc }));
 
   // ---- Finalidade (opcional, só bovinos) ----
   let finalidade: Finalidade | undefined;
   const txtFin = texto(valores.finalidade);
   if (txtFin) {
     const f = parseFinalidade(valores.finalidade);
-    if (!f) avisos.push(`Finalidade "${txtFin}" não reconhecida, por isso ignorada.`);
+    if (!f) avisos.push(t('excel.finalidadeDesconhecida', { valor: txtFin }));
     else if (especie && especie !== 'Bovino')
-      avisos.push('Finalidade só se aplica a bovinos, por isso ignorada.');
+      avisos.push(t('excel.finalidadeSoBovinos'));
     else {
       finalidade = f;
       if (sexo && !finalidadesPara(sexo).includes(f))
-        avisos.push(`Finalidade "${f}" não é típica de ${sexo.toLowerCase()}, mas foi guardada na mesma.`);
+        avisos.push(t('excel.finalidadeAtipica', { valor: f, sexo: sexo.toLowerCase() }));
     }
   }
 
@@ -467,7 +469,7 @@ export function linhaParaAnimal(
   const txtIdent = textoData(valores.dataIdentificacao);
   if (txtIdent) {
     const di = parseDataPt(txtIdent);
-    if (!di) avisos.push(`Data de identificação "${txtIdent}" inválida, por isso ignorada.`);
+    if (!di) avisos.push(t('excel.identificacaoInvalida', { valor: txtIdent }));
     else dataIdentificacao = di;
   }
 
@@ -476,7 +478,7 @@ export function linhaParaAnimal(
   const txtSnira = texto(valores.comunicadoSnira);
   if (txtSnira) {
     sniraValor = parseBooleano(valores.comunicadoSnira);
-    if (sniraValor === null) avisos.push(`"${txtSnira}" não é Sim nem Não, por isso ficou Sim.`);
+    if (sniraValor === null) avisos.push(t('excel.sniraInvalido', { valor: txtSnira }));
   }
 
   // ---- Data prevista de parto (opcional, pode ser futura) ----
@@ -484,8 +486,8 @@ export function linhaParaAnimal(
   const txtParto = textoData(valores.dataPrevistaParto);
   if (txtParto) {
     const dp = parseDataPt(txtParto, { permitirFuturo: true });
-    if (!dp) avisos.push(`Data prevista de parto "${txtParto}" inválida, por isso ignorada.`);
-    else if (sexo === 'Macho') avisos.push('Data de parto indicada num macho, por isso ignorada.');
+    if (!dp) avisos.push(t('excel.partoInvalido', { valor: txtParto }));
+    else if (sexo === 'Macho') avisos.push(t('excel.partoNumMacho'));
     else dataPrevistaParto = dp;
   }
 
@@ -580,10 +582,7 @@ function marcarDuplicados(
       if (brinco) brincosVistos.add(brinco);
       if (nomeData) nomesVistos.add(nomeData);
       if (!id && !brinco && !nomeData)
-        l.avisos.push(
-          'Sem brinco nem nome, não conseguimos confirmar se este animal já existe na app. '
-            + 'Confira que não o está a registar duas vezes.',
-        );
+        l.avisos.push(t('excel.semBrincoNemNome'));
     }
   }
 }

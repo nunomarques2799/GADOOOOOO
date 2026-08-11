@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CartaoIntroducao } from '@/components/CartaoIntroducao';
 import { FolhaPermissoes } from '@/components/FolhaPermissoes';
-import { Avatar, Badge, Button, Card, Chip, EmptyState, Icon, Text } from '@/components/ui';
+import { SeletorExploracao } from '@/components/SeletorExploracao';
+import { Avatar, Badge, Button, Card, EmptyState, Icon, Text } from '@/components/ui';
 import { acessoTerminou, rotuloPrazo } from '@/data/acessoTemporario';
 import { useAuth } from '@/data/auth';
 import { formatDataHora } from '@/data/helpers';
@@ -22,6 +23,7 @@ import {
   type Trabalhador,
 } from '@/data/trabalhadores';
 import type { Convite, RoleMembro } from '@/data/types';
+import { t } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, radii, spacing } from '@/theme';
 
@@ -163,7 +165,7 @@ export default function TrabalhadoresScreen() {
   ): Promise<string | null> {
     const razao = await definirPermissoes(membroId, permissoes);
     if (razao) return razao;
-    toast.sucesso('Permissões guardadas', pessoaAAjustar?.nome);
+    toast.sucesso(t('equipa.permissoesGuardadas'), pessoaAAjustar?.nome);
     await carregar();
     return null;
   }
@@ -178,11 +180,15 @@ export default function TrabalhadoresScreen() {
   async function mudarPrazo(membroId: string, horas: number | null): Promise<string | null> {
     const razao = await definirPrazoDeAcesso(membroId, horas);
     if (razao) {
-      toast.erro('O tempo de acesso não mudou', razao);
+      toast.erro(t('equipa.prazoNaoMudou'), razao);
       return razao;
     }
     toast.sucesso(
-      horas === null ? 'Acesso sem prazo' : horas === 0 ? 'Acesso terminado' : 'Acesso prolongado',
+      horas === null
+        ? t('equipa.acessoSemPrazo')
+        : horas === 0
+          ? t('equipa.acessoTerminado')
+          : t('equipa.acessoProlongado'),
       pessoaAAjustar?.nome,
     );
     await carregar();
@@ -192,10 +198,13 @@ export default function TrabalhadoresScreen() {
   async function marcarFim(membroId: string, fimIso: string): Promise<string | null> {
     const razao = await definirFimDeAcesso(membroId, fimIso);
     if (razao) {
-      toast.erro('O tempo de acesso não mudou', razao);
+      toast.erro(t('equipa.prazoNaoMudou'), razao);
       return razao;
     }
-    toast.sucesso('Acesso marcado', `${pessoaAAjustar?.nome ?? ''} · até ${formatDataHora(fimIso)}`);
+    toast.sucesso(
+      t('equipa.acessoMarcado'),
+      `${pessoaAAjustar?.nome ?? ''} · ${t('equipa.ate', { quando: formatDataHora(fimIso) })}`,
+    );
     await carregar();
     return null;
   }
@@ -236,13 +245,13 @@ export default function TrabalhadoresScreen() {
               gap: spacing.sm,
             }}>
             <Text variant="display" style={{ flexShrink: 1 }}>
-              Trabalhadores
+              {t('nav.trabalhadores')}
             </Text>
             <Pressable
               onPress={() => void carregar()}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Atualizar lista"
+              accessibilityLabel={t('equipa.atualizarLista')}
               style={({ pressed }) => [
                 {
                   flexDirection: 'row',
@@ -254,12 +263,12 @@ export default function TrabalhadoresScreen() {
               ]}>
               <Icon name="refresh" size="md" color={colors.primary} />
               <Text variant="bodyStrong" color={colors.primary}>
-                Atualizar
+                {t('equipa.atualizar')}
               </Text>
             </Pressable>
           </View>
           <Text variant="body" color={colors.textSecondary}>
-            Quem trabalha nas suas explorações
+            {t('equipa.subtitulo')}
           </Text>
         </View>
 
@@ -270,34 +279,23 @@ export default function TrabalhadoresScreen() {
           <CartaoIntroducao
             chave="trabalhadores"
             icon="account-hard-hat"
-            titulo="Para que serve este separador"
+            titulo={t('equipa.introTitulo')}
             pontos={[
-              'Aqui estão as pessoas a quem deu acesso à sua exploração: trabalhadores e veterinários. Quem não está nesta lista não vê nada do que registou.',
-              'Convida-se com um código: a pessoa instala a app, escreve o código e fica logo ligada à sua exploração — não precisa de saber a sua palavra-passe.',
-              'Cada um só mexe no que lhe compete: o trabalhador aponta o que faz no dia a dia, o veterinário regista tratamentos.',
-              'Toque numa pessoa para ver e mudar ao certo o que ela pode alterar. Ao veterinário pode dar acesso até ao dia e hora que quiser, findos os quais ele sai sozinho.',
-              'No registo de alterações vê o que cada um mexeu e a que horas — quem registou um animal, quem mudou um terreno, quem lançou uma despesa.',
+              t('equipa.intro1'),
+              t('equipa.intro2'),
+              t('equipa.intro3'),
+              t('equipa.intro4'),
+              t('equipa.intro5'),
             ]}
           />
 
           {/* Por exploração, à vista e não escondido, como nos Animais */}
           {minhas.length > 1 ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-              <Chip
-                label="Todas"
-                icon="barn"
-                selected={exploracaoId === undefined}
-                onPress={() => setExploracaoId(undefined)}
-              />
-              {minhas.map((e) => (
-                <Chip
-                  key={e.id}
-                  label={e.nome}
-                  selected={exploracaoId === e.id}
-                  onPress={() => setExploracaoId(exploracaoId === e.id ? undefined : e.id)}
-                />
-              ))}
-            </View>
+            <SeletorExploracao
+              exploracoes={minhas}
+              valor={exploracaoId}
+              onEscolher={setExploracaoId}
+            />
           ) : null}
 
           {erro ? (
@@ -306,7 +304,7 @@ export default function TrabalhadoresScreen() {
                 <Icon name="alert-circle-outline" size="lg" color={colors.danger} />
                 <View style={{ flex: 1 }}>
                   <Text variant="bodyStrong" color={colors.danger}>
-                    Não foi possível carregar a equipa
+                    {t('equipa.semCarregar')}
                   </Text>
                   <Text variant="secondary" color={colors.textSecondary}>
                     {erro}
@@ -324,21 +322,21 @@ export default function TrabalhadoresScreen() {
                   <Badge
                     tone="warning"
                     icon="account-hard-hat"
-                    label={`${conta.trabalhador} trabalhador${conta.trabalhador > 1 ? 'es' : ''}`}
+                    label={t('equipa.nTrabalhadores', { n: conta.trabalhador })}
                   />
                 ) : null}
                 {conta.veterinario > 0 ? (
                   <Badge
                     tone="info"
                     icon="medical-bag"
-                    label={`${conta.veterinario} veterinário${conta.veterinario > 1 ? 's' : ''}`}
+                    label={t('equipa.nVeterinarios', { n: conta.veterinario })}
                   />
                 ) : null}
                 {conta.admin > 0 ? (
                   <Badge
                     tone="success"
                     icon="shield-crown"
-                    label={`${conta.admin} dono${conta.admin > 1 ? 's' : ''}`}
+                    label={t('equipa.nDonos', { n: conta.admin })}
                   />
                 ) : null}
               </View>
@@ -349,21 +347,21 @@ export default function TrabalhadoresScreen() {
           {minhas.length === 0 ? (
             <EmptyState
               icon="account-hard-hat"
-              title="Sem equipa para gerir"
-              message="Só o dono de uma exploração vê e convida a equipa. Se entrou por convite, fale com quem o convidou."
+              title={t('equipa.semEquipaTitulo')}
+              message={t('equipa.semEquipaMensagem')}
             />
           ) : aCarregar && pessoas.length === 0 ? (
             <Card>
               <Text variant="body" color={colors.textSecondary}>
-                A carregar a equipa…
+                {t('equipa.aCarregarEquipa')}
               </Text>
             </Card>
           ) : pessoas.length === 0 ? (
             <EmptyState
               icon="account-plus-outline"
-              title="Ainda não tem trabalhadores"
-              message="Convide alguém com um código: ele entra na app e fica logo ligado à sua exploração, a ver os animais e a registar o que faz."
-              actionLabel={exploracaoDeGestao ? 'Convidar alguém' : undefined}
+              title={t('equipa.vazioTitulo')}
+              message={t('equipa.vazioMensagem')}
+              actionLabel={exploracaoDeGestao ? t('equipa.convidarAlguem') : undefined}
               onAction={
                 exploracaoDeGestao
                   ? () => router.push(`/exploracao/equipa/${exploracaoDeGestao}`)
@@ -447,8 +445,8 @@ export default function TrabalhadoresScreen() {
             <Button
               label={
                 minhas.length > 1 && exploracaoId
-                  ? `Convidar para ${nomeDe(minhas, exploracaoId)}`
-                  : 'Convidar trabalhador ou veterinário'
+                  ? t('equipa.convidarPara', { nome: nomeDe(minhas, exploracaoId) })
+                  : t('equipa.convidarTrabalhadorOuVet')
               }
               icon="account-multiple-plus"
               variant="secondary"
@@ -458,10 +456,8 @@ export default function TrabalhadoresScreen() {
 
           {pessoas.length > 0 ? (
             <Text variant="caption" color={colors.textMuted} style={{ textAlign: 'center' }}>
-              Toque numa pessoa para escolher o que ela pode alterar na app.
-              {minhas.length > 1 && !exploracaoId
-                ? ' Para convidar ou remover numa exploração à escolha, toque nela em cima.'
-                : ''}
+              {t('equipa.toqueNumaPessoa')}
+              {minhas.length > 1 && !exploracaoId ? ` ${t('equipa.toqueNaExploracao')}` : ''}
             </Text>
           ) : null}
 
@@ -476,16 +472,16 @@ export default function TrabalhadoresScreen() {
           {minhas.length > 0 ? (
             <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
               <Text variant="label" color={colors.textSecondary} style={{ marginLeft: spacing.xs }}>
-                CONSULTAR
+                {t('equipa.consultar')}
               </Text>
               <Button
-                label="Ver o registo de alterações"
+                label={t('equipa.verRegistoAlteracoes')}
                 icon="history"
                 variant="secondary"
                 onPress={() => router.push('/atividade')}
               />
               <Button
-                label="Ver quem já cá esteve"
+                label={t('equipa.verQuemCaEsteve')}
                 icon="account-clock-outline"
                 variant="secondary"
                 onPress={() => router.push('/equipa/historico')}
@@ -528,7 +524,7 @@ export default function TrabalhadoresScreen() {
 
 /** Nome da exploração, para as legendas. */
 function nomeDe(lista: { id: string; nome: string }[], id: string): string {
-  return lista.find((e) => e.id === id)?.nome ?? 'Exploração';
+  return lista.find((e) => e.id === id)?.nome ?? t('equipa.exploracao');
 }
 
 const ICONE_PAPEL: Record<RoleMembro, 'shield-crown' | 'medical-bag' | 'account-hard-hat'> = {
@@ -582,7 +578,7 @@ function LinhaPessoa({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${pessoa.nome}, ${legendaRole(pessoa.papelPrincipal).toLowerCase()}`}
-      accessibilityHint="Toque para escolher o que esta pessoa pode alterar"
+      accessibilityHint={t('equipa.toqueParaPermissoes')}
       style={({ pressed }) => [
         {
           flexDirection: 'row',
@@ -612,7 +608,7 @@ function LinhaPessoa({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
             <Icon name="tune-variant" size="xs" color={colors.warning} />
             <Text variant="caption" color={colors.warning}>
-              Permissões ajustadas
+              {t('equipa.permissoesAjustadas')}
             </Text>
           </View>
         ) : null}

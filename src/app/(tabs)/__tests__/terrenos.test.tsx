@@ -153,8 +153,9 @@ describe('separador Terrenos vazio', () => {
     const r = abrir();
     expect(textos(r)).toContain('Courela de Baixo');
     expect(textos(r)).not.toContain('Sem terrenos');
-    // Com terrenos, criar é pelo botão flutuante.
-    expect(tocaveis(r)).toContain('Novo');
+    // Com terrenos, criar é pelo botão flutuante. Ele passou a ser só o sinal
+    // "+", por isso "Novo terreno" é agora o rótulo FALADO (ver `FAB`).
+    expect(tocaveis(r)).toContain('Novo terreno');
   });
 
   it('com várias explorações, cada grupo tem o seu "NOVO" e não se repete o convite', () => {

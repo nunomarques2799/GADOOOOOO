@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 
 import { Card, Header, Icon, Screen, Text } from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
+import { t } from '@/i18n';
 import {
   colors,
   FAMILIAS,
@@ -33,11 +34,11 @@ export default function AparenciaScreen() {
     if (aAplicar || p.id === escolhida) return;
     confirmar(
       `Mudar para "${p.nome}"?`,
-      'A app volta a abrir para ficar tudo com as cores novas. Não se perde nada do que está registado, e os outros aparelhos onde entrar com esta conta passam a abrir assim.',
+      t('aspeto.vaiRecarregar'),
       () => {
         void aplicar(p);
       },
-      { rotuloConfirmar: 'Mudar' },
+      { rotuloConfirmar: t('aspeto.mudar') },
     );
   }
 
@@ -50,7 +51,7 @@ export default function AparenciaScreen() {
       // recarregamento. A escolha ficou gravada — o que falta é dizê-lo, em
       // vez de deixar o criador a olhar para uma app da mesma cor.
       avisar(
-        'Escolha guardada',
+        t('idioma.escolhaGuardada'),
         `A app fica com o aspeto "${p.nome}" da próxima vez que a abrir.`,
       );
       setAAplicar(false);
@@ -59,7 +60,7 @@ export default function AparenciaScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Aspeto da app" />
+      <Header title={t('aspeto.titulo')} />
       <Screen>
         <Text variant="body" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
           {PALETAS.length} maneiras de a app se apresentar. Só muda o aspeto: os animais,
@@ -99,7 +100,7 @@ export default function AparenciaScreen() {
           }}>
           <Icon name="information" size="md" color={colors.info} />
           <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
-            As cores dos avisos não mudam: o vermelho continua a ser prazo vencido, o
+            {t('aspeto.coresDosAvisos')}
             amarelo "esta semana" e o azul informação. É assim que se reconhecem de
             relance.
           </Text>
@@ -132,7 +133,9 @@ function CartaoPaleta({
   selecionada: boolean;
   onPress: () => void;
 }) {
-  const t = paleta.tokens;
+  // `cor` e não `t`: o `t` é a função de tradução importada em cima, e o nome
+  // antigo tapava-a dentro deste componente.
+  const cor = paleta.tokens;
 
   return (
     <Pressable
@@ -150,10 +153,10 @@ function CartaoPaleta({
           overflow: 'hidden',
         }}>
         {/* Amostra: o cabeçalho, um cartão e um botão, como na app a sério */}
-        <View style={{ backgroundColor: t.background, padding: spacing.sm }}>
+        <View style={{ backgroundColor: cor.background, padding: spacing.sm }}>
           <View
             style={{
-              backgroundColor: t.headerTo,
+              backgroundColor: cor.headerTo,
               borderRadius: radii.sm,
               paddingHorizontal: spacing.sm,
               paddingVertical: spacing.xs,
@@ -161,18 +164,18 @@ function CartaoPaleta({
               alignItems: 'center',
               gap: 6,
             }}>
-            <Icon name="cow" size="sm" color={t.onPrimary} />
-            <Text variant="caption" color={t.onPrimary}>
+            <Icon name="cow" size="sm" color={cor.onPrimary} />
+            <Text variant="caption" color={cor.onPrimary}>
               Terrabovina
             </Text>
           </View>
 
           <View
             style={{
-              backgroundColor: t.surface,
+              backgroundColor: cor.surface,
               borderRadius: radii.sm,
               borderWidth: 1,
-              borderColor: t.border,
+              borderColor: cor.border,
               padding: spacing.sm,
               marginTop: spacing.xs,
               flexDirection: 'row',
@@ -180,36 +183,36 @@ function CartaoPaleta({
               gap: spacing.sm,
             }}>
             <View style={{ flex: 1 }}>
-              <Text variant="caption" color={t.text}>
-                Mimosa · 12 anos
+              <Text variant="caption" color={cor.text}>
+                {t('aspeto.exemploAnimal')}
               </Text>
-              <Text variant="caption" color={t.textMuted}>
-                Bovino · Mertolenga
+              <Text variant="caption" color={cor.textMuted}>
+                {t('aspeto.exemploRaca')}
               </Text>
             </View>
             <View
               style={{
-                backgroundColor: t.primaryTint,
+                backgroundColor: cor.primaryTint,
                 borderRadius: radii.pill,
                 paddingHorizontal: spacing.xs,
                 paddingVertical: 3,
               }}>
-              <Text variant="caption" color={t.primaryDark}>
-                Em dia
+              <Text variant="caption" color={cor.primaryDark}>
+                {t('docs.emDia')}
               </Text>
             </View>
           </View>
 
           <View
             style={{
-              backgroundColor: t.primary,
+              backgroundColor: cor.primary,
               borderRadius: radii.sm,
               paddingVertical: spacing.xs,
               marginTop: spacing.xs,
               alignItems: 'center',
             }}>
-            <Text variant="caption" color={t.onPrimary}>
-              Registar animal
+            <Text variant="caption" color={cor.onPrimary}>
+              {t('animais.registarAnimal')}
             </Text>
           </View>
         </View>

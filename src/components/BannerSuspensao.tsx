@@ -2,6 +2,7 @@ import { View } from 'react-native';
 
 import { Card, Icon, Text } from '@/components/ui';
 import { useMembros } from '@/data/membros';
+import { t } from '@/i18n';
 import { colors, spacing } from '@/theme';
 
 /**
@@ -26,8 +27,8 @@ export function BannerSuspensao() {
           <Text variant="bodyStrong">Conta suspensa (só consulta)</Text>
           <Text variant="secondary" color={colors.textSecondary}>
             {isAdminEmAlguma
-              ? 'Pode ver e exportar tudo o que já registou, mas de momento não é possível gravar alterações. Fale connosco para reativar a conta.'
-              : 'Pode consultar os dados desta exploração, mas não gravar alterações. A conta do responsável pela exploração está suspensa.'}
+              ? t('banner.suspensaPropria')
+              : t('banner.suspensaDoDono')}
           </Text>
         </View>
       </View>

@@ -90,7 +90,7 @@ create table if not exists public.config_notificacao (
   -- trocar por algo como 'Terrabovina <avisos@terrabovina.pt>'.
   remetente text not null default 'Terrabovina <onboarding@resend.dev>',
   -- Vai no botão do email.
-  url_app text not null default 'https://app-gestaogado.netlify.app',
+  url_app text not null default 'https://app.terrabovina.pt',
   -- Interruptor geral: a `false`, o trigger não faz nada (nem sequer tenta
   -- ler o segredo). É o que se usa na base de testes, para não encher a caixa
   -- de correio a cada conta de experiência.

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
+import { SeletorExploracao } from '@/components/SeletorExploracao';
 import {
   Badge,
   Card,
@@ -21,13 +22,14 @@ import { formatDataHora, formatDataPt } from '@/data/helpers';
 import {
   contarPorMotivo,
   historicoDoEfetivo,
-  MOTIVOS,
+  motivos,
   rotuloMotivo,
   type LinhaHistorico,
   type MotivoSaida,
 } from '@/data/historicoAnimais';
 import { useNomesEquipa } from '@/data/nomesEquipa';
 import { useGado } from '@/data/store';
+import { t, type ChaveTexto } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /**
@@ -43,10 +45,10 @@ import { colors, radii, spacing } from '@/theme';
  * depender da memória de quem lá estava.
  */
 
-const ASPETO: Record<MotivoSaida, { icone: IconName; tom: Tone; verbo: string }> = {
-  falecido: { icone: 'grave-stone', tom: 'neutral', verbo: 'Morte registada' },
-  vendido: { icone: 'cash', tom: 'info', verbo: 'Venda registada' },
-  eliminado: { icone: 'trash-can-outline', tom: 'danger', verbo: 'Eliminado' },
+const ASPETO: Record<MotivoSaida, { icone: IconName; tom: Tone; chaveVerbo: ChaveTexto }> = {
+  falecido: { icone: 'grave-stone', tom: 'neutral', chaveVerbo: 'ficha.morteRegistada' },
+  vendido: { icone: 'cash', tom: 'info', chaveVerbo: 'ficha.vendaRegistada' },
+  eliminado: { icone: 'trash-can-outline', tom: 'danger', chaveVerbo: 'ficha.eliminado' },
 };
 
 export default function HistoricoEfetivoScreen() {
@@ -75,36 +77,19 @@ export default function HistoricoEfetivoScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Histórico do efetivo" />
+      <Header title={t('histAnimal.titulo')} />
       <Screen>
         <Text variant="body" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
-          Os animais que saíram do efetivo. Nenhum destes registos foi apagado: ficam aqui
-          com o dia e o nome de quem os registou.
+          {t('histAnimal.ajuda')}
         </Text>
 
         {podeEscolherExploracao ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: spacing.xs,
-              marginBottom: spacing.sm,
-            }}>
-            <Chip
-              label="Todas"
-              icon="barn"
-              selected={exploracaoId === undefined}
-              onPress={() => setExploracaoId(undefined)}
-            />
-            {exploracoes.map((e) => (
-              <Chip
-                key={e.id}
-                label={e.nome}
-                selected={exploracaoId === e.id}
-                onPress={() => setExploracaoId(exploracaoId === e.id ? undefined : e.id)}
-              />
-            ))}
-          </View>
+          <SeletorExploracao
+            exploracoes={exploracoes}
+            valor={exploracaoId}
+            onEscolher={setExploracaoId}
+            style={{ marginBottom: spacing.sm }}
+          />
         ) : null}
 
         {/* Motivo. Um motivo sem ninguém dentro não aparece: um chip que só
@@ -118,11 +103,11 @@ export default function HistoricoEfetivoScreen() {
               marginBottom: spacing.sm,
             }}>
             <Chip
-              label={`Todos (${total})`}
+              label={`${t('filtro.todos')} (${total})`}
               selected={motivo === undefined}
               onPress={() => setMotivo(undefined)}
             />
-            {MOTIVOS.filter((m) => conta[m.valor] > 0).map((m) => (
+            {motivos().filter((m) => conta[m.valor] > 0).map((m) => (
               <Chip
                 key={m.valor}
                 label={`${m.label} (${conta[m.valor]})`}
@@ -152,7 +137,7 @@ export default function HistoricoEfetivoScreen() {
             <TextInput
               value={texto}
               onChangeText={setTexto}
-              placeholder="Nome ou brinco"
+              placeholder={t('histAnimal.procurar')}
               placeholderTextColor={colors.textMuted}
               style={{
                 flex: 1,
@@ -169,11 +154,11 @@ export default function HistoricoEfetivoScreen() {
         {linhas.length === 0 ? (
           <EmptyState
             icon="history"
-            title={total === 0 ? 'Ainda não saiu nenhum animal' : 'Nada com esses filtros'}
+            title={total === 0 ? t('histAnimal.vazioTitulo') : t('histAnimal.semFiltrosTitulo')}
             message={
               total === 0
-                ? 'Quando marcar uma morte ou uma venda, ou eliminar um registo, o que aconteceu fica escrito aqui.'
-                : 'Experimente outro motivo, outra exploração ou limpar a pesquisa.'
+                ? t('histAnimal.vazioMensagem')
+                : t('histAnimal.semFiltrosMensagem')
             }
           />
         ) : (
@@ -219,17 +204,17 @@ function LinhaSaida({
    */
   const rasto = (() => {
     const quando = linha.registadoEm ? formatDataHora(linha.registadoEm) : undefined;
-    if (autor && quando) return `Registado por ${autor}, ${quando}`;
-    if (autor) return `Registado por ${autor}`;
-    if (quando) return `Registado ${quando}`;
-    return 'Sem registo de quem o fez';
+    if (autor && quando) return t('histAnimal.porEQuando', { autor, quando });
+    if (autor) return t('histAnimal.porQuem', { autor });
+    if (quando) return t('histAnimal.quando', { quando });
+    return t('histAnimal.semAutor');
   })();
 
   return (
     <Pressable
       onPress={() => router.push(`/animal/${animal.id}`)}
       accessibilityRole="button"
-      accessibilityLabel={`${rotuloAnimal(animal)}, ${rotuloMotivo[motivo].toLowerCase()}. ${rasto}`}
+      accessibilityLabel={`${rotuloAnimal(animal)}, ${rotuloMotivo(motivo).toLowerCase()}. ${rasto}`}
       style={({ pressed }) => [
         {
           flexDirection: 'row',
@@ -252,11 +237,11 @@ function LinhaSaida({
           <Text variant="bodyStrong" numberOfLines={1} style={{ flexShrink: 1 }}>
             {rotuloAnimal(animal)}
           </Text>
-          <Badge tone={aspeto.tom} icon={aspeto.icone} label={rotuloMotivo[motivo]} />
+          <Badge tone={aspeto.tom} icon={aspeto.icone} label={rotuloMotivo(motivo)} />
         </View>
         <Text variant="secondary" color={colors.textSecondary} numberOfLines={1}>
-          {aspeto.verbo}
-          {linha.dataSaida ? ` a ${formatDataPt(linha.dataSaida)}` : ''}
+          {t(aspeto.chaveVerbo)}
+          {linha.dataSaida ? ` · ${formatDataPt(linha.dataSaida)}` : ''}
           {animal.numeroIdentificacao ? ` · ${animal.numeroIdentificacao}` : ''}
         </Text>
         <Text variant="caption" color={colors.textMuted} numberOfLines={2}>

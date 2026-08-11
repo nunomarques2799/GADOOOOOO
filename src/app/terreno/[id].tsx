@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { AnimalRow } from '@/components/AnimalRow';
@@ -18,18 +18,23 @@ import {
   Text,
 } from '@/components/ui';
 import { tipoTerrenoMeta } from '@/data/constants';
+import { mapaAlertas } from '@/data/filtrosAnimais';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 export default function TerrenoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const desktop = useDesktop();
-  const { terrenoById, exploracaoById, animais, terrenosByExploracao } = useGado();
+  const { terrenoById, exploracaoById, animais, terrenosByExploracao, alertas } = useGado();
   const { pode } = useMembros();
   const [moverAberto, setMoverAberto] = useState(false);
+  // Antes do `return` do terreno que não existe: um hook não pode ficar depois
+  // de uma saída antecipada.
+  const porAnimal = useMemo(() => mapaAlertas(alertas), [alertas]);
 
   const terreno = id ? terrenoById(id) : undefined;
   // O veterinário trata dos animais, não do património — não edita terrenos.
@@ -41,8 +46,8 @@ export default function TerrenoDetalheScreen() {
   if (!terreno) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Terreno" />
-        <EmptyState icon="map-marker" title="Terreno não encontrado" message="Este registo já não existe." />
+        <Header title={t('formTerreno.terreno')} />
+        <EmptyState icon="map-marker" title={t('formTerreno.naoEncontrado')} message={t('ficha.jaNaoExiste')} />
       </View>
     );
   }
@@ -98,7 +103,7 @@ export default function TerrenoDetalheScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Icon name="barn" size={14} color={colors.textOnDarkMuted} />
                 <Text variant="secondary" color={colors.textOnDarkMuted} numberOfLines={1}>
-                  {exploracao?.nome ?? 'Sem exploração'}
+                  {exploracao?.nome ?? t('ficha.semExploracao')}
                 </Text>
               </View>
             </View>
@@ -112,15 +117,15 @@ export default function TerrenoDetalheScreen() {
               borderTopWidth: 1,
               borderTopColor: 'rgba(255,255,255,0.18)',
             }}>
-            <HeroStat value={terreno.tipo ?? 'Outro'} label="Tipo" />
-            <HeroStat value={terreno.area != null ? `${terreno.area} ha` : 'Sem área'} label="Área" />
-            <HeroStat value={animaisNoTerreno.length} label="Animais" />
+            <HeroStat value={terreno.tipo ?? 'Outro'} label={t('formTerreno.tipo')} />
+            <HeroStat value={terreno.area != null ? `${terreno.area} ha` : t('detTerreno.semArea')} label={t('detTerreno.area')} />
+            <HeroStat value={animaisNoTerreno.length} label={t('nav.animais')} />
           </View>
         </LinearGradient>
 
         {/* Mapa + direções */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-          Localização
+          {t('ficha.localizacao')}
         </Text>
         {temCoords ? (
           <>
@@ -134,7 +139,7 @@ export default function TerrenoDetalheScreen() {
               altura={desktop ? 460 : 340}
             />
             <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.xs, marginBottom: spacing.sm }}>
-              Como chegar ao terreno:
+              {t('detTerreno.comoChegar')}
             </Text>
             <BotoesDirecoes latitude={terreno.latitude!} longitude={terreno.longitude!} nome={terreno.nome} />
           </>
@@ -143,7 +148,7 @@ export default function TerrenoDetalheScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <Icon name="map-marker-off" size="lg" color={colors.textMuted} />
               <Text variant="body" style={{ flex: 1 }}>
-                Sem localização no mapa. Edite o terreno para marcar onde fica.
+                {t('detTerreno.semLocalizacao')}
               </Text>
             </View>
           </Card>
@@ -153,7 +158,7 @@ export default function TerrenoDetalheScreen() {
         {terreno.descricao ? (
           <>
             <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
-              Descrição
+              {t('formTerreno.descricao')}
             </Text>
             <Card>
               <Text variant="body" color={colors.textSecondary}>
@@ -172,23 +177,27 @@ export default function TerrenoDetalheScreen() {
             marginTop: spacing.xl,
             marginBottom: spacing.xs,
           }}>
-          <Text variant="h3">Animais ({animaisNoTerreno.length})</Text>
+          <Text variant="h3">
+            {t('nav.animais')} ({animaisNoTerreno.length})
+          </Text>
         </View>
 
         {animaisNoTerreno.length === 0 ? (
           <Card>
             <Text variant="body" color={colors.textSecondary}>
-              Ainda não há animais neste terreno. Associe os que estão aqui.
+              {t('detTerreno.semAnimais')}
             </Text>
           </Card>
         ) : (
           // Sem `nomeTerreno`: são todos deste terreno, repetir o nome em cada
           // linha era ruído.
-          animaisNoTerreno.map((a) => <AnimalRow key={a.id} animal={a} />)
+          animaisNoTerreno.map((a) => (
+            <AnimalRow key={a.id} animal={a} alertas={porAnimal.get(a.id)} />
+          ))
         )}
 
         <Button
-          label="Associar animais"
+          label={t('associar.titulo')}
           icon="cow"
           variant="secondary"
           onPress={() => router.push(`/terreno/animais/${terreno.id}`)}

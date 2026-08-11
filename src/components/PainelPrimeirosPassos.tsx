@@ -18,6 +18,7 @@ import {
   type ChavePasso,
   type Passo,
 } from '@/data/tutorial';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /** Para onde leva cada passo, e com que ícone aparece. */
@@ -111,24 +112,24 @@ export function PainelPrimeirosPassos() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
         <Icon name="flag-checkered" size="lg" color={colors.primary} />
         <View style={{ flex: 1 }}>
-          <Text variant="bodyStrong">Vamos começar</Text>
+          <Text variant="bodyStrong">{t('tutorial.titulo')}</Text>
           <Text variant="secondary" color={colors.textSecondary}>
-            {feitos} de {total} feito{feitos === 1 ? '' : 's'}
+            {t('tutorial.progresso', { n: feitos, total })}
           </Text>
         </View>
         <Pressable
           onPress={esconder}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Esconder o guia de primeiros passos"
+          accessibilityLabel={t('tutorial.esconderAjuda')}
           style={({ pressed }) => [{ padding: 4 }, pressed && { opacity: 0.6 }]}>
           <Text variant="caption" color={colors.textMuted}>
-            Esconder
+            {t('tutorial.esconder')}
           </Text>
         </Pressable>
       </View>
 
-      {/* Barra de progresso — proporção dos passos essenciais já feitos. */}
+      {/* Barra de progresso: proporção dos passos essenciais já feitos. */}
       <View
         style={{
           height: 8,
@@ -148,8 +149,7 @@ export function PainelPrimeirosPassos() {
       </View>
 
       <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
-        Siga os passos pela ordem. Toque em cada um para saber o que é. Pode
-        parar a meio e continuar quando quiser — a app guarda tudo.
+        {t('tutorial.comoFunciona')}
       </Text>
 
       <View style={{ marginTop: spacing.sm }}>
@@ -178,10 +178,10 @@ export function PainelPrimeirosPassos() {
             }}
           />
           <Text variant="label" color={colors.textSecondary}>
-            SE QUISER — NÃO É PRECISO
+            {t('tutorial.opcionaisTitulo')}
           </Text>
           <Text variant="caption" color={colors.textMuted} style={{ marginBottom: spacing.xs }}>
-            Feitios da app que pode ligar agora ou nunca. Também estão no Perfil.
+            {t('tutorial.opcionaisAjuda')}
           </Text>
           {extras.map((p) => (
             <LinhaPasso
@@ -227,8 +227,8 @@ function LinhaPasso({
         disabled={passo.feito}
         accessibilityRole="button"
         accessibilityState={{ disabled: passo.feito, expanded: aberto }}
-        accessibilityLabel={`${passo.titulo}. ${passo.feito ? 'Feito' : passo.descricao}`}
-        accessibilityHint={passo.feito ? undefined : 'Toque para saber o que é'}
+        accessibilityLabel={`${passo.titulo}. ${passo.feito ? t('tutorial.feito') : passo.descricao}`}
+        accessibilityHint={passo.feito ? undefined : t('tutorial.toqueParaSaber')}
         style={({ pressed }) => [
           {
             flexDirection: 'row',

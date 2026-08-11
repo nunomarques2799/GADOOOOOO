@@ -5,6 +5,7 @@ import { Card, EmptyState, Header, Icon, Screen, Text } from '@/components/ui';
 import { avisar } from '@/data/avisos';
 import { useExistencias } from '@/data/useExistencias';
 import { useGado } from '@/data/store';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /**
@@ -25,7 +26,7 @@ export default function ExistenciasDefinicaoScreen() {
     try {
       await definirExistenciasAtivas(valor);
     } catch (e) {
-      avisar('Não foi possível guardar', e instanceof Error ? e.message : String(e));
+      avisar(t('comum.semGravar'), e instanceof Error ? e.message : String(e));
     } finally {
       setAGuardar(false);
     }
@@ -34,12 +35,12 @@ export default function ExistenciasDefinicaoScreen() {
   if (!podeLigarDesligar) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Registo de medicamentos" />
+        <Header title={t('definicoes.existencias')} />
         <Screen>
           <EmptyState
             icon="lock-outline"
-            title="Só quem gere a exploração"
-            message="Esta definição pertence ao dono da exploração. Fale com ele se precisar de dar entrada de medicamentos na app."
+            title={t('interruptor.soQuemGere')}
+            message={t('interruptor.soQuemGereExistencias')}
           />
         </Screen>
       </View>
@@ -48,7 +49,7 @@ export default function ExistenciasDefinicaoScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Registo de medicamentos" />
+      <Header title={t('definicoes.existencias')} />
       <Screen>
         <Card style={{ marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
@@ -68,16 +69,16 @@ export default function ExistenciasDefinicaoScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text variant="h3">Gerir a arrecadação na app</Text>
+              <Text variant="h3">{t('interruptor.gerirArrecadacao')}</Text>
               <Text variant="secondary" color={colors.textSecondary}>
-                {ativas ? 'Ligado' : 'Desligado'}
+                {ativas ? t('comum.ligado') : t('comum.desligado')}
               </Text>
             </View>
             <Switch
               value={ativas}
               onValueChange={alternar}
               disabled={aGuardar}
-              accessibilityLabel="Gerir a arrecadação na app"
+              accessibilityLabel={t('interruptor.gerirArrecadacao')}
               trackColor={{ false: colors.borderStrong, true: colors.success }}
               thumbColor={colors.white}
             />
@@ -85,26 +86,26 @@ export default function ExistenciasDefinicaoScreen() {
         </Card>
 
         <Text variant="h3" style={{ marginBottom: spacing.sm }}>
-          O que isto muda
+          {t('interruptor.oQueMuda')}
         </Text>
         <Card padded={false} style={{ marginBottom: spacing.md }}>
           <View style={{ paddingHorizontal: spacing.md }}>
             <Linha
               icon="package-variant-closed"
-              titulo="Separador Existências"
-              texto="Os lotes que comprou, o que resta de cada um e a validade. Desligado, o separador desaparece da app."
+              titulo={t('interruptor.existencias1Titulo')}
+              texto={t('interruptor.existencias1Texto')}
               divider
             />
             <Linha
               icon="needle"
-              titulo="Escolher o lote no tratamento"
-              texto="Ao registar uma vacina ou um medicamento deixa de lhe ser perguntado de que frasco saiu. O registo sanitário continua igual — o animal, a data, o produto e o intervalo de segurança ficam todos."
+              titulo={t('interruptor.existencias2Titulo')}
+              texto={t('interruptor.existencias2Texto')}
               divider
             />
             <Linha
               icon="bell-outline"
-              titulo="Avisos de validade e de stock"
-              texto="Deixa de ser avisado quando um lote está a acabar ou a chegar à validade."
+              titulo={t('interruptor.existencias3Titulo')}
+              texto={t('interruptor.existencias3Texto')}
             />
           </View>
         </Card>
@@ -123,8 +124,8 @@ export default function ExistenciasDefinicaoScreen() {
           <Icon name="information" size="md" color={colors.info} />
           <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
             {medicamentos.length > 0
-              ? `Desligar não apaga nada. Os ${medicamentos.length} ${medicamentos.length === 1 ? 'lote que já registou fica guardado e volta' : 'lotes que já registou ficam guardados e voltam'} a aparecer se ligar outra vez.`
-              : 'Desligar não apaga nada. O que registar fica sempre guardado, mesmo que volte a desligar mais tarde.'}
+              ? t('interruptor.desligarComLotes', { n: medicamentos.length })
+              : t('interruptor.desligarNaoApaga')}
           </Text>
         </View>
 
@@ -143,8 +144,7 @@ export default function ExistenciasDefinicaoScreen() {
           }}>
           <Icon name="alert-outline" size="md" color={colors.warning} />
           <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
-            O registo de medicamentos é obrigatório por lei e pode ser pedido numa
-            inspeção. Desligue-o só se o mantiver noutro sítio.
+            {t('interruptor.obrigacaoLegal')}
           </Text>
         </View>
 
@@ -152,7 +152,7 @@ export default function ExistenciasDefinicaoScreen() {
           variant="caption"
           color={colors.textMuted}
           style={{ marginTop: spacing.md, textAlign: 'center' }}>
-          Esta definição vale para todas as suas explorações.
+          {t('interruptor.valeParaTodas')}
         </Text>
       </Screen>
     </View>

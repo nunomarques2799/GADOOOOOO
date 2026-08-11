@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { Icon, type IconName, Text } from '@/components/ui';
 import type { MeteoEstado } from '@/data/store';
 import type { DiaMeteo, Meteorologia } from '@/data/types';
+import { t, type ChaveTexto } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 /** Linha branca ténue que separa os blocos dentro do cartão verde. */
@@ -46,7 +47,7 @@ export function WeatherCard({
               {meteo.temperatura}
             </Text>
             <Text style={{ fontFamily: 'Nunito_700Bold', fontSize: 24, color: colors.textOnDark, marginTop: 6 }}>
-              °C
+              {t('meteo.grausC')}
             </Text>
           </View>
           <Text variant="bodyStrong" color={colors.textOnDark}>
@@ -70,9 +71,9 @@ export function WeatherCard({
           borderTopWidth: 1,
           borderTopColor: RISCA,
         }}>
-        <Metric icon="water-percent" label="Humidade" value={`${meteo.humidade}%`} />
-        <Metric icon="weather-windy" label="Vento" value={`${meteo.vento} km/h`} />
-        <Metric icon="weather-pouring" label="Precip." value={`${meteo.precipitacao} mm`} />
+        <Metric icon="water-percent" label={t('meteo.humidade')} value={`${meteo.humidade}%`} />
+        <Metric icon="weather-windy" label={t('meteo.vento')} value={`${meteo.vento} km/h`} />
+        <Metric icon="weather-pouring" label={t('meteo.precipitacao')} value={`${meteo.precipitacao} mm`} />
       </View>
 
       {/* Amanhã, à vista. É a pergunta que se faz de véspera — dá para semear,
@@ -80,7 +81,7 @@ export function WeatherCard({
           abrir nada. Os outros seis ficam por baixo, a um toque. */}
       {amanha ? (
         <View style={{ marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: RISCA }}>
-          <LinhaDia dia={amanha} rotulo="Amanhã" destaque />
+          <LinhaDia dia={amanha} rotulo={t('meteo.amanha')} destaque />
 
           {proximos.length > 1 ? (
             <>
@@ -97,7 +98,9 @@ export function WeatherCard({
                 accessibilityRole="button"
                 accessibilityState={{ expanded: aberto }}
                 accessibilityLabel={
-                  aberto ? 'Esconder os próximos dias' : `Ver os próximos ${proximos.length} dias`
+                  aberto
+                    ? t('meteo.esconderDias')
+                    : t('meteo.verProximosDias', { n: proximos.length })
                 }
                 style={({ pressed }) => [
                   {
@@ -112,7 +115,7 @@ export function WeatherCard({
                 ]}>
                 <Icon name={aberto ? 'chevron-up' : 'chevron-down'} size="md" color={colors.textOnDark} />
                 <Text variant="bodyStrong" color={colors.textOnDark}>
-                  {aberto ? 'Mostrar menos' : `Próximos ${proximos.length} dias`}
+                  {aberto ? t('meteo.mostrarMenos') : t('meteo.proximosDias', { n: proximos.length })}
                 </Text>
               </Pressable>
             </>
@@ -192,7 +195,7 @@ function LinhaDia({
         </Text>
         {chuva ? (
           <Text variant="caption" color={colors.textOnDarkMuted}>
-            Chuva {chuva}
+            {t('meteo.chuva', { chuva })}
           </Text>
         ) : null}
       </View>
@@ -203,7 +206,16 @@ function LinhaDia({
   );
 }
 
-const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+/** Guardam a CHAVE: uma tabela de módulo congelava a língua de arranque. */
+const DIAS_SEMANA: ChaveTexto[] = [
+  'dia.domingo',
+  'dia.segunda',
+  'dia.terca',
+  'dia.quarta',
+  'dia.quinta',
+  'dia.sexta',
+  'dia.sabado',
+];
 
 /**
  * "Quarta, 5/8" — o dia da semana é como se marca trabalho no campo, e a data
@@ -216,7 +228,7 @@ function rotuloDia(iso: string): string {
   const [ano, mes, dia] = iso.split('-').map(Number);
   if (!ano || !mes || !dia) return iso;
   const d = new Date(ano, mes - 1, dia);
-  return `${DIAS_SEMANA[d.getDay()]}, ${dia}/${mes}`;
+  return `${t(DIAS_SEMANA[d.getDay()])}, ${dia}/${mes}`;
 }
 
 /** Indicador de estado da meteorologia junto ao local (a carregar / offline / atualizar). */
@@ -237,7 +249,7 @@ function EstadoMeteo({
       <Icon name={offline ? 'cloud-off-outline' : 'refresh'} size={14} color={colors.textOnDarkMuted} />
       {offline ? (
         <Text variant="caption" color={colors.textOnDarkMuted}>
-          Sem ligação
+          {t('meteo.semLigacao')}
         </Text>
       ) : null}
     </View>
@@ -249,7 +261,7 @@ function EstadoMeteo({
       onPress={onRecarregar}
       hitSlop={10}
       accessibilityRole="button"
-      accessibilityLabel="Atualizar meteorologia"
+      accessibilityLabel={t('meteo.atualizar')}
       style={({ pressed }) => [{ marginLeft: 2 }, pressed && { opacity: 0.6 }]}>
       {conteudo}
     </Pressable>

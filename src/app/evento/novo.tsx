@@ -38,6 +38,7 @@ import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useExistencias } from '@/data/useExistencias';
 import { useFinancas } from '@/data/useFinancas';
 import type { Animal, EventoTipo, ResultadoDiagnostico, Sexo } from '@/data/types';
+import { t, type ChaveTexto } from '@/i18n';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 /* ------------------------------------------------------------------ *
@@ -80,54 +81,98 @@ const EM_MASSA: Registavel[] = ['Vacinação', 'Medicamento', 'Cobrição'];
 /** Os tipos que saem de um lote da arrecadação. */
 const COM_LOTE: Registavel[] = ['Vacinação', 'Medicamento'];
 
+/**
+ * Ícone, cor e textos de cada tipo.
+ *
+ * O `titulo` e o `feito` são GETTERS pela mesma razão que a `cor`: esta tabela
+ * é criada ao importar o módulo, antes de a paleta e o idioma guardados estarem
+ * aplicados. Escritos como valores, ficavam com a cor de origem e a língua de
+ * arranque para o resto da execução (ver AGENTS.md).
+ */
 const META: Record<
   Registavel,
   { icon: IconName; cor: string; titulo: string; feito: string }
 > = {
   Parto: {
     icon: 'baby-bottle-outline',
-    cor: colors.info,
-    titulo: 'Registar parto',
-    feito: 'Parto registado',
+    get cor() {
+      return colors.info;
+    },
+    get titulo() {
+      return t('evento.registarParto');
+    },
+    get feito() {
+      return t('evento.partoRegistado');
+    },
   },
   Cobrição: {
     icon: 'gender-male-female',
     get cor() {
       return colors.primaryDark;
     },
-    titulo: 'Registar cobrição',
-    feito: 'Cobrição registada',
+    get titulo() {
+      return t('evento.registarCobricao');
+    },
+    get feito() {
+      return t('evento.cobricaoRegistada');
+    },
   },
   Diagnóstico: {
     icon: 'stethoscope',
-    cor: colors.info,
-    titulo: 'Registar diagnóstico',
-    feito: 'Diagnóstico registado',
+    get cor() {
+      return colors.info;
+    },
+    get titulo() {
+      return t('evento.registarDiagnostico');
+    },
+    get feito() {
+      return t('evento.diagnosticoRegistado');
+    },
   },
   Vacinação: {
     icon: 'needle',
-    // Getter porque segue a paleta escolhida: esta tabela é criada no arranque
-    // do módulo, antes de a paleta guardada estar aplicada.
     get cor() {
       return colors.primary;
     },
-    titulo: 'Registar vacina',
-    feito: 'Vacina registada',
+    get titulo() {
+      return t('evento.registarVacina');
+    },
+    get feito() {
+      return t('evento.vacinaRegistada');
+    },
   },
   Medicamento: {
     icon: 'medical-bag',
-    cor: colors.danger,
-    titulo: 'Registar medicamento',
-    feito: 'Medicamento registado',
+    get cor() {
+      return colors.danger;
+    },
+    get titulo() {
+      return t('evento.registarMedicamento');
+    },
+    get feito() {
+      return t('evento.medicamentoRegistado');
+    },
   },
-  Pesagem: { icon: 'scale', cor: colors.warning, titulo: 'Registar pesagem', feito: 'Pesagem registada' },
+  Pesagem: {
+    icon: 'scale',
+    get cor() {
+      return colors.warning;
+    },
+    get titulo() {
+      return t('evento.registarPesagem');
+    },
+    get feito() {
+      return t('evento.pesagemRegistada');
+    },
+  },
 };
 
-const opcoesData = [
-  { label: 'Hoje', dias: 0 },
-  { label: 'Ontem', dias: 1 },
-  { label: 'Há 2 dias', dias: 2 },
-  { label: 'Há 1 semana', dias: 7 },
+/** Atalhos da data. Guardam a CHAVE, e quem desenha é que traduz. */
+const opcoesData: { chave: ChaveTexto; dias: number }[] = [
+  { chave: 'formAnimal.hoje', dias: 0 },
+  { chave: 'formAnimal.ontem', dias: 1 },
+  { chave: 'evento.ha2Dias', dias: 2 },
+  { chave: 'formAnimal.ha1Semana', dias: 7 },
 ];
 
 const VACINAS_COMUNS = ['Língua azul', 'Brucelose', 'Clostridioses', 'Carbúnculo'];
@@ -518,14 +563,14 @@ export default function NovoEventoScreen() {
       } catch (e) {
         const a = animalById(id);
         falhados.push({
-          nome: a?.nome ?? a?.numeroIdentificacao ?? 'Sem nome',
+          nome: a?.nome ?? a?.numeroIdentificacao ?? t('animais.semNome'),
           erro: e instanceof Error ? e.message : String(e),
         });
       }
     }
 
     if (gravados === 0) {
-      toast.erro('Registo não guardado', falhados[0]?.erro ?? 'Tente novamente.');
+      toast.erro(t('evento.naoGuardado'), falhados[0]?.erro ?? t('evento.tenteNovamente'));
       setAGuardar(false);
       return;
     }
@@ -566,7 +611,7 @@ export default function NovoEventoScreen() {
           // O parto ficou gravado — isso é o que interessa e não se desfaz. O
           // que falhou foi a ficha da cria, e é preciso dizê-lo: em silêncio, o
           // criador contava com um animal que a app não tem.
-          toast.erro('Parto guardado, cria por registar', mensagemDeErro(e));
+          toast.erro(t('evento.criaPorRegistar'), mensagemDeErro(e));
         }
       }
     }
@@ -578,9 +623,9 @@ export default function NovoEventoScreen() {
       // Este continua a interromper, e não é um toast: é uma lista de nomes
       // para ir buscar, que não pode desaparecer sozinha ao fim de segundos.
       avisar(
-        'Guardado, com falhas',
-        `Ficou registado em ${gravados} ${gravados === 1 ? 'animal' : 'animais'}. ` +
-          `Não foi possível em: ${falhados.map((f) => f.nome).join(', ')}.`,
+        t('evento.guardadoComFalhas'),
+        `${t('evento.ficouRegistadoEm', { n: gravados })} `
+          + t('evento.naoFoiPossivelEm', { nomes: falhados.map((f) => f.nome).join(', ') }),
       );
       if (animalIds.length === 1) router.replace(`/animal/${animalIds[0]}`);
       else router.back();
@@ -590,7 +635,7 @@ export default function NovoEventoScreen() {
     toast.sucesso(
       META[tipo].feito,
       cria
-        ? `${descricao}. A cria já está na lista — falta pôr-lhe o brinco.`
+        ? `${descricao}. A cria já está na lista: falta pôr-lhe o brinco.`
         : gravados === 1
           ? `${descricao} · ${formatDataPt(data)}`
           : `${descricao} em ${gravados} animais, a ${formatDataPt(data)}`,
@@ -617,8 +662,8 @@ export default function NovoEventoScreen() {
         <Header title={META[tipo].titulo} />
         <EmptyState
           icon="lock-outline"
-          title="Sem permissão para registar"
-          message="Quem gere esta exploração não lhe deu acesso a registar tratamentos. Fale com essa pessoa se acha que é engano."
+          title={t('evento.semPermissaoTitulo')}
+          message={t('evento.semPermissaoMensagem')}
         />
       </EcraComTeclado>
     );
@@ -632,7 +677,7 @@ export default function NovoEventoScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.huge * 2 }}>
         {/* Tipo de evento */}
-        <Field label="Tipo de registo" obrigatorio>
+        <Field label={t('evento.tipoDeRegisto')} obrigatorio>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {REGISTAVEIS.map((t) => (
               <TipoButton
@@ -651,12 +696,12 @@ export default function NovoEventoScreen() {
         <Field
           label={
             tipo === 'Parto'
-              ? 'Mãe (fêmea)'
+              ? t('evento.maeFemea')
               : varios
-                ? `${SO_FEMEAS.includes(tipo) ? 'Fêmeas' : 'Animais'}${animalIds.length > 0 ? ` (${animalIds.length} escolhidas)` : ''}`
+                ? `${SO_FEMEAS.includes(tipo) ? t('filtro.femeas') : t('nav.animais')}${animalIds.length > 0 ? ` (${t('evento.nEscolhidos', { n: animalIds.length })})` : ''}`
                 : SO_FEMEAS.includes(tipo)
-                  ? 'Fêmea'
-                  : 'Animal'
+                  ? t('evento.femea')
+                  : t('ficha.animal')
           }
           obrigatorio>
           <SeletorAnimais
@@ -667,19 +712,19 @@ export default function NovoEventoScreen() {
             varios={varios}
             vazio={
               SO_FEMEAS.includes(tipo)
-                ? 'Não há fêmeas registadas.'
-                : 'Ainda não há animais registados.'
+                ? t('evento.semFemeas')
+                : t('evento.semAnimais')
             }
           />
         </Field>
 
         {/* Data */}
-        <Field label="Data" obrigatorio>
+        <Field label={t('ficha.data')} obrigatorio>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
             {opcoesData.map((o) => (
               <Chip
                 key={o.dias}
-                label={o.label}
+                label={t(o.chave)}
                 // Com uma data escrita à mão, nenhum atalho está escolhido —
                 // senão o ecrã mostrava "Hoje" aceso por baixo de outra data.
                 selected={!dataManualIso && diasAtras === o.dias}
@@ -695,17 +740,17 @@ export default function NovoEventoScreen() {
             variant="caption"
             color={colors.textMuted}
             style={{ marginTop: spacing.sm, marginBottom: 4 }}>
-            Ou data exata (dd/mm/aaaa), para registar o que já aconteceu
+            {t('evento.ouDataExata')}
           </Text>
           <CampoData
             value={dataManual}
             onChangeText={setDataManual}
-            placeholder="Ex: 15/03/2026"
-            rotuloCalendario="Escolher a data do registo no calendário"
+            placeholder={t('evento.exData')}
+            rotuloCalendario={t('evento.calendarioData')}
           />
           {dataManualInvalida ? (
             <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
-              Data inválida. Use o formato dd/mm/aaaa e uma data não futura.
+              {t('formAnimal.dataInvalidaNaoFutura')}
             </Text>
           ) : null}
 
@@ -720,36 +765,35 @@ export default function NovoEventoScreen() {
         {/* ---- Campos específicos ---- */}
         {tipo === 'Parto' ? (
           <>
-            <Field label="Tipo de parto" obrigatorio>
+            <Field label={t('evento.tipoDeParto')} obrigatorio>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
                 {(['Normal', 'Distócico', 'Cesariana'] as const).map((t) => (
                   <Chip key={t} label={t} selected={tipoParto === t} onPress={() => setTipoParto(t)} />
                 ))}
               </View>
             </Field>
-            <Field label="Resultado" obrigatorio>
+            <Field label={t('evento.resultado')} obrigatorio>
               <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <BigToggle label="Nado-vivo" icon="heart-pulse" selected={criaViva} onPress={() => setCriaViva(true)} />
-                <BigToggle label="Nado-morto" icon="heart-broken" selected={!criaViva} onPress={() => setCriaViva(false)} />
+                <BigToggle label={t('evento.nadoVivo')} icon="heart-pulse" selected={criaViva} onPress={() => setCriaViva(true)} />
+                <BigToggle label={t('evento.nadoMorto')} icon="heart-broken" selected={!criaViva} onPress={() => setCriaViva(false)} />
               </View>
             </Field>
             {criaViva ? (
-              <Field label="Sexo da cria" obrigatorio>
+              <Field label={t('evento.sexoDaCria')} obrigatorio>
                 <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  <BigToggle label="Fêmea" icon="gender-female" selected={sexoCria === 'Fêmea'} onPress={() => setSexoCria('Fêmea')} />
-                  <BigToggle label="Macho" icon="gender-male" selected={sexoCria === 'Macho'} onPress={() => setSexoCria('Macho')} />
+                  <BigToggle label={t('evento.femea')} icon="gender-female" selected={sexoCria === 'Fêmea'} onPress={() => setSexoCria('Fêmea')} />
+                  <BigToggle label={t('evento.macho')} icon="gender-male" selected={sexoCria === 'Macho'} onPress={() => setSexoCria('Macho')} />
                 </View>
                 <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-                  Guardamos a cria como animal novo, com este sexo, a data do
-                  parto e a mãe já preenchidos.
+                  {t('evento.criaComoAnimalNovo')}
                 </Text>
               </Field>
             ) : null}
             <Aviso
               texto={
                 criaViva
-                  ? 'A cria fica registada sozinha, por completar: acrescente-lhe o brinco até aos 20 dias e comunique o nascimento ao SNIRA. Se nasceram duas crias, registe dois partos.'
-                  : 'Um parto por cada cria: se nasceram duas, registe dois partos.'
+                  ? t('evento.criaViva')
+                  : t('evento.umPartoPorCria')
               }
             />
           </>
@@ -757,7 +801,7 @@ export default function NovoEventoScreen() {
 
         {tipo === 'Cobrição' ? (
           <>
-            <Field label="Como" obrigatorio>
+            <Field label={t('evento.como')} obrigatorio>
               <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                 {MODOS_COBRICAO.map((m) => (
                   <BigToggle
@@ -814,8 +858,8 @@ export default function NovoEventoScreen() {
               />
               <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
                 {sugestoesTouro.length > 0
-                  ? 'Escolha um acima ou escreva outro. Se não souber qual foi (manada com o touro à solta), deixe em branco.'
-                  : 'Se não souber qual foi (manada com o touro à solta), deixe em branco.'}
+                  ? t('evento.escolhaTouroOuEscreva')
+                  : t('evento.touroDesconhecido')}
               </Text>
             </Field>
             <Aviso
@@ -826,7 +870,7 @@ export default function NovoEventoScreen() {
 
         {tipo === 'Diagnóstico' ? (
           <>
-            <Field label="Resultado" obrigatorio>
+            <Field label={t('evento.resultado')} obrigatorio>
               <View style={{ gap: spacing.xs }}>
                 {resultadosDiagnostico.map((r) => (
                   <Pressable
@@ -874,20 +918,23 @@ export default function NovoEventoScreen() {
               <Aviso
                 texto={
                   partoPrevisto
-                    ? `Parto previsto para ${formatDataPt(partoPrevisto)}, contado a partir da cobrição de ${formatDataPt(cobricaoDoDiagnostico!.data)}. Fica marcado na ficha e no calendário.`
-                    : 'Não há cobrição registada antes desta data, por isso a app não consegue calcular o parto previsto. Registe a cobrição, ou escreva a data prevista na ficha do animal.'
+                    ? t('evento.partoPrevistoPara', {
+                        data: formatDataPt(partoPrevisto),
+                        cobricao: formatDataPt(cobricaoDoDiagnostico!.data),
+                      })
+                    : t('evento.semCobricaoAnterior')
                 }
               />
             ) : null}
             {resultado === 'vazia' && animal?.dataPrevistaParto ? (
-              <Aviso texto="A data prevista de parto que estava na ficha vai ser apagada." />
+              <Aviso texto={t('evento.dataPartoApagada')} />
             ) : null}
 
-            <Field label="Veterinário" opcional>
+            <Field label={t('evento.veterinario')} opcional>
               <TextField
                 value={vetDiag}
                 onChangeText={setVetDiag}
-                placeholder="Ex: Dr. Sousa"
+                placeholder={t('evento.exVeterinario')}
                 icon="stethoscope"
                 autoCapitalize="words"
               />
@@ -899,10 +946,10 @@ export default function NovoEventoScreen() {
             alguma coisa lá dentro: um seletor vazio num formulário que se usa
             no tronco é um campo a mais para ler e ignorar. */}
         {COM_LOTE.includes(tipo) && lotesDisponiveis.length > 0 ? (
-          <Field label="Sai do stock" opcional>
+          <Field label={t('evento.saiDoStock')} opcional>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               <Chip
-                label="Não registar"
+                label={t('evento.naoRegistar')}
                 selected={!loteId}
                 onPress={() => {
                   setLoteId(undefined);
@@ -921,7 +968,7 @@ export default function NovoEventoScreen() {
             {loteEscolhido ? (
               <View style={{ marginTop: spacing.sm }}>
                 <Text variant="caption" color={colors.textMuted} style={{ marginBottom: 4 }}>
-                  Quanto se gastou, em {loteEscolhido.medicamento.unidade}
+                  {t('evento.quantoSeGastou', { unidade: loteEscolhido.medicamento.unidade })}
                   {animalIds.length > 1 ? ' e POR ANIMAL' : ''}
                 </Text>
                 <TextField
@@ -945,9 +992,11 @@ export default function NovoEventoScreen() {
                     {animalIds.length > 1
                       ? `${animalIds.length} animais × ${formatQuantidade(quantidadeNum, loteEscolhido.medicamento.unidade)} = ${formatQuantidade(quantidadeNum * animalIds.length, loteEscolhido.medicamento.unidade)}. `
                       : ''}
-                    Restam {formatQuantidade(loteEscolhido.resta, loteEscolhido.medicamento.unidade)} neste lote.
+                    {t('evento.restamNesteLote', {
+                      resta: formatQuantidade(loteEscolhido.resta, loteEscolhido.medicamento.unidade),
+                    })}
                     {quantidadeNum * animalIds.length > loteEscolhido.resta
-                      ? ' Não chega — o registo grava na mesma, mas confira o que está na arrecadação.'
+                      ? ' Não chega: o registo grava na mesma, mas confira o que está na arrecadação.'
                       : ''}
                   </Text>
                 ) : null}
@@ -958,18 +1007,18 @@ export default function NovoEventoScreen() {
 
         {tipo === 'Vacinação' ? (
           <>
-            <Field label="Vacina / doença" obrigatorio>
-              <TextField value={vacina} onChangeText={setVacina} placeholder="Ex: Língua azul" icon="needle" />
+            <Field label={t('evento.vacinaDoenca')} obrigatorio>
+              <TextField value={vacina} onChangeText={setVacina} placeholder={t('evento.exVacina')} icon="needle" />
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs }}>
                 {VACINAS_COMUNS.map((v) => (
                   <Chip key={v} label={v} selected={vacina === v} onPress={() => setVacina(v)} />
                 ))}
               </View>
             </Field>
-            <Field label="Lote" opcional>
-              <TextField value={lote} onChangeText={setLote} placeholder="Ex: 4471" icon="flask-outline" autoCapitalize="characters" />
+            <Field label={t('evento.lote')} opcional>
+              <TextField value={lote} onChangeText={setLote} placeholder={t('evento.exLote')} icon="flask-outline" autoCapitalize="characters" />
             </Field>
-            <Field label="Próxima dose" opcional>
+            <Field label={t('evento.proximaDose')} opcional>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
                 {PROXIMA_DOSE.map((p) => (
                   <Chip
@@ -981,31 +1030,31 @@ export default function NovoEventoScreen() {
                 ))}
               </View>
             </Field>
-            <Field label="Veterinário" opcional>
-              <TextField value={vetVacina} onChangeText={setVetVacina} placeholder="Ex: Dr. Sousa" icon="stethoscope" autoCapitalize="words" />
+            <Field label={t('evento.veterinario')} opcional>
+              <TextField value={vetVacina} onChangeText={setVetVacina} placeholder={t('evento.exVeterinario')} icon="stethoscope" autoCapitalize="words" />
             </Field>
           </>
         ) : null}
 
         {tipo === 'Medicamento' ? (
           <>
-            <Field label="Medicamento" obrigatorio>
-              <TextField value={medicamento} onChangeText={setMedicamento} placeholder="Ex: Antibiótico" icon="medical-bag" />
+            <Field label={t('evento.medicamento')} obrigatorio>
+              <TextField value={medicamento} onChangeText={setMedicamento} placeholder={t('evento.exMedicamento')} icon="medical-bag" />
             </Field>
-            <Field label="Dose" opcional>
-              <TextField value={dose} onChangeText={setDose} placeholder="Ex: 20 ml" icon="cup-water" />
+            <Field label={t('evento.dose')} opcional>
+              <TextField value={dose} onChangeText={setDose} placeholder={t('evento.exDose')} icon="cup-water" />
             </Field>
-            <Field label="Via de administração" opcional>
+            <Field label={t('evento.via')} opcional>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
                 {VIAS.map((v) => (
                   <Chip key={v} label={v} selected={via === v} onPress={() => setVia(via === v ? undefined : v)} />
                 ))}
               </View>
             </Field>
-            <Field label="Motivo" opcional>
-              <TextField value={motivo} onChangeText={setMotivo} placeholder="Ex: Mastite" icon="clipboard-text-outline" />
+            <Field label={t('ficha.motivo')} opcional>
+              <TextField value={motivo} onChangeText={setMotivo} placeholder={t('evento.exMotivo')} icon="clipboard-text-outline" />
             </Field>
-            <Field label="Intervalo de segurança (dias)" opcional>
+            <Field label={t('evento.intervaloSeguranca')} opcional>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
                 {SEGURANCA_DIAS.map((d) => (
                   <Chip
@@ -1018,19 +1067,19 @@ export default function NovoEventoScreen() {
               </View>
               {seguranca > 0 ? (
                 <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-                  Não vender para abate até {formatDataPt(isoMaisDias(data, seguranca))}.
+                  {t('evento.naoVenderAte', { data: formatDataPt(isoMaisDias(data, seguranca)) })}
                 </Text>
               ) : null}
             </Field>
-            <Field label="Veterinário" opcional>
-              <TextField value={vetMed} onChangeText={setVetMed} placeholder="Ex: Dr. Sousa" icon="stethoscope" autoCapitalize="words" />
+            <Field label={t('evento.veterinario')} opcional>
+              <TextField value={vetMed} onChangeText={setVetMed} placeholder={t('evento.exVeterinario')} icon="stethoscope" autoCapitalize="words" />
             </Field>
           </>
         ) : null}
 
         {tipo === 'Pesagem' ? (
-          <Field label="Peso (kg)" obrigatorio>
-            <TextField value={peso} onChangeText={setPeso} placeholder="Ex: 520" icon="weight-kilogram" keyboardType="decimal-pad" />
+          <Field label={t('evento.peso')} obrigatorio>
+            <TextField value={peso} onChangeText={setPeso} placeholder={t('evento.exPeso')} icon="weight-kilogram" keyboardType="decimal-pad" />
           </Field>
         ) : null}
 
@@ -1039,8 +1088,8 @@ export default function NovoEventoScreen() {
             só não se pede o dinheiro. É também a única coisa financeira que o
             veterinário preenche. */}
         {podeRegistarCusto && (tipo === 'Vacinação' || tipo === 'Medicamento') ? (
-          <Field label={animalIds.length > 1 ? 'Custo por animal (€)' : 'Custo (€)'} opcional>
-            <TextField value={custo} onChangeText={setCusto} placeholder="Ex: 45" icon="cash" keyboardType="decimal-pad" />
+          <Field label={animalIds.length > 1 ? t('evento.custoPorAnimal') : t('evento.custo')} opcional>
+            <TextField value={custo} onChangeText={setCusto} placeholder={t('evento.exCusto')} icon="cash" keyboardType="decimal-pad" />
             {/* O valor é gravado em CADA animal. Mostrar a conta feita evita o
                 engano de escrever aqui o total da fatura e ficar com trinta
                 vezes esse total lançado na exploração. */}
@@ -1054,8 +1103,8 @@ export default function NovoEventoScreen() {
         ) : null}
 
         {/* Notas — comum a todos */}
-        <Field label="Notas" opcional>
-          <TextField value={notas} onChangeText={setNotas} placeholder="Observações (opcional)" icon="note-text-outline" multiline />
+        <Field label={t('evento.notas')} opcional>
+          <TextField value={notas} onChangeText={setNotas} placeholder={t('evento.exNotas')} icon="note-text-outline" multiline />
         </Field>
       </ScrollView>
 
@@ -1079,10 +1128,10 @@ export default function NovoEventoScreen() {
         <Button
           label={
             aGuardar
-              ? 'A guardar…'
+              ? t('comum.aGuardar')
               : animalIds.length > 1
-                ? `Guardar em ${animalIds.length} animais`
-                : 'Guardar registo'
+                ? t('evento.guardarEmNAnimais', { n: animalIds.length })
+                : t('evento.guardarRegisto')
           }
           icon="check"
           onPress={guardar}

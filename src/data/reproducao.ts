@@ -22,6 +22,8 @@
  * pariu em 2025 — contá-lo era dá-la por prenhe três anos seguidos.
  */
 
+import { t, type ChaveTexto } from '@/i18n';
+
 import { GestacaoDias, PrazosReproducao } from './constants';
 import { diasAte, diasEntreDatas, idadeDias, isoMaisDias } from './helpers';
 import type { Animal, Evento, ResultadoDiagnostico } from './types';
@@ -516,13 +518,21 @@ export function resumoReproducao(animais: Animal[], eventos: Evento[]): ResumoRe
 }
 
 /** Como se lê a fase, para a app a mostrar. */
-export const faseMeta: Record<
-  FaseReprodutiva,
-  { label: string; explicacao: string }
-> = {
-  gestante: { label: 'Gestante', explicacao: 'Confirmada prenhe.' },
-  coberta: { label: 'Coberta', explicacao: 'Coberta, à espera de diagnóstico.' },
-  duvidosa: { label: 'Por confirmar', explicacao: 'Diagnóstico inconclusivo: repetir.' },
-  vazia: { label: 'Vazia', explicacao: 'Não está prenhe.' },
-  'nao-aplicavel': { label: '—', explicacao: 'Não entra na gestão reprodutiva.' },
-};
+/**
+ * O nome e a explicação de cada fase.
+ *
+ * FUNÇÃO e não tabela de módulo: os textos passam pelo `t()`, e um `Record`
+ * resolvido no import ficava congelado na língua de arranque (a mesma armadilha
+ * das cores, ver AGENTS.md). Quem desenha é que traduz.
+ */
+export function faseMeta(fase: FaseReprodutiva): { label: string; explicacao: string } {
+  const chaves: Record<FaseReprodutiva, [ChaveTexto, ChaveTexto]> = {
+    gestante: ['fase.gestante', 'fase.gestanteExplicacao'],
+    coberta: ['fase.coberta', 'fase.cobertaExplicacao'],
+    duvidosa: ['fase.duvidosa', 'fase.duvidosaExplicacao'],
+    vazia: ['fase.vazia', 'fase.vaziaExplicacao'],
+    'nao-aplicavel': ['fase.naoAplicavel', 'fase.naoAplicavelExplicacao'],
+  };
+  const [label, explicacao] = chaves[fase];
+  return { label: t(label), explicacao: t(explicacao) };
+}

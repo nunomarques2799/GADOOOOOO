@@ -11,6 +11,7 @@ import { useMembros } from '@/data/membros';
 import { explicarRecusa } from '@/data/supabaseRepo';
 import { supabase } from '@/data/supabase';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, radii, sizes, spacing } from '@/theme';
 
 /** O que a pessoa escolheu fazer neste ecrã. `null` = ainda não escolheu. */
@@ -101,7 +102,11 @@ export function EcraPendente() {
     // Se OK, `recarregar` dentro de `resgatarConvite` faz o gate desaparecer.
   }
 
-  const titulo = aprovado ? 'Bem-vindo' : porCodigo ? 'Falta o código' : 'A aguardar aprovação';
+  const titulo = aprovado
+    ? t('pendente.bemVindo')
+    : porCodigo
+      ? t('pendente.faltaCodigo')
+      : t('pendente.aAguardar');
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -175,19 +180,19 @@ export function EcraPendente() {
             />
             <View style={{ flex: 1 }}>
               <Text variant="bodyStrong">
-                {aprovado ? 'A sua conta está ativa' : 'A sua conta está pendente'}
+                {aprovado ? t('pendente.contaAtiva') : t('pendente.contaPendente')}
               </Text>
               <Text variant="body" color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
                 {aprovado
                   ? porCodigo
-                    ? 'Peça o código de convite a quem gere a exploração onde vai trabalhar e escreva-o abaixo.'
-                    : 'Pode criar a sua primeira exploração ou associar-se a uma através de um código de convite.'
+                    ? t('pendente.pecaCodigo')
+                    : t('pendente.podeCriar')
                   : porCodigo
-                    ? 'Não tem de esperar por ninguém: com o código de convite de uma exploração entra de imediato. Peça-o a quem a gere.'
-                    : 'O administrador da plataforma vai analisar o pedido de acesso. Se tiver recebido um código de convite de um cliente, pode usá-lo já para entrar.'}
+                    ? t('pendente.semEsperar')
+                    : t('pendente.emAnalise')}
               </Text>
               <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm }}>
-                Conta: {email}
+                {t('pendente.conta', { email })}
               </Text>
             </View>
           </View>
@@ -203,16 +208,16 @@ export function EcraPendente() {
           {aprovado ? (
             <CartaoOpcao
               icone="barn"
-              titulo="Criar exploração"
-              descricao="Registar a minha exploração e começar a lançar animais."
+              titulo={t('exploracoes.nova')}
+              descricao={t('pendente.criarDescricao')}
               escolhida={escolha === 'criar'}
               onPress={() => setEscolha('criar')}
             />
           ) : null}
           <CartaoOpcao
             icone="ticket-confirmation-outline"
-            titulo="Tenho um código"
-            descricao="Entrar na exploração de outra pessoa com um código de convite."
+            titulo={t('pendente.tenhoCodigo')}
+            descricao={t('pendente.tenhoCodigoDescricao')}
             escolhida={escolha === 'convite'}
             onPress={() => setEscolha('convite')}
           />
@@ -222,43 +227,43 @@ export function EcraPendente() {
           <View style={{ marginTop: spacing.lg }}>
             <View style={{ flexDirection: desktop ? 'row' : 'column', gap: desktop ? spacing.md : 0 }}>
               <Campo
-                label="Nome"
+                label={t('formAnimal.nome')}
                 icon="barn"
                 value={nomeExp}
                 onChangeText={setNomeExp}
-                placeholder="Ex: Monte do Avô"
+                placeholder={t('formExploracao.exNome')}
               />
               <Campo
-                label="Marca de exploração"
+                label={t('formExploracao.marca')}
                 icon="barcode"
                 value={marca}
                 onChangeText={setMarca}
-                placeholder="PT 00 000 0000"
+                placeholder={t('formExploracao.exMarca')}
                 autoCapitalize="characters"
               />
             </View>
             <View style={{ flexDirection: desktop ? 'row' : 'column', gap: desktop ? spacing.md : 0 }}>
               <Campo
-                label="NIF do detentor"
+                label={t('formExploracao.nif')}
                 icon="card-account-details-outline"
                 value={nifDetentor}
                 onChangeText={setNif}
                 placeholder="000 000 000"
                 keyboardType="number-pad"
               />
-              <Campo label="Localização" opcional>
+              <Campo label={t('formExploracao.localizacao')} opcional>
                 {/* A localidade sai da mesma lista que dá a meteorologia — ver
                     `CampoLocalidade`. Escrita à mão continua a valer. */}
                 <CampoLocalidade
                   value={localizacao}
                   onChangeText={setLocalizacao}
-                  placeholder="Ex: Idanha-a-Nova"
+                  placeholder={t('formExploracao.exLocalizacao')}
                 />
               </Campo>
             </View>
             {erroCriar ? <ErroBox mensagem={erroCriar} /> : null}
             <Button
-              label="Criar e continuar"
+              label={t('pendente.criarEContinuar')}
               icon="check"
               onPress={criarPrimeiraExploracao}
               disabled={!validoExp}
@@ -271,21 +276,21 @@ export function EcraPendente() {
 
         {escolha === 'convite' ? (
           <View style={{ marginTop: spacing.lg, maxWidth: desktop ? 420 : undefined }}>
-            <Campo label="Código de convite" icon="ticket-confirmation-outline">
+            <Campo label={t('pendente.codigoConvite')} icon="ticket-confirmation-outline">
               <CampoTexto
                 icon="ticket-confirmation-outline"
                 value={codigo}
                 onChangeText={(t) => setCodigo(t.toUpperCase())}
-                placeholder="Ex: A7BXK2M9"
+                placeholder={t('pendente.exCodigo')}
                 autoCapitalize="characters"
               />
               <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-                Peça o código ao responsável pela exploração.
+                {t('pendente.pecaAoResponsavel')}
               </Text>
             </Campo>
             {erroResgate ? <ErroBox mensagem={erroResgate} /> : null}
             <Button
-              label="Entrar com este código"
+              label={t('pendente.entrarComCodigo')}
               icon="login"
               onPress={submeterCodigo}
               disabled={!codigo.trim()}
@@ -306,7 +311,7 @@ export function EcraPendente() {
             borderTopColor: colors.border,
           }}>
           <Button
-            label="Verificar novamente"
+            label={t('pendente.verificarNovamente')}
             icon="refresh"
             variant={escolha === null ? 'primary' : 'secondary'}
             onPress={recarregar}
@@ -314,7 +319,7 @@ export function EcraPendente() {
             fullWidth={!desktop}
           />
           <Button
-            label="Terminar sessão"
+            label={t('perfil.terminarSessao')}
             icon="logout"
             variant="ghost"
             onPress={sair}
@@ -329,9 +334,9 @@ export function EcraPendente() {
 /** Traduz mensagens comuns vindas do Postgres para PT-PT. */
 function traduzErroConvite(msg: string): string {
   const m = msg.toLowerCase();
-  if (m.includes('código inválido')) return 'Código inválido.';
-  if (m.includes('já foi usado') || m.includes('ja foi usado')) return 'Este código já foi utilizado.';
-  if (m.includes('expirado')) return 'Este código expirou. Peça um novo ao cliente.';
+  if (m.includes('código inválido')) return t('pendente.codigoInvalido');
+  if (m.includes('já foi usado') || m.includes('ja foi usado')) return t('pendente.codigoUsado');
+  if (m.includes('expirado')) return t('pendente.codigoExpirado');
   // O código é de um papel e a conta foi criada para o outro (ver
   // `supabase/schema_convite_por_papel.sql`). A frase do servidor já diz qual é
   // qual e o que pedir a seguir — só lhe falta a maiúscula, porque as mensagens

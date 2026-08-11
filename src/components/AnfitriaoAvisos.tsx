@@ -7,6 +7,7 @@ import {
   type PedidoAviso,
   type PedidoConfirmacao,
 } from '@/data/avisos';
+import { t } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 /**
@@ -85,7 +86,7 @@ export function AnfitriaoAvisos() {
     <Modal visible transparent animationType="fade" onRequestClose={fechar}>
       <Pressable
         onPress={fechar}
-        accessibilityLabel="Fechar"
+        accessibilityLabel={t('comum.fechar')}
         style={{
           flex: 1,
           backgroundColor: colors.overlay,
@@ -147,13 +148,13 @@ export function AnfitriaoAvisos() {
           </ScrollView>
 
           {pedido.tipo === 'aviso' ? (
-            <Button label="Entendido" icon="check" onPress={fechar} />
+            <Button label={t('avisos.entendido')} icon="check" onPress={fechar} />
           ) : (
             // Em coluna, e o confirmar em BAIXO: a ação sem volta é a que
             // exige mais um instante de leitura, e não a que fica debaixo
             // do dedo de quem vinha a tocar sem ler.
             <View style={{ gap: spacing.sm }}>
-              <Button label="Cancelar" variant="ghost" onPress={fechar} />
+              <Button label={t('comum.cancelar')} variant="ghost" onPress={fechar} />
               <Button
                 label={pedido.rotuloConfirmar}
                 icon={pedido.destrutivo ? 'trash-can-outline' : 'check'}

@@ -18,6 +18,8 @@
  * O `helpers.ts` mantém-se em baixo e não conhece nenhum dos de cima.
  */
 
+import { t, type ChaveTexto } from '@/i18n';
+
 import {
   PartoPrevisaoCaducaDias,
   PrazosExistencias,
@@ -28,7 +30,7 @@ import {
 import { diaIso, diasAte, diasEntreDatas, idadeDias, isoMaisDias } from './helpers';
 import { lotesComEstado } from './medicamentos';
 import { aguardamDiagnostico, semCobricaoAposParto } from './reproducao';
-import { comunicacoesPendentes, rotuloComunicacao } from './snira';
+import { comunicacoesPendentes, type TipoComunicacao } from './snira';
 import type { Alerta, Animal, Evento, Medicamento } from './types';
 
 /* ---- Cálculo de alertas legais ---- */
@@ -52,9 +54,9 @@ export function computeAlertas(
   for (const a of animais) {
     // Animais que já saíram do efetivo (falecidos/vendidos) não geram alertas.
     if (a.estado && a.estado !== 'ativo') continue;
-    const rotulo = a.nome ?? a.numeroIdentificacao ?? 'Sem nome';
+    const rotulo = a.nome ?? a.numeroIdentificacao ?? t('animais.semNome');
 
-    // Identificação (brinco) até 20 dias de vida — bovinos
+    // Identificação (brinco) até 20 dias de vida, bovinos
     if (a.especie === 'Bovino' && !a.numeroIdentificacao) {
       const prazo = PrazosLegais.identificacao - idadeDias(a.dataNascimento);
       out.push({
@@ -64,16 +66,20 @@ export function computeAlertas(
         exploracaoId: a.exploracaoId,
         data: isoMaisDias(a.dataNascimento, PrazosLegais.identificacao),
         gravidade: prazo <= 0 ? 'urgente' : prazo <= 5 ? 'aviso' : 'info',
-        titulo: prazo <= 0 ? 'Identificação em atraso' : 'Falta identificar (brinco)',
+        titulo: t(prazo <= 0 ? 'aviso.idAtrasoTitulo' : 'aviso.idTitulo'),
         descricao:
           prazo <= 0
-            ? `${rotulo} devia estar identificado. Prazo excedido há ${Math.abs(prazo)} dia(s).`
-            : `${rotulo} tem ${idadeDias(a.dataNascimento)} dias. Colocar brinco em ${prazo} dia(s).`,
+            ? t('aviso.idAtrasoDesc', { rotulo, n: Math.abs(prazo) })
+            : t('aviso.idDesc', {
+                rotulo,
+                idade: t('idade.dias', { n: idadeDias(a.dataNascimento) }),
+                n: prazo,
+              }),
         diasRestantes: prazo,
       });
     }
 
-    // Comunicação ao SNIRA — 7 dias após identificação
+    // Comunicação ao SNIRA: 7 dias após a identificação
     if (a.dataIdentificacao && a.comunicadoSnira === false) {
       const prazo = PrazosLegais.snira - idadeDias(a.dataIdentificacao);
       out.push({
@@ -83,11 +89,11 @@ export function computeAlertas(
         exploracaoId: a.exploracaoId,
         data: isoMaisDias(a.dataIdentificacao, PrazosLegais.snira),
         gravidade: prazo <= 0 ? 'urgente' : prazo <= 3 ? 'aviso' : 'info',
-        titulo: prazo <= 0 ? 'Comunicação SNIRA em atraso' : 'Comunicar ao SNIRA',
+        titulo: t(prazo <= 0 ? 'aviso.sniraAtrasoTitulo' : 'aviso.sniraNascTitulo'),
         descricao:
           prazo <= 0
-            ? `${rotulo}: nascimento por comunicar ao SNIRA. Prazo excedido há ${Math.abs(prazo)} dia(s).`
-            : `${rotulo}: comunicar nascimento ao SNIRA em ${prazo} dia(s).`,
+            ? t('aviso.sniraNascAtrasoDesc', { rotulo, n: Math.abs(prazo) })
+            : t('aviso.sniraNascDesc', { rotulo, n: prazo }),
         diasRestantes: prazo,
       });
     }
@@ -107,8 +113,11 @@ export function computeAlertas(
           exploracaoId: a.exploracaoId,
           data: a.dataPrevistaParto,
           gravidade: 'info',
-          titulo: 'Parto previsto por confirmar',
-          descricao: `${rotulo}: a data prevista de parto já passou há mais de ${PartoPrevisaoCaducaDias} dias. Registe o parto ou corrija a previsão.`,
+          titulo: t('aviso.partoConfirmarTitulo'),
+          descricao: t('aviso.partoConfirmarDesc', {
+            rotulo,
+            dias: PartoPrevisaoCaducaDias,
+          }),
         });
       } else if (dias <= 14) {
         out.push({
@@ -118,11 +127,11 @@ export function computeAlertas(
           exploracaoId: a.exploracaoId,
           data: a.dataPrevistaParto,
           gravidade: dias <= 3 ? 'aviso' : 'info',
-          titulo: 'Parto previsto',
+          titulo: t('aviso.partoTitulo'),
           descricao:
             dias < 0
-              ? `${rotulo} passou a data prevista de parto há ${Math.abs(dias)} dia(s).`
-              : `${rotulo} está próxima do parto (${dias} dia(s)).`,
+              ? t('aviso.partoAtrasoDesc', { rotulo, n: Math.abs(dias) })
+              : t('aviso.partoDesc', { rotulo, n: dias }),
           diasRestantes: dias,
         });
       }
@@ -139,14 +148,14 @@ export function computeAlertas(
           exploracaoId: a.exploracaoId,
           data: a.fimIntervaloSeguranca,
           gravidade: 'info',
-          titulo: 'Período de segurança',
-          descricao: `${rotulo}: em intervalo de segurança, não vender para abate (faltam ${dias} dia(s)).`,
+          titulo: t('aviso.segurancaTitulo'),
+          descricao: t('aviso.segurancaDesc', { rotulo, n: dias }),
           diasRestantes: dias,
         });
       }
     }
 
-    // Vacinação — revacinação anual (ou falta de registo em adultos).
+    // Vacinação: revacinação anual (ou falta de registo em adultos).
     const idade = idadeDias(a.dataNascimento);
     const ultima = ultimaVacinacao.get(a.id);
     if (ultima !== undefined) {
@@ -163,11 +172,11 @@ export function computeAlertas(
           exploracaoId: a.exploracaoId,
           data: isoMaisDias(new Date(ultima).toISOString(), PrazosSanitarios.revacinacao),
           gravidade: restam <= 0 ? 'urgente' : 'info',
-          titulo: restam <= 0 ? 'Revacinação em atraso' : 'Revacinação a aproximar-se',
+          titulo: t(restam <= 0 ? 'aviso.revacinarAtrasoTitulo' : 'aviso.revacinarTitulo'),
           descricao:
             restam <= 0
-              ? `${rotulo}: passou ~1 ano da última vacinação. Prazo excedido há ${Math.abs(restam)} dia(s).`
-              : `${rotulo}: revacinar em ${restam} dia(s) (última há ${diasDesde} dias).`,
+              ? t('aviso.revacinarAtrasoDesc', { rotulo, n: Math.abs(restam) })
+              : t('aviso.revacinarDesc', { rotulo, n: restam, desde: diasDesde }),
           diasRestantes: restam,
         });
       }
@@ -180,8 +189,8 @@ export function computeAlertas(
         // Sem `data` de propósito: não há prazo nenhum a correr, há um registo
         // em falta. No calendário só apareceria a fingir de tarefa marcada.
         gravidade: 'info',
-        titulo: 'Sem registo de vacinação',
-        descricao: `${rotulo} não tem nenhuma vacinação registada. Registe a última para acompanhar o plano.`,
+        titulo: t('aviso.semVacinacaoTitulo'),
+        descricao: t('aviso.semVacinacaoDesc', { rotulo }),
       });
     }
   }
@@ -208,11 +217,26 @@ export function computeAlertas(
  * duplicar o que já foi produzido.
  */
 function alertasSnira(animais: Animal[], eventos: Evento[]): Alerta[] {
+  /**
+   * O que se comunica, em minúsculas e na língua da app.
+   *
+   * NÃO usa o `rotuloComunicacao`: essa tabela alimenta também a exportação
+   * para o iDigital, que é um formulário do Estado português e tem de continuar
+   * a dizer "Movimentação" seja qual for a língua em que o criador leia a app.
+   */
+  const oQueSeComunica: Record<TipoComunicacao, ChaveTexto> = {
+    nascimento: 'snira.nascimento',
+    morte: 'snira.morte',
+    saida: 'snira.saida',
+    entrada: 'snira.entrada',
+    movimentacao: 'snira.movimentacao',
+  };
+
   return comunicacoesPendentes(animais, eventos)
     .filter((p) => p.tipo !== 'nascimento')
     .map((p) => {
       const dias = p.diasRestantes;
-      const oQue = rotuloComunicacao[p.tipo].toLowerCase();
+      const oQue = t(oQueSeComunica[p.tipo]);
       return {
         id: `snira-ev-${p.eventoId}`,
         categoria: 'snira' as const,
@@ -220,11 +244,22 @@ function alertasSnira(animais: Animal[], eventos: Evento[]): Alerta[] {
         exploracaoId: p.exploracaoId,
         data: p.prazo,
         gravidade: dias < 0 ? ('urgente' as const) : dias <= 3 ? ('aviso' as const) : ('info' as const),
-        titulo: dias < 0 ? `Comunicação SNIRA em atraso` : `Comunicar ${oQue} ao SNIRA`,
+        titulo:
+          dias < 0 ? t('aviso.sniraAtrasoTitulo') : t('aviso.sniraEvTitulo', { oQue }),
         descricao:
           dias < 0
-            ? `${p.rotulo}: ${oQue} de ${diaIso(p.data)} por comunicar. Prazo excedido há ${Math.abs(dias)} dia(s).`
-            : `${p.rotulo}: comunicar ${oQue} de ${diaIso(p.data)} em ${dias} dia(s).`,
+            ? t('aviso.sniraEvAtrasoDesc', {
+                rotulo: p.rotulo,
+                oQue,
+                data: diaIso(p.data),
+                n: Math.abs(dias),
+              })
+            : t('aviso.sniraEvDesc', {
+                rotulo: p.rotulo,
+                oQue,
+                data: diaIso(p.data),
+                n: dias,
+              }),
         diasRestantes: dias,
       };
     });
@@ -248,7 +283,7 @@ function alertasReproducao(animais: Animal[], eventos: Evento[]): Alerta[] {
   const out: Alerta[] = [];
 
   for (const { animal, estado } of aguardamDiagnostico(animais, eventos)) {
-    const rotulo = animal.nome ?? animal.numeroIdentificacao ?? 'Sem nome';
+    const rotulo = animal.nome ?? animal.numeroIdentificacao ?? t('animais.semNome');
     const dias = estado.diasNaFase;
     const duvidosa = estado.fase === 'duvidosa';
     out.push({
@@ -259,16 +294,16 @@ function alertasReproducao(animais: Animal[], eventos: Evento[]): Alerta[] {
       // Sem `data`: o que falta é uma ida do veterinário, não um dia marcado.
       // Pô-lo no calendário fazia-o passar por tarefa agendada.
       gravidade: dias >= PrazosReproducao.diagnosticoUrgenteAPartirDe ? 'urgente' : 'aviso',
-      titulo: duvidosa ? 'Diagnóstico por repetir' : 'Diagnóstico de gestação em falta',
+      titulo: t(duvidosa ? 'aviso.diagRepetirTitulo' : 'aviso.diagTitulo'),
       descricao: duvidosa
-        ? `${rotulo}: o diagnóstico ficou por confirmar há ${dias} dias. Repetir.`
-        : `${rotulo}: coberta há ${dias} dias e ainda sem diagnóstico. Confirme se está gestante.`,
+        ? t('aviso.diagRepetirDesc', { rotulo, n: dias })
+        : t('aviso.diagDesc', { rotulo, n: dias }),
       diasRestantes: -dias,
     });
   }
 
   for (const { animal, estado } of semCobricaoAposParto(animais, eventos)) {
-    const rotulo = animal.nome ?? animal.numeroIdentificacao ?? 'Sem nome';
+    const rotulo = animal.nome ?? animal.numeroIdentificacao ?? t('animais.semNome');
     const dias = estado.diasDesdeUltimoParto ?? 0;
     out.push({
       id: `cobr-${animal.id}`,
@@ -276,8 +311,8 @@ function alertasReproducao(animais: Animal[], eventos: Evento[]): Alerta[] {
       animalId: animal.id,
       exploracaoId: animal.exploracaoId,
       gravidade: dias >= PrazosReproducao.cobrirUrgenteApos ? 'urgente' : 'aviso',
-      titulo: 'Sem cobrição desde o parto',
-      descricao: `${rotulo}: pariu há ${dias} dias e não voltou a ser coberta. Cada dia parada adia o parto seguinte.`,
+      titulo: t('aviso.semCobricaoTitulo'),
+      descricao: t('aviso.semCobricaoDesc', { rotulo, n: dias }),
       diasRestantes: -dias,
     });
   }
@@ -302,7 +337,9 @@ function alertasReproducao(animais: Animal[], eventos: Evento[]): Alerta[] {
 function alertasExistencias(medicamentos: Medicamento[], eventos: Evento[]): Alerta[] {
   return lotesComEstado(medicamentos, eventos).flatMap((l): Alerta[] => {
     const m = l.medicamento;
-    const nome = m.lote?.trim() ? `${m.nome} (lote ${m.lote.trim()})` : m.nome;
+    const nome = m.lote?.trim()
+      ? t('aviso.comLote', { nome: m.nome, lote: m.lote.trim() })
+      : m.nome;
 
     if (l.expirado) {
       // Um lote expirado e já vazio não interessa a ninguém: não há nada para
@@ -316,8 +353,11 @@ function alertasExistencias(medicamentos: Medicamento[], eventos: Evento[]): Ale
           medicamentoId: m.id,
           data: m.validade,
           gravidade: 'urgente',
-          titulo: 'Medicamento fora de validade',
-          descricao: `${nome}: a validade passou há ${Math.abs(l.diasParaValidade ?? 0)} dia(s) e ainda há existências. Não administrar.`,
+          titulo: t('aviso.foraValidadeTitulo'),
+          descricao: t('aviso.foraValidadeDesc', {
+            nome,
+            n: Math.abs(l.diasParaValidade ?? 0),
+          }),
           diasRestantes: l.diasParaValidade,
         },
       ];
@@ -332,8 +372,8 @@ function alertasExistencias(medicamentos: Medicamento[], eventos: Evento[]): Ale
           medicamentoId: m.id,
           data: m.validade,
           gravidade: (l.diasParaValidade ?? 0) <= 7 ? 'aviso' : 'info',
-          titulo: 'Validade a terminar',
-          descricao: `${nome}: expira em ${l.diasParaValidade} dia(s). Gaste este lote antes dos outros.`,
+          titulo: t('aviso.validadeATerminarTitulo'),
+          descricao: t('aviso.validadeATerminarDesc', { nome, n: l.diasParaValidade ?? 0 }),
           diasRestantes: l.diasParaValidade,
         },
       ];
@@ -349,8 +389,13 @@ function alertasExistencias(medicamentos: Medicamento[], eventos: Evento[]): Ale
           // Sem `data`: não há prazo nenhum. É por isso — e de propósito — que
           // este é o único alerta das existências que se pode calar.
           gravidade: 'info',
-          titulo: 'Existências a acabar',
-          descricao: `${nome}: restam ${l.resta} ${m.unidade} de ${m.quantidade}.`,
+          titulo: t('aviso.aAcabarTitulo'),
+          descricao: t('aviso.aAcabarDesc', {
+            nome,
+            resta: l.resta,
+            unidade: m.unidade,
+            total: m.quantidade,
+          }),
         },
       ];
     }

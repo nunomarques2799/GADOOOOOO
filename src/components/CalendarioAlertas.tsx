@@ -13,6 +13,7 @@ import {
   rotuloMes,
 } from '@/data/calendario';
 import type { Alerta, AlertaGravidade } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /** A cor de cada gravidade. Semânticas — não mudam com a paleta escolhida. */
@@ -74,18 +75,18 @@ export function CalendarioAlertas({
           gap: spacing.xs,
           marginBottom: spacing.sm,
         }}>
-        <Seta icon="chevron-left" label="Mês anterior" onPress={() => andar(-1)} />
+        <Seta icon="chevron-left" label={t('calendario.mesAnterior')} onPress={() => andar(-1)} />
         <Text variant="h3" center style={{ flex: 1 }}>
           {rotuloMes(ano, mes)}
         </Text>
-        <Seta icon="chevron-right" label="Mês seguinte" onPress={() => andar(1)} />
+        <Seta icon="chevron-right" label={t('calendario.mesSeguinte')} onPress={() => andar(1)} />
       </View>
 
       {!noMesDeHoje ? (
         <Pressable
           onPress={irParaHoje}
           accessibilityRole="button"
-          accessibilityLabel="Voltar ao mês de hoje"
+          accessibilityLabel={t('calendario.voltarAHoje')}
           style={({ pressed }) => [
             {
               alignSelf: 'center',
@@ -102,7 +103,7 @@ export function CalendarioAlertas({
           ]}>
           <Icon name="calendar-today" size="sm" color={colors.primaryDark} />
           <Text variant="label" color={colors.primaryDark}>
-            Hoje
+            {t('alerta.hoje')}
           </Text>
         </Pressable>
       ) : null}
@@ -150,7 +151,7 @@ export function CalendarioAlertas({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <Icon name="check-circle-outline" size="md" color={colors.success} />
             <Text variant="body" color={colors.textSecondary} style={{ flex: 1 }}>
-              Nada marcado para este dia.
+              {t('calendario.nadaNesteDia')}
             </Text>
           </View>
         </Card>

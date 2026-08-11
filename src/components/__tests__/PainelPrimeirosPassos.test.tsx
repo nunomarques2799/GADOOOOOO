@@ -135,7 +135,7 @@ describe('painel de primeiros passos', () => {
   it('os opcionais ficam à parte e não entram na conta', () => {
     const r = abrir();
     const t = textos(r);
-    expect(t).toContain('SE QUISER — NÃO É PRECISO');
+    expect(t).toContain('SE QUISER, NÃO É PRECISO');
     expect(t).toContain('Ligar a gestão do dinheiro');
     // Continua a contar 3: os feitios à escolha não fazem o guia crescer.
     // O número vem num nó de texto próprio, daí os espaços.

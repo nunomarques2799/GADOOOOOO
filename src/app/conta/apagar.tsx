@@ -16,6 +16,7 @@ import { useMembros } from '@/data/membros';
 import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, layout, radii, shadow, spacing } from '@/theme';
 
 /**
@@ -85,14 +86,17 @@ export default function ApagarContaScreen() {
   function perguntarPelaUltimaVez() {
     if (!podeApagar) return;
     confirmar(
-      'Apagar a conta?',
+      t('apagar.perguntaTitulo'),
       consequencias.apagaDados
-        ? `Vai apagar a sua conta, ${frase(consequencias.exploracoesApagadas.length, 'exploração', 'explorações')} ` +
-          `e ${frase(consequencias.animais, 'animal', 'animais')}. ` +
-          'Não há forma de recuperar isto — nem sua, nem de quem gere a aplicação.'
-        : 'Vai apagar a sua conta e perder o acesso à aplicação. Não há forma de voltar atrás.',
+        ? `${t('apagar.perguntaComDados', {
+            exploracoes: t('perfil.nExploracoes', {
+              n: consequencias.exploracoesApagadas.length,
+            }),
+            animais: t('terrenos.nAnimais', { n: consequencias.animais }),
+          })} ${t('apagar.semRecuperar')}`
+        : t('apagar.perguntaSemDados'),
       () => void executar(),
-      { rotuloConfirmar: 'Apagar definitivamente', destrutivo: true },
+      { rotuloConfirmar: t('apagar.definitivamente'), destrutivo: true },
     );
   }
 
@@ -111,10 +115,7 @@ export default function ApagarContaScreen() {
     // ao ecrã de entrada sozinho (ver `_layout.tsx`). O aviso é montado por
     // fora dele e sobrevive a essa troca — daí ser `avisar()` e não um toast,
     // que morreria com o ecrã.
-    avisar(
-      'Conta apagada',
-      'Os seus dados foram removidos do servidor. Obrigado por ter usado a Terrabovina.',
-    );
+    avisar(t('apagar.apagada'), t('apagar.apagadaDetalhe'));
   }
 
   const conteudo = {
@@ -126,7 +127,7 @@ export default function ApagarContaScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Apagar a minha conta" />
+      <Header title={t('perfil.apagarConta')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -136,9 +137,7 @@ export default function ApagarContaScreen() {
         }}>
         <View style={{ ...conteudo, gap: spacing.md }}>
           <Text variant="secondary" color={colors.textSecondary}>
-            Apagar a conta é definitivo. Ninguém — nem quem gere a aplicação —
-            consegue recuperar o que se perde aqui. Leia o que vai desaparecer
-            antes de continuar.
+            {t('apagar.intro')}
           </Text>
 
           {/* O que desaparece, contado dos dados desta pessoa. Uma lista de
@@ -147,24 +146,22 @@ export default function ApagarContaScreen() {
           {consequencias.apagaDados ? (
             <Card>
               <View style={{ gap: spacing.sm }}>
-                <Titulo icone="alert-octagon" texto="Isto vai ser apagado" tom={colors.danger} />
+                <Titulo icone="alert-octagon" texto={t('apagar.vaiSerApagado')} tom={colors.danger} />
                 {consequencias.exploracoesApagadas.map((e) => (
                   <Item
                     key={e.id}
                     icone="barn"
                     texto={e.nome}
-                    detalhe={frase(e.animais, 'animal', 'animais')}
+                    detalhe={t('terrenos.nAnimais', { n: e.animais })}
                   />
                 ))}
                 <Text variant="secondary" color={colors.textSecondary}>
-                  Com cada exploração caem os terrenos, os animais, os eventos,
-                  os documentos e o histórico. {pessoas === null
-                    ? 'Quem trabalha consigo perde o acesso.'
+                  {t('apagar.comCadaExploracao')}{' '}
+                  {pessoas === null
+                    ? t('apagar.equipaPerdeAcesso')
                     : pessoas > 0
-                      ? `${frase(pessoas, 'pessoa da sua equipa', 'pessoas da sua equipa')} ${
-                          pessoas === 1 ? 'perde' : 'perdem'
-                        } o acesso.`
-                      : 'Não há mais ninguém com acesso a estas explorações.'}
+                      ? t('apagar.nPessoasPerdem', { n: pessoas })
+                      : t('apagar.maisNinguem')}
                 </Text>
               </View>
             </Card>
@@ -177,7 +174,7 @@ export default function ApagarContaScreen() {
               <View style={{ gap: spacing.sm }}>
                 <Titulo
                   icone="account-off-outline"
-                  texto="Isto continua a existir, sem si"
+                  texto={t('apagar.continuaAExistir')}
                   tom={colors.warning}
                 />
                 {consequencias.acessosPerdidos.map((a) => (
@@ -189,9 +186,7 @@ export default function ApagarContaScreen() {
                   />
                 ))}
                 <Text variant="secondary" color={colors.textSecondary}>
-                  Estas explorações são de outra pessoa: os animais e os
-                  registos ficam lá. O que se perde é a sua entrada — para
-                  voltar precisa de um código de convite novo.
+                  {t('apagar.deOutraPessoa')}
                 </Text>
               </View>
             </Card>
@@ -202,15 +197,13 @@ export default function ApagarContaScreen() {
               nem sequer há para onde voltar a entrar. */}
           {pendentesSinc > 0 ? (
             <Caixa tom={colors.warning} fundo={colors.warningTint} icone="cloud-alert">
-              {frase(pendentesSinc, 'alteração guardada', 'alterações guardadas')} neste aparelho
-              ainda não {pendentesSinc === 1 ? 'chegou' : 'chegaram'} ao servidor. Se apagar a
-              conta agora, {pendentesSinc === 1 ? 'perde-se' : 'perdem-se'} também.
+              {t('apagar.porSincronizar', { n: pendentesSinc })}
             </Caixa>
           ) : null}
 
           <Field
-            label={`Escreva ${PALAVRA_CONFIRMACAO} para confirmar`}
-            ajuda="É de propósito: um botão vermelho sozinho carrega-se sem ler.">
+            label={t('apagar.escrevaParaConfirmar', { palavra: PALAVRA_CONFIRMACAO })}
+            ajuda={t('apagar.ajudaEscrever')}>
             <TextField
               value={texto}
               onChangeText={setTexto}
@@ -223,8 +216,7 @@ export default function ApagarContaScreen() {
 
           {!configurado ? (
             <Caixa tom={colors.info} fundo={colors.infoTint} icone="information-outline">
-              Esta app está em modo offline. Para apagar a conta é preciso ter
-              sessão iniciada.
+              {t('apagar.modoOffline')}
             </Caixa>
           ) : null}
 
@@ -261,7 +253,7 @@ export default function ApagarContaScreen() {
             gap: spacing.sm,
           }}>
           <Button
-            label="Apagar a minha conta"
+            label={t('perfil.apagarConta')}
             icon="delete-forever"
             variant="danger"
             onPress={perguntarPelaUltimaVez}
@@ -269,7 +261,7 @@ export default function ApagarContaScreen() {
             loading={aApagar}
           />
           <Button
-            label="Afinal não"
+            label={t('apagar.afinalNao')}
             variant="ghost"
             onPress={() => router.back()}
             disabled={aApagar}
@@ -281,9 +273,8 @@ export default function ApagarContaScreen() {
 }
 
 /** "3 animais", "1 animal" — o singular certo, que aqui aparece muitas vezes. */
-function frase(n: number, singular: string, plural: string): string {
-  return `${n} ${n === 1 ? singular : plural}`;
-}
+// O `frase(n, singular, plural)` que aqui vivia saiu: o plural passou a vir do
+// `t()`, que já o resolve pelo `n` e o faz nas duas línguas.
 
 function Titulo({ icone, texto, tom }: { icone: IconName; texto: string; tom: string }) {
   return (

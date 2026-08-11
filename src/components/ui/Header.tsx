@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
@@ -35,12 +36,12 @@ export function Header({ title, actionIcon, onAction, background = 'transparent'
         justifyContent: 'space-between',
         backgroundColor: background,
       }}>
-      <CircleButton icon="chevron-left" onPress={() => router.back()} label="Voltar" />
+      <CircleButton icon="chevron-left" onPress={() => router.back()} label={t('comum.voltar')} />
       <Text variant="h3" numberOfLines={1} style={{ flex: 1, textAlign: 'center' }}>
         {title}
       </Text>
       {actionIcon && onAction ? (
-        <CircleButton icon={actionIcon} onPress={onAction} label="Ação" />
+        <CircleButton icon={actionIcon} onPress={onAction} label={t('comum.acao')} />
       ) : (
         <View style={{ width: 44 }} />
       )}

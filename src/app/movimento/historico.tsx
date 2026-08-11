@@ -2,9 +2,9 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { SeletorExploracao } from '@/components/SeletorExploracao';
 import {
   Card,
-  Chip,
   EmptyState,
   Header,
   Icon,
@@ -19,6 +19,7 @@ import { useNomesEquipa } from '@/data/nomesEquipa';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
 import type { Movimento } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /** Quantos registos a lista mostra de cada vez. */
@@ -66,12 +67,12 @@ export default function HistoricoMovimentosScreen() {
   if (!podeVerFinancas) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Histórico de registos" />
+        <Header title={t('financas.historicoRegistos')} />
         <Screen>
           <EmptyState
             icon="lock-outline"
-            title="Contas reservadas ao dono"
-            message="Só quem gere a exploração pode ver quem lançou cada movimento."
+            title={t('financas.reservadasTitulo')}
+            message={t('histMovimento.reservadoMensagem')}
           />
         </Screen>
       </View>
@@ -80,49 +81,29 @@ export default function HistoricoMovimentosScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Histórico de registos" />
+      <Header title={t('financas.historicoRegistos')} />
       <Screen>
         <Text variant="body" color={colors.textSecondary} style={{ marginBottom: spacing.md }}>
-          Cada lançamento pela ordem em que entrou na app, com o nome de quem o
-          registou e a hora.
+          {t('histMovimento.ajuda')}
         </Text>
 
         {podeEscolher ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: spacing.xs,
-              marginBottom: spacing.md,
-            }}>
-            <Chip
-              label="Todas"
-              icon="barn"
-              selected={exploracaoId === undefined}
-              onPress={() => {
-                setExploracaoId(undefined);
-                setLimite(PAGINA);
-              }}
-            />
-            {consultaveis.map((e) => (
-              <Chip
-                key={e.id}
-                label={e.nome}
-                selected={exploracaoId === e.id}
-                onPress={() => {
-                  setExploracaoId(exploracaoId === e.id ? undefined : e.id);
-                  setLimite(PAGINA);
-                }}
-              />
-            ))}
-          </View>
+          <SeletorExploracao
+            exploracoes={consultaveis}
+            valor={exploracaoId}
+            onEscolher={(id) => {
+              setExploracaoId(id);
+              setLimite(PAGINA);
+            }}
+            style={{ marginBottom: spacing.md }}
+          />
         ) : null}
 
         {lista.length === 0 ? (
           <EmptyState
             icon="history"
-            title="Ainda não há registos"
-            message="Assim que alguém lançar uma despesa ou uma receita, fica aqui escrito quem foi e a que horas."
+            title={t('histMovimento.vazioTitulo')}
+            message={t('histMovimento.vazioMensagem')}
           />
         ) : (
           <>
@@ -160,7 +141,7 @@ export default function HistoricoMovimentosScreen() {
                 ]}>
                 <Icon name="chevron-down" size="md" color={colors.primary} />
                 <Text variant="bodyStrong" color={colors.primary}>
-                  Ver mais {Math.min(PAGINA, porMostrar)} (faltam {porMostrar})
+                  {t('financas.verMaisFaltam', { n: Math.min(PAGINA, porMostrar), faltam: porMostrar })}
                 </Text>
               </Pressable>
             ) : null}
@@ -169,8 +150,7 @@ export default function HistoricoMovimentosScreen() {
                 saldo mas não guardam autor nem instante de registo. Calá-lo
                 daria um histórico com ar de completo que não é. */}
             <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm }}>
-              Só despesas e receitas lançadas em Finanças. O custo de uma vacina ou de um
-              medicamento fica no histórico do animal, junto do tratamento.
+              {t('histMovimento.soFinancas')}
             </Text>
           </>
         )}
@@ -206,8 +186,8 @@ function LinhaRegisto({
     const quando = movimento.criadoEm ? formatDataHora(movimento.criadoEm) : undefined;
     if (autor && quando) return `${autor} · ${quando}`;
     if (autor) return autor;
-    if (quando) return `Registado ${quando}`;
-    return 'Sem registo de quem o lançou';
+    if (quando) return t('histAnimal.quando', { quando });
+    return t('histMovimento.semAutor');
   })();
 
   const conteudo = (

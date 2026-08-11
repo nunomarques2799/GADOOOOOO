@@ -24,6 +24,7 @@ import { formatDataCurta, parseDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /**
@@ -155,8 +156,8 @@ export function FormularioEventoAgenda({
         <Header title={editar ? 'Editar evento' : 'Novo evento'} />
         <EmptyState
           icon="lock-outline"
-          title="O calendário é de quem trabalha na exploração"
-          message="Marcar eventos é de quem tem a exploração a cargo e de quem lá trabalha todos os dias. Pode continuar a registar o que fizer a cada animal."
+          title={t('agenda.semPermissaoTitulo')}
+          message={t('agenda.semPermissaoMensagem')}
         />
       </EcraComTeclado>
     );
@@ -165,11 +166,11 @@ export function FormularioEventoAgenda({
   if (disponiveis.length === 0) {
     return (
       <EcraComTeclado>
-        <Header title="Novo evento" />
+        <Header title={t('acao.evento')} />
         <EmptyState
           icon="barn"
-          title="Sem explorações"
-          message="Os eventos pertencem a uma exploração. Crie primeiro a sua."
+          title={t('formTerreno.semExploracoesTitulo')}
+          message={t('agenda.semExploracoesMensagem')}
         />
       </EcraComTeclado>
     );
@@ -187,29 +188,29 @@ export function FormularioEventoAgenda({
           do Início.
         </Text>
 
-        <Field label="O que é" obrigatorio>
+        <Field label={t('guardarDoc.oQueE')} obrigatorio>
           <TextField
             value={titulo}
             onChangeText={setTitulo}
-            placeholder="Ex: Feira de Idanha"
+            placeholder={t('agenda.exTitulo')}
             icon="calendar-text-outline"
           />
         </Field>
 
-        <Field label="Dia" obrigatorio>
+        <Field label={t('agenda.dia')} obrigatorio>
           <CampoData
             value={dia}
             onChangeText={setDia}
-            placeholder="dd/mm/aaaa"
+            placeholder={t('agenda.exDia')}
             permitirFuturo
-            rotuloCalendario="Escolher o dia do evento"
+            rotuloCalendario={t('agenda.calendarioDia')}
           />
         </Field>
 
         {/* A hora é opcional e por isso vem atrás de um interruptor: "dia 12 há
             feira" é um evento completo, e um campo de hora sempre à vista
             convidava a pôr lá 00:00 só para o preencher. */}
-        <Field label="Horas">
+        <Field label={t('agenda.horas')}>
           <Card>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <Icon
@@ -222,13 +223,13 @@ export function FormularioEventoAgenda({
                 <Text variant="secondary" color={colors.textSecondary}>
                   {comHora
                     ? 'O calendário mostra a hora ao lado do evento.'
-                    : 'Sem hora marcada — aparece no topo do dia.'}
+                    : 'Sem hora marcada. Aparece no topo do dia.'}
                 </Text>
               </View>
               <Switch
                 value={comHora}
                 onValueChange={setComHora}
-                accessibilityLabel="Marcar uma hora"
+                accessibilityLabel={t('agenda.marcarHora')}
                 trackColor={{ false: colors.borderStrong, true: colors.primary }}
                 thumbColor={colors.white}
               />
@@ -250,19 +251,19 @@ export function FormularioEventoAgenda({
         {/* Quem vê. Duas opções escritas por extenso e não um interruptor com
             "público" ao lado: o que muda é quem lê aquilo, e essa é a decisão
             que não pode ficar por perceber. */}
-        <Field label="Quem vê">
+        <Field label={t('guardarDoc.quemVe')}>
           <View style={{ gap: spacing.sm }}>
             <OpcaoVisibilidade
               icone="account-group"
-              titulo="Toda a equipa"
-              descricao="Quem trabalha nesta exploração vê este evento no calendário."
+              titulo={t('guardarDoc.todaEquipa')}
+              descricao={t('agenda.todaEquipaDescricao')}
               escolhida={publico}
               onPress={() => setPublico(true)}
             />
             <OpcaoVisibilidade
               icone="lock-outline"
-              titulo="Só eu"
-              descricao="Fica guardado na sua conta. Mais ninguém o vê, nem o dono da exploração."
+              titulo={t('guardarDoc.soEu')}
+              descricao={t('agenda.soEuDescricao')}
               escolhida={!publico}
               onPress={() => setPublico(false)}
             />
@@ -270,7 +271,7 @@ export function FormularioEventoAgenda({
         </Field>
 
         {disponiveis.length > 1 ? (
-          <Field label="Exploração" obrigatorio>
+          <Field label={t('formAnimal.exploracao')} obrigatorio>
             <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
               {disponiveis.map((e) => (
                 <Chip
@@ -285,11 +286,11 @@ export function FormularioEventoAgenda({
           </Field>
         ) : null}
 
-        <Field label="Notas" opcional ajuda="O que mais precisar de ter à mão nesse dia.">
+        <Field label={t('evento.notas')} opcional ajuda={t('agenda.notasAjuda')}>
           <TextInput
             value={descricao}
             onChangeText={setDescricao}
-            placeholder="Ex: levar a guia de circulação e os brincos de substituição"
+            placeholder={t('agenda.exNotas')}
             placeholderTextColor={colors.textMuted}
             multiline
             textAlignVertical="top"
@@ -328,7 +329,7 @@ export function FormularioEventoAgenda({
 
         {editar ? (
           <Button
-            label="Eliminar evento"
+            label={t('agenda.eliminarEvento')}
             icon="trash-can-outline"
             variant="danger"
             onPress={eliminar}

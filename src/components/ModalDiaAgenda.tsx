@@ -7,6 +7,7 @@ import { Badge, Button, Card, Icon, Text } from '@/components/ui';
 import { diaVizinho, rotuloDoDia, type EventoAgenda } from '@/data/agenda';
 import { MESES } from '@/data/calendario';
 import type { Alerta } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 /**
@@ -85,7 +86,7 @@ export function ModalDiaAgenda({
   return (
     <Modal visible={aberto} animationType="slide" transparent onRequestClose={onFechar}>
       <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel="Fechar" />
+        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
         <View
           style={[
             {
@@ -120,7 +121,7 @@ export function ModalDiaAgenda({
             }}>
             <Seta
               icon="chevron-left"
-              label="Dia anterior"
+              label={t('calendario.diaAnterior')}
               onPress={() => onMudarDia(diaVizinho(dia, -1))}
             />
             <View style={{ flex: 1 }}>
@@ -135,7 +136,7 @@ export function ModalDiaAgenda({
             </View>
             <Seta
               icon="chevron-right"
-              label="Dia seguinte"
+              label={t('calendario.diaSeguinte')}
               onPress={() => onMudarDia(diaVizinho(dia, 1))}
             />
           </View>
@@ -152,7 +153,7 @@ export function ModalDiaAgenda({
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <Icon name="calendar-blank-outline" size="lg" color={colors.textMuted} />
                   <Text variant="body" color={colors.textSecondary} style={{ flex: 1 }}>
-                    Nada marcado para este dia.
+                    {t('calendario.nadaNesteDia')}
                   </Text>
                 </View>
               </Card>
@@ -179,7 +180,7 @@ export function ModalDiaAgenda({
                   variant="label"
                   color={colors.textSecondary}
                   style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-                  PRAZOS DESTE DIA
+                  {t('calendario.prazosDesteDia')}
                 </Text>
                 <Card padded={false} style={{ marginBottom: spacing.md }}>
                   <View style={{ paddingHorizontal: spacing.md }}>
@@ -193,7 +194,7 @@ export function ModalDiaAgenda({
 
             {podeMarcar ? (
               <Button
-                label="Marcar evento neste dia"
+                label={t('calendario.marcarNesteDia')}
                 icon="calendar-plus"
                 variant="secondary"
                 onPress={() => onNovo(dia)}
@@ -207,7 +208,7 @@ export function ModalDiaAgenda({
               color={colors.textMuted}
               center
               style={{ marginTop: spacing.md }}>
-              Arraste para o lado, ou use as setas, para ver os outros dias.
+              {t('calendario.arrasteParaOLado')}
             </Text>
           </ScrollView>
         </View>
@@ -229,8 +230,8 @@ function tituloDoDia(dia: string): string {
 
 function resumo(eventos: number, alertas: number): string {
   const partes: string[] = [];
-  if (eventos > 0) partes.push(`${eventos} ${eventos === 1 ? 'evento' : 'eventos'}`);
-  if (alertas > 0) partes.push(`${alertas} ${alertas === 1 ? 'prazo' : 'prazos'}`);
+  if (eventos > 0) partes.push(t('calendario.nEventos', { n: eventos }));
+  if (alertas > 0) partes.push(t('calendario.nPrazos', { n: alertas }));
   return partes.join(' · ');
 }
 
@@ -248,7 +249,7 @@ function LinhaEvento({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${evento.titulo}${evento.hora ? `, às ${evento.hora}` : ', todo o dia'}`}
-      accessibilityHint="Toque para ver ou alterar"
+      accessibilityHint={t('agenda.toqueParaVer')}
       style={({ pressed }) => [
         {
           flexDirection: 'row',
@@ -288,7 +289,7 @@ function LinhaEvento({
         {/* Só o privado se marca. O público é o normal, e uma etiqueta em cada
             linha a dizer "público" não distinguia nada de nada. */}
         {!evento.publico ? (
-          <Badge tone="neutral" icon="lock-outline" label="Só eu vejo" style={{ marginTop: 4 }} />
+          <Badge tone="neutral" icon="lock-outline" label={t('calendario.soEuVejo')} style={{ marginTop: 4 }} />
         ) : null}
       </View>
       <Icon name="chevron-right" size="sm" color={colors.textMuted} />

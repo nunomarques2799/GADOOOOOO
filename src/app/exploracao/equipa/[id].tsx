@@ -32,6 +32,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useToasts } from '@/data/toasts';
 import type { Convite, MembroExploracao, RoleMembro } from '@/data/types';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 type MembroComNome = MembroExploracao & { nome: string };
@@ -300,8 +301,12 @@ export default function EquipaExploracaoScreen() {
   if (!exploracao) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Equipa" />
-        <EmptyState icon="barn" title="Exploração não encontrada" message="Este registo já não existe." />
+        <Header title={t('equipaExp.titulo')} />
+        <EmptyState
+          icon="barn"
+          title={t('formExploracao.naoEncontrada')}
+          message={t('ficha.jaNaoExiste')}
+        />
       </View>
     );
   }
@@ -309,11 +314,11 @@ export default function EquipaExploracaoScreen() {
   if (!podeGerir) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Equipa" />
+        <Header title={t('equipaExp.titulo')} />
         <EmptyState
           icon="shield-off-outline"
-          title="Sem permissão"
-          message="Só o administrador desta exploração pode gerir a equipa."
+          title={t('formLote.semPermissaoTitulo')}
+          message={t('equipaExp.semPermissao')}
         />
       </View>
     );
@@ -437,7 +442,7 @@ export default function EquipaExploracaoScreen() {
                             as duas frases que se dizem, e só uma delas se
                             conseguia escrever. */}
                         <Chip
-                          label="Até dia e hora"
+                          label={t('acesso.ateDiaEHora')}
                           icon="calendar-clock"
                           selected={aMarcar === m.id}
                           onPress={() => setAMarcar(aMarcar === m.id ? undefined : m.id)}
@@ -448,7 +453,7 @@ export default function EquipaExploracaoScreen() {
                             vínculo e as permissões dele com ele. */}
                         {!terminou ? (
                           <Chip
-                            label="Terminar já"
+                            label={t('acesso.terminarJa')}
                             icon="clock-remove-outline"
                             onPress={() => pedirEMudarPrazo(m, 0, 'Acesso terminado')}
                           />
@@ -471,7 +476,7 @@ export default function EquipaExploracaoScreen() {
                         <CampoData
                           value={diaFim}
                           onChangeText={setDiaFim}
-                          placeholder="dd/mm/aaaa"
+                          placeholder={t('agenda.exDia')}
                           permitirFuturo
                           rotuloCalendario={`Dia em que o acesso de ${m.nome} termina`}
                         />
@@ -497,7 +502,7 @@ export default function EquipaExploracaoScreen() {
                             ?? `Termina a ${formatDataHora(fimEscolhido as string)}.`}
                         </Text>
                         <Button
-                          label="Marcar esta hora"
+                          label={t('acesso.marcarEstaHora')}
                           icon="calendar-clock"
                           variant="secondary"
                           onPress={() => void marcarFim(m)}
@@ -515,7 +520,7 @@ export default function EquipaExploracaoScreen() {
             pergunta seguinte a essa — e porque é aqui que se dá por falta de
             alguém que se lembra de ter convidado. */}
         <Button
-          label="Ver quem já cá esteve"
+          label={t('equipa.verQuemCaEsteve')}
           icon="account-clock-outline"
           variant="ghost"
           onPress={() => router.push(`/equipa/historico?exploracao=${id}`)}
@@ -557,13 +562,13 @@ export default function EquipaExploracaoScreen() {
 
               <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
                 <Chip
-                  label="Durante um tempo"
+                  label={t('acesso.duranteUmTempo')}
                   icon="timer-sand"
                   selected={modoPrazo === 'duracao'}
                   onPress={() => setModoPrazo('duracao')}
                 />
                 <Chip
-                  label="Até dia e hora"
+                  label={t('acesso.ateDiaEHora')}
                   icon="calendar-clock"
                   selected={modoPrazo === 'ate'}
                   onPress={() => setModoPrazo('ate')}
@@ -594,7 +599,7 @@ export default function EquipaExploracaoScreen() {
                   <CampoData
                     value={diaFim}
                     onChangeText={setDiaFim}
-                    placeholder="dd/mm/aaaa"
+                    placeholder={t('agenda.exDia')}
                     permitirFuturo
                     rotuloCalendario="Escolher o dia em que o acesso termina"
                   />
@@ -628,7 +633,7 @@ export default function EquipaExploracaoScreen() {
           ) : null}
 
           <Button
-            label="Gerar código"
+            label={t('equipaExp.gerarCodigo')}
             icon="ticket-confirmation-outline"
             onPress={gerarConvite}
             loading={aGerar}
@@ -743,7 +748,7 @@ export default function EquipaExploracaoScreen() {
                         color={copiado === c.codigo ? colors.success : colors.primary}
                       />
                     </Pressable>
-                    <Pressable onPress={() => apagarConvite(c.codigo)} hitSlop={8} accessibilityLabel="Apagar convite">
+                    <Pressable onPress={() => apagarConvite(c.codigo)} hitSlop={8} accessibilityLabel={t('equipaExp.apagarConvite')}>
                       <Icon name="trash-can-outline" size="md" color={colors.danger} />
                     </Pressable>
                   </View>

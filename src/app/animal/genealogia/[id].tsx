@@ -8,6 +8,7 @@ import { especieMeta } from '@/data/constants';
 import { ascendentesDe, descendentesDe, rotuloAnimal, type NoGenealogico } from '@/data/genealogia';
 import { formatDataPt, idadeExtenso } from '@/data/helpers';
 import { useGado } from '@/data/store';
+import { t } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
 
 /** Gerações mostradas para cada lado (pais/avós/bisavós e crias/netos/bisnetos). */
@@ -32,8 +33,12 @@ export default function GenealogiaScreen() {
   if (!animal) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Árvore genealógica" />
-        <EmptyState icon="cow-off" title="Animal não encontrado" message="Este registo já não existe." />
+        <Header title={t('genealogia.titulo')} />
+        <EmptyState
+          icon="cow-off"
+          title={t('genealogia.naoEncontrado')}
+          message={t('ficha.jaNaoExiste')}
+        />
       </View>
     );
   }
@@ -43,7 +48,7 @@ export default function GenealogiaScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Árvore genealógica" />
+      <Header title={t('genealogia.titulo')} />
       <Screen>
         {/* Ascendentes — dos mais recentes (pais) para os mais antigos */}
         <Text variant="h3" style={{ marginBottom: spacing.xs }}>
@@ -55,7 +60,7 @@ export default function GenealogiaScreen() {
               Ainda não há mãe nem pai registados para este animal.
             </Text>
             <Button
-              label="Indicar mãe e pai"
+              label={t('genealogia.indicarPais')}
               icon="pencil"
               variant="secondary"
               onPress={() => router.push(`/animal/editar/${animal.id}`)}

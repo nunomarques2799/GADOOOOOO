@@ -33,6 +33,7 @@ import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
 import type { CategoriaDespesa, CategoriaReceita, Direcao, Movimento } from '@/data/types';
+import { t, type ChaveTexto } from '@/i18n';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
 /**
@@ -60,11 +61,12 @@ const CATEGORIAS_RECEITA: { valor: CategoriaReceita; icon: IconName }[] = [
   { valor: 'Outras receitas', icon: 'dots-horizontal' },
 ];
 
-const opcoesData = [
-  { label: 'Hoje', dias: 0 },
-  { label: 'Ontem', dias: 1 },
-  { label: 'Há 1 semana', dias: 7 },
-  { label: 'Há 1 mês', dias: 30 },
+/** Atalhos da data. Guardam a CHAVE, e quem desenha é que traduz. */
+const opcoesData: { chave: ChaveTexto; dias: number }[] = [
+  { chave: 'formAnimal.hoje', dias: 0 },
+  { chave: 'formAnimal.ontem', dias: 1 },
+  { chave: 'formAnimal.ha1Semana', dias: 7 },
+  { chave: 'formMovimento.ha1Mes', dias: 30 },
 ];
 
 /**
@@ -215,10 +217,10 @@ export function FormularioMovimento({
 
       toast.sucesso(
         editar
-          ? 'Movimento guardado'
+          ? t('formMovimento.guardado')
           : direcaoEfetiva === 'receita'
-            ? 'Receita registada'
-            : 'Despesa registada',
+            ? t('formMovimento.receitaRegistada')
+            : t('formMovimento.despesaRegistada'),
         `${formatEuro(valorNum)} · ${descricao.trim()}`,
       );
       // `back()` sozinho não chega: quem abre este ecrã por link direto (a app
@@ -231,10 +233,10 @@ export function FormularioMovimento({
       // mostrado como gravado, e desaparecer em silêncio é o pior dos casos.
       toast.erro(
         editar
-          ? 'Movimento não guardado'
+          ? t('formMovimento.semGuardar')
           : direcaoEfetiva === 'receita'
-            ? 'Receita não registada'
-            : 'Despesa não registada',
+            ? t('formMovimento.receitaSemRegistar')
+            : t('formMovimento.despesaSemRegistar'),
         mensagemDeErro(e),
       );
       setAGravar(false);
@@ -249,20 +251,20 @@ export function FormularioMovimento({
     const executar = async () => {
       try {
         await deleteMovimento(movimento.id);
-        toast.sucesso('Movimento eliminado', `${formatEuro(movimento.valor)} · ${movimento.descricao}`);
+        toast.sucesso(t('formMovimento.eliminado'), `${formatEuro(movimento.valor)} · ${movimento.descricao}`);
         if (router.canGoBack()) router.back();
         else router.replace('/financas');
       } catch (e) {
-        avisar('Não foi possível eliminar', mensagemDeErro(e));
+        avisar(t('comum.semEliminar'), mensagemDeErro(e));
       }
     };
     confirmar(
-      'Eliminar movimento',
-      `Vai apagar ${formatEuro(movimento.valor)} — "${movimento.descricao}" — das contas da `
+      t('formMovimento.eliminarMovimento'),
+      `Vai apagar ${formatEuro(movimento.valor)} ("${movimento.descricao}") das contas da `
         + 'exploração. O saldo muda. Fica registado quem o apagou, mas o lançamento em si não '
         + 'se recupera.',
       () => void executar(),
-      { rotuloConfirmar: 'Eliminar', destrutivo: true },
+      { rotuloConfirmar: t('comum.eliminar'), destrutivo: true },
     );
   }
 
@@ -275,12 +277,12 @@ export function FormularioMovimento({
   if (!ativas) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Registar movimento" />
+        <Header title={t('financas.registarMovimento')} />
         <Screen>
           <EmptyState
             icon="cash-off"
-            title="Gestão financeira desligada"
-            message="Esta conta não usa a app para registar despesas e receitas. Quem gere a exploração pode ligá-la em Perfil → Gestão financeira."
+            title={t('financas.desligadaTitulo')}
+            message={t('financas.desligadaMensagem')}
           />
         </Screen>
       </View>
@@ -290,12 +292,12 @@ export function FormularioMovimento({
   if (editar && !podeEditar) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Header title="Movimento" />
+        <Header title={t('formMovimento.movimento')} />
         <Screen>
           <EmptyState
             icon="lock-outline"
-            title="Este lançamento não é seu"
-            message="Cada pessoa corrige o que lançou. Para mudar este, fale com quem gere a exploração."
+            title={t('formMovimento.naoESeuTitulo')}
+            message={t('formMovimento.naoESeuMensagem')}
           />
         </Screen>
       </View>
@@ -307,10 +309,10 @@ export function FormularioMovimento({
       <Header
         title={
           editar
-            ? 'Editar movimento'
+            ? t('formMovimento.editar')
             : direcaoEfetiva === 'receita'
-              ? 'Registar receita'
-              : 'Registar despesa'
+              ? t('formMovimento.registarReceita')
+              : t('financas.registarDespesa')
         }
       />
       <ScrollView
@@ -324,20 +326,20 @@ export function FormularioMovimento({
             (ver o cabeçalho deste ficheiro). */}
         {editar ? (
           exploracoes.length > 1 ? (
-            <Field label="Exploração">
+            <Field label={t('formAnimal.exploracao')}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Icon name="barn" size="md" color={colors.textMuted} />
                 <Text variant="body" style={{ flex: 1 }}>
-                  {nomeExploracao ?? 'Sem exploração'}
+                  {nomeExploracao ?? t('ficha.semExploracao')}
                 </Text>
               </View>
               <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-                Um lançamento não muda de exploração. Se foi na outra, elimine e volte a lançar.
+                {t('formMovimento.naoMudaExploracao')}
               </Text>
             </Field>
           ) : null
         ) : exploracoes.length > 1 ? (
-          <Field label="Exploração" obrigatorio>
+          <Field label={t('formAnimal.exploracao')} obrigatorio>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               {exploracoes.map((e) => (
                 <Chip
@@ -358,17 +360,17 @@ export function FormularioMovimento({
 
         {/* Despesa ou receita — só quem pode lançar receitas vê a escolha */}
         {podeReceita ? (
-          <Field label="Tipo de movimento" obrigatorio>
+          <Field label={t('formMovimento.tipo')} obrigatorio>
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               <BigToggle
-                label="Despesa"
+                label={t('formMovimento.despesa')}
                 icon="cash-minus"
                 cor={colors.danger}
                 selected={direcaoEfetiva === 'despesa'}
                 onPress={() => setDirecao('despesa')}
               />
               <BigToggle
-                label="Receita"
+                label={t('formMovimento.receita')}
                 icon="cash-plus"
                 cor={colors.success}
                 selected={direcaoEfetiva === 'receita'}
@@ -378,7 +380,7 @@ export function FormularioMovimento({
           </Field>
         ) : null}
 
-        <Field label="Categoria" obrigatorio>
+        <Field label={t('formMovimento.categoria')} obrigatorio>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
             {categorias.map((c) => (
               <Chip
@@ -392,31 +394,31 @@ export function FormularioMovimento({
           </View>
         </Field>
 
-        <Field label="Valor (€)" obrigatorio>
+        <Field label={t('formMovimento.valor')} obrigatorio>
           <CampoTexto
             value={valor}
             onChangeText={setValor}
-            placeholder="Ex: 860"
+            placeholder={t('formMovimento.exValor')}
             icon="cash"
             keyboardType="decimal-pad"
           />
         </Field>
 
-        <Field label="Descrição" obrigatorio>
+        <Field label={t('formTerreno.descricao')} obrigatorio>
           <CampoTexto
             value={descricao}
             onChangeText={setDescricao}
-            placeholder="Ex: Ração, 40 sacos"
+            placeholder={t('formMovimento.exDescricao')}
             icon="note-text-outline"
           />
         </Field>
 
-        <Field label="Data" obrigatorio>
+        <Field label={t('formMovimento.data')} obrigatorio>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
             {opcoesData.map((o) => (
               <Chip
                 key={o.dias}
-                label={o.label}
+                label={t(o.chave)}
                 // Com uma data escolhida à mão, nenhum atalho fica aceso.
                 selected={!dataManualIso && diasAtras === o.dias}
                 onPress={() => {
@@ -428,17 +430,17 @@ export function FormularioMovimento({
           </View>
 
           <Text variant="caption" color={colors.textMuted} style={{ marginTop: spacing.sm, marginBottom: 4 }}>
-            Ou outra data (dd/mm/aaaa)
+            {t('formMovimento.ouOutraData')}
           </Text>
           <CampoData
             value={dataManual}
             onChangeText={setDataManual}
-            placeholder="Ex: 15/03/2026"
-            rotuloCalendario="Escolher a data do movimento no calendário"
+            placeholder={t('formLote.exDataCompra')}
+            rotuloCalendario={t('formMovimento.calendarioData')}
           />
           {dataManualInvalida ? (
             <Text variant="caption" color={colors.danger} style={{ marginTop: 4 }}>
-              Data inválida. Use o formato dd/mm/aaaa e uma data não futura.
+              {t('formAnimal.dataInvalidaNaoFutura')}
             </Text>
           ) : null}
 
@@ -456,11 +458,11 @@ export function FormularioMovimento({
           </View>
         </Field>
 
-        <Field label={direcaoEfetiva === 'receita' ? 'Comprador' : 'Fornecedor'} opcional>
+        <Field label={direcaoEfetiva === 'receita' ? t('formMovimento.comprador') : t('formLote.fornecedor')} opcional>
           <CampoTexto
             value={contraparte}
             onChangeText={setContraparte}
-            placeholder="Ex: Agro-Nisa"
+            placeholder={t('formLote.exFornecedor')}
             icon="store-outline"
             autoCapitalize="words"
           />
@@ -471,7 +473,7 @@ export function FormularioMovimento({
             etiquetas empurrava o resto do formulário para fora do ecrã, e
             encontrar lá a vaca certa era pior do que não imputar nada. */}
         {animaisDaExploracao.length > 0 ? (
-          <Field label="Animal" opcional>
+          <Field label={t('ficha.animal')} opcional>
             <SeletorAnimais
               animais={animaisDaExploracao}
               terrenos={terrenosDaExploracao}
@@ -479,14 +481,13 @@ export function FormularioMovimento({
               onMudar={(ids) => setAnimalId(ids[0])}
             />
             <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
-              Só se este movimento for mesmo de um animal. Deixe em branco para custos da
-              exploração inteira.
+              {t('formMovimento.animalAjuda')}
             </Text>
           </Field>
         ) : null}
 
         {terrenosDaExploracao.length > 0 ? (
-          <Field label="Terreno" opcional>
+          <Field label={t('filtro.terreno')} opcional>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
               {terrenosDaExploracao.map((t) => (
                 <Chip
@@ -502,7 +503,7 @@ export function FormularioMovimento({
         ) : null}
 
         {!podeReceita ? (
-          <Aviso texto="Pode registar despesas. As receitas (vendas, subsídios) são lançadas por quem gere a exploração." />
+          <Aviso texto={t('formMovimento.soDespesas')} />
         ) : null}
 
         {/* Histórico de alterações — só na edição, e depois do formulário: é
@@ -511,7 +512,7 @@ export function FormularioMovimento({
 
         {podeEliminar && movimento ? (
           <Button
-            label="Eliminar movimento"
+            label={t('formMovimento.eliminarMovimento')}
             icon="trash-can-outline"
             variant="danger"
             onPress={confirmarEliminar}
@@ -537,7 +538,7 @@ export function FormularioMovimento({
           shadow.lg,
         ]}>
         <Button
-          label={aGravar ? 'A gravar…' : editar ? 'Guardar alterações' : 'Guardar movimento'}
+          label={aGravar ? t('comum.aGuardar') : editar ? t('formAnimal.guardarAlteracoes') : t('formMovimento.guardarMovimento')}
           icon="check"
           onPress={guardar}
           disabled={!valido || aGravar}
@@ -547,7 +548,7 @@ export function FormularioMovimento({
             variant="caption"
             color={corDirecao}
             style={{ marginTop: spacing.xs, textAlign: 'center' }}>
-            {direcaoEfetiva === 'receita' ? 'Entra' : 'Sai'} {valor.replace('.', ',')} €
+            {direcaoEfetiva === 'receita' ? t('formMovimento.entra') : t('formMovimento.sai')} {valor.replace('.', ',')} €
           </Text>
         ) : null}
       </View>
@@ -595,7 +596,7 @@ function HistoricoMovimento({ movimento }: { movimento: Movimento }) {
   return (
     <View style={{ marginTop: spacing.md }}>
       <Text variant="label" style={{ marginBottom: spacing.xs }}>
-        Histórico de alterações
+        {t('formMovimento.historicoAlteracoes')}
       </Text>
       <View
         style={{
@@ -611,15 +612,14 @@ function HistoricoMovimento({ movimento }: { movimento: Movimento }) {
           </Text>
         ) : estado === 'erro' ? (
           <Text variant="secondary" color={colors.textMuted} style={{ paddingVertical: spacing.sm }}>
-            Não foi possível carregar o histórico. Tente com ligação à internet.
+            {t('formMovimento.semHistorico')}
           </Text>
         ) : linhas.length === 0 ? (
           <Text variant="secondary" color={colors.textMuted} style={{ paddingVertical: spacing.sm }}>
             {/* Vazio quer dizer duas coisas: um lançamento anterior ao registo
                 de atividade, ou a app em modo local. Nenhuma delas é um erro,
                 e prometer um histórico que não existe é pior do que dizê-lo. */}
-            Sem alterações registadas. Os lançamentos antigos, e os feitos sem
-            servidor, não têm este registo.
+            {t('formMovimento.semAlteracoes')}
           </Text>
         ) : (
           linhas.map((l, i) => (
@@ -652,7 +652,7 @@ function HistoricoMovimento({ movimento }: { movimento: Movimento }) {
               />
               <View style={{ flex: 1 }}>
                 <Text variant="bodyStrong" numberOfLines={1}>
-                  {frase(l)} · {nomeDe(l.userId) ?? 'Sem nome'}
+                  {frase(l)} · {nomeDe(l.userId) ?? t('animais.semNome')}
                 </Text>
                 <Text variant="caption" color={colors.textMuted}>
                   {formatDataHora(l.em)}

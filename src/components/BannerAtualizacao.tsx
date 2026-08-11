@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 
 import { Card, Icon, Text } from '@/components/ui';
 import { useAtualizacao } from '@/data/useAtualizacao';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /**
@@ -23,14 +24,14 @@ export function BannerAtualizacao() {
         <View style={{ flex: 1 }}>
           <Text variant="bodyStrong">Nova versão pronta</Text>
           <Text variant="secondary" color={colors.textSecondary}>
-            Já está descarregada. A app fecha e volta a abrir sozinha.
+            {t('banner.jaDescarregada')}
           </Text>
         </View>
         {aInstalar ? null : (
           <Pressable
             onPress={() => setFechado(true)}
             accessibilityRole="button"
-            accessibilityLabel="Dispensar"
+            accessibilityLabel={t('banner.dispensar')}
             hitSlop={8}>
             <Icon name="close" size="md" color={colors.textMuted} />
           </Pressable>
@@ -43,7 +44,7 @@ export function BannerAtualizacao() {
         }}
         disabled={aInstalar}
         accessibilityRole="button"
-        accessibilityLabel="Atualizar agora"
+        accessibilityLabel={t('banner.atualizarAgora')}
         accessibilityState={{ disabled: aInstalar }}
         style={({ pressed }) => [
           {
@@ -60,7 +61,7 @@ export function BannerAtualizacao() {
         ]}>
         <Icon name={aInstalar ? 'progress-download' : 'download'} size="sm" color={colors.onPrimary} />
         <Text variant="button" color={colors.onPrimary} style={{ fontSize: 16 }}>
-          {aInstalar ? 'A atualizar…' : 'Atualizar agora'}
+          {aInstalar ? t('banner.aAtualizar') : t('banner.atualizarAgora')}
         </Text>
       </Pressable>
     </Card>

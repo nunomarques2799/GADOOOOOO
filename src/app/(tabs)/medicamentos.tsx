@@ -17,6 +17,7 @@ import {
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
+import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, spacing } from '@/theme';
@@ -60,9 +61,9 @@ export default function MedicamentosScreen() {
     const atencao = lotes.filter((l) => !l.expirado && !l.esgotado && (l.aExpirar || l.quaseVazio));
     const ok = lotes.filter((l) => !l.expirado && !l.esgotado && !l.aExpirar && !l.quaseVazio);
     return [
-      { chave: 'atencao', titulo: 'A tratar', icon: 'alert-outline' as IconName, cor: colors.warning, data: atencao },
-      { chave: 'ok', titulo: 'Disponível', icon: 'check-circle-outline' as IconName, cor: colors.success, data: ok },
-      { chave: 'fora', titulo: 'Fora de uso', icon: 'archive-outline' as IconName, cor: colors.textMuted, data: fora },
+      { chave: 'atencao', titulo: t('existencias.aTratar'), icon: 'alert-outline' as IconName, cor: colors.warning, data: atencao },
+      { chave: 'ok', titulo: t('existencias.disponivel'), icon: 'check-circle-outline' as IconName, cor: colors.success, data: ok },
+      { chave: 'fora', titulo: t('existencias.foraDeUso'), icon: 'archive-outline' as IconName, cor: colors.textMuted, data: fora },
     ].filter((s) => s.data.length > 0);
   }, [lotes]);
 
@@ -72,12 +73,12 @@ export default function MedicamentosScreen() {
     try {
       descarregarTabelaExcel(
         `medicamentos-${hojeISO()}.xlsx`,
-        'Registo de medicamentos',
+        t('existencias.registoMedicamentos'),
         tabelaExistencias(lotes),
       );
-      toast.sucesso('Ficheiro descarregado', `${lotes.length} ${lotes.length === 1 ? 'lote' : 'lotes'}`);
+      toast.sucesso(t('existencias.descarregado'), t('existencias.nLotes', { n: lotes.length }));
     } catch (e) {
-      toast.erro('Não foi possível descarregar', mensagemDeErro(e));
+      toast.erro(t('existencias.semDescarga'), mensagemDeErro(e));
     }
   }
 
@@ -119,30 +120,30 @@ export default function MedicamentosScreen() {
         ListHeaderComponent={
           <View style={{ paddingTop: insets.top + spacing.md, gap: spacing.md }}>
             <View>
-              <Text variant="display">Existências</Text>
+              <Text variant="display">{t('nav.existencias')}</Text>
               <Text variant="body" color={colors.textSecondary}>
                 {lotes.length === 0
-                  ? 'Medicamentos e vacinas na arrecadação'
-                  : `${lotes.length} ${lotes.length === 1 ? 'lote' : 'lotes'} registados`}
+                  ? t('existencias.subtitulo')
+                  : t('existencias.nLotesRegistados', { n: lotes.length })}
               </Text>
             </View>
             <CartaoIntroducao
               chave="medicamentos"
               icon="package-variant-closed"
-              titulo="Para que serve este separador"
+              titulo={t('existencias.introTitulo')}
               pontos={[
-                'Dê entrada de cada frasco ou caixa que compra, com o lote e a validade. Uma linha por compra: se comprar outro do mesmo, é outra linha.',
-                'Ao registar uma vacina ou um medicamento na ficha de um animal, escolha o lote de onde saiu — a app desconta sozinha o que gastou.',
-                'A app avisa quando um lote está a acabar e quando a validade se aproxima, para não descobrir isso com o animal já preso no tronco.',
-                'É também o registo de medicamentos que a lei obriga a ter. Do computador, sai em Excel para levar a uma inspeção.',
+                t('existencias.intro1'),
+                t('existencias.intro2'),
+                t('existencias.intro3'),
+                t('existencias.intro4'),
               ]}
             />
             {comFicheiros && lotes.length > 0 ? (
-              <Card onPress={exportar} accessibilityLabel="Exportar registo de medicamentos">
+              <Card onPress={exportar} accessibilityLabel={t('existencias.exportar')}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <Icon name="microsoft-excel" size="md" color={colors.primary} />
                   <Text variant="body" style={{ flex: 1 }}>
-                    Exportar registo de medicamentos
+                    {t('existencias.exportar')}
                   </Text>
                   <Icon name="chevron-right" size="sm" color={colors.textMuted} />
                 </View>
@@ -153,13 +154,11 @@ export default function MedicamentosScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="package-variant-closed"
-            title="Arrecadação vazia"
+            title={t('existencias.vazioTitulo')}
             message={
-              podeGerir
-                ? 'Dê entrada dos medicamentos e vacinas que tem. Depois, ao registar um tratamento, escolhe o lote e a app desconta o que gastou.'
-                : 'Ainda não há medicamentos registados nesta exploração. Quem a gere é que lhes pode dar entrada.'
+              podeGerir ? t('existencias.vazioPodeGerir') : t('existencias.vazioSemPermissao')
             }
-            actionLabel={podeGerir && primeiraGerivel ? 'Dar entrada' : undefined}
+            actionLabel={podeGerir && primeiraGerivel ? t('existencias.darEntrada') : undefined}
             onAction={
               podeGerir && primeiraGerivel ? () => router.push('/medicamento/novo') : undefined
             }
@@ -167,7 +166,10 @@ export default function MedicamentosScreen() {
         }
       />
       {podeGerir && lotes.length > 0 ? (
-        <FAB label="Dar entrada" onPress={() => router.push('/medicamento/novo')} />
+        <FAB
+          label={t('existencias.darEntrada')}
+          onPress={() => router.push('/medicamento/novo')}
+        />
       ) : null}
     </View>
   );
@@ -178,14 +180,17 @@ function LinhaLote({ lote, onPress }: { lote: EstadoLote; onPress: () => void })
 
   /** O estado em duas palavras, com a cor a dizer o mesmo à distância. */
   const estado = lote.expirado
-    ? { texto: 'Fora de validade', cor: colors.danger }
+    ? { texto: t('existencias.foraDeValidade'), cor: colors.danger }
     : lote.esgotado
-      ? { texto: 'Esgotado', cor: colors.textMuted }
+      ? { texto: t('existencias.esgotado'), cor: colors.textMuted }
       : lote.aExpirar
-        ? { texto: `Expira em ${lote.diasParaValidade} dias`, cor: colors.warning }
+        ? {
+            texto: t('existencias.expiraEm', { n: lote.diasParaValidade ?? 0 }),
+            cor: colors.warning,
+          }
         : lote.quaseVazio
-          ? { texto: 'A acabar', cor: colors.warning }
-          : { texto: 'Disponível', cor: colors.success };
+          ? { texto: t('existencias.aAcabar'), cor: colors.warning }
+          : { texto: t('existencias.disponivel'), cor: colors.success };
 
   return (
     <Card onPress={onPress} accessibilityLabel={m.nome} style={{ marginBottom: spacing.sm }}>
@@ -200,8 +205,10 @@ function LinhaLote({ lote, onPress }: { lote: EstadoLote; onPress: () => void })
             {m.nome}
           </Text>
           <Text variant="caption" color={colors.textMuted} numberOfLines={1}>
-            {m.lote?.trim() ? `Lote ${m.lote.trim()}` : 'Sem lote'}
-            {m.validade ? ` · validade ${formatDataPt(m.validade)}` : ''}
+            {m.lote?.trim()
+              ? t('existencias.lote', { lote: m.lote.trim() })
+              : t('existencias.semLote')}
+            {m.validade ? ` · ${t('existencias.validade', { data: formatDataPt(m.validade) })}` : ''}
             {m.custo != null ? ` · ${formatEuro(m.custo, 0)}` : ''}
           </Text>
           {/* A barra é o que se lê de relance: quanto falta no frasco, sem ter
@@ -223,8 +230,13 @@ function LinhaLote({ lote, onPress }: { lote: EstadoLote; onPress: () => void })
             />
           </View>
           <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: 4 }}>
-            Restam {formatQuantidade(lote.resta, m.unidade)} de {formatQuantidade(m.quantidade, m.unidade)}
-            {m.intervaloSegurancaDias > 0 ? ` · segurança ${m.intervaloSegurancaDias} dias` : ''}
+            {t('existencias.restamDe', {
+              resta: formatQuantidade(lote.resta, m.unidade),
+              total: formatQuantidade(m.quantidade, m.unidade),
+            })}
+            {m.intervaloSegurancaDias > 0
+              ? ` · ${t('existencias.seguranca', { n: m.intervaloSegurancaDias })}`
+              : ''}
           </Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 4 }}>

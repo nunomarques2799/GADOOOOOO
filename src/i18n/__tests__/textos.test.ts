@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from '@jest/globals';
 
 import { definirIdiomaParaTestes, IDIOMA_OMISSAO, IDIOMAS } from '../idioma';
-import { CHAVES_TEXTO, DICIONARIOS_EM_CRU, t } from '../textos';
+import { CHAVES_TEXTO, DICIONARIOS_EM_CRU, t, type ChaveTexto } from '../textos';
 
 afterEach(() => definirIdiomaParaTestes(IDIOMA_OMISSAO));
 
@@ -75,15 +75,52 @@ describe('o dicionário está completo', () => {
    * SEM tradução nem compila. Este teste apanha o que o tipo não apanha: uma
    * tradução ESQUECIDA, deixada igual ao português por copiar-colar — que
    * compila lindamente e só se vê com a app em inglês à frente.
+   *
+   * As exceções abaixo são as chaves em que as duas colunas SÃO iguais de
+   * propósito, e cada uma tem de dizer porquê. A lista é curta e à mão de
+   * propósito: acrescentar uma tem de ser uma decisão, não um atalho para
+   * calar o teste.
    */
+  const IGUAIS_DE_PROPOSITO: ChaveTexto[] = [
+    // Máscaras de números oficiais portugueses (o brinco do SIA, a marca de
+    // exploração). Não são frases: é o que se escreve no campo, e escreve-se
+    // exatamente igual em inglês.
+    'formAnimal.exBrinco',
+    'formExploracao.exMarca',
+    // "Animal" e "Dose" escrevem-se igual nas duas línguas.
+    'ficha.animal',
+    'evento.dose',
+    // A pré-visualização das paletas mostra uma espécie e uma raça, e esses são
+    // nomes de DOMÍNIO: ficam em português nas duas línguas (ver `textos.ts`).
+    'aspeto.exemploRaca',
+    // "Offline" é a mesma palavra nas duas línguas, e é a que se usa em
+    // português corrente.
+    'sinc.offline',
+    // Símbolo da unidade, não uma palavra.
+    'meteo.grausC',
+  ];
+
   it('e nenhuma tradução ficou igual ao português por esquecimento', () => {
     definirIdiomaParaTestes('pt');
     const emPt = new Map(CHAVES_TEXTO.map((c) => [c, t(c)]));
 
     definirIdiomaParaTestes('en');
-    const iguais = CHAVES_TEXTO.filter((c) => t(c) === emPt.get(c));
+    const iguais = CHAVES_TEXTO.filter(
+      (c) => t(c) === emPt.get(c) && !IGUAIS_DE_PROPOSITO.includes(c),
+    );
 
     expect(iguais).toEqual([]);
+  });
+
+  it('e a lista de exceções não tem chaves já traduzidas', () => {
+    // Uma exceção que deixou de fazer falta é uma porta aberta para a próxima
+    // tradução esquecida entrar por ela sem ninguém dar conta.
+    definirIdiomaParaTestes('pt');
+    const emPt = new Map(CHAVES_TEXTO.map((c) => [c, t(c)]));
+    definirIdiomaParaTestes('en');
+
+    const jaTraduzidas = IGUAIS_DE_PROPOSITO.filter((c) => t(c) !== emPt.get(c));
+    expect(jaTraduzidas).toEqual([]);
   });
 
   /**

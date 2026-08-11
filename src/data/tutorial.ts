@@ -26,6 +26,8 @@
  * preferências do aparelho.
  */
 
+import { t } from '@/i18n';
+
 import { guardar as guardarKv, ler as lerKv } from './armazenamento';
 
 export type ChavePasso =
@@ -84,31 +86,28 @@ export function passosTutorial(e: EstadoTutorial): Passo[] {
   const passos: Passo[] = [
     {
       chave: 'exploracao',
-      titulo: 'Criar a sua exploração',
-      descricao: 'É a sua quinta dentro da app. Comece por aqui.',
-      detalhe:
-        'A exploração é a sua quinta ou herdade dentro da app: é dentro dela que ficam os terrenos, os animais e tudo o que registar. Basta o nome por que lhe chama e a localidade — a marca de exploração e o resto podem ficar para depois. Se tiver duas quintas, crie duas: a app mantém as contas de cada uma separadas.',
-      acao: 'Criar a exploração',
+      titulo: t('tutorial.exploracaoTitulo'),
+      descricao: t('tutorial.exploracaoDescricao'),
+      detalhe: t('tutorial.exploracaoDetalhe'),
+      acao: t('tutorial.exploracaoAcao'),
       opcional: false,
       feito: e.temExploracoes,
     },
     {
       chave: 'terreno',
-      titulo: 'Registar os seus terrenos',
-      descricao: 'As pastagens, os cercados e os currais onde o gado anda.',
-      detalhe:
-        'Um terreno é cada sítio onde os animais podem estar: uma pastagem, um cercado, um curral. Dê-lhe o nome por que lhe chama ("Courela de Baixo") e, se quiser, marque-o no mapa por satélite. Feito isto, pode dizer em que terreno está cada animal e ver, de uma olhadela, quantos estão em cada sítio.',
-      acao: 'Adicionar um terreno',
+      titulo: t('tutorial.terrenoTitulo'),
+      descricao: t('tutorial.terrenoDescricao'),
+      detalhe: t('tutorial.terrenoDetalhe'),
+      acao: t('tutorial.terrenoAcao'),
       opcional: false,
       feito: e.temTerrenos,
     },
     {
       chave: 'animal',
-      titulo: 'Registar o primeiro animal',
-      descricao: 'Basta a espécie, o sexo e a idade: o resto fica para depois.',
-      detalhe:
-        'Comece por um animal só, para ver como é. Não precisa de ter tudo à mão: a espécie, o sexo e a data de nascimento chegam para o registar, e o brinco, a raça, a fotografia e o terreno acrescentam-se quando quiser. Se já tiver o efetivo escrito num ficheiro Excel, pode importá-lo todo de uma vez em vez de o escrever à mão.',
-      acao: 'Registar um animal',
+      titulo: t('tutorial.animalTitulo'),
+      descricao: t('tutorial.animalDescricao'),
+      detalhe: t('tutorial.animalDetalhe'),
+      acao: t('tutorial.animalAcao'),
       opcional: false,
       feito: e.temAnimais,
     },
@@ -117,11 +116,10 @@ export function passosTutorial(e: EstadoTutorial): Passo[] {
   if (e.suportaAvisos) {
     passos.push({
       chave: 'avisos',
-      titulo: 'Ligar os avisos no telemóvel',
-      descricao: 'Para os prazos legais o avisarem a tempo, mesmo com a app fechada.',
-      detalhe:
-        'A app conta os prazos por si — identificar um vitelo, comunicar ao SNIRA, a próxima vacinação — mas só o consegue chamar se lhe der autorização. Com os avisos ligados, o recado aparece no ecrã do telemóvel no dia certo, mesmo que não abra a app nessa semana.',
-      acao: 'Ligar os avisos',
+      titulo: t('tutorial.avisosTitulo'),
+      descricao: t('tutorial.avisosDescricao'),
+      detalhe: t('tutorial.avisosDetalhe'),
+      acao: t('tutorial.avisosAcao'),
       opcional: false,
       feito: e.avisosLigados,
     });
@@ -131,11 +129,10 @@ export function passosTutorial(e: EstadoTutorial): Passo[] {
   if (e.podeConfigurar) {
     passos.push({
       chave: 'financas',
-      titulo: 'Ligar a gestão do dinheiro',
-      descricao: 'Só se quiser apontar despesas e vendas na app.',
-      detalhe:
-        'Ligando a gestão financeira, passa a poder apontar o que gasta (ração, veterinário, rendas) e o que recebe (vendas, leite, subsídios), e a app mostra-lhe o saldo da exploração e quanto lhe custou cada animal. Se não a ligar, nada de dinheiro aparece na app. Pode ligar e desligar quando quiser — desligar esconde, não apaga.',
-      acao: 'Ver a gestão do dinheiro',
+      titulo: t('tutorial.financasTitulo'),
+      descricao: t('tutorial.financasDescricao'),
+      detalhe: t('tutorial.financasDetalhe'),
+      acao: t('tutorial.financasAcao'),
       opcional: true,
       feito: e.financasLigadas,
     });

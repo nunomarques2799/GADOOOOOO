@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Avatar, Badge, Card, Chip, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
+import { SeletorExploracao } from '@/components/SeletorExploracao';
+import { Avatar, Badge, Card, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
 import { acessoTerminou } from '@/data/acessoTemporario';
 import { formatDataHora } from '@/data/helpers';
 import {
@@ -21,6 +22,7 @@ import { useGado } from '@/data/store';
 import { iniciais } from '@/data/trabalhadores';
 import type { RoleMembro } from '@/data/types';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, layout, spacing } from '@/theme';
 
 const ICONE_PAPEL: Record<RoleMembro, IconName> = {
@@ -155,7 +157,7 @@ export default function HistoricoEquipaScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Histórico da equipa" actionIcon="refresh" onAction={carregar} />
+      <Header title={t('histEquipa.titulo')} actionIcon="refresh" onAction={carregar} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={aCarregar} onRefresh={() => void carregar()} />}
@@ -187,22 +189,11 @@ export default function HistoricoEquipaScreen() {
           ) : null}
 
           {minhas.length > 1 ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-              <Chip
-                label="Todas"
-                icon="barn"
-                selected={exploracaoId === undefined}
-                onPress={() => setExploracaoId(undefined)}
-              />
-              {minhas.map((e) => (
-                <Chip
-                  key={e.id}
-                  label={e.nome}
-                  selected={exploracaoId === e.id}
-                  onPress={() => setExploracaoId(exploracaoId === e.id ? undefined : e.id)}
-                />
-              ))}
-            </View>
+            <SeletorExploracao
+              exploracoes={minhas}
+              valor={exploracaoId}
+              onEscolher={setExploracaoId}
+            />
           ) : null}
 
           {entradas.length > 0 ? (
@@ -233,8 +224,8 @@ export default function HistoricoEquipaScreen() {
           {minhas.length === 0 ? (
             <EmptyState
               icon="account-off-outline"
-              title="Sem equipa para gerir"
-              message="Só o dono de uma exploração vê quem lá passou. Se entrou por convite, fale com quem o convidou."
+              title={t('equipa.semEquipaTitulo')}
+              message={t('histEquipa.semEquipaMensagem')}
             />
           ) : aCarregar && entradas.length === 0 ? (
             <Card>
@@ -245,8 +236,8 @@ export default function HistoricoEquipaScreen() {
           ) : entradas.length === 0 ? (
             <EmptyState
               icon="account-clock-outline"
-              title="Ainda não saiu ninguém"
-              message="Quando o prazo de um veterinário acabar, ou quando remover alguém da equipa, fica aqui registado quem era, com que função e quando."
+              title={t('histEquipa.vazioTitulo')}
+              message={t('histEquipa.vazioMensagem')}
             />
           ) : (
             <Card padded={false}>
@@ -363,7 +354,7 @@ function Linha({
       onPress={onReabrir}
       accessibilityRole="button"
       accessibilityLabel={`${entrada.nome}, ${rotuloFim(entrada, formatDataHora).toLowerCase()}`}
-      accessibilityHint="Toque para abrir a equipa desta exploração e dar-lhe mais tempo"
+      accessibilityHint={t('histEquipa.toqueParaEquipa')}
       style={({ pressed }) => [estilo, pressed && { opacity: 0.6 }]}>
       {conteudo}
     </Pressable>

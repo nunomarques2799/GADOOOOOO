@@ -3,6 +3,7 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { Button, Icon, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
+import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /**
@@ -67,16 +68,15 @@ export function EcraACarregar({ mensagem }: { mensagem?: string }) {
       <ActivityIndicator color={colors.primary} />
 
       <Text variant="body" color={colors.textSecondary} center>
-        {mensagem ?? 'A abrir a Terrabovina…'}
+        {mensagem ?? t('carregar.aAbrir')}
       </Text>
 
       {demora ? (
         <View style={{ alignItems: 'center', gap: spacing.sm, maxWidth: 420 }}>
           <Text variant="secondary" color={colors.textMuted} center>
-            Está a demorar mais do que o costume. Pode ser falta de rede, ou a sessão
-            ter caducado e ser preciso entrar outra vez.
+            {t('carregar.aDemorar')}
           </Text>
-          <Button label="Terminar sessão e entrar de novo" icon="logout" onPress={sair} />
+          <Button label={t('carregar.sairEEntrar')} icon="logout" onPress={sair} />
         </View>
       ) : null}
     </View>

@@ -16,6 +16,7 @@ import { definirSom, somLigado, somSucesso } from '@/data/som';
 import { useGado } from '@/data/store';
 import { definirVibracao, vibracaoLigada, vibrarSucesso } from '@/data/vibrar';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, layout, radii, spacing } from '@/theme';
 
 /**
@@ -30,10 +31,10 @@ export default function NotificacoesScreen() {
 
   function pedirReposicao() {
     confirmar(
-      'Repor as preferências',
-      'Volta às definições recomendadas: todas as categorias ligadas, com antecedências pré-definidas.',
+      t('notif.reporTitulo'),
+      t('notif.reporMensagem'),
       repor,
-      { rotuloConfirmar: 'Repor' },
+      { rotuloConfirmar: t('notif.repor') },
     );
   }
 
@@ -47,7 +48,7 @@ export default function NotificacoesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Notificações e alertas" />
+      <Header title={t('definicoes.notificacoes')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -60,8 +61,7 @@ export default function NotificacoesScreen() {
             <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' }}>
               <Icon name="information-outline" size="md" color={colors.info} />
               <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
-                Escolha que avisos aparecem no início. Prazos já vencidos ou urgentes
-                aparecem sempre, mesmo que a categoria esteja desligada.
+                {t('notif.explicacao')}
               </Text>
             </View>
           </Card>
@@ -86,7 +86,7 @@ export default function NotificacoesScreen() {
           <AvisosDispensados />
 
           <Button
-            label="Repor recomendações"
+            label={t('notif.reporRecomendacoes')}
             icon="restart"
             variant="ghost"
             onPress={pedirReposicao}
@@ -127,8 +127,8 @@ function AvisoNoTelemovel() {
     definirNoTelemovel(ok);
     if (!ok) {
       avisar(
-        'Autorização recusada',
-        'O telemóvel está a bloquear os avisos desta app. Pode autorizá-los nas definições do sistema, em Notificações.',
+        t('notif.autorizacaoRecusada'),
+        t('notif.autorizacaoRecusadaTexto'),
       );
     }
   }
@@ -154,20 +154,20 @@ function AvisoNoTelemovel() {
           />
         </View>
         <Text variant="bodyStrong" style={{ flex: 1 }}>
-          Avisar no telemóvel
+          {t('notif.avisarNoTelemovel')}
         </Text>
         <Switch
           value={ligado}
           onValueChange={(v) => void alternar(v)}
           trackColor={{ true: colors.primary, false: colors.borderStrong }}
           thumbColor={colors.white}
-          accessibilityLabel="Avisar no telemóvel"
+          accessibilityLabel={t('notif.avisarNoTelemovel')}
         />
       </View>
       <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
         {ligado
-          ? 'O telemóvel avisa-o de manhã quando um prazo se aproxima, mesmo com a app fechada e sem internet.'
-          : 'Os avisos só aparecem quando abrir a app.'}
+          ? t('notif.avisarLigado')
+          : t('notif.avisarDesligado')}
       </Text>
     </Card>
   );
@@ -212,20 +212,20 @@ function VibracaoAoGravar() {
           />
         </View>
         <Text variant="bodyStrong" style={{ flex: 1 }}>
-          Vibrar ao gravar
+          {t('notif.vibrar')}
         </Text>
         <Switch
           value={ligada}
           onValueChange={alternar}
           trackColor={{ true: colors.primary, false: colors.borderStrong }}
           thumbColor={colors.white}
-          accessibilityLabel="Vibrar ao gravar"
+          accessibilityLabel={t('notif.vibrar')}
         />
       </View>
       <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
         {ligada
-          ? 'O aparelho dá um toque curto quando um registo fica gravado, e um toque diferente quando alguma coisa falha. Dá para confirmar sem ler o ecrã.'
-          : 'Os registos só se confirmam pelo aviso no ecrã.'}
+          ? t('notif.vibrarLigado')
+          : t('notif.vibrarDesligado')}
       </Text>
     </Card>
   );
@@ -271,20 +271,20 @@ function SomAoGravar() {
           />
         </View>
         <Text variant="bodyStrong" style={{ flex: 1 }}>
-          Som ao gravar
+          {t('notif.som')}
         </Text>
         <Switch
           value={ligado}
           onValueChange={alternar}
           trackColor={{ true: colors.primary, false: colors.borderStrong }}
           thumbColor={colors.white}
-          accessibilityLabel="Som ao gravar"
+          accessibilityLabel={t('notif.som')}
         />
       </View>
       <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
         {ligado
-          ? 'A app dá um sinal sonoro curto quando um registo fica gravado, e outro diferente quando alguma coisa falha. O aparelho no silencioso continua calado.'
-          : 'Os registos só se confirmam pelo aviso no ecrã e pela vibração.'}
+          ? t('notif.somLigado')
+          : t('notif.somDesligado')}
       </Text>
     </Card>
   );
@@ -305,14 +305,14 @@ function AvisosDispensados() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
         <Icon name="bell-off-outline" size="md" color={colors.textSecondary} />
         <Text variant="bodyStrong" style={{ flex: 1 }}>
-          Avisos dispensados
+          {t('notif.dispensados')}
         </Text>
         <Text variant="secondary" color={colors.textMuted}>
           {alertasDispensados.length}
         </Text>
       </View>
       <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
-        Estes avisos não aparecem no início. Voltam sozinhos se a situação se agravar.
+        {t('notif.dispensadosAjuda')}
       </Text>
       <View style={{ marginTop: spacing.sm, gap: spacing.xs }}>
         {alertasDispensados.map((a) => (
@@ -323,7 +323,7 @@ function AvisosDispensados() {
               {a.descricao}
             </Text>
             <Button
-              label="Repor"
+              label={t('notif.repor')}
               variant="ghost"
               fullWidth={false}
               onPress={() => reativarAlerta(a.id)}
@@ -386,10 +386,10 @@ function LinhaCategoria({
       {ativa ? (
         <View style={{ marginTop: spacing.md, gap: spacing.xs }}>
           <Text variant="secondary" color={colors.textSecondary}>
-            Começar a avisar
+            {t('notif.comecarAAvisar')}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <BotaoRedondo icone="minus" onPress={menos} rotulo="Menos dias" />
+            <BotaoRedondo icone="minus" onPress={menos} rotulo={t('notif.menosDias')} />
             <View
               style={{
                 flex: 1,
@@ -403,7 +403,7 @@ function LinhaCategoria({
                 {antecedencia === 1 ? 'dia antes' : 'dias antes'}
               </Text>
             </View>
-            <BotaoRedondo icone="plus" onPress={mais} rotulo="Mais dias" />
+            <BotaoRedondo icone="plus" onPress={mais} rotulo={t('notif.maisDias')} />
           </View>
         </View>
       ) : null}

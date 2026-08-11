@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
+import { t } from '@/i18n';
 import { colors, radii, sizes, spacing } from '@/theme';
 
 /**
@@ -71,39 +72,39 @@ export function EcraNovaPalavra() {
               <Icon name="lock-reset" size={48} color={colors.textOnDark} />
             </View>
             <Text variant="display" color={colors.textOnDark}>
-              Nova palavra-passe
+              {t('novaPalavra.titulo')}
             </Text>
             <Text variant="body" color={colors.textOnDarkMuted} style={{ marginTop: 2 }}>
-              Escolha uma nova palavra-passe
+              {t('novaPalavra.subtitulo')}
             </Text>
           </LinearGradient>
 
           <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
             <Campo
-              label="Nova palavra-passe"
+              label={t('novaPalavra.titulo')}
               icon="lock-outline"
               value={palavra}
               onChangeText={setPalavra}
-              placeholder="Mínimo 6 caracteres"
+              placeholder={t('login.palavraPassePlaceholder')}
             />
             <Campo
-              label="Confirmar palavra-passe"
+              label={t('novaPalavra.confirmar')}
               icon="lock-check-outline"
               value={confirmar}
               onChangeText={setConfirmar}
-              placeholder="Repita a palavra-passe"
+              placeholder={t('novaPalavra.repita')}
             />
 
             {curta ? (
-              <Aviso texto="A palavra-passe deve ter pelo menos 6 caracteres." />
+              <Aviso texto={t('novaPalavra.curta')} />
             ) : naoCoincide ? (
-              <Aviso texto="As palavras-passe não coincidem." />
+              <Aviso texto={t('novaPalavra.naoCoincidem')} />
             ) : erro ? (
               <Aviso texto={erro} />
             ) : null}
 
             <Button
-              label="Guardar nova palavra-passe"
+              label={t('novaPalavra.guardar')}
               icon="check"
               onPress={guardar}
               disabled={!valido}
@@ -115,7 +116,7 @@ export function EcraNovaPalavra() {
               accessibilityRole="button"
               style={{ marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.xs }}>
               <Text variant="body" color={colors.textSecondary}>
-                Cancelar
+                {t('comum.cancelar')}
               </Text>
             </Pressable>
           </View>

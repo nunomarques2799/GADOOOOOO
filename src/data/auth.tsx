@@ -14,7 +14,7 @@ import type { Intencao } from './intencao';
 import { supabase, supabaseConfigurado } from './supabase';
 
 /** Destino do link de recuperação de palavra-passe (página no site). */
-const URL_RECUPERACAO = 'https://gestaogado.netlify.app/recuperar';
+const URL_RECUPERACAO = 'https://terrabovina.pt/recuperar';
 
 /** Traduz as mensagens de erro mais comuns do Supabase para PT-PT. */
 function traduzErro(msg: string): string {
@@ -72,10 +72,40 @@ type AuthContext = {
    * primeiro — ver `data/apagarConta.ts` e o ecrã `conta/apagar`.
    */
   apagarConta: () => Promise<string | null>;
+  /**
+   * Termina a sessão. Sai sempre do lado de cá, mesmo que o servidor recuse —
+   * ver o `fecharSessao` aqui em baixo. Nunca rejeita, e por isso os ecrãs
+   * podem chamá-la com `void sair()`.
+   */
   sair: () => Promise<void>;
 };
 
 const Ctx = createContext<AuthContext | null>(null);
+
+/**
+ * Fecha a sessão e diz se ela ficou mesmo fechada. Nunca rejeita.
+ *
+ * Quem chama isto está a SAIR, e sair não pode ficar dependente de uma promessa
+ * que vai à rede: o `signOut()` sem `scope` pede ao servidor para revogar o
+ * token, e falha sem ligação, com o token já inválido, ou quando o cadeado do
+ * auth-js está preso noutro separador. Essa falha chega por duas portas — um
+ * `error` na resposta ou uma rejeição — e as duas querem a mesma coisa a
+ * seguir, daí serem tratadas aqui como uma só.
+ *
+ * `scope: 'local'` não vai ao servidor: apaga a sessão deste aparelho e avisa
+ * quem está à escuta, que é o que faz o `PortaoAuth` mostrar o ecrã de entrada.
+ */
+async function fecharSessao(scope?: 'local'): Promise<boolean> {
+  if (!supabase) return true;
+  try {
+    const { error } = scope
+      ? await supabase.auth.signOut({ scope })
+      : await supabase.auth.signOut();
+    return !error;
+  } catch {
+    return false;
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessao, setSessao] = useState<Session | null>(null);
@@ -194,8 +224,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // revogar o token — e o servidor já não tem a quem o revogar. Esse erro
     // deixava a app com a sessão de uma conta apagada no ecrã, que é o pior
     // dos dois mundos: os dados desapareceram e a app continua a agir como se
-    // ainda lá estivessem.
-    await supabase.auth.signOut({ scope: 'local' });
+    // ainda lá estivessem. Pelo `fecharSessao` para nem uma rejeição do
+    // armazenamento poder passar à frente do `limparCache()` daqui a duas
+    // linhas: o ecrã que chamou isto espera por esta promessa, e uma rejeição
+    // deixava-o a rodar para sempre sobre uma conta que já não existe.
+    await fecharSessao('local');
     // A cache é a cópia local dos dados que acabaram de ser apagados. Ficar cá
     // era deixar o efetivo de uma exploração que já não existe a servir de
     // primeiro ecrã a quem entrasse a seguir neste aparelho.
@@ -204,7 +237,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const sair = useCallback(async () => {
-    await supabase?.auth.signOut();
+    // Revogar o token no servidor é o que se quer quando há rede: a partir daí
+    // ele não serve a mais ninguém. Mas é também a única parte disto que
+    // depende de fora, e não pode ser ela a decidir se a pessoa sai da conta —
+    // sem rede, a falha levava atrás o `limparCache()` e a app ficava na conta
+    // depois de se tocar em "Terminar sessão", sem uma palavra a explicar.
+    //
+    // Falhando, sai-se à mesma pelo caminho de casa (`scope: 'local'`), que é o
+    // mesmo recuo do `apagarConta` aqui em cima. O token que ficou por revogar
+    // caduca sozinho — e continua a ser revogado sempre que há rede, porque a
+    // tentativa normal vem primeiro.
+    if (!(await fecharSessao())) await fecharSessao('local');
     // A cache local pertence à conta que saiu. Sem a apagar, o criador seguinte
     // a entrar neste dispositivo veria o efetivo do anterior enquanto o servidor
     // não respondesse (o arranque lê da cache antes de ir à rede).

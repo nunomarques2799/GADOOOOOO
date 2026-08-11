@@ -11,6 +11,8 @@
  * poder mostrar uma linha por gente e, dentro dela, onde é que ela entra.
  */
 
+import { t } from '@/i18n';
+
 import { legendaRole, type PermissoesMembro } from './permissoes';
 import type { MembroExploracao, RoleMembro } from './types';
 
@@ -139,16 +141,22 @@ export function contarPorPapel(lista: Trabalhador[]): Record<RoleMembro, number>
  * Como se descreve onde a pessoa entra: "Trabalhador em Monte do Avô" ou, com
  * o mesmo papel em várias, "Trabalhador em 2 explorações".
  */
-export function resumoVinculos(t: Trabalhador): string {
-  if (t.vinculos.length === 1) {
-    const v = t.vinculos[0];
-    return `${legendaRole(v.role)} em ${v.nomeExploracao}`;
-  }
-  const papeis = new Set(t.vinculos.map((v) => v.role));
+export function resumoVinculos(pessoa: Trabalhador): string {
+  // O parâmetro chama-se `pessoa` e não `t`: `t` é agora a função de tradução
+  // importada em cima, e o nome antigo tapava-a dentro desta função.
+  const onde = (v: Trabalhador['vinculos'][number]) =>
+    t('papel.emExploracao', { papel: legendaRole(v.role), nome: v.nomeExploracao });
+
+  if (pessoa.vinculos.length === 1) return onde(pessoa.vinculos[0]);
+
+  const papeis = new Set(pessoa.vinculos.map((v) => v.role));
   if (papeis.size === 1) {
-    return `${legendaRole(t.papelPrincipal)} em ${t.vinculos.length} explorações`;
+    return t('papel.emNExploracoes', {
+      papel: legendaRole(pessoa.papelPrincipal),
+      n: pessoa.vinculos.length,
+    });
   }
-  return t.vinculos.map((v) => `${legendaRole(v.role)} em ${v.nomeExploracao}`).join(' · ');
+  return pessoa.vinculos.map(onde).join(' · ');
 }
 
 /** Iniciais para o avatar: "Joaquim Marques" → "JM". */

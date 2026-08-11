@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, type IconName, Text } from '@/components/ui';
 import { useToasts, type Toast, type TipoToast } from '@/data/toasts';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, motion, radii, shadow, sizes, spacing } from '@/theme';
 
 /**
@@ -94,7 +95,7 @@ function Cartao({
         accessibilityRole="button"
         // Lido em voz alta como o que é: a mensagem, e que se toca para fechar.
         accessibilityLabel={`${toast.mensagem}${toast.detalhe ? `. ${toast.detalhe}` : ''}`}
-        accessibilityHint="Toque para fechar este aviso"
+        accessibilityHint={t('avisos.toqueParaFechar')}
         // Região viva: o Android lê o cartão só por ele ter aparecido, sem
         // esperar que o dedo lhe caia em cima. O erro interrompe o que estiver a
         // ser lido ("assertive"), o resto espera a vez — a mesma diferença de

@@ -10,6 +10,7 @@ import { formatDataHora } from '@/data/helpers';
 import { mensagemLegivel } from '@/data/supabaseRepo';
 import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
+import { t } from '@/i18n';
 import { colors, layout, radii, spacing } from '@/theme';
 
 /**
@@ -39,10 +40,10 @@ export default function SincronizacaoScreen() {
 
   function confirmarLimparFalhadas() {
     confirmar(
-      'Esquecer alterações recusadas',
-      'A lista deixa de aparecer. As alterações em si já não estão guardadas: se ainda forem precisas, tem de as fazer outra vez.',
+      t('sinc.esquecerTitulo'),
+      t('sinc.esquecerMensagem'),
       limparFalhadas,
-      { rotuloConfirmar: 'Esquecer' },
+      { rotuloConfirmar: t('sinc.esquecer') },
     );
   }
 
@@ -71,8 +72,8 @@ export default function SincronizacaoScreen() {
     );
     await guardarFicheiro(`copia-gado-${hojeISO()}.json`, json, 'application/json');
     avisar(
-      'Cópia guardada',
-      'Guardámos uma cópia dos seus dados neste dispositivo. Mantenha o ficheiro num local seguro.',
+      t('sinc.copiaGuardada'),
+      t('sinc.copiaGuardadaTexto'),
     );
   }
 
@@ -84,7 +85,11 @@ export default function SincronizacaoScreen() {
     gap: spacing.md,
   } as const;
 
-  const estadoRotulo = !online ? 'Offline' : pendentesSinc > 0 ? 'A sincronizar' : 'Sincronizado';
+  const estadoRotulo = !online
+    ? t('sinc.offline')
+    : pendentesSinc > 0
+      ? t('sinc.aSincronizar')
+      : t('sinc.sincronizado');
   const estadoTom = !online ? 'warning' : pendentesSinc > 0 ? 'info' : 'success';
   const estadoIcone = !online
     ? 'cloud-off-outline'
@@ -94,7 +99,7 @@ export default function SincronizacaoScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Header title="Sincronização e cópia" />
+      <Header title={t('definicoes.sincronizacao')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -135,16 +140,16 @@ export default function SincronizacaoScreen() {
                 <Text variant="bodyStrong">{estadoRotulo}</Text>
                 <Text variant="secondary" color={colors.textSecondary}>
                   {!online
-                    ? 'Sem ligação. As alterações ficam guardadas no dispositivo e enviam-se automaticamente quando a rede voltar.'
+                    ? t('sinc.semLigacao')
                     : pendentesSinc > 0
                       ? `${pendentesSinc} alteração${pendentesSinc > 1 ? 'ões' : ''} por enviar.`
-                      : 'Tudo enviado. Os dados no servidor estão em dia.'}
+                      : t('sinc.tudoEnviado')}
                 </Text>
               </View>
             </View>
 
             <Button
-              label={aSincronizar ? 'A sincronizar…' : 'Sincronizar agora'}
+              label={aSincronizar ? t('sinc.aSincronizarPontos') : t('sinc.sincronizarAgora')}
               icon="refresh"
               variant="secondary"
               onPress={() => void sincronizarAgora()}
@@ -198,7 +203,7 @@ export default function SincronizacaoScreen() {
                 variant="label"
                 color={colors.textSecondary}
                 style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-                {nConflitos > 0 ? 'ALTERAÇÕES PERDIDAS' : 'NÃO FOI POSSÍVEL GRAVAR'}
+                {nConflitos > 0 ? t('sinc.perdidas') : t('sinc.semGravar')}
               </Text>
               <Card>
                 <View style={{ gap: spacing.sm }}>
@@ -211,8 +216,8 @@ export default function SincronizacaoScreen() {
                       </Text>
                       <Text variant="secondary" color={colors.textSecondary}>
                         {nConflitos > 0
-                          ? 'Foram feitas sem ligação e não chegaram ao servidor. Confira o que está em falta e volte a registar o que ainda fizer sentido.'
-                          : 'Foram feitas sem ligação e o servidor não as aceitou, normalmente por não ter permissão para essa exploração.'}
+                          ? t('sinc.perdidasTexto')
+                          : t('sinc.recusadasTexto')}
                       </Text>
                     </View>
                   </View>
@@ -258,7 +263,7 @@ export default function SincronizacaoScreen() {
                   </View>
 
                   <Button
-                    label="Esquecer esta lista"
+                    label={t('sinc.esquecerLista')}
                     icon="check"
                     variant="secondary"
                     onPress={confirmarLimparFalhadas}
@@ -301,7 +306,7 @@ export default function SincronizacaoScreen() {
                 </View>
 
                 <Button
-                  label="Descarregar cópia (JSON)"
+                  label={t('sinc.descarregarCopia')}
                   icon="file-download-outline"
                   variant="secondary"
                   onPress={() => void descarregarCopia()}

@@ -4,6 +4,7 @@ import { Card, Icon, Text } from '@/components/ui';
 import { acessoQuaseAFim, faltaParaExpirar, rotuloPrazo } from '@/data/acessoTemporario';
 import { formatDataHora } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
+import { t } from '@/i18n';
 import { colors, spacing } from '@/theme';
 
 /**
@@ -42,8 +43,8 @@ export function BannerAcessoExpirado() {
       <Aviso
         icone="clock-alert-outline"
         cor={colors.warning}
-        titulo="O seu acesso terminou"
-        texto="O tempo de acesso à exploração acabou, por isso já não vê os animais nem os registos dela. A sua conta continua criada: peça um código novo a quem o convidou para voltar a entrar."
+        titulo={t('banner.acessoTerminouTitulo')}
+        texto={t('banner.acessoTerminouTexto')}
         rodape={rotuloPrazo(ultimoExpirado.expiraEm, formatDataHora)}
       />
     );
@@ -55,7 +56,7 @@ export function BannerAcessoExpirado() {
         icone="clock-outline"
         cor={colors.info}
         titulo={`O seu acesso acaba em breve (${faltaParaExpirar(aAcabar.expiraEm)})`}
-        texto="Depois disso deixa de ver esta exploração. Termine o que tiver em mãos, ou peça mais tempo a quem o convidou."
+        texto={t('banner.acessoAcabaTexto')}
         rodape={rotuloPrazo(aAcabar.expiraEm, formatDataHora)}
       />
     );

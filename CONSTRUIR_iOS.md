@@ -189,7 +189,7 @@ limitação do iOS — é igual no Android.
 Além do build e do `eas submit`, a Apple pede:
 
 - **Política de privacidade** com URL público — já existe:
-  `https://gestaogado.netlify.app/privacidade`;
+  `https://terrabovina.pt/privacidade`;
 - **capturas de ecrã** nos tamanhos que o App Store Connect exigir;
 - o questionário de **privacidade** (que dados a app recolhe) — há conta, email,
   dados da exploração e fotografias, guardados no Supabase;

@@ -14,6 +14,8 @@
  * Ao mexer numa política do SQL, mexer também aqui (e no teste).
  */
 
+import { t } from '@/i18n';
+
 import type { EstadoPerfil, RoleMembro } from './types';
 
 export type Capacidade =
@@ -410,7 +412,7 @@ export function podeCriarExploracao(
 
 /** Nome do papel para mostrar ao utilizador. */
 export function legendaRole(role: RoleMembro): string {
-  if (role === 'admin') return 'Dono';
-  if (role === 'trabalhador') return 'Trabalhador';
-  return 'Veterinário';
+  if (role === 'admin') return t('papel.dono');
+  if (role === 'trabalhador') return t('papel.trabalhador');
+  return t('papel.veterinario');
 }

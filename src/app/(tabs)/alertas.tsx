@@ -4,7 +4,8 @@ import { Pressable, View } from 'react-native';
 import { AlertItem } from '@/components/AlertItem';
 import { CalendarioAlertas } from '@/components/CalendarioAlertas';
 import { CartaoIntroducao } from '@/components/CartaoIntroducao';
-import { Card, Chip, EmptyState, Icon, type IconName, Screen, Text } from '@/components/ui';
+import { SeletorExploracao } from '@/components/SeletorExploracao';
+import { Card, EmptyState, Icon, type IconName, Screen, Text } from '@/components/ui';
 import { useGado } from '@/data/store';
 import type { Alerta, AlertaGravidade } from '@/data/types';
 import { t } from '@/i18n';
@@ -13,14 +14,33 @@ import { colors, radii, spacing } from '@/theme';
 
 type Vista = 'lista' | 'calendario';
 
+/**
+ * Quantos avisos de cada grupo se desenham à primeira.
+ *
+ * Este ecrã vivia dentro de um ScrollView normal e desenhava TODOS os avisos de
+ * uma vez: num efetivo grande são milhares de linhas montadas antes de o
+ * separador aparecer, e o toque no "Alertas" ficava um par de segundos sem
+ * resposta nenhuma. Com um teto por grupo o ecrã abre sempre no mesmo tempo,
+ * seja qual for o tamanho do efetivo, e quem precisa de ver o resto carrega em
+ * "Ver mais" — que é o gesto de quem já decidiu percorrer a lista toda.
+ */
+const MOSTRA_INICIAL = 15;
+
+/** Quantos mais se acrescentam de cada vez. */
+const MOSTRA_PASSO = 25;
+
 export default function AlertasScreen() {
   const { alertas, exploracoes, dispensarAlerta } = useGado();
   const { controlo: controloAtualizar } = useAtualizarPuxando();
   const [vista, setVista] = useState<Vista>('lista');
   const [exploracaoId, setExploracaoId] = useState<string | undefined>(undefined);
+  /** Grupos que o criador fechou (tocando no cabeçalho). */
+  const [fechados, setFechados] = useState<Partial<Record<AlertaGravidade, boolean>>>({});
+  /** Quantos de cada grupo estão à vista. */
+  const [limites, setLimites] = useState<Partial<Record<AlertaGravidade, number>>>({});
 
   // Os grupos vivem aqui dentro (e não no topo do módulo) para lerem as cores
-  // no render — ver `theme/paletas.ts`.
+  // e os textos no render — ver `theme/paletas.ts` e `i18n/`.
   const grupos: { chave: AlertaGravidade; titulo: string; cor: string }[] = [
     { chave: 'urgente', titulo: t('alertas.urgente'), cor: colors.danger },
     { chave: 'aviso', titulo: t('alertas.estaSemana'), cor: colors.warning },
@@ -28,7 +48,7 @@ export default function AlertasScreen() {
   ];
 
   // Só vale a pena escolher exploração quando há mais do que uma. Com uma só,
-  // o filtro seria uma linha de chips que não muda nada.
+  // o filtro seria um botão que não muda nada.
   const podeFiltrar = exploracoes.length > 1;
 
   const visiveis = useMemo(
@@ -36,7 +56,20 @@ export default function AlertasScreen() {
     [alertas, exploracaoId],
   );
 
+  // Separados de uma vez só, em vez de um `.filter()` por grupo dentro do
+  // render: com milhares de avisos eram três voltas à lista a cada toque num
+  // cabeçalho.
+  const porGravidade = useMemo(() => {
+    const m: Record<AlertaGravidade, Alerta[]> = { urgente: [], aviso: [], info: [] };
+    for (const a of visiveis) m[a.gravidade].push(a);
+    return m;
+  }, [visiveis]);
+
   const nomeExploracao = exploracoes.find((e) => e.id === exploracaoId)?.nome;
+
+  function alternarGrupo(chave: AlertaGravidade) {
+    setFechados((f) => ({ ...f, [chave]: !f[chave] }));
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -47,7 +80,7 @@ export default function AlertasScreen() {
         <View style={{ marginTop: spacing.md, marginBottom: spacing.md }}>
           <Text variant="display">{t('nav.alertas')}</Text>
           <Text variant="body" color={colors.textSecondary}>
-            Prazos legais e tarefas por fazer
+            {t('alertas.subtitulo')}
           </Text>
         </View>
 
@@ -58,12 +91,12 @@ export default function AlertasScreen() {
           <CartaoIntroducao
             chave="alertas"
             icon="bell-ring-outline"
-            titulo="Para que serve este separador"
+            titulo={t('alertas.introTitulo')}
             pontos={[
-              'A app conta sozinha os prazos legais a partir das datas que registou: identificar um vitelo, comunicar ao SNIRA, o fim de um intervalo de segurança.',
-              'Em cima ficam os urgentes, e a seguir o que é desta semana. Quando trata do assunto no animal, o alerta desaparece daqui.',
-              'No Calendário vê os mesmos prazos por dias, para saber o que o espera na semana que vem.',
-              'Só os avisos sem contagem decrescente se podem dispensar. O que tem prazo a correr fica — é o que não pode ser esquecido.',
+              t('alertas.intro1'),
+              t('alertas.intro2'),
+              t('alertas.intro3'),
+              t('alertas.intro4'),
             ]}
           />
         </View>
@@ -94,28 +127,12 @@ export default function AlertasScreen() {
 
         {/* Por exploração */}
         {podeFiltrar ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: spacing.xs,
-              marginBottom: spacing.md,
-            }}>
-            <Chip
-              label={t('comum.todas')}
-              icon="barn"
-              selected={exploracaoId === undefined}
-              onPress={() => setExploracaoId(undefined)}
-            />
-            {exploracoes.map((e) => (
-              <Chip
-                key={e.id}
-                label={e.nome}
-                selected={exploracaoId === e.id}
-                onPress={() => setExploracaoId(exploracaoId === e.id ? undefined : e.id)}
-              />
-            ))}
-          </View>
+          <SeletorExploracao
+            exploracoes={exploracoes}
+            valor={exploracaoId}
+            onEscolher={setExploracaoId}
+            style={{ marginBottom: spacing.md }}
+          />
         ) : null}
 
         {visiveis.length === 0 ? (
@@ -124,7 +141,7 @@ export default function AlertasScreen() {
             title={t('alertas.tudoEmDiaTitulo')}
             message={
               nomeExploracao
-                ? `Não há prazos nem tarefas pendentes em ${nomeExploracao}.`
+                ? t('alertas.tudoEmDiaNaExploracao', { nome: nomeExploracao })
                 : t('alertas.tudoEmDiaMensagem')
             }
           />
@@ -132,29 +149,103 @@ export default function AlertasScreen() {
           <CalendarioAlertas alertas={visiveis} onDispensar={dispensarAlerta} />
         ) : (
           grupos.map((g) => {
-            const doGrupo = visiveis.filter((a: Alerta) => a.gravidade === g.chave);
+            const doGrupo = porGravidade[g.chave];
             if (doGrupo.length === 0) return null;
+
+            const fechado = !!fechados[g.chave];
+            const limite = limites[g.chave] ?? MOSTRA_INICIAL;
+            const aMostrar = fechado ? [] : doGrupo.slice(0, limite);
+            const faltam = doGrupo.length - aMostrar.length;
+
             return (
               <View key={g.chave} style={{ marginBottom: spacing.lg }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm, marginTop: spacing.sm }}>
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: g.cor }} />
+                <Pressable
+                  onPress={() => alternarGrupo(g.chave)}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: !fechado }}
+                  // O `aria-expanded` a acompanhar o `accessibilityState`: no
+                  // react-native-web desta versão o estado não chega ao DOM
+                  // sozinho, e um leitor de ecrã anunciava os três cabeçalhos
+                  // exatamente da mesma maneira, aberto ou fechado. É a mesma
+                  // razão do `aria-checked` no `EcraLogin`.
+                  aria-expanded={!fechado}
+                  accessibilityLabel={`${g.titulo}, ${doGrupo.length}`}
+                  accessibilityHint={
+                    fechado ? t('alertas.abrirGrupoAjuda') : t('alertas.fecharGrupoAjuda')
+                  }
+                  style={({ pressed }) => [
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: spacing.xs,
+                      // Alvo inteiro e generoso: fecha-se com o polegar, e é o
+                      // gesto que se repete para chegar ao grupo de baixo.
+                      minHeight: 48,
+                      marginBottom: fechado ? 0 : spacing.sm,
+                      marginTop: spacing.sm,
+                    },
+                    pressed && { opacity: 0.6 },
+                  ]}>
+                  <View
+                    style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: g.cor }}
+                  />
                   <Text variant="h3">{g.titulo}</Text>
-                  <Text variant="secondary" color={colors.textMuted}>
+                  <Text variant="secondary" color={colors.textMuted} style={{ flex: 1 }}>
                     ({doGrupo.length})
                   </Text>
-                </View>
-                <Card padded={false}>
-                  <View style={{ paddingHorizontal: spacing.md }}>
-                    {doGrupo.map((a, i) => (
-                      <AlertItem
-                        key={a.id}
-                        alerta={a}
-                        divider={i < doGrupo.length - 1}
-                        onDispensar={dispensarAlerta}
-                      />
-                    ))}
-                  </View>
-                </Card>
+                  <Icon
+                    name={fechado ? 'chevron-down' : 'chevron-up'}
+                    size="lg"
+                    color={colors.textSecondary}
+                  />
+                </Pressable>
+
+                {fechado ? null : (
+                  <Card padded={false}>
+                    <View style={{ paddingHorizontal: spacing.md }}>
+                      {aMostrar.map((a, i) => (
+                        <AlertItem
+                          key={a.id}
+                          alerta={a}
+                          divider={i < aMostrar.length - 1}
+                          onDispensar={dispensarAlerta}
+                        />
+                      ))}
+                    </View>
+                  </Card>
+                )}
+
+                {!fechado && faltam > 0 ? (
+                  <Pressable
+                    onPress={() =>
+                      setLimites((l) => ({
+                        ...l,
+                        [g.chave]: (l[g.chave] ?? MOSTRA_INICIAL) + MOSTRA_PASSO,
+                      }))
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={t('alertas.verMais', { n: faltam })}
+                    style={({ pressed }) => [
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        minHeight: 48,
+                        marginTop: spacing.xs,
+                        borderRadius: radii.pill,
+                        backgroundColor: colors.surfaceAlt,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                      },
+                      pressed && { opacity: 0.7 },
+                    ]}>
+                    <Icon name="chevron-down" size="md" color={colors.primaryDark} />
+                    <Text variant="label" color={colors.primaryDark}>
+                      {t('alertas.verMais', { n: faltam })}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             );
           })
