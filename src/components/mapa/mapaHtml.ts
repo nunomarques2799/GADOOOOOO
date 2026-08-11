@@ -71,16 +71,25 @@ export function mapaHtml({ latitude, longitude, selecionavel = false }: MapaHtml
       }
     }
 
-    var mapa = L.map('mapa', { zoomControl: true, attributionControl: false })
+    // A atribuição fica LIGADA de propósito: as imagens são da Esri e os termos
+    // dela obrigam a creditar quem as serve. Sem isto a app mostra conteúdo de
+    // terceiros sem dizer de quem é, que é o que a Apple pergunta no campo
+    // "Content Rights" e motivo de chumbo pela diretriz 5.2.
+    var mapa = L.map('mapa', { zoomControl: true, attributionControl: true })
       .setView([CFG.lat, CFG.lng], CFG.zoom);
 
     // Satélite (Esri World Imagery) + rótulos de estradas/lugares por cima.
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19
+      maxZoom: 19,
+      attribution: 'Imagens &copy; Esri'
     }).addTo(mapa);
     L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19
     }).addTo(mapa);
+
+    // O aviso do Leaflet ("Leaflet | ...") não é exigido e ocupa espaço num
+    // mapa pequeno; o crédito da Esri, esse, fica.
+    mapa.attributionControl.setPrefix('');
 
     var marcador = null;
     function colocar(lat, lng) {
