@@ -194,7 +194,20 @@ select * from (
     -- `t` a uma base onde o criador não tem por onde ligar o interruptor.
     (34, 'schema_existencias_opcional.sql', 'perfil.existencias_ativas + definir_existencias_ativas()',
         (exists (select 1 from col where tabela = 'perfil' and coluna = 'existencias_ativas')
-         and exists (select 1 from func where nome = 'definir_existencias_ativas')))
+         and exists (select 1 from func where nome = 'definir_existencias_ativas'))),
+    -- TRÊS marcas, e a terceira é a que interessa. As duas primeiras (tabela e
+    -- RPC) dão `t` a uma base onde o chat abre, escreve e lê — e onde as
+    -- mensagens dos outros só aparecem a quem fechar e voltar a abrir o ecrã,
+    -- porque o passo do tempo real corre dentro de um bloco que engole o erro
+    -- (secção 11 do ficheiro). Sem esta linha, isso é uma avaria que ninguém
+    -- descobre a partir daqui.
+    (35, 'schema_chat.sql',            'tabela mensagem + abrir_conversa() + mensagem no tempo real',
+        (to_regclass('public.mensagem') is not null
+         and exists (select 1 from func where nome = 'abrir_conversa')
+         and exists (
+           select 1 from pg_publication_tables
+            where pubname = 'supabase_realtime'
+              and schemaname = 'public' and tablename = 'mensagem')))
 ) as t(ordem, ficheiro, marca, aplicado)
 order by ordem;
 -- Ler a coluna `aplicado`: true = já correu, false = FALTA aplicar.

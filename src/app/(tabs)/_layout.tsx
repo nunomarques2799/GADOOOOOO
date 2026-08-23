@@ -8,6 +8,7 @@ import { BarraLateral, type ItemNav } from '@/components/BarraLateral';
 import { Icon, type IconName, Text } from '@/components/ui';
 import { useMembros } from '@/data/membros';
 import type { CapacidadeLeitura } from '@/data/permissoes';
+import { useNaoLidas } from '@/data/useChat';
 import { useExistencias } from '@/data/useExistencias';
 import { t, type ChaveTexto } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -39,6 +40,16 @@ type Destino = {
    */
   chave: ChaveTexto;
   icon: IconName;
+  /**
+   * Um rótulo mais CURTO, só para a barra de baixo do telemóvel.
+   *
+   * A barra tem sete colunas de ~51px num ecrã de 375px, e "Conversas"
+   * mede 63px: escrito por extenso, encostava-se aos vizinhos. Na barra
+   * lateral do computador e em todo o resto da app continua a chamar-se
+   * pelo nome inteiro, que é onde há espaço para ele.
+   */
+  curto?: ChaveTexto;
+
   /** Só aparece a quem gere a equipa de alguma exploração. */
   soComEquipa?: boolean;
   /**
@@ -74,6 +85,7 @@ const DESTINOS: Destino[] = [
   { nome: 'terrenos', rota: '/terrenos', chave: 'nav.terrenos', icon: 'grass' },
   { nome: 'animais', rota: '/animais', chave: 'nav.animais', icon: 'cow' },
   { nome: 'alertas', rota: '/alertas', chave: 'nav.alertas', icon: 'bell-outline' },
+  { nome: 'chat', rota: '/chat', chave: 'nav.chat', curto: 'nav.chatCurto', icon: 'chat-outline' },
   { nome: 'reproducao', rota: '/reproducao', chave: 'nav.reproducao', icon: 'heart-pulse' },
   {
     nome: 'medicamentos',
@@ -110,10 +122,17 @@ const DESTINOS: Destino[] = [
 /**
  * A barra de baixo do TELEMÓVEL, pela ordem em que aparece.
  *
- * São cinco lugares para os doze destinos do `DESTINOS`: a barra reparte a
- * largura por todos, e com doze cada um ficaria espremido num ecrã de 375px —
- * bem menos ainda com a letra do sistema no máximo, que é o cenário que esta
- * app tem de aguentar.
+ * São SETE lugares para os treze destinos do `DESTINOS` (seis daqui mais o
+ * "Mais"): a barra reparte a largura por todos, e com treze cada um ficaria
+ * espremido num ecrã de 375px — bem menos ainda com a letra do sistema no
+ * máximo, que é o cenário que esta app tem de aguentar.
+ *
+ * Eram CINCO até as Conversas existirem (2026-08-23). Com o chat a entrar, os
+ * Terrenos entraram com ele: com um só a mais, o "+" deixava de estar ao meio
+ * (dois de um lado, três do outro), e o botão mais usado da app é o do meio
+ * precisamente por se acertar nele sem olhar. Com seis mais o "Mais" volta a
+ * haver três de cada lado. Sete lugares é o limite: a partir daqui, um destino
+ * novo obriga a tirar outro.
  *
  * O `'+'` do meio não é um destino: é o botão de REGISTAR, e abre a folha das
  * ações rápidas (`FolhaAcoesRapidas`). Está aqui porque esta app usa-se para
@@ -124,13 +143,14 @@ const DESTINOS: Destino[] = [
  *
  * As Explorações saíram daqui para o "Mais": abrem-se para consultar ou para
  * mexer numa configuração, não a cada bocado. O que se faz todos os dias é ver
- * o Início, procurar um animal, registar, e ver o que está a arder.
+ * o Início, procurar um animal, registar, ver o que está a arder, e agora ler
+ * o que a equipa escreveu.
  *
  * No computador não há este problema: a barra lateral é vertical e leva-os
  * todos — e lá não há botão "+" nenhum, porque as ações rápidas estão à vista
  * no Início sem ter de rolar.
  */
-const BARRA_TELEMOVEL = ['index', 'animais', '+', 'alertas'] as const;
+const BARRA_TELEMOVEL = ['index', 'animais', 'terrenos', '+', 'alertas', 'chat'] as const;
 
 /** Os destinos que a barra mostra (o `'+'` não é destino). */
 const NO_TELEMOVEL: string[] = BARRA_TELEMOVEL.filter((n) => n !== '+');
@@ -169,6 +189,7 @@ function TabBar({ state, navigation }: TabBarProps) {
   const destinos = useDestinos();
   const [maisAberto, setMaisAberto] = useState(false);
   const [registarAberto, setRegistarAberto] = useState(false);
+  const naoLidas = useNaoLidas();
 
   const escondidos = destinos.filter((d) => !NO_TELEMOVEL.includes(d.nome));
   const rotaAtual = state.routes[state.index]?.name;
@@ -189,7 +210,7 @@ function TabBar({ state, navigation }: TabBarProps) {
             backgroundColor: colors.surface,
             paddingTop: spacing.sm,
             paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.sm,
-            paddingHorizontal: spacing.xs,
+            paddingHorizontal: 0,
             borderTopWidth: 1,
             borderTopColor: colors.border,
             borderTopLeftRadius: radii.xl,
@@ -217,10 +238,11 @@ function TabBar({ state, navigation }: TabBarProps) {
           return (
             <Botao
               key={route.key}
-              label={t(cfg.chave)}
+              label={t(cfg.curto ?? cfg.chave)}
               icon={cfg.icon}
               focused={focused}
               onPress={onPress}
+              porLer={nome === 'chat' ? naoLidas : 0}
             />
           );
         })}
@@ -352,7 +374,7 @@ function BotaoRegistar({ onPress }: { onPress: () => void }) {
         ]}>
         <Icon name="plus" size={30} color={colors.onPrimary} />
       </View>
-      <Text variant="caption" color={colors.primaryDark}>
+      <Text variant="caption" color={colors.primaryDark} numberOfLines={1}>
         {t('nav.registar')}
       </Text>
     </Pressable>
@@ -364,18 +386,23 @@ function Botao({
   icon,
   focused,
   onPress,
+  porLer = 0,
 }: {
   label: string;
   icon: IconName;
   focused: boolean;
   onPress: () => void;
+  /** Quantas mensagens por ler. Zero não desenha nada. */
+  porLer?: number;
 }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: focused }}
-      accessibilityLabel={label}
+      accessibilityLabel={
+        porLer > 0 ? `${label}, ${t('chat.naoLidasN', { n: porLer })}` : label
+      }
       style={{ flex: 1, alignItems: 'center', gap: 4, paddingVertical: 2 }}>
       <View
         style={{
@@ -387,8 +414,33 @@ function Botao({
           backgroundColor: focused ? colors.primaryTint : 'transparent',
         }}>
         <Icon name={icon} size={26} color={focused ? colors.primary : colors.textMuted} />
+        {/* O ponto das mensagens por ler. Sem número lá dentro de propósito:
+            num ícone de 26px, um "12" fica ilegível, e o que interessa saber
+            é que há alguma coisa para ler. A conta certa está na lista. */}
+        {porLer > 0 ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: 2,
+              right: 12,
+              minWidth: 12,
+              height: 12,
+              borderRadius: radii.pill,
+              backgroundColor: colors.danger,
+              borderWidth: 2,
+              borderColor: colors.surface,
+            }}
+          />
+        ) : null}
       </View>
-      <Text variant="caption" color={focused ? colors.primaryDark : colors.textMuted}>
+      {/* O `numberOfLines` não é enfeite: com a letra do sistema no máximo (o
+          cenário dos 258px do AGENTS.md), "Terrenos" mede mais do que a sua
+          coluna e, sem isto, escrevia-se por cima do vizinho. Cortado com
+          reticências fica feio e legível, que é a ordem certa. */}
+      <Text
+        variant="caption"
+        color={focused ? colors.primaryDark : colors.textMuted}
+        numberOfLines={1}>
         {label}
       </Text>
     </Pressable>

@@ -44,6 +44,14 @@ jest.mock('@/data/useExistencias', () => ({
   }),
 }));
 
+/**
+ * O contador de mensagens por ler, pela mesma razão da folha do "+": o
+ * `useChat` a sério puxa `auth` → `supabase` → AsyncStorage, que num teste de
+ * nós de texto não existe, e a suite rebentava antes do primeiro `expect`.
+ * Aqui só interessa que o destino Conversas apareça a quem deve.
+ */
+jest.mock('@/data/useChat', () => ({ useNaoLidas: () => 0 }));
+
 jest.mock('@/data/membros', () => {
   const api = {
     podeEmAlguma: () => mockComEquipa.valor,
@@ -119,6 +127,22 @@ describe('navegação por papel', () => {
     expect(lista).toContain('Animais');
     expect(lista).toContain('Alertas');
     expect(lista).toContain('Explorações');
+  });
+
+  /**
+   * As Conversas são de toda a gente, e é isso que este teste guarda.
+   *
+   * O veterinário não entra no grupo da exploração (é a RLS que o impede, ver
+   * `supabase/schema_chat.sql`), mas TEM mensagens privadas: escondê-lo da
+   * barra por não ter grupo deixava-o sem forma de perguntar uma dose a quem
+   * o chamou. É a diferença entre "não tem nada nesta aba" e "não tem esta
+   * aba", e aqui é a primeira.
+   */
+  it('toda a gente vê as Conversas, incluindo quem não gere equipa', () => {
+    mockComEquipa.valor = false;
+    mockLeitura.verFinancas = false;
+    mockLeitura.verDocumentos = false;
+    expect(rotulos(montar())).toContain('Conversas');
   });
 
   it('as duas abas são independentes uma da outra', () => {

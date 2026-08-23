@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AberturaPorAviso } from '@/components/AberturaPorAviso';
 import { AnfitriaoAvisos } from '@/components/AnfitriaoAvisos';
+import { AnfitriaoMensagens } from '@/components/AnfitriaoMensagens';
 import { AnfitriaoToasts } from '@/components/AnfitriaoToasts';
 import { EcraACarregar } from '@/components/EcraACarregar';
 import { EcraLogin } from '@/components/EcraLogin';
@@ -240,6 +241,10 @@ export default function RootLayout() {
                     fim do acesso. Aqui dentro porque precisa dos três
                     contextos ao mesmo tempo — ver o cabeçalho dele. */}
                 <AgendadorAvisos />
+                {/* Abre a subscrição de tempo real das conversas (é ela que
+                    acende o número na barra de baixo) e mostra o aviso curto
+                    da mensagem que chega com a app aberta. */}
+                <AnfitriaoMensagens />
                 <Stack
                   screenOptions={{
                     headerShown: false,
@@ -268,6 +273,9 @@ export default function RootLayout() {
                   <Stack.Screen name="terreno/animais/[id]" options={{ animation: 'slide_from_bottom' }} />
                   <Stack.Screen name="exploracao/equipa/[id]" />
                   <Stack.Screen name="equipa/historico" />
+                  <Stack.Screen name="chat/[id]" />
+                  <Stack.Screen name="chat/info/[id]" />
+                  <Stack.Screen name="chat/ajustes" />
                   <Stack.Screen name="atividade" />
                   <Stack.Screen name="cliente/[id]" />
                   <Stack.Screen name="conta/editar" />
