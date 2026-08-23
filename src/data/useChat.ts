@@ -37,11 +37,14 @@ import {
   type Conversa,
   type MembroConversa,
   type Mensagem,
+  type OpcaoSondagem,
   type PessoaChat,
+  type TipoMensagem,
 } from './chat';
 import { armazenamentoDisponivel, guardar, ler } from './armazenamento';
 import { useAuth } from './auth';
 import { CHAVES, pareceErroDeRede } from './cacheLocal';
+import { esquecerPush, registarPush } from './push';
 import { supabase, supabaseConfigurado } from './supabase';
 
 import type { RoleMembro } from './types';
@@ -70,6 +73,8 @@ type LinhaConversa = {
   c_outro: string | null;
   c_ultima_em: string;
   c_ultimo_texto: string | null;
+  /** O TIPO da última mensagem (`foto`, `audio`…). Ver `minhas_conversas()`. */
+  c_ultimo_genero: TipoMensagem | null;
   c_ultimo_autor: string | null;
   c_ultimo_apagado: boolean | null;
   c_nao_lidas: number | null;
@@ -80,11 +85,22 @@ type LinhaConversa = {
 type LinhaMensagem = {
   id: string;
   conversa_id: string;
+  tipo: TipoMensagem | null;
   autor: string | null;
   texto: string;
   criado_em: string;
   apagada_em: string | null;
+  anexo: string | null;
+  anexo_tamanho: number | null;
+  anexo_segundos: number | null;
+  latitude: number | null;
+  longitude: number | null;
 };
+
+/** As colunas de uma mensagem, num sítio só (são pedidas em três). */
+const COLUNAS_MENSAGEM =
+  'id, conversa_id, tipo, autor, texto, criado_em, apagada_em, ' +
+  'anexo, anexo_tamanho, anexo_segundos, latitude, longitude';
 
 function toConversa(r: LinhaConversa): Conversa {
   return {
@@ -95,6 +111,7 @@ function toConversa(r: LinhaConversa): Conversa {
     outro: r.c_outro ?? undefined,
     ultimaEm: r.c_ultima_em,
     ultimoTexto: r.c_ultimo_texto ?? undefined,
+    ultimoTipo: r.c_ultimo_genero ?? undefined,
     ultimoAutor: r.c_ultimo_autor ?? undefined,
     ultimoApagado: r.c_ultimo_apagado === true,
     naoLidas: r.c_nao_lidas ?? 0,
@@ -107,10 +124,16 @@ function toMensagem(r: LinhaMensagem): Mensagem {
   return {
     id: r.id,
     conversaId: r.conversa_id,
+    tipo: r.tipo ?? 'texto',
     autor: r.autor ?? undefined,
     texto: r.texto,
     criadoEm: r.criado_em,
     apagadaEm: r.apagada_em ?? undefined,
+    anexo: r.anexo ?? undefined,
+    anexoTamanho: r.anexo_tamanho ?? undefined,
+    anexoSegundos: r.anexo_segundos ?? undefined,
+    latitude: r.latitude ?? undefined,
+    longitude: r.longitude ?? undefined,
   };
 }
 
@@ -186,9 +209,22 @@ function lerAvisos(): boolean {
   return ler(CHAVES.chatAjustes) !== 'nao';
 }
 
+/**
+ * Liga ou desliga os avisos de mensagem nova.
+ *
+ * É UM interruptor para as duas coisas: o aviso curto com a app aberta e a
+ * notificação no telemóvel com ela fechada. São a mesma pergunta ("quero ser
+ * avisado?"), e dois interruptores para ela obrigavam a explicar a diferença
+ * entre push e toast a quem só quer saber se o telemóvel toca.
+ *
+ * Desligar não é só deixar de mostrar: TIRA o aparelho da lista do servidor,
+ * senão o telemóvel continuava a tocar com a app fechada.
+ */
 export function definirAvisosDeMensagens(ativo: boolean): void {
   if (armazenamentoDisponivel) guardar(CHAVES.chatAjustes, ativo ? 'sim' : 'nao');
   definir({ avisar: ativo });
+  if (ativo) void registarPush();
+  else void esquecerPush();
 }
 
 /* ------------------------------------------------------------------ *
@@ -199,6 +235,13 @@ type Instantaneo = {
   conversas: Conversa[];
   /** Por conversa, da mais antiga para a mais recente. */
   mensagens: Record<string, Mensagem[]>;
+  /**
+   * As respostas de cada sondagem, por id da MENSAGEM que a leva.
+   *
+   * Fora da cache do disco de propósito: os votos mudam por baixo de nós e uma
+   * contagem guardada é uma contagem errada. Pedem-se ao abrir a conversa.
+   */
+  sondagens: Record<string, OpcaoSondagem[]>;
   pessoas: PessoaChat[];
   aCarregar: boolean;
   erro: string | null;
@@ -210,6 +253,7 @@ const inicial = armazenamentoDisponivel ? lerCache() : { conversas: [], mensagen
 let instantaneo: Instantaneo = {
   conversas: inicial.conversas,
   mensagens: inicial.mensagens,
+  sondagens: {},
   pessoas: [],
   aCarregar: false,
   erro: null,
@@ -327,13 +371,120 @@ async function puxarMensagens(conversaId: string): Promise<void> {
   if (!ligado() || !supabase) return;
   const { data, error } = await supabase
     .from('mensagem')
-    .select('id, conversa_id, autor, texto, criado_em, apagada_em')
+    .select(COLUNAS_MENSAGEM)
     .eq('conversa_id', conversaId)
     .order('criado_em', { ascending: false })
     .limit(PAGINA);
   if (error) return;
-  const vindas = ((data ?? []) as LinhaMensagem[]).map(toMensagem);
+  const vindas = ((data ?? []) as unknown as LinhaMensagem[]).map(toMensagem);
   guardarMensagens(conversaId, vindas);
+}
+
+type LinhaSondagem = {
+  s_mensagem: string;
+  s_opcao: string;
+  s_texto: string;
+  s_ordem: number;
+  s_votos: number | null;
+  s_quem: string[] | null;
+  s_minha: boolean | null;
+};
+
+/**
+ * As sondagens de uma conversa, com as contas feitas.
+ *
+ * Um pedido por conversa aberta, e não um por sondagem: quem organiza o
+ * trabalho de uma semana faz três ou quatro, e três ou quatro idas ao servidor
+ * para desenhar um ecrã é o que faz uma conversa demorar a abrir.
+ */
+async function puxarSondagens(conversaId: string): Promise<void> {
+  if (!ligado() || !supabase) return;
+  const { data, error } = await supabase.rpc('sondagens_da_conversa', { conv: conversaId });
+  if (error) return;
+  const porMensagem: Record<string, OpcaoSondagem[]> = {};
+  for (const r of (data ?? []) as LinhaSondagem[]) {
+    (porMensagem[r.s_mensagem] ??= []).push({
+      id: r.s_opcao,
+      mensagemId: r.s_mensagem,
+      texto: r.s_texto,
+      ordem: r.s_ordem,
+      votos: r.s_votos ?? 0,
+      quem: r.s_quem ?? [],
+      minha: r.s_minha === true,
+    });
+  }
+  definir({ sondagens: { ...instantaneo.sondagens, ...porMensagem } });
+}
+
+/* ------------------------------------------------------------------ *
+ *  Ficheiros (fotografias e áudio)
+ * ------------------------------------------------------------------ */
+
+const BUCKET = 'chat';
+
+/** Quanto tempo dura uma ligação assinada. Chega para ver e ouvir. */
+const SEGUNDOS_LIGACAO = 60 * 60;
+
+/**
+ * As ligações já pedidas, para não pedir uma nova a cada redesenho da lista.
+ *
+ * Guarda a hora em que expira e não só o URL: um endereço assinado que já
+ * caducou parece bom e devolve 400 quando a imagem tenta carregar.
+ */
+const ligacoes = new Map<string, { url: string; ate: number }>();
+
+/**
+ * O endereço temporário de um ficheiro do bucket.
+ *
+ * O bucket é PRIVADO (ver `schema_chat_anexos.sql`), portanto não há URL fixo:
+ * é isso que impede a fotografia de uma conversa de ficar acessível a quem
+ * apanhar o endereço.
+ */
+export async function ligacaoParaAnexo(caminho: string): Promise<string | null> {
+  const guardada = ligacoes.get(caminho);
+  // Um minuto de margem: uma ligação que caduca a meio do carregamento da
+  // imagem é o mesmo que uma ligação caducada.
+  if (guardada && guardada.ate > Date.now() + 60_000) return guardada.url;
+  if (!ligado() || !supabase) return null;
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(caminho, SEGUNDOS_LIGACAO);
+  if (error || !data?.signedUrl) return null;
+  ligacoes.set(caminho, { url: data.signedUrl, ate: Date.now() + SEGUNDOS_LIGACAO * 1000 });
+  return data.signedUrl;
+}
+
+/** O caminho de um anexo: `<conversa>/<mensagem>.<ext>`. Ver a RLS do bucket. */
+function caminhoDoAnexo(conversaId: string, mensagemId: string, extensao: string): string {
+  return `${conversaId}/${mensagemId}.${extensao}`;
+}
+
+/**
+ * Apaga os ficheiros das mensagens que já não existem.
+ *
+ * Corre uma vez por arranque. É a segunda metade da limpeza dos seis meses: a
+ * base apaga as mensagens sozinha (`pg_cron`), mas apagar o FICHEIRO precisa da
+ * API do Storage, que só existe do lado de cá. Ver o cabeçalho de
+ * `supabase/schema_chat_anexos.sql`.
+ *
+ * Nunca lança: é arrumação, e uma limpeza falhada não pode estragar a abertura
+ * da app.
+ */
+async function limparAnexosOrfaos(): Promise<void> {
+  if (!ligado() || !supabase) return;
+  try {
+    const { data, error } = await supabase.from('anexo_orfao').select('caminho').limit(100);
+    if (error || !data?.length) return;
+    const caminhos = (data as { caminho: string }[]).map((r) => r.caminho);
+    const { error: erroFicheiros } = await supabase.storage.from(BUCKET).remove(caminhos);
+    // A linha só sai DEPOIS de o ficheiro sair. Ao contrário, um erro do
+    // Storage deixava o ficheiro lá para sempre e sem ninguém a saber dele.
+    if (erroFicheiros) return;
+    await supabase.from('anexo_orfao').delete().in('caminho', caminhos);
+    for (const c of caminhos) ligacoes.delete(c);
+  } catch {
+    /* fica para o próximo arranque */
+  }
 }
 
 /** Junta mensagens à conversa e guarda. */
@@ -413,6 +564,9 @@ let canal: { unsubscribe: () => void } | null = null;
 
 /** Quantos `useChat()` estão montados. O canal vive enquanto houver um. */
 let montados = 0;
+
+/** A arrumação de arranque (ficheiros órfãos, token de push) já correu? */
+let jaLimpou = false;
 
 function ligarTempoReal(): void {
   if (canal || !ligado() || !supabase) return;
@@ -555,6 +709,15 @@ export function useChat(): UseChat {
     }
     void puxarConversas();
     void puxarPessoas();
+    // Uma vez por arranque, e não a cada montagem: é arrumação de ficheiros de
+    // mensagens que já não existem, não tem pressa nenhuma.
+    if (!jaLimpou) {
+      jaLimpou = true;
+      void limparAnexosOrfaos();
+      // O token deste aparelho. Só se quem o usa quiser ser avisado: registá-lo
+      // à revelia era pôr o telemóvel a tocar sem ninguém ter pedido.
+      if (instantaneo.avisar) void registarPush();
+    }
     // O canal é da APP e não deste hook: fechá-lo na limpeza deixava a app sem
     // tempo real de cada vez que uma conversa se fechasse (o ecrã da conversa
     // também monta este hook). Conta-se quantos estão montados e fecha-se
@@ -674,11 +837,29 @@ export function useChat(): UseChat {
   };
 }
 
+/** Um ficheiro pronto a subir: o que o seletor de imagens ou o gravador dão. */
+export type AnexoParaEnviar = {
+  bytes: ArrayBuffer;
+  mime: string;
+  extensao: string;
+  tamanho: number;
+  /** Só no áudio. */
+  segundos?: number;
+};
+
 export type UseConversa = {
   conversa?: Conversa;
   mensagens: Mensagem[];
+  /** As respostas de cada sondagem desta conversa, por id da mensagem. */
+  sondagens: Record<string, OpcaoSondagem[]>;
   aCarregar: boolean;
   enviar: (texto: string) => Promise<void>;
+  /** Fotografia ou mensagem de voz. A legenda é opcional. */
+  enviarAnexo: (tipo: 'foto' | 'audio', ficheiro: AnexoParaEnviar, legenda?: string) => Promise<void>;
+  enviarLocalizacao: (latitude: number, longitude: number, legenda?: string) => Promise<void>;
+  criarSondagem: (pergunta: string, opcoes: string[]) => Promise<void>;
+  /** Votar, ou tirar o voto se já era esta a resposta escolhida. */
+  votar: (mensagemId: string, opcaoId: string) => Promise<void>;
   apagar: (mensagemId: string) => Promise<void>;
   denunciar: (mensagemId: string, motivo?: string) => Promise<void>;
 };
@@ -689,11 +870,12 @@ export function useConversa(conversaId: string): UseConversa {
   const userId = sessao?.user?.id ?? '';
   meuId = userId;
 
-  const { conversas, mensagens: todas, aCarregar } = useSyncExternalStore(
-    subscrever,
-    instantaneoAtual,
-    instantaneoAtual,
-  );
+  const {
+    conversas,
+    mensagens: todas,
+    sondagens: todasSondagens,
+    aCarregar,
+  } = useSyncExternalStore(subscrever, instantaneoAtual, instantaneoAtual);
 
   const conversa = conversas.find((c) => c.id === conversaId);
   const mensagens = useMemo(() => todas[conversaId] ?? [], [todas, conversaId]);
@@ -702,6 +884,7 @@ export function useConversa(conversaId: string): UseConversa {
     if (!conversaId || !userId) return;
     definirConversaAberta(conversaId);
     void puxarMensagens(conversaId).then(() => marcarLido(conversaId));
+    void puxarSondagens(conversaId);
     return () => {
       definirConversaAberta(null);
     };
@@ -714,6 +897,7 @@ export function useConversa(conversaId: string): UseConversa {
       const m: Mensagem = {
         id: novoId(),
         conversaId,
+        tipo: 'texto',
         autor: userId,
         texto: limpo,
         criadoEm: new Date().toISOString(),
@@ -732,11 +916,11 @@ export function useConversa(conversaId: string): UseConversa {
         .insert({ id: m.id, conversa_id: conversaId, autor: userId, texto: limpo })
         // A hora certa (a do servidor) vem de volta na mesma ida, para o balão
         // não ficar com a do telemóvel. Ver a coluna `criado_em` no schema.
-        .select('id, conversa_id, autor, texto, criado_em, apagada_em')
+        .select(COLUNAS_MENSAGEM)
         .single();
 
       if (!error) {
-        const confirmada = data ? toMensagem(data as LinhaMensagem) : { ...m, porEnviar: undefined };
+        const confirmada = data ? toMensagem(data as unknown as LinhaMensagem) : { ...m, porEnviar: undefined };
         guardarMensagens(conversaId, [confirmada]);
         return;
       }
@@ -752,6 +936,114 @@ export function useConversa(conversaId: string): UseConversa {
       throw new Error(error.message);
     },
     [conversaId, userId],
+  );
+
+  /**
+   * Fotografia ou mensagem de voz.
+   *
+   * PESSIMISTA, ao contrário do texto: primeiro sobe o ficheiro, e só depois
+   * escreve a linha. Um ficheiro sem linha é lixo que a limpeza apanha; uma
+   * linha sem ficheiro é uma mensagem que abre num quadrado cinzento para
+   * sempre. É a mesma ordem (e a mesma razão) do `useDocumentos.ts`.
+   *
+   * Também não vai para a fila do offline. Sem rede não há Storage, e guardar
+   * megabytes de fotografias numa fila local à espera de rede enchia o
+   * armazenamento do telemóvel sem nada a avisar.
+   */
+  const enviarAnexo = useCallback(
+    async (tipo: 'foto' | 'audio', ficheiro: AnexoParaEnviar, legenda?: string) => {
+      if (!ligado() || !supabase) throw new Error('sem ligação à conta');
+      const id = novoId();
+      const caminho = caminhoDoAnexo(conversaId, id, ficheiro.extensao);
+
+      const { error: erroFicheiro } = await supabase.storage
+        .from(BUCKET)
+        .upload(caminho, ficheiro.bytes, { contentType: ficheiro.mime, upsert: false });
+      if (erroFicheiro) throw new Error(erroFicheiro.message);
+
+      const { data, error } = await supabase
+        .from('mensagem')
+        .insert({
+          id,
+          conversa_id: conversaId,
+          autor: userId,
+          texto: legenda?.trim() ?? '',
+          tipo,
+          anexo: caminho,
+          anexo_tamanho: ficheiro.tamanho,
+          anexo_segundos: ficheiro.segundos ?? null,
+        })
+        .select(COLUNAS_MENSAGEM)
+        .single();
+
+      if (error) {
+        // O ficheiro já subiu. Apaga-se já, para o teto do plano não ser comido
+        // por tentativas falhadas que ninguém vê em lado nenhum.
+        try {
+          await supabase.storage.from(BUCKET).remove([caminho]);
+        } catch {
+          /* fica órfão; o erro que conta é o de baixo */
+        }
+        throw new Error(error.message);
+      }
+      guardarMensagens(conversaId, [toMensagem(data as unknown as LinhaMensagem)]);
+    },
+    [conversaId, userId],
+  );
+
+  const enviarLocalizacao = useCallback(
+    async (latitude: number, longitude: number, legenda?: string) => {
+      if (!ligado() || !supabase) throw new Error('sem ligação à conta');
+      const { data, error } = await supabase
+        .from('mensagem')
+        .insert({
+          id: novoId(),
+          conversa_id: conversaId,
+          autor: userId,
+          texto: legenda?.trim() ?? '',
+          tipo: 'local',
+          latitude,
+          longitude,
+        })
+        .select(COLUNAS_MENSAGEM)
+        .single();
+      if (error) throw new Error(error.message);
+      guardarMensagens(conversaId, [toMensagem(data as unknown as LinhaMensagem)]);
+    },
+    [conversaId, userId],
+  );
+
+  const criarSondagem = useCallback(
+    async (pergunta: string, opcoes: string[]) => {
+      if (!ligado() || !supabase) throw new Error('sem ligação à conta');
+      const { error } = await supabase.rpc('criar_sondagem', {
+        conv: conversaId,
+        pergunta,
+        opcoes,
+      });
+      if (error) throw new Error(error.message);
+      // A mensagem chega pelo tempo real; as respostas é que não (não são
+      // mensagens), por isso pedem-se agora.
+      await puxarMensagens(conversaId);
+      await puxarSondagens(conversaId);
+    },
+    [conversaId],
+  );
+
+  const votar = useCallback(
+    async (mensagemId: string, opcaoId: string) => {
+      if (!ligado() || !supabase) throw new Error('sem ligação à conta');
+      // Tocar outra vez na resposta que já estava escolhida tira o voto. É o
+      // que se espera de um botão que está "ligado", e evita um segundo botão
+      // só para desistir.
+      const jaEra = (instantaneo.sondagens[mensagemId] ?? []).some((o) => o.id === opcaoId && o.minha);
+      const { error } = jaEra
+        ? await supabase.rpc('tirar_voto', { msg: mensagemId })
+        : await supabase.rpc('votar_sondagem', { msg: mensagemId, opcao: opcaoId });
+      if (error) throw new Error(error.message);
+      await puxarSondagens(conversaId);
+    },
+    [conversaId],
   );
 
   const apagar = useCallback(
@@ -782,7 +1074,19 @@ export function useConversa(conversaId: string): UseConversa {
     if (error) throw new Error(error.message);
   }, []);
 
-  return { conversa, mensagens, aCarregar, enviar, apagar, denunciar };
+  return {
+    conversa,
+    mensagens,
+    sondagens: todasSondagens,
+    aCarregar,
+    enviar,
+    enviarAnexo,
+    enviarLocalizacao,
+    criarSondagem,
+    votar,
+    apagar,
+    denunciar,
+  };
 }
 
 /**

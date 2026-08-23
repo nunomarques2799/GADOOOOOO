@@ -1,13 +1,15 @@
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BalaoMensagem } from '@/components/chat/BalaoMensagem';
+import { FolhaAnexos, type EscolhaAnexo } from '@/components/chat/FolhaAnexos';
 import { EcraComTeclado, Header, Icon, Text } from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
 import {
   agruparPorDia,
-  horaCurta,
   MAX_TEXTO,
   MESES_ATE_APAGAR,
   podeApagarMensagem,
@@ -21,7 +23,7 @@ import {
 import { useNomesEquipa } from '@/data/nomesEquipa';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
-import { useChat, useConversa } from '@/data/useChat';
+import { ligacaoParaAnexo, useChat, useConversa } from '@/data/useChat';
 import { useDesktop } from '@/hooks/useDesktop';
 import { t } from '@/i18n';
 import { colors, layout, radii, spacing } from '@/theme';
@@ -33,6 +35,10 @@ import { colors, layout, radii, spacing } from '@/theme';
  * 2 no cabeçalho do `useChat.ts`), com a marca de "por enviar" enquanto não
  * sair. É a diferença entre esta app e a agenda, e é de propósito: um recado
  * escreve-se no curral.
+ *
+ * Os ANEXOS não seguem essa regra: uma fotografia precisa de rede para subir
+ * (não há Storage offline), e guardar megabytes numa fila local à espera de
+ * ligação enchia o telemóvel sem nada a avisar.
  *
  * NÃO há aviso de "mensagem enviada". A regra da app é que toda a ação que
  * grava dá sinal, e aqui o sinal é a própria mensagem a aparecer na conversa:
@@ -46,7 +52,18 @@ export default function ConversaScreen() {
   const desktop = useDesktop();
   const router = useRouter();
 
-  const { conversa, mensagens, enviar, apagar, denunciar } = useConversa(conversaId);
+  const {
+    conversa,
+    mensagens,
+    sondagens,
+    enviar,
+    enviarAnexo,
+    enviarLocalizacao,
+    criarSondagem,
+    votar,
+    apagar,
+    denunciar,
+  } = useConversa(conversaId);
   const { pessoas } = useChat();
   const { nomeDe } = useNomesEquipa();
   const { exploracoes, utilizador } = useGado();
@@ -55,17 +72,17 @@ export default function ConversaScreen() {
   const [texto, setTexto] = useState('');
   const [aEnviar, setAEnviar] = useState(false);
   const [escolhida, setEscolhida] = useState<Mensagem | null>(null);
+  const [anexosAberto, setAnexosAberto] = useState(false);
+  const [fotoAberta, setFotoAberta] = useState<string | null>(null);
   const scroll = useRef<ScrollView>(null);
 
+  const exploracao = exploracoes.find((e) => e.id === conversa?.exploracaoId);
   const nomeExploracao = useCallback(
     (expId?: string) => exploracoes.find((e) => e.id === expId)?.nome,
     [exploracoes],
   );
 
-  const titulo = conversa
-    ? tituloDaConversa(conversa, nomeDe, nomeExploracao)
-    : t('chat.titulo');
-
+  const titulo = conversa ? tituloDaConversa(conversa, nomeDe, nomeExploracao) : t('chat.titulo');
   const blocos = useMemo(() => agruparPorDia(mensagens), [mensagens]);
 
   /**
@@ -98,6 +115,33 @@ export default function ConversaScreen() {
     } catch (e) {
       setTexto(guardado);
       toast.erro(t('chat.semEnviar'), mensagemDeErro(e));
+    } finally {
+      setAEnviar(false);
+    }
+  }
+
+  /**
+   * O que fazer com o que a folha de anexos devolveu.
+   *
+   * A LEGENDA é o que estiver escrito no campo quando se junta a fotografia:
+   * escrever primeiro e anexar depois é o gesto que sai naturalmente, e obrigar
+   * a um segundo campo dentro da folha era uma pergunta a mais.
+   */
+  async function comAnexo(escolha: EscolhaAnexo) {
+    const legenda = texto.trim();
+    setAEnviar(true);
+    try {
+      if (escolha.tipo === 'foto' || escolha.tipo === 'audio') {
+        await enviarAnexo(escolha.tipo, escolha.ficheiro, legenda);
+      } else if (escolha.tipo === 'local') {
+        await enviarLocalizacao(escolha.latitude, escolha.longitude, legenda);
+      } else {
+        await criarSondagem(escolha.pergunta, escolha.opcoes);
+      }
+      setTexto('');
+      scroll.current?.scrollToEnd({ animated: true });
+    } catch (e) {
+      toast.erro(t('chat.semAnexo'), mensagemDeErro(e));
     } finally {
       setAEnviar(false);
     }
@@ -192,7 +236,7 @@ export default function ConversaScreen() {
                 {rotuloDoDia(bloco.dia)}
               </Text>
               {bloco.mensagens.map((m) => (
-                <Balao
+                <BalaoMensagem
                   key={m.id}
                   mensagem={m}
                   minha={m.autor === utilizador.id}
@@ -202,7 +246,15 @@ export default function ConversaScreen() {
                       ? primeiroNome(nomeDe(m.autor) ?? t('chat.utilizadorRemovido'))
                       : t('chat.utilizadorRemovido')
                   }
+                  opcoes={sondagens[m.id]}
+                  nomeDe={nomeDe}
                   onLongPress={() => abrirOpcoes(m)}
+                  onVotar={(opcaoId) => {
+                    void votar(m.id, opcaoId).catch((e) =>
+                      toast.erro(t('comum.semGravar'), mensagemDeErro(e)),
+                    );
+                  }}
+                  onVerFoto={setFotoAberta}
                 />
               ))}
             </View>
@@ -223,9 +275,28 @@ export default function ConversaScreen() {
               ...coluna,
               flexDirection: 'row',
               alignItems: 'flex-end',
-              gap: spacing.sm,
+              gap: spacing.xs,
               paddingTop: spacing.sm,
             }}>
+            <Pressable
+              onPress={() => setAnexosAberto(true)}
+              disabled={aEnviar}
+              accessibilityRole="button"
+              accessibilityLabel={t('chat.anexar')}
+              style={({ pressed }) => [
+                {
+                  width: 48,
+                  height: 48,
+                  borderRadius: radii.pill,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.surfaceSunken,
+                },
+                pressed && { opacity: 0.7 },
+              ]}>
+              <Icon name="plus" size="md" color={colors.text} />
+            </Pressable>
+
             <TextInput
               value={texto}
               onChangeText={setTexto}
@@ -300,6 +371,17 @@ export default function ConversaScreen() {
         </View>
       )}
 
+      <FolhaAnexos
+        aberto={anexosAberto}
+        onFechar={() => setAnexosAberto(false)}
+        onEscolher={(escolha) => void comAnexo(escolha)}
+        centro={
+          exploracao?.latitude != null && exploracao?.longitude != null
+            ? { latitude: exploracao.latitude, longitude: exploracao.longitude }
+            : undefined
+        }
+      />
+
       <FolhaOpcoes
         mensagem={escolhida}
         meuId={utilizador.id}
@@ -307,78 +389,58 @@ export default function ConversaScreen() {
         onApagar={apagarEscolhida}
         onDenunciar={denunciarEscolhida}
       />
+
+      <VerFotografia caminho={fotoAberta} onFechar={() => setFotoAberta(null)} />
     </EcraComTeclado>
   );
 }
 
-/** Uma mensagem. As minhas à direita, as dos outros à esquerda. */
-function Balao({
-  mensagem,
-  minha,
-  mostrarAutor,
-  nome,
-  onLongPress,
-}: {
-  mensagem: Mensagem;
-  minha: boolean;
-  mostrarAutor: boolean;
-  nome: string;
-  onLongPress: () => void;
-}) {
-  const apagada = !!mensagem.apagadaEm;
+/** A fotografia em grande, por cima de tudo. Toca-se para fechar. */
+function VerFotografia({ caminho, onFechar }: { caminho: string | null; onFechar: () => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!caminho) {
+      setUrl(null);
+      return;
+    }
+    let vivo = true;
+    void ligacaoParaAnexo(caminho).then((u) => {
+      if (vivo) setUrl(u);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [caminho]);
+
+  if (!caminho) return null;
+
   return (
-    <Pressable
-      onLongPress={onLongPress}
-      delayLongPress={350}
-      accessibilityRole="text"
-      accessibilityLabel={`${minha ? '' : `${nome}: `}${apagada ? t('chat.mensagemApagada') : mensagem.texto}`}
-      style={({ pressed }) => [
-        {
-          alignSelf: minha ? 'flex-end' : 'flex-start',
-          maxWidth: '86%',
-          marginBottom: spacing.xs,
-          paddingHorizontal: spacing.md,
-          paddingVertical: spacing.sm,
-          borderRadius: radii.lg,
-          backgroundColor: minha ? colors.primaryTint : colors.surface,
-          borderWidth: 1,
-          borderColor: minha ? colors.primaryTint : colors.border,
-        },
-        pressed && { opacity: 0.8 },
-      ]}>
-      {mostrarAutor && !minha ? (
-        <Text variant="caption" color={colors.primaryDark} style={{ marginBottom: 2 }}>
-          {nome}
-        </Text>
-      ) : null}
-      <Text
-        variant="body"
-        color={apagada ? colors.textMuted : colors.text}
-        style={apagada ? { fontStyle: 'italic' } : undefined}>
-        {apagada ? t('chat.mensagemApagada') : mensagem.texto}
-      </Text>
-      <View
+    <Modal visible animationType="fade" transparent onRequestClose={onFechar}>
+      <Pressable
+        onPress={onFechar}
+        accessibilityRole="button"
+        accessibilityLabel={t('comum.fechar')}
         style={{
-          flexDirection: 'row',
+          flex: 1,
+          backgroundColor: colors.overlay,
           alignItems: 'center',
-          alignSelf: 'flex-end',
-          gap: spacing.xxs,
-          marginTop: 2,
+          justifyContent: 'center',
+          padding: spacing.md,
         }}>
-        {mensagem.porEnviar ? (
-          <>
-            <Icon name="clock-outline" size="xs" color={colors.textMuted} />
-            <Text variant="caption" color={colors.textMuted}>
-              {t('chat.porEnviar')}
-            </Text>
-          </>
+        {url ? (
+          <Image
+            source={{ uri: url }}
+            style={{ width: '100%', height: '80%' }}
+            contentFit="contain"
+          />
         ) : (
-          <Text variant="caption" color={colors.textMuted}>
-            {horaCurta(mensagem.criadoEm)}
+          <Text variant="body" color={colors.textOnDark}>
+            {t('comum.aCarregar')}
           </Text>
         )}
-      </View>
-    </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 

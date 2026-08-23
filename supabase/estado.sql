@@ -207,7 +207,25 @@ select * from (
          and exists (
            select 1 from pg_publication_tables
             where pubname = 'supabase_realtime'
-              and schemaname = 'public' and tablename = 'mensagem')))
+              and schemaname = 'public' and tablename = 'mensagem'))),
+    -- A marca é o BUCKET e não a coluna: as colunas entram com um `alter table`
+    -- que corre sempre, e o bucket é o que falta numa base onde o ficheiro
+    -- morreu a meio. Sem bucket, mandar uma fotografia falha no carregamento e
+    -- a mensagem nem chega a ser escrita.
+    (36, 'schema_chat_anexos.sql',    'coluna mensagem.tipo + bucket `chat`',
+        (exists (select 1 from col where tabela = 'mensagem' and coluna = 'tipo')
+         and exists (select 1 from storage.buckets where id = 'chat'))),
+    (37, 'schema_chat_sondagens.sql', 'sondagem_opcao + criar_sondagem()',
+        (to_regclass('public.sondagem_opcao') is not null
+         and exists (select 1 from func where nome = 'criar_sondagem'))),
+    -- O gatilho e não só a tabela: uma base com `push_token` e sem
+    -- `trg_chat_push` guarda os tokens e nunca envia nada, o que é exatamente
+    -- o estado que ninguém descobre sem ir ver.
+    (38, 'schema_chat_push.sql',      'push_token + gatilho trg_chat_push',
+        (to_regclass('public.push_token') is not null
+         and exists (
+           select 1 from pg_trigger where tgname = 'trg_chat_push'
+             and tgrelid = 'public.mensagem'::regclass)))
 ) as t(ordem, ficheiro, marca, aplicado)
 order by ordem;
 -- Ler a coluna `aplicado`: true = já correu, false = FALTA aplicar.

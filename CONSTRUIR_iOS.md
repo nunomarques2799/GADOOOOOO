@@ -164,7 +164,9 @@ Isto está no `app.json` e resolve coisas que só aparecem do lado da Apple:
 |-----------|--------|
 | `ios.config.usesNonExemptEncryption: false` | Sem isto, **cada** envio para o TestFlight fica parado à espera que alguém responda ao questionário de "export compliance". A app só usa HTTPS normal, que é isento. |
 | `NSAppTransportSecurity` fechado | O template do Expo traz `NSAllowsArbitraryLoads: true`, ou seja, ATS completamente desligado — a app aceitaria tráfego em claro para qualquer servidor. Nenhum endereço da app é `http://`, por isso está fechado, com `NSAllowsLocalNetworking` para o Metro continuar a funcionar em desenvolvimento. |
-| `microphonePermission: false` no `expo-image-picker` | O plugin acrescentava `NSMicrophoneUsageDescription` sozinho. A app nunca grava som, e pedir microfone sem o usar é das coisas que a revisão da Apple manda justificar. |
+| `microphonePermission: false` no `expo-image-picker` | O plugin acrescentava `NSMicrophoneUsageDescription` sozinho, e o seletor de imagens não grava som nenhum. Pedir microfone sem o usar é das coisas que a revisão da Apple manda justificar. **Continua `false` aqui**, ao contrário do `expo-audio` (ver a linha seguinte). |
+| `microphonePermission` com texto no `expo-audio` (desde 2026-08-23) | Estava `false`, e mudou porque as conversas passaram a ter **mensagens de voz** (`src/data/gravarAudio.ts`). A frase que lá está é a que o iPhone mostra no pedido, e tem de dizer para que é: "gravar mensagens de voz nas conversas com a sua equipa". Duas consequências: **a app instalada só grava depois de um BUILD NATIVO NOVO** (a permissão vive no binário), e o questionário de privacidade da App Store passa a ter de declarar áudio como conteúdo do utilizador. |
+| `recordAudioAndroid: true` | O par Android do anterior. Acrescenta a permissão `RECORD_AUDIO` ao manifesto. |
 | `CFBundleDevelopmentRegion: "pt-PT"` | A app é só em português. Faz o sistema tratá-la como tal. |
 | `ios.icon: "./assets/expo.icon"` | Ícone em formato Icon Composer (`assets/expo.icon/`). Trata sozinho das variantes clara/escura/tinted do iOS — não é preciso PNG de reserva. |
 
@@ -181,6 +183,38 @@ Importar e exportar **Excel** e guardar relatórios em **PDF** continuam a ser d
 computador: escrever um ficheiro passa pelo DOM (ver `excelFicheiro.ts`). O ecrã
 Documentos já diz isso em vez de mostrar botões que não fazem nada. Não é uma
 limitação do iOS — é igual no Android.
+
+---
+
+## As notificações de mensagens (push) exigem uma chave da Apple
+
+As conversas mandam um aviso ao telemóvel quando chega mensagem nova. O envio
+já está feito e provado do lado da base de dados
+(`supabase/schema_chat_push.sql`, que chama a API da Expo pelo `pg_net`), e a
+app já pede e guarda o token (`src/data/push.ts`). **Falta o que só se faz na
+conta da Apple**, uma vez:
+
+```
+eas credentials -p ios       # Push Notifications → criar/ligar a chave APNs
+eas credentials -p android   # carregar as credenciais FCM V1
+```
+
+E, depois disso, **um build nativo novo**. Sem a chave, o
+`getExpoPushTokenAsync` nem chega a devolver token: a app não rebenta (o
+`push.ts` engole o erro), fica é sem avisos com a app fechada, exatamente como
+estava antes.
+
+Para confirmar que está a funcionar, depois de instalar o build novo em dois
+aparelhos com contas diferentes:
+
+```sql
+select * from public.push_token;      -- tem de ter uma linha por aparelho
+select * from public.push_recentes(); -- 'entregue' = a Expo aceitou
+```
+
+O `push_recentes()` mostra a resposta da Expo. `DeviceNotRegistered` quer dizer
+que o token morreu (a app foi desinstalada); `entregue` quer dizer que a
+notificação saiu daqui, e o que acontece a seguir é com a Apple.
 
 ---
 

@@ -90,8 +90,8 @@
       [
         "expo-audio",
         {
-          "microphonePermission": false,
-          "recordAudioAndroid": false,
+          "microphonePermission": "A Terrabovina precisa do microfone para gravar mensagens de voz nas conversas com a sua equipa.",
+          "recordAudioAndroid": true,
           "enableBackgroundPlayback": false,
           "enableBackgroundRecording": false
         }

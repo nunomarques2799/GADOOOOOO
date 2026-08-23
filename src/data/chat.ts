@@ -30,6 +30,8 @@ export type Conversa = {
   outro?: string;
   ultimaEm: string;
   ultimoTexto?: string;
+  /** Ausente quando a conversa ainda não tem nenhuma mensagem. */
+  ultimoTipo?: TipoMensagem;
   ultimoAutor?: string;
   ultimoApagado: boolean;
   naoLidas: number;
@@ -41,9 +43,19 @@ export type Conversa = {
   ativa: boolean;
 };
 
+/**
+ * O que uma mensagem pode ser.
+ *
+ * Não há `video`, e a ausência é uma decisão: um minuto de vídeo de telemóvel
+ * são dezenas de MB, e o plano tem 1 GB de Storage para tudo, as faturas
+ * incluídas. Ver o cabeçalho de `supabase/schema_chat_anexos.sql`.
+ */
+export type TipoMensagem = 'texto' | 'foto' | 'audio' | 'local' | 'sondagem';
+
 export type Mensagem = {
   id: string;
   conversaId: string;
+  tipo: TipoMensagem;
   /** Ausente quando a conta de quem escreveu já não existe. */
   autor?: string;
   texto: string;
@@ -59,6 +71,28 @@ export type Mensagem = {
    * do lado de cá (a coluna não existe na base).
    */
   porEnviar?: boolean;
+
+  /** O caminho do ficheiro no bucket `chat`. Fotografia e áudio. */
+  anexo?: string;
+  anexoTamanho?: number;
+  /** Só no áudio: quanto tempo dura, para se saber antes de tocar. */
+  anexoSegundos?: number;
+  /** Só na localização. */
+  latitude?: number;
+  longitude?: number;
+};
+
+/** Uma resposta de uma sondagem, com a conta dos votos já feita. */
+export type OpcaoSondagem = {
+  id: string;
+  mensagemId: string;
+  texto: string;
+  ordem: number;
+  votos: number;
+  /** Quem votou nesta. São ids: os nomes vêm do `useNomesEquipa`. */
+  quem: string[];
+  /** Foi nesta que eu votei? */
+  minha: boolean;
 };
 
 export type PessoaChat = {
@@ -117,12 +151,73 @@ export function resumoDaUltima(
   meuId: string,
   nomeDe: (id?: string) => string | undefined,
 ): string {
-  if (!c.ultimoTexto) return t('chat.semMensagens');
-  const texto = c.ultimoApagado ? t('chat.mensagemApagada') : c.ultimoTexto;
+  if (!c.ultimoTipo) return t('chat.semMensagens');
+  const texto = c.ultimoApagado
+    ? t('chat.mensagemApagada')
+    : descricaoCurta(c.ultimoTipo, c.ultimoTexto ?? '');
   if (c.ultimoAutor === meuId) return t('chat.euDisse', { texto });
   if (c.tipo === 'privada') return texto;
   const nome = nomeDe(c.ultimoAutor) ?? t('chat.utilizadorRemovido');
   return `${primeiroNome(nome)}: ${texto}`;
+}
+
+/**
+ * Uma mensagem em UMA linha, para a lista de conversas e para o aviso.
+ *
+ * Uma fotografia não tem texto para mostrar ali, e mostrar o caminho do
+ * ficheiro seria pior do que não mostrar nada. A legenda ganha à palavra
+ * genérica quando existe: "Fotografia" diz menos do que "o portão partido".
+ */
+export function descricaoCurta(tipo: TipoMensagem, texto: string): string {
+  const limpo = texto.trim();
+  if (tipo === 'texto' || tipo === 'sondagem') return limpo;
+  if (limpo) return limpo;
+  if (tipo === 'foto') return t('chat.umaFotografia');
+  if (tipo === 'audio') return t('chat.umaMensagemDeVoz');
+  return t('chat.umaLocalizacao');
+}
+
+/** "1:05", "0:08". A duração de um áudio como se lê num botão de tocar. */
+export function duracaoCurta(segundos?: number): string {
+  const s = Math.max(0, Math.round(segundos ?? 0));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** O teto de gravação, em segundos. */
+export const MAX_SEGUNDOS_AUDIO = 120;
+
+/** Quantas respostas uma sondagem aceita. É o mesmo que o servidor aceita. */
+export const MIN_OPCOES = 2;
+export const MAX_OPCOES = 6;
+export const MAX_PERGUNTA = 300;
+
+/**
+ * O que falta para a sondagem poder ser criada, ou `null` se está pronta.
+ *
+ * As mesmas regras do `criar_sondagem` no servidor, repetidas aqui pela razão
+ * de sempre: as daqui poupam a ida, as de lá é que valem.
+ */
+export function problemaComSondagem(pergunta: string, opcoes: string[]): string | null {
+  const p = pergunta.trim();
+  if (!p) return t('chat.sondagemSemPergunta');
+  if (p.length > MAX_PERGUNTA) return t('chat.sondagemPerguntaLonga', { n: MAX_PERGUNTA });
+  // As repetidas contam uma vez só: é o que o servidor faz, e duas respostas
+  // iguais repartiam os votos por nada.
+  const limpas = new Set(opcoes.map((o) => o.trim()).filter(Boolean));
+  if (limpas.size < MIN_OPCOES) return t('chat.sondagemPoucasRespostas', { n: MIN_OPCOES });
+  if (limpas.size > MAX_OPCOES) return t('chat.sondagemMuitasRespostas', { n: MAX_OPCOES });
+  return null;
+}
+
+/** A percentagem de cada resposta, para a barra. Sem votos, tudo a zero. */
+export function percentagemDaOpcao(opcao: OpcaoSondagem, total: number): number {
+  if (total <= 0) return 0;
+  return Math.round((opcao.votos / total) * 100);
+}
+
+/** Quantos votos tem a sondagem toda. */
+export function totalDeVotos(opcoes: OpcaoSondagem[]): number {
+  return opcoes.reduce((soma, o) => soma + o.votos, 0);
 }
 
 /** "João Carlos Silva" → "João". A lista é estreita e o nome inteiro não cabe. */

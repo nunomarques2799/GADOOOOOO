@@ -5,6 +5,7 @@ import { Avatar, Card, Header, Icon, Screen, SectionHeader, Text } from '@/compo
 import { iniciais } from '@/data/chat';
 import { EMAIL_APOIO } from '@/data/apoio';
 import { useNomesEquipa } from '@/data/nomesEquipa';
+import { suportaPush } from '@/data/push';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { definirAvisosDeMensagens, useChat } from '@/data/useChat';
 import { t } from '@/i18n';
@@ -53,9 +54,18 @@ export default function AjustesChatScreen() {
             <Icon name="bell-outline" size="md" color={colors.textSecondary} />
             <View style={{ flex: 1 }}>
               <Text variant="body">{t('chat.avisarNovas')}</Text>
+              {/* Um interruptor para as duas coisas (ver
+                  `definirAvisosDeMensagens`), por isso o que ele promete muda
+                  com o aparelho: no telemóvel toca com a app fechada, no
+                  computador só a mostra enquanto ela está aberta. */}
               <Text variant="caption" color={colors.textSecondary}>
-                {t('chat.avisarNovasAjuda')}
+                {suportaPush ? t('chat.avisosNoTelemovelAjuda') : t('chat.avisarNovasAjuda')}
               </Text>
+              {!suportaPush ? (
+                <Text variant="caption" color={colors.textMuted}>
+                  {t('chat.avisosSoNoTelemovel')}
+                </Text>
+              ) : null}
             </View>
             <Switch
               value={avisar}

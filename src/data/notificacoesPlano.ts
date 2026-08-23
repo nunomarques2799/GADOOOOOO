@@ -70,11 +70,17 @@ export function quandoTocar(diasAFrente: number, agora = new Date()): Date {
  * e eliminado noutro aparelho, ou um aviso que ficou agendado de outra conta).
  * Mandar para uma ficha inexistente dava um "Animal não encontrado" a quem só
  * queria saber o que tinha de fazer hoje.
+ *
+ * A CONVERSA vem primeiro, e sozinha: um aviso de mensagem chega por push (do
+ * gatilho de `supabase/schema_chat_push.sql`) e nunca traz animal nenhum, mas
+ * a app tem uma só porta para os toques em avisos — e sem esta linha o toque
+ * numa mensagem abria a lista de alertas, que não tem nada a ver.
  */
 export function destinoDoAviso(
-  aviso: { animalId?: string },
+  aviso: { animalId?: string; conversaId?: string },
   existeAnimal: (id: string) => boolean,
 ): string {
+  if (aviso.conversaId) return `/chat/${aviso.conversaId}`;
   if (aviso.animalId && existeAnimal(aviso.animalId)) return `/animal/${aviso.animalId}`;
   return '/alertas';
 }

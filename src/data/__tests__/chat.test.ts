@@ -14,21 +14,27 @@ import { describe, expect, it } from '@jest/globals';
 import { comRelogio } from '../../testUtils/relogio';
 import {
   agruparPorDia,
+  descricaoCurta,
+  duracaoCurta,
   horaCurta,
   iniciais,
   mesclarMensagens,
   ordenarConversas,
+  percentagemDaOpcao,
   podeApagarMensagem,
   podeDenunciarMensagem,
   primeiroNome,
+  problemaComSondagem,
   problemaComTexto,
   resumoDaUltima,
   rotuloDoDia,
   tituloDaConversa,
+  totalDeVotos,
   totalNaoLidas,
   MAX_TEXTO,
   type Conversa,
   type Mensagem,
+  type OpcaoSondagem,
 } from '../chat';
 
 /** Uma conversa com o mínimo preenchido. */
@@ -48,6 +54,7 @@ function conv(p: Partial<Conversa> & { id: string }): Conversa {
 function msg(p: Partial<Mensagem> & { id: string }): Mensagem {
   return {
     conversaId: 'c1',
+    tipo: 'texto',
     autor: 'u1',
     texto: 'bom dia',
     criadoEm: '2026-08-20T10:00:00.000Z',
@@ -109,17 +116,17 @@ describe('tituloDaConversa — como se chama cada uma', () => {
 
 describe('resumoDaUltima — a linha de baixo, na lista', () => {
   it('diz "Eu" quando fui eu a escrever', () => {
-    const c = conv({ id: 'c1', ultimoTexto: 'já fui', ultimoAutor: 'u1' });
+    const c = conv({ id: 'c1', ultimoTexto: 'já fui', ultimoTipo: 'texto', ultimoAutor: 'u1' });
     expect(resumoDaUltima(c, 'u1', nomeDe)).toBe('Eu: já fui');
   });
 
   it('no grupo, diz o primeiro nome de quem escreveu', () => {
-    const c = conv({ id: 'c1', tipo: 'grupo', ultimoTexto: 'vou lá', ultimoAutor: 'u2' });
+    const c = conv({ id: 'c1', tipo: 'grupo', ultimoTexto: 'vou lá', ultimoTipo: 'texto', ultimoAutor: 'u2' });
     expect(resumoDaUltima(c, 'u1', nomeDe)).toBe('Ana: vou lá');
   });
 
   it('na privada não diz o nome: só lá estão dois', () => {
-    const c = conv({ id: 'c2', tipo: 'privada', outro: 'u2', ultimoTexto: 'vou lá', ultimoAutor: 'u2' });
+    const c = conv({ id: 'c2', tipo: 'privada', outro: 'u2', ultimoTexto: 'vou lá', ultimoTipo: 'texto', ultimoAutor: 'u2' });
     expect(resumoDaUltima(c, 'u1', nomeDe)).toBe('vou lá');
   });
 
@@ -127,10 +134,22 @@ describe('resumoDaUltima — a linha de baixo, na lista', () => {
     expect(resumoDaUltima(conv({ id: 'c1' }), 'u1', nomeDe)).toBe('Ainda sem mensagens');
   });
 
+  /**
+   * O "tem mensagens?" pergunta-se ao TIPO e não ao texto.
+   *
+   * Uma fotografia sem legenda tem texto vazio: com a pergunta feita ao texto,
+   * uma conversa cheia de fotografias aparecia na lista como "Ainda sem
+   * mensagens".
+   */
+  it('uma fotografia sem legenda não é uma conversa vazia', () => {
+    const c = conv({ id: 'c1', tipo: 'grupo', ultimoTipo: 'foto', ultimoAutor: 'u2' });
+    expect(resumoDaUltima(c, 'u1', nomeDe)).toBe('Ana: Fotografia');
+  });
+
   it('a mensagem apagada não mostra o texto que lá estava', () => {
     // O texto continua na base (é a linha que fica), mas quem a apagou pediu
     // que não se lesse — e a lista é o sítio onde isso passaria despercebido.
-    const c = conv({ id: 'c1', tipo: 'privada', outro: 'u2', ultimoTexto: 'segredo', ultimoAutor: 'u2', ultimoApagado: true });
+    const c = conv({ id: 'c1', tipo: 'privada', outro: 'u2', ultimoTexto: 'segredo', ultimoTipo: 'texto', ultimoAutor: 'u2', ultimoApagado: true });
     expect(resumoDaUltima(c, 'u1', nomeDe)).toBe('Mensagem apagada');
   });
 });
@@ -269,6 +288,98 @@ describe('a lista de conversas', () => {
     expect(
       totalNaoLidas([conv({ id: 'a', naoLidas: 9, silenciada: true }), conv({ id: 'b', naoLidas: 1 })]),
     ).toBe(1);
+  });
+});
+
+describe('descricaoCurta — uma mensagem numa linha', () => {
+  it('o texto é o próprio texto', () => {
+    expect(descricaoCurta('texto', 'vou já')).toBe('vou já');
+  });
+
+  it('uma fotografia sem legenda diz o que é', () => {
+    // Sem isto, a lista de conversas mostrava uma linha em BRANCO por baixo do
+    // nome de quem mandou uma fotografia, e parecia uma conversa avariada.
+    expect(descricaoCurta('foto', '')).toBe('Fotografia');
+    expect(descricaoCurta('audio', '')).toBe('Mensagem de voz');
+    expect(descricaoCurta('local', '')).toBe('Localização');
+  });
+
+  it('mas a legenda ganha à palavra genérica', () => {
+    // "o portão partido" diz mais do que "Fotografia".
+    expect(descricaoCurta('foto', 'o portão partido')).toBe('o portão partido');
+  });
+});
+
+describe('duracaoCurta — o tempo de um áudio', () => {
+  it('escreve minutos e segundos', () => {
+    expect(duracaoCurta(0)).toBe('0:00');
+    expect(duracaoCurta(8)).toBe('0:08');
+    expect(duracaoCurta(65)).toBe('1:05');
+    expect(duracaoCurta(600)).toBe('10:00');
+  });
+
+  it('não inventa nada com o que não recebeu', () => {
+    expect(duracaoCurta(undefined)).toBe('0:00');
+    expect(duracaoCurta(-5)).toBe('0:00');
+  });
+});
+
+describe('problemaComSondagem — as mesmas regras do servidor', () => {
+  it('aceita uma pergunta com duas respostas', () => {
+    expect(problemaComSondagem('Quem vem sábado?', ['Eu vou', 'Não posso'])).toBeNull();
+  });
+
+  it('sem pergunta não há sondagem', () => {
+    expect(problemaComSondagem('   ', ['a', 'b'])).toMatch(/pergunta/);
+  });
+
+  it('com uma resposta só também não', () => {
+    expect(problemaComSondagem('Vens?', ['Sim'])).toMatch(/pelo menos/);
+    expect(problemaComSondagem('Vens?', ['Sim', '  '])).toMatch(/pelo menos/);
+  });
+
+  /**
+   * As repetidas contam UMA vez, como no `criar_sondagem` do servidor.
+   *
+   * Sem esta conta, a app deixava passar "Sim/Sim" e era o servidor a recusar
+   * depois de a pessoa carregar em enviar. Duas respostas iguais repartiam os
+   * votos por nada.
+   */
+  it('duas respostas iguais são uma só', () => {
+    expect(problemaComSondagem('Vens?', ['Sim', 'Sim'])).toMatch(/pelo menos/);
+    expect(problemaComSondagem('Vens?', ['Sim', ' Sim '])).toMatch(/pelo menos/);
+  });
+
+  it('há um teto de respostas', () => {
+    expect(problemaComSondagem('Qual?', ['a', 'b', 'c', 'd', 'e', 'f'])).toBeNull();
+    expect(problemaComSondagem('Qual?', ['a', 'b', 'c', 'd', 'e', 'f', 'g'])).toMatch(/máximo/);
+  });
+});
+
+describe('as contas de uma sondagem', () => {
+  const op = (p: Partial<OpcaoSondagem> & { id: string }): OpcaoSondagem => ({
+    mensagemId: 'm1',
+    texto: 'Sim',
+    ordem: 0,
+    votos: 0,
+    quem: [],
+    minha: false,
+    ...p,
+  });
+
+  it('soma os votos todos', () => {
+    expect(totalDeVotos([op({ id: 'a', votos: 2 }), op({ id: 'b', votos: 1 })])).toBe(3);
+  });
+
+  it('a percentagem é sobre o total, e não sobre o maior', () => {
+    const a = op({ id: 'a', votos: 3 });
+    expect(percentagemDaOpcao(a, 4)).toBe(75);
+  });
+
+  it('sem votos nenhuns, nenhuma barra se enche', () => {
+    // Uma divisão por zero dava `NaN`, e um `width: NaN%` desenha a barra
+    // inteira: uma sondagem por responder parecia ter 100% em todas.
+    expect(percentagemDaOpcao(op({ id: 'a' }), 0)).toBe(0);
   });
 });
 
