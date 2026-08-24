@@ -1,10 +1,19 @@
 <!DOCTYPE html>
 <!--
-  MODELO de Política de Privacidade. Antes de usar comercialmente:
-   1. Preencha todos os campos entre [parênteses retos] (identidade do
-      responsável, contactos, região de alojamento, processador de pagamentos).
-   2. Peça a revisão de um jurista/DPO — este texto é um ponto de partida
-      conforme o RGPD (UE 2016/679), não aconselhamento jurídico.
+  Política de Privacidade da Terrabovina.
+
+  É esta a página para onde aponta o `privacyPolicyUrl` da App Store
+  (https://terrabovina.pt/privacidade). O que estiver aqui tem de coincidir com
+  o que a app faz de verdade e com o questionário de privacidade do App Store
+  Connect, senão é chumbo pela diretriz 5.1.1.
+
+  O QUE FALTA, e só o titular da conta pode preencher: a identidade do
+  responsável pelo tratamento (nome/empresa, NIF e morada). Está marcada com
+  `[assim]` na secção 1. O resto do texto já descreve o serviço tal como ele é.
+
+  Atualizada a 2026-08-24 com as CONVERSAS (mensagens, fotografias, áudio,
+  pontos no mapa, sondagens), com o token de notificações e com a fila de
+  denúncias. Ao mexer no chat, é aqui que se volta.
 -->
 <html lang="pt-PT">
 <head>
@@ -28,11 +37,12 @@
 
   <main>
     <h1>Política de Privacidade</h1>
-    <p class="updated">Última atualização: 16 de julho de 2026</p>
+    <p class="updated">Última atualização: 24 de agosto de 2026</p>
 
     <div class="nota">
-      Modelo a rever por um jurista e a completar com os dados do responsável antes de publicar.
-      Os campos <span class="placeholder">[assim]</span> devem ser preenchidos.
+      Falta preencher a identidade do responsável pelo tratamento, na secção 1
+      (os campos <span class="placeholder">[assim]</span>). O texto conforma-se com o RGPD
+      (UE 2016/679) mas não substitui a revisão de um jurista.
     </div>
 
     <p>
@@ -45,69 +55,176 @@
     <p>
       O responsável pelo tratamento dos dados é <span class="placeholder">[NOME DO RESPONSÁVEL / EMPRESA]</span>,
       NIF <span class="placeholder">[NIF]</span>, com morada em <span class="placeholder">[MORADA]</span>.
-      Para qualquer questão sobre privacidade, contacte <span class="placeholder">[email de contacto]</span>.
+      Para qualquer questão sobre privacidade, contacte
+      <a class="link" href="mailto:terrabovinasuperadmin@gmail.com">terrabovinasuperadmin@gmail.com</a>.
     </p>
 
     <h2><span class="num">2.</span>Que dados recolhemos</h2>
     <ul>
-      <li><strong>Dados de conta:</strong> nome, endereço de email, telefone e NIF (quando fornecidos).</li>
-      <li><strong>Dados da exploração:</strong> explorações, terrenos (incluindo localização/coordenadas), animais, identificações (brincos/SIA) e eventos sanitários que o utilizador regista.</li>
+      <li><strong>Dados de conta:</strong> nome, endereço de email, telefone, NIF e fotografia de perfil (quando fornecidos).</li>
+      <li><strong>Dados da exploração:</strong> explorações, terrenos (incluindo localização/coordenadas), animais e respetivas fotografias, identificações (brincos/SIA), eventos sanitários, medicamentos e documentos que o utilizador carrega (por exemplo, faturas e guias).</li>
+      <li><strong>Gestão económica (opcional):</strong> receitas e despesas que o utilizador escolha registar. Esta funcionalidade só existe se for ligada no Perfil.</li>
+      <li>
+        <strong>Conversas:</strong> as mensagens trocadas dentro da App entre pessoas que partilham
+        uma exploração. Podem ser texto, <strong>fotografias</strong>, <strong>mensagens de voz</strong>,
+        um <strong>ponto marcado no mapa</strong> e <strong>sondagens</strong> (a pergunta, as respostas
+        e quem votou em cada uma). Guardamos também quem escreveu, em que conversa e a que horas.
+      </li>
+      <li><strong>Notificações no telemóvel:</strong> um identificador do aparelho ("token"), emitido pelo sistema operativo, que serve para lhe entregar o aviso de mensagem nova.</li>
+      <li><strong>Registo de atividade:</strong> quem criou, alterou ou eliminou cada registo da exploração, e quando. Serve para o dono da exploração perceber o que se passou.</li>
       <li><strong>Dados de subscrição:</strong> plano, estado e histórico de pagamento (quando aplicável).</li>
       <li><strong>Dados técnicos mínimos:</strong> informação necessária ao funcionamento e à segurança do serviço (por exemplo, dados de sessão).</li>
     </ul>
+    <p>
+      A App <strong>não recolhe a sua localização</strong>. As coordenadas que existem são as do
+      terreno ou da exploração, escolhidas por si num mapa ou numa lista de sítios, e o ponto que
+      decidir marcar numa conversa. Não há acesso ao GPS do aparelho.
+      A App também <strong>não tem publicidade, análise de utilização nem relatórios de erro</strong>.
+    </p>
 
     <h2><span class="num">3.</span>Finalidades e base legal</h2>
     <ul>
-      <li><strong>Prestar o serviço</strong> de gestão da exploração (execução do contrato, art. 6.º/1/b RGPD).</li>
+      <li><strong>Prestar o serviço</strong> de gestão da exploração, incluindo as conversas entre a equipa (execução do contrato, art. 6.º/1/b RGPD).</li>
       <li><strong>Ajudar no cumprimento de obrigações legais</strong> de identificação e registo pecuário. O utilizador continua responsável pelas comunicações oficiais (DGAV/IFAP/SNIRA).</li>
+      <li><strong>Entregar notificações</strong> que o utilizador ativou (execução do contrato).</li>
+      <li><strong>Moderar conteúdo denunciado</strong> e proteger os utilizadores de abusos (interesse legítimo, art. 6.º/1/f, e cumprimento das regras das lojas de aplicações).</li>
       <li><strong>Gerir a subscrição e os pagamentos</strong> (execução do contrato e obrigações legais/contabilísticas).</li>
       <li><strong>Segurança e prevenção de fraude</strong> (interesse legítimo, art. 6.º/1/f).</li>
     </ul>
 
-    <h2><span class="num">4.</span>Conservação e apagamento</h2>
+    <h2><span class="num">4.</span>As conversas dentro da App</h2>
     <p>
-      Conservamos os seus dados enquanto a sua conta estiver ativa. Pode <strong>apagar a conta e todos
-      os dados associados</strong> a qualquer momento, diretamente na App (Perfil → Apagar a minha conta).
-      O apagamento é permanente e remove as suas explorações, terrenos, animais e histórico. Alguns
-      dados de faturação podem ter de ser conservados pelo período legalmente exigido.
+      Esta secção é a que interessa ler com atenção, porque é a única em que os seus dados podem
+      ser vistos por <strong>outras pessoas</strong>.
     </p>
-
-    <h2><span class="num">5.</span>Com quem partilhamos</h2>
-    <p>Não vendemos os seus dados. Recorremos a subcontratantes que os tratam por nossa conta:</p>
     <ul>
-      <li><strong>Alojamento e base de dados:</strong> Supabase, na região <span class="placeholder">[UE / região]</span>.</li>
-      <li><strong>Processamento de pagamentos:</strong> <span class="placeholder">[ex.: Stripe]</span> (quando existir subscrição paga).</li>
-      <li><strong>Distribuição do site:</strong> Netlify.</li>
+      <li>
+        <strong>Quem vê o quê.</strong> Cada exploração tem um grupo, com o dono e os trabalhadores
+        lá dentro. O veterinário não entra no grupo: só tem conversas privadas. As conversas privadas
+        só são possíveis entre pessoas que partilhem uma exploração ativa.
+      </li>
+      <li>
+        <strong>Quem sai deixa de ler.</strong> Quem for retirado de um grupo continua a ver o que
+        foi escrito enquanto lá esteve, e não vê nada do que vier depois.
+      </li>
+      <li>
+        <strong>As mensagens duram seis meses.</strong> Ao fim desse tempo são apagadas
+        automaticamente, com os ficheiros que lhes estejam agarrados. Não há arquivo.
+      </li>
+      <li>
+        <strong>Apagar uma mensagem apaga o conteúdo.</strong> O texto, o ficheiro e as coordenadas
+        desaparecem; fica apenas a marca de que ali houve uma mensagem apagada.
+      </li>
+      <li>
+        <strong>Não há cifra ponta a ponta.</strong> As mensagens são transmitidas por ligação
+        encriptada (HTTPS) e guardadas numa base de dados a que só quem administra o serviço tem
+        acesso técnico. Não lemos as conversas dos utilizadores, e as regras de acesso da base de
+        dados não abrem essa porta a quem administra a plataforma. A <strong>única exceção</strong>
+        está no ponto seguinte.
+      </li>
     </ul>
 
-    <h2><span class="num">6.</span>Os seus direitos</h2>
+    <h3>Denunciar e bloquear</h3>
+    <p>
+      Pode <strong>bloquear</strong> outro utilizador, e a partir daí ele deixa de lhe poder escrever.
+      Pode também <strong>denunciar</strong> uma mensagem que considere abusiva. Quando o faz:
+    </p>
+    <ul>
+      <li>
+        é feita uma <strong>cópia</strong> dessa mensagem (texto ou ficheiro), das três mensagens
+        que a antecederam e do motivo que indicar, e essa cópia fica numa fila de moderação;
+      </li>
+      <li>
+        <strong>é essa cópia, e só essa, que quem administra o serviço passa a poder ler</strong>,
+        para poder decidir. Ao denunciar está a pedir precisamente isso;
+      </li>
+      <li>
+        se o conteúdo denunciado for uma fotografia ou uma mensagem de voz, o ficheiro fica
+        acessível a quem modera enquanto a denúncia estiver por tratar;
+      </li>
+      <li>
+        a conta de quem escreveu pode ser <strong>suspensa</strong>, ficando impedida de escrever
+        seja onde for na App.
+      </li>
+    </ul>
+    <p>
+      Para comunicar um abuso fora da App, escreva para
+      <a class="link" href="mailto:terrabovinasuperadmin@gmail.com">terrabovinasuperadmin@gmail.com</a>.
+      As denúncias são analisadas no prazo de 24 horas.
+    </p>
+
+    <h2><span class="num">5.</span>Conservação e apagamento</h2>
+    <p>
+      Conservamos os seus dados enquanto a sua conta estiver ativa, com uma exceção: as
+      <strong>mensagens das conversas são apagadas ao fim de seis meses</strong>, com os ficheiros
+      que as acompanhem.
+    </p>
+    <p>
+      Pode <strong>apagar a conta e todos os dados associados</strong> a qualquer momento,
+      diretamente na App (Perfil → Apagar a minha conta). O apagamento é permanente e remove as suas
+      explorações, terrenos, animais, documentos e histórico. As mensagens que tenha escrito em
+      conversas de grupo deixam de ter autor identificado e desaparecem no prazo normal dos seis
+      meses. Alguns dados de faturação podem ter de ser conservados pelo período legalmente exigido.
+    </p>
+
+    <h2><span class="num">6.</span>Com quem partilhamos</h2>
+    <p>Não vendemos os seus dados. Recorremos a subcontratantes que os tratam por nossa conta:</p>
+    <ul>
+      <li><strong>Alojamento, base de dados e ficheiros:</strong> Supabase, na União Europeia (Irlanda).</li>
+      <li>
+        <strong>Notificações no telemóvel:</strong> Expo, e através dela os serviços de notificações
+        da Apple (APNs) e da Google (FCM). Recebem o identificador do aparelho e o texto do aviso,
+        que inclui o nome de quem escreveu e o princípio da mensagem. Se desligar as notificações,
+        nada disto sai daqui.
+      </li>
+      <li><strong>Envio de emails do serviço:</strong> Resend (por exemplo, quando usa o formulário de apoio).</li>
+      <li><strong>Distribuição do site:</strong> Cloudflare e Netlify.</li>
+      <li><strong>Mapas:</strong> as imagens de satélite dos terrenos vêm da Esri. O pedido do mapa revela ao fornecedor a zona que está a ver.</li>
+      <li><strong>Processamento de pagamentos:</strong> <span class="placeholder">[a definir]</span> (quando existir subscrição paga).</li>
+    </ul>
+
+    <h2><span class="num">7.</span>Os seus direitos</h2>
     <p>Enquanto titular dos dados, tem direito a:</p>
     <ul>
-      <li>Aceder aos seus dados e obter uma cópia (exportação em CSV disponível na App).</li>
+      <li>Aceder aos seus dados e obter uma cópia (exportação em Excel disponível na App).</li>
       <li>Retificar dados incorretos.</li>
       <li>Apagar os dados ("direito ao esquecimento"), na App ou a pedido.</li>
       <li>Limitar ou opor-se a determinados tratamentos e à portabilidade.</li>
     </ul>
     <p>
-      Para exercer estes direitos, use a App ou contacte <span class="placeholder">[email de contacto]</span>.
+      Para exercer estes direitos, use a App ou contacte
+      <a class="link" href="mailto:terrabovinasuperadmin@gmail.com">terrabovinasuperadmin@gmail.com</a>.
       Tem também o direito de apresentar reclamação à autoridade de controlo: a
       <a class="link" href="https://www.cnpd.pt" target="_blank" rel="noopener">CNPD</a> (Comissão Nacional de Proteção de Dados).
     </p>
 
-    <h2><span class="num">7.</span>Segurança</h2>
+    <h2><span class="num">8.</span>Segurança</h2>
     <p>
-      Aplicamos medidas técnicas e organizativas adequadas: isolamento dos dados por utilizador
-      (Row Level Security), comunicação encriptada (HTTPS) e controlo de acessos por perfis
-      (administrador, trabalhador, veterinário).
+      Aplicamos medidas técnicas e organizativas adequadas: isolamento dos dados por utilizador e
+      por exploração, imposto pela própria base de dados (Row Level Security), comunicação
+      encriptada (HTTPS) e controlo de acessos por perfis (administrador, trabalhador, veterinário).
+    </p>
+    <p>
+      Os ficheiros que carrega, tanto os documentos como as fotografias e as mensagens de voz das
+      conversas, ficam em <strong>armazenamento privado</strong>: não têm endereço público e só se
+      abrem através de ligações temporárias, geradas para quem tem acesso àquele conteúdo.
     </p>
 
-    <h2><span class="num">8.</span>Cookies e armazenamento local</h2>
+    <h2><span class="num">9.</span>Menores</h2>
     <p>
-      A App usa apenas armazenamento local essencial (sessão e funcionamento offline). O site
-      institucional não usa cookies de rastreio ou publicidade.
+      A App destina-se a maiores de 18 anos, no contexto profissional de uma exploração pecuária, e
+      não se dirige a crianças nem recolhe conscientemente dados de menores.
     </p>
 
-    <h2><span class="num">9.</span>Alterações</h2>
+    <h2><span class="num">10.</span>Armazenamento no aparelho</h2>
+    <p>
+      A App guarda dados no seu aparelho para poder funcionar <strong>sem ligação à internet</strong>:
+      os registos da exploração, as últimas mensagens de cada conversa e as suas preferências. Tudo
+      isso desaparece quando termina a sessão ou desinstala a App. O site institucional não usa
+      cookies de rastreio ou publicidade.
+    </p>
+
+    <h2><span class="num">11.</span>Alterações</h2>
     <p>
       Podemos atualizar esta política. A data no topo indica a última revisão; alterações relevantes
       serão comunicadas pelos meios adequados.
