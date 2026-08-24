@@ -221,11 +221,17 @@ select * from (
     -- O gatilho e não só a tabela: uma base com `push_token` e sem
     -- `trg_chat_push` guarda os tokens e nunca envia nada, o que é exatamente
     -- o estado que ninguém descobre sem ir ver.
+    -- `to_regclass(...)` e não `'public.mensagem'::regclass`: o cast REBENTA
+    -- quando a tabela não existe, e a base onde ela não existe é exatamente a
+    -- que este quadro serve para diagnosticar. A produção do dia 24 de agosto
+    -- parou aqui com "relation public.mensagem does not exist" e não chegou a
+    -- imprimir linha nenhuma. A função devolve `null`, o `=` fica `null`, o
+    -- `exists` fica falso, e a linha diz o que tem a dizer: falta aplicar.
     (38, 'schema_chat_push.sql',      'push_token + gatilho trg_chat_push',
         (to_regclass('public.push_token') is not null
          and exists (
            select 1 from pg_trigger where tgname = 'trg_chat_push'
-             and tgrelid = 'public.mensagem'::regclass)))
+             and tgrelid = to_regclass('public.mensagem'))))
 ) as t(ordem, ficheiro, marca, aplicado)
 order by ordem;
 -- Ler a coluna `aplicado`: true = já correu, false = FALTA aplicar.
