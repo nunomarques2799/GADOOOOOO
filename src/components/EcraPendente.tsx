@@ -5,7 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CampoLocalidade } from '@/components/CampoLocalidade';
 import { Button, Card, Icon, type IconName, Text } from '@/components/ui';
+import { confirmacaoValida, PALAVRA_CONFIRMACAO } from '@/data/apagarConta';
 import { useAuth } from '@/data/auth';
+import { avisar, confirmar } from '@/data/avisos';
 import { entraPorCodigo, lerIntencao } from '@/data/intencao';
 import { useMembros } from '@/data/membros';
 import { explicarRecusa } from '@/data/supabaseRepo';
@@ -41,7 +43,7 @@ function novoId(prefixo: string): string {
 export function EcraPendente() {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
-  const { utilizador, sair } = useAuth();
+  const { utilizador, sair, apagarConta } = useAuth();
   const { recarregar, aCarregar, estadoPerfil, resgatarConvite } = useMembros();
 
   const nome = utilizador?.user_metadata?.nome as string | undefined;
@@ -73,6 +75,24 @@ export function EcraPendente() {
   const [aResgatar, setAResgatar] = useState(false);
   const [erroResgate, setErroResgate] = useState<string | null>(null);
 
+  // Apagar a conta a partir DAQUI.
+  //
+  // A diretriz 5.1.1(v) da Apple obriga quem deixa criar conta a deixar
+  // apagá-la de dentro da app. O ecrã que faz isso (`conta/apagar`) vive
+  // dentro dos separadores, e quem está neste ecrã não tem separadores
+  // nenhuns: o `AppRouter` do `_layout.tsx` monta ISTO em vez da app inteira
+  // enquanto `membros.length === 0`. Ou seja, quem se registava ficava com uma
+  // conta que só sabia terminar sessão, e a única forma de a apagar era pedir
+  // a alguém. Isso é o buraco que esta secção fecha.
+  //
+  // Note-se que não é só o "pendente": uma conta JÁ APROVADA que ainda não
+  // criou exploração nenhuma cai no mesmo ecrã, e tinha o mesmo problema.
+  const [aApagar, setAApagar] = useState(false);
+  const [querApagar, setQuerApagar] = useState(false);
+  const [palavra, setPalavra] = useState('');
+  const [erroApagar, setErroApagar] = useState<string | null>(null);
+  const podeApagar = confirmacaoValida(palavra) && !aApagar;
+
   async function criarPrimeiraExploracao() {
     if (!supabase || !validoExp) return;
     setAGravar(true);
@@ -100,6 +120,37 @@ export function EcraPendente() {
     setAResgatar(false);
     if (erro) setErroResgate(traduzErroConvite(erro));
     // Se OK, `recarregar` dentro de `resgatarConvite` faz o gate desaparecer.
+  }
+
+  function perguntarPelaUltimaVez() {
+    if (!podeApagar) return;
+    // `perguntaSemDados` e não a versão com contagens: quem está neste ecrã não
+    // tem exploração nenhuma, portanto não há explorações nem animais para
+    // enumerar. É o mesmo texto que o `conta/apagar` usa quando a conta está
+    // vazia.
+    confirmar(
+      t('apagar.perguntaTitulo'),
+      t('apagar.perguntaSemDados'),
+      () => void executarApagar(),
+      { rotuloConfirmar: t('apagar.definitivamente'), destrutivo: true },
+    );
+  }
+
+  async function executarApagar() {
+    setAApagar(true);
+    setErroApagar(null);
+    const razao = await apagarConta();
+    if (razao) {
+      // Continua a haver conta: fica-se aqui, com a razão à vista e a palavra
+      // ainda escrita. Fechar o formulário seria esconder a falha.
+      setAApagar(false);
+      setErroApagar(razao);
+      return;
+    }
+    // Sem sessão, o portão do `_layout.tsx` leva a app ao ecrã de entrada
+    // sozinho. O aviso é montado por fora dele e sobrevive a essa troca, ao
+    // contrário de um toast, que morreria com o ecrã.
+    avisar(t('apagar.apagada'), t('apagar.apagadaDetalhe'));
   }
 
   const titulo = aprovado
@@ -325,6 +376,68 @@ export function EcraPendente() {
             onPress={sair}
             fullWidth={!desktop}
           />
+        </View>
+
+        {/* Apagar a conta (5.1.1(v)).
+            Fechado até alguém lhe tocar, e depois com a palavra escrita à mão,
+            pela mesma razão do ecrã `conta/apagar`: um botão vermelho sozinho
+            ao lado do "Terminar sessão" carrega-se sem ler, e este não tem
+            volta. A distância é a funcionalidade. */}
+        <View style={{ marginTop: spacing.xl, alignItems: 'center' }}>
+          {querApagar ? (
+            <Card style={{ width: '100%', maxWidth: 420 }}>
+              <Text variant="bodyStrong" color={colors.danger}>
+                {t('perfil.apagarConta')}
+              </Text>
+              <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: 2 }}>
+                {t('pendente.apagarExplicacao')}
+              </Text>
+              <View style={{ marginTop: spacing.md }}>
+                <Campo
+                  label={t('apagar.escrevaParaConfirmar', { palavra: PALAVRA_CONFIRMACAO })}
+                  icon="alert-octagon-outline"
+                  value={palavra}
+                  onChangeText={setPalavra}
+                  placeholder={PALAVRA_CONFIRMACAO}
+                  autoCapitalize="characters"
+                />
+                <Text variant="caption" color={colors.textMuted} style={{ marginTop: -spacing.xs }}>
+                  {t('apagar.ajudaEscrever')}
+                </Text>
+              </View>
+              {erroApagar ? (
+                <Text variant="secondary" color={colors.danger} style={{ marginTop: spacing.sm }}>
+                  {erroApagar}
+                </Text>
+              ) : null}
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+                <Button
+                  label={t('apagar.afinalNao')}
+                  variant="secondary"
+                  onPress={() => {
+                    setQuerApagar(false);
+                    setPalavra('');
+                    setErroApagar(null);
+                  }}
+                />
+                <Button
+                  label={t('perfil.apagarConta')}
+                  icon="delete-forever"
+                  variant="danger"
+                  onPress={perguntarPelaUltimaVez}
+                  disabled={!podeApagar}
+                  loading={aApagar}
+                />
+              </View>
+            </Card>
+          ) : (
+            <Button
+              label={t('perfil.apagarConta')}
+              icon="delete-forever"
+              variant="ghost"
+              onPress={() => setQuerApagar(true)}
+            />
+          )}
         </View>
       </ScrollView>
     </View>

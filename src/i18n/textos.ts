@@ -1345,6 +1345,8 @@ const pt = {
   'pendente.pecaAoResponsavel': 'Peça o código ao responsável pela exploração.',
   'pendente.entrarComCodigo': 'Entrar com este código',
   'pendente.verificarNovamente': 'Verificar novamente',
+  'pendente.apagarExplicacao':
+    'Não quer continuar? Pode apagar a conta e os dados do registo. Ninguém tem de a aprovar primeiro.',
   'pendente.codigoInvalido': 'Código inválido.',
   'pendente.codigoUsado': 'Este código já foi utilizado.',
   'pendente.codigoExpirado': 'Este código expirou. Peça um novo ao cliente.',
@@ -3159,6 +3161,8 @@ const en: Record<ChaveTexto, string> = {
   'pendente.pecaAoResponsavel': 'Ask whoever answers for the farm for the code.',
   'pendente.entrarComCodigo': 'Get in with this code',
   'pendente.verificarNovamente': 'Check again',
+  'pendente.apagarExplicacao':
+    'Changed your mind? You can delete your account and your sign-up details. Nobody has to approve it first.',
   'pendente.codigoInvalido': 'Invalid code.',
   'pendente.codigoUsado': 'This code has already been used.',
   'pendente.codigoExpirado': 'This code has expired. Ask the client for a new one.',
