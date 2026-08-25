@@ -14,9 +14,31 @@
 -- Tudo o que cria leva o prefixo `demo-`, por isso a limpeza é uma linha (ver o
 -- fim do ficheiro). Correr outra vez é seguro: começa por apagar o que criou.
 --
+-- A CONTA É UM PARÂMETRO desde 2026-08-25, e não um endereço escrito aqui
+-- dentro. Era `testaccount@gmail.com`, até se descobrir que o criador não tem
+-- acesso a essa caixa: a conta de demonstração tem de ser uma a que ELE possa
+-- entrar, senão não consegue gravar o vídeo que a Apple pede. Como o bloco
+-- começa por apagar tudo o que leva o prefixo `demo-`, correr isto com outro
+-- email MUDA A DEMONSTRAÇÃO DE DONO em vez de a duplicar, que é o que se quer.
+--
+-- Ao trocar de conta aqui, trocar também no App Store Connect (os campos
+-- `demoAccountName`/`demoAccountPassword` da App Review Information) e nas
+-- notas de revisão. Uma sem a outra deixa o revisor a bater numa porta errada.
+--
 -- Correr com:
---   psql "<ligação>" -v ON_ERROR_STOP=1 -f supabase/dados_demo_apple.sql
+--   psql "<ligação>" -v ON_ERROR_STOP=1 -v email=contateste@gmail.com \
+--        -f supabase/dados_demo_apple.sql
 -- ---------------------------------------------------------------------------
+
+\if :{?email}
+\else
+  \echo 'ERRO: falta -v email=<endereço da conta de demonstração>'
+  \quit
+\endif
+
+-- A variável do psql só existe do lado do cliente e os blocos `do $$` não a
+-- veem. Passa-se para a sessão, e é de lá que o PL/pgSQL a lê.
+set demo.email = :'email';
 
 do $$
 declare
@@ -24,9 +46,10 @@ declare
   exp   text := 'demo-exp-1';
   hoje  date := current_date;
 begin
-  select id into uid from auth.users where email = 'testaccount@gmail.com';
+  select id into uid from auth.users where email = current_setting('demo.email');
   if uid is null then
-    raise exception 'A conta testaccount@gmail.com não existe nesta base.';
+    raise exception 'A conta % não existe nesta base. Registe-a primeiro na app.',
+      current_setting('demo.email');
   end if;
 
   -- Limpar uma passagem anterior, na ordem inversa das chaves estrangeiras.
