@@ -7,13 +7,23 @@
   o que a app faz de verdade e com o questionário de privacidade do App Store
   Connect, senão é chumbo pela diretriz 5.1.1.
 
-  O QUE FALTA, e só o titular da conta pode preencher: a identidade do
-  responsável pelo tratamento (nome/empresa, NIF e morada). Está marcada com
-  `[assim]` na secção 1. O resto do texto já descreve o serviço tal como ele é.
+  Não falta preencher nada desde 2026-08-25. O responsável pelo tratamento é
+  uma PESSOA SINGULAR, e não uma empresa: não há sociedade constituída, e por
+  isso não há NIF de empresa nem sede. O artigo 13.º pede a identidade e um
+  contacto do responsável, e é o que a secção 1 tem.
+
+  A morada e o NIF pessoais ficaram DE FORA por escolha do titular: sem
+  empresa, a morada seria a casa dele, num site público e para sempre. Quando a
+  sociedade existir, é na secção 1 e na abertura dos `termos.html` que se troca.
 
   Atualizada a 2026-08-24 com as CONVERSAS (mensagens, fotografias, áudio,
   pontos no mapa, sondagens), com o token de notificações e com a fila de
   denúncias. Ao mexer no chat, é aqui que se volta.
+
+  A 2026-08-25 saiu também o "Processamento de pagamentos: [a definir]" da
+  lista de subcontratantes. A app é gratuita e a ficha da App Store diz o
+  mesmo: uma política a prever um processador de pagamentos que não existe é a
+  mesma contradição que os termos tinham na secção dos planos pagos.
 
   OS `<!--email_off-->` À VOLTA DO EMAIL NÃO SÃO DECORAÇÃO. O Cloudflare tem a
   "Email Address Obfuscation" ligada e reescreve qualquer endereço que encontre
@@ -45,12 +55,10 @@
 
   <main>
     <h1>Política de Privacidade</h1>
-    <p class="updated">Última atualização: 24 de agosto de 2026</p>
+    <p class="updated">Última atualização: 25 de agosto de 2026</p>
 
     <div class="nota">
-      Falta preencher a identidade do responsável pelo tratamento, na secção 1
-      (os campos <span class="placeholder">[assim]</span>). O texto conforma-se com o RGPD
-      (UE 2016/679) mas não substitui a revisão de um jurista.
+      O texto conforma-se com o RGPD (UE 2016/679) mas não substitui a revisão de um jurista.
     </div>
 
     <p>
@@ -61,9 +69,10 @@
 
     <h2><span class="num">1.</span>Responsável pelo tratamento</h2>
     <p>
-      O responsável pelo tratamento dos dados é <span class="placeholder">[NOME DO RESPONSÁVEL / EMPRESA]</span>,
-      NIF <span class="placeholder">[NIF]</span>, com morada em <span class="placeholder">[MORADA]</span>.
-      Para qualquer questão sobre privacidade, contacte
+      O responsável pelo tratamento dos dados é <strong>Nuno Filipe Glória Marques</strong>,
+      pessoa singular, contactável em
+      <!--email_off--><a class="link" href="mailto:nunomarques271999@gmail.com">nunomarques271999@gmail.com</a><!--/email_off-->.
+      Para questões sobre privacidade pode usar esse endereço ou o endereço de apoio da aplicação,
       <!--email_off--><a class="link" href="mailto:terrabovinasuperadmin@gmail.com">terrabovinasuperadmin@gmail.com</a><!--/email_off-->.
     </p>
 
@@ -80,7 +89,11 @@
       </li>
       <li><strong>Notificações no telemóvel:</strong> um identificador do aparelho ("token"), emitido pelo sistema operativo, que serve para lhe entregar o aviso de mensagem nova.</li>
       <li><strong>Registo de atividade:</strong> quem criou, alterou ou eliminou cada registo da exploração, e quando. Serve para o dono da exploração perceber o que se passou.</li>
-      <li><strong>Dados de subscrição:</strong> plano, estado e histórico de pagamento (quando aplicável).</li>
+      <li>
+        <strong>Plano da conta:</strong> um campo de plano e estado por conta, usado por quem
+        administra a plataforma. A App é gratuita e <strong>não há cobranças</strong>: não guardamos
+        dados de cartão nem histórico de pagamentos.
+      </li>
       <li><strong>Dados técnicos mínimos:</strong> informação necessária ao funcionamento e à segurança do serviço (por exemplo, dados de sessão).</li>
     </ul>
     <p>
@@ -96,7 +109,7 @@
       <li><strong>Ajudar no cumprimento de obrigações legais</strong> de identificação e registo pecuário. O utilizador continua responsável pelas comunicações oficiais (DGAV/IFAP/SNIRA).</li>
       <li><strong>Entregar notificações</strong> que o utilizador ativou (execução do contrato).</li>
       <li><strong>Moderar conteúdo denunciado</strong> e proteger os utilizadores de abusos (interesse legítimo, art. 6.º/1/f, e cumprimento das regras das lojas de aplicações).</li>
-      <li><strong>Gerir a subscrição e os pagamentos</strong> (execução do contrato e obrigações legais/contabilísticas).</li>
+      <li><strong>Gerir o plano da conta</strong> e saber que contas estão ativas (execução do contrato).</li>
       <li><strong>Segurança e prevenção de fraude</strong> (interesse legítimo, art. 6.º/1/f).</li>
     </ul>
 
@@ -188,7 +201,11 @@
       <li><strong>Envio de emails do serviço:</strong> Resend (por exemplo, quando usa o formulário de apoio).</li>
       <li><strong>Distribuição do site:</strong> Cloudflare e Netlify.</li>
       <li><strong>Mapas:</strong> as imagens de satélite dos terrenos vêm da Esri. O pedido do mapa revela ao fornecedor a zona que está a ver.</li>
-      <li><strong>Processamento de pagamentos:</strong> <span class="placeholder">[a definir]</span> (quando existir subscrição paga).</li>
+      <li>
+        <strong>Pagamentos:</strong> nenhum. A aplicação é gratuita, não tem compras nem
+        subscrições, e por isso não há processador de pagamentos nem dados de pagamento seus em
+        lado nenhum.
+      </li>
     </ul>
 
     <h2><span class="num">7.</span>Os seus direitos</h2>

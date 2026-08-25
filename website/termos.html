@@ -1,9 +1,37 @@
 <!DOCTYPE html>
 <!--
-  MODELO de Termos de Utilização. Antes de usar comercialmente:
-   1. Preencha os campos entre [parênteses retos] (prestador, contactos, foro).
-   2. Peça a revisão de um jurista — este texto é um ponto de partida, não
-      aconselhamento jurídico.
+  Termos de Utilização da Terrabovina.
+
+  Não falta preencher nada desde 2026-08-25. O prestador é uma PESSOA
+  SINGULAR, e não uma empresa: não há sociedade constituída, e por isso não há
+  NIF de empresa nem sede. Nome e um contacto que funcione é o que a lei pede
+  para identificar quem presta o serviço, e é o que está.
+
+  A morada e o NIF pessoais ficaram DE FORA por escolha do titular: sem
+  empresa, a morada seria a casa dele, num site público e para sempre. Quando a
+  sociedade existir, é aqui e na secção 1 da `privacidade.html` que se troca.
+
+  Atualizado a 2026-08-25 com a secção 4 (CONVERSAS E CONTEÚDO DOS
+  UTILIZADORES). Ela não é enfeite: a diretriz 1.2 da Apple exige, a quem
+  deixa pessoas escrever umas às outras, um compromisso PUBLICADO de tolerância
+  zero a conteúdo ofensivo, com o caminho para denunciar, bloquear e ver
+  alguém agir. Ao mexer no chat, é aqui que se volta, e também na
+  `privacidade.html`.
+
+  Corrigido no mesmo dia: a secção dos pagamentos dizia que "alguns planos são
+  pagos, com faturação recorrente". A app é GRATUITA e a ficha da App Store
+  diz o mesmo. Uns termos a prometer subscrições que não existem são uma
+  contradição que o revisor encontra sozinho.
+
+  OS `email_off` À VOLTA DO EMAIL NÃO SÃO DECORAÇÃO. O Cloudflare tem a
+  "Email Address Obfuscation" ligada e reescreve qualquer endereço que encontre
+  no HTML para `[email protected]`, decifrado por JavaScript no navegador. Num
+  contacto que a diretriz 1.2 da Apple exige PUBLICADO, isso é um contacto que
+  não se lê sem JavaScript. Ao acrescentar um email novo a esta página, vai o
+  mesmo par de comentários com ele.
+
+  Continua a ser um ponto de partida e não aconselhamento jurídico: antes de
+  usar comercialmente, peça a revisão de um jurista.
 -->
 <html lang="pt-PT">
 <head>
@@ -27,17 +55,17 @@
 
   <main>
     <h1>Termos de Utilização</h1>
-    <p class="updated">Última atualização: 16 de julho de 2026</p>
+    <p class="updated">Última atualização: 25 de agosto de 2026</p>
 
     <div class="nota">
-      Modelo a rever por um jurista e a completar com os dados do prestador antes de publicar.
-      Os campos <span class="placeholder">[assim]</span> devem ser preenchidos.
+      O texto não substitui a revisão de um jurista.
     </div>
 
     <p>
       Estes termos regulam a utilização da aplicação <strong>Terrabovina</strong> ("a App"),
-      fornecida por <span class="placeholder">[NOME DO PRESTADOR / EMPRESA]</span>, NIF
-      <span class="placeholder">[NIF]</span> ("nós"). Ao criar uma conta ou usar a App, aceita estes termos.
+      fornecida por <strong>Nuno Filipe Glória Marques</strong>, pessoa singular, contactável em
+      <!--email_off--><a class="link" href="mailto:nunomarques271999@gmail.com">nunomarques271999@gmail.com</a><!--/email_off-->
+      ("nós"). Ao criar uma conta ou usar a App, aceita estes termos.
     </p>
 
     <h2><span class="num">1.</span>Objeto</h2>
@@ -56,14 +84,48 @@
     <h2><span class="num">3.</span>Uso aceitável</h2>
     <p>Compromete-se a não usar a App para fins ilícitos, a não tentar aceder a dados de outros utilizadores nem a comprometer a segurança do serviço.</p>
 
-    <h2><span class="num">4.</span>Subscrição e pagamentos</h2>
+    <h2><span class="num">4.</span>Conversas e conteúdo dos utilizadores</h2>
     <p>
-      Alguns planos são pagos, com faturação recorrente. Quando aplicável, as condições de preço,
-      período experimental, renovação e cancelamento são apresentadas no momento da subscrição.
-      O não pagamento pode suspender o acesso às funcionalidades pagas.
+      A App tem conversas entre as pessoas da mesma exploração, onde se escrevem mensagens e se
+      podem juntar fotografias, mensagens de voz, pontos no mapa e sondagens. Esse conteúdo é
+      escrito por utilizadores e não por nós.
+    </p>
+    <p>
+      <strong>Não toleramos conteúdo ofensivo nem comportamento abusivo.</strong> É proibido usar as
+      conversas para insultar, ameaçar, assediar, difundir conteúdo ilegal, sexual, violento ou
+      discriminatório, ou para enviar publicidade não pedida.
+    </p>
+    <ul>
+      <li>
+        <strong>Denunciar:</strong> mantenha o dedo sobre a mensagem e escolha "Denunciar". A
+        mensagem é copiada para uma fila que administramos, com as mensagens anteriores, para se
+        perceber o contexto.
+      </li>
+      <li>
+        <strong>Bloquear:</strong> pode bloquear outra pessoa a partir da conversa. Deixam de poder
+        escrever um ao outro.
+      </li>
+      <li>
+        <strong>O que fazemos:</strong> analisamos as denúncias no prazo de 24 horas. Podemos
+        remover conteúdo e suspender ou terminar a conta de quem não cumpra estas regras.
+      </li>
+    </ul>
+    <p>
+      Duas notas sobre o alcance destas conversas. Só se pode escrever a quem partilha consigo uma
+      exploração ativa, por convite do administrador dela: não há forma de contactar desconhecidos
+      pela App. E <strong>não lemos as conversas</strong>: o único conteúdo a que acedemos é o de uma
+      mensagem que alguém nos entregou ao denunciá-la. As mensagens são apagadas ao fim de seis
+      meses.
     </p>
 
-    <h2><span class="num">5.</span>Os seus dados e responsabilidade</h2>
+    <h2><span class="num">5.</span>Preço</h2>
+    <p>
+      A App é <strong>gratuita</strong>: não tem compras dentro da aplicação, subscrições nem
+      publicidade. Se um dia passar a ter funcionalidades pagas, as condições serão apresentadas
+      antes de as contratar, e o que já tiver registado continua a ser seu.
+    </p>
+
+    <h2><span class="num">6.</span>Os seus dados e responsabilidade</h2>
     <ul>
       <li>Os dados que introduz são seus; concede-nos apenas o necessário para prestar o serviço.</li>
       <li>É responsável pela veracidade e atualização da informação que regista.</li>
@@ -74,7 +136,7 @@
       </li>
     </ul>
 
-    <h2><span class="num">6.</span>Disponibilidade e limitação de responsabilidade</h2>
+    <h2><span class="num">7.</span>Disponibilidade e limitação de responsabilidade</h2>
     <p>
       Esforçamo-nos por manter a App disponível e correta, mas fornecemo-la "tal como está", sem garantia
       de ausência de erros ou de conformidade legal automática. Na medida permitida por lei, não somos
@@ -82,26 +144,27 @@
       incumprimentos de prazos legais que continuam a ser da responsabilidade do utilizador.
     </p>
 
-    <h2><span class="num">7.</span>Propriedade intelectual</h2>
+    <h2><span class="num">8.</span>Propriedade intelectual</h2>
     <p>A App, a marca e o conteúdo do serviço são nossos ou dos nossos licenciadores. Os seus dados continuam a ser seus.</p>
 
-    <h2><span class="num">8.</span>Cessação</h2>
+    <h2><span class="num">9.</span>Cessação</h2>
     <p>
       Pode terminar a qualquer momento, apagando a conta na App. Podemos suspender ou terminar contas
       que violem estes termos ou a lei.
     </p>
 
-    <h2><span class="num">9.</span>Lei aplicável e foro</h2>
+    <h2><span class="num">10.</span>Lei aplicável e foro</h2>
     <p>
-      Estes termos regem-se pela lei portuguesa. Para a resolução de litígios é competente o foro de
-      <span class="placeholder">[comarca]</span>, sem prejuízo dos direitos do consumidor à resolução
-      alternativa de litígios.
+      Estes termos regem-se pela lei portuguesa. Aplicam-se as regras gerais de competência dos
+      tribunais portugueses, sem prejuízo do direito do consumidor a demandar e ser demandado no
+      tribunal do seu domicílio e de recorrer à resolução alternativa de litígios de consumo.
     </p>
 
-    <h2><span class="num">10.</span>Alterações e contacto</h2>
+    <h2><span class="num">11.</span>Alterações e contacto</h2>
     <p>
       Podemos atualizar estes termos; a data no topo indica a última revisão. Para qualquer questão,
-      contacte <span class="placeholder">[email de contacto]</span>.
+      ou para comunicar um abuso fora da App, contacte
+      <!--email_off--><a class="link" href="mailto:terrabovinasuperadmin@gmail.com">terrabovinasuperadmin@gmail.com</a><!--/email_off-->.
     </p>
   </main>
 
