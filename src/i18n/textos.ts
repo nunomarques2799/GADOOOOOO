@@ -1487,6 +1487,18 @@ const pt = {
   'erroAuth.emailInvalido': 'Email inválido.',
   'erroAuth.semLigacao': 'Sem ligação à internet. Tente novamente.',
 
+  /* E as do servidor (Postgres e PostgREST), pela mesma razão. Estas são
+     mensagens LONGAS de propósito: dizem o que aconteceu e o que fazer a
+     seguir, porque quem as lê está a meio de guardar alguma coisa. */
+  'erroServidor.recusaExploracao':
+    'O servidor recusou criar a exploração. Ou a sessão expirou (feche e volte a entrar), ou a conta ainda não está aprovada para criar explorações.',
+  'erroServidor.semPermissao':
+    'Não tem permissão para gravar isto. Se acha que devia ter, peça ao administrador da exploração.',
+  'erroServidor.cacheSchema':
+    'O servidor foi atualizado há pouco e ainda não reconhece este campo. Tente daqui a um minuto; se continuar, avise quem gere a aplicação.',
+  'erroServidor.semLigacao':
+    'Sem ligação ao servidor. A alteração fica guardada e é enviada quando houver rede.',
+
   /* ---- Marcar um evento na agenda ---- */
   'agenda.semPermissaoTitulo': 'O calendário é de quem trabalha na exploração',
   'agenda.semPermissaoMensagem':
@@ -3309,6 +3321,15 @@ const en: Record<ChaveTexto, string> = {
   'erroAuth.palavraCurta': 'The password is too short (at least 6 characters).',
   'erroAuth.emailInvalido': 'That email address is not valid.',
   'erroAuth.semLigacao': 'No internet connection. Please try again.',
+
+  'erroServidor.recusaExploracao':
+    'The server refused to create the farm. Either the session has expired (close the app and sign in again), or the account is not approved to create farms yet.',
+  'erroServidor.semPermissao':
+    'You are not allowed to save this. If you think you should be, ask the farm administrator.',
+  'erroServidor.cacheSchema':
+    'The server was updated a moment ago and does not know this field yet. Try again in a minute; if it carries on, tell whoever runs the app.',
+  'erroServidor.semLigacao':
+    'No connection to the server. The change is kept here and is sent when there is a network.',
 
   /* ---- Marcar um evento na agenda ---- */
   'agenda.semPermissaoTitulo': 'The calendar belongs to whoever works on the farm',

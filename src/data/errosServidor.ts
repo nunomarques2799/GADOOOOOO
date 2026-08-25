@@ -13,7 +13,13 @@
  * Aqui só se traduzem os casos RECONHECIDOS. O que não estiver na lista passa
  * tal e qual: uma mensagem estranha é melhor do que uma mensagem inventada, e é
  * por ela que se descobre o caso seguinte a acrescentar.
+ *
+ * Os textos vivem no `i18n` e são lidos DENTRO da função, no momento do erro:
+ * o idioma é um valor de módulo e uma tabela feita no arranque ficava presa à
+ * língua desse instante.
  */
+
+import { t } from '@/i18n';
 
 /**
  * Só se chama com o `message` de um erro vindo do Supabase. As mensagens de
@@ -34,31 +40,21 @@ export function traduzErroServidor(msg: string): string {
     // mensagem vaga. Quem consegue distinguir os dois casos é `explicarRecusa`
     // no `supabaseRepo.ts`, que vai perguntar ao servidor quem somos.
     if (m.includes('"exploracao"')) {
-      return (
-        'O servidor recusou criar a exploração. ' +
-        'Ou a sessão expirou (feche e volte a entrar), ou a conta ainda não ' +
-        'está aprovada para criar explorações.'
-      );
+      return t('erroServidor.recusaExploracao');
     }
-    return (
-      'Não tem permissão para gravar isto. ' +
-      'Se acha que devia ter, peça ao administrador da exploração.'
-    );
+    return t('erroServidor.semPermissao');
   }
 
   // ---- PostgREST com a cópia do schema desatualizada ----
   // A coluna existe na base; quem não sabe dela é a API. Acontece nos minutos
   // a seguir a uma alteração à base de dados, e passa sozinho.
   if (m.includes('schema cache')) {
-    return (
-      'O servidor foi atualizado há pouco e ainda não reconhece este campo. ' +
-      'Tente daqui a um minuto; se continuar, avise quem gere a aplicação.'
-    );
+    return t('erroServidor.cacheSchema');
   }
 
   // ---- Sem rede ----
   if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('network request')) {
-    return 'Sem ligação ao servidor. A alteração fica guardada e é enviada quando houver rede.';
+    return t('erroServidor.semLigacao');
   }
 
   return msg;
