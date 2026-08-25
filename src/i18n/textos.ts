@@ -1476,6 +1476,17 @@ const pt = {
   'erro.titulo': 'Alguma coisa correu mal',
   'erro.dadosSeguros': 'Os seus dados continuam guardados neste aparelho: não se perdeu nada.',
 
+  /* As mensagens de erro da autenticação (entrar, registar, recuperar a
+     palavra-passe). Vivem aqui, e não escritas à mão no `data/auth.tsx`, para
+     seguirem o idioma escolhido: com a app em inglês saíam na mesma em
+     português, e isso ficou à vista na gravação feita para a App Store. */
+  'erroAuth.credenciais': 'Email ou palavra-passe incorretos.',
+  'erroAuth.emailPorConfirmar': 'Confirme o email antes de entrar.',
+  'erroAuth.contaJaExiste': 'Já existe uma conta com este email.',
+  'erroAuth.palavraCurta': 'A palavra-passe é demasiado curta (mín. 6 caracteres).',
+  'erroAuth.emailInvalido': 'Email inválido.',
+  'erroAuth.semLigacao': 'Sem ligação à internet. Tente novamente.',
+
   /* ---- Marcar um evento na agenda ---- */
   'agenda.semPermissaoTitulo': 'O calendário é de quem trabalha na exploração',
   'agenda.semPermissaoMensagem':
@@ -3291,6 +3302,13 @@ const en: Record<ChaveTexto, string> = {
   'avisos.entendido': 'Understood',
   'erro.titulo': 'Something went wrong',
   'erro.dadosSeguros': 'Your data is still saved on this device: nothing was lost.',
+
+  'erroAuth.credenciais': 'Wrong email or password.',
+  'erroAuth.emailPorConfirmar': 'Confirm your email address before signing in.',
+  'erroAuth.contaJaExiste': 'There is already an account with this email address.',
+  'erroAuth.palavraCurta': 'The password is too short (at least 6 characters).',
+  'erroAuth.emailInvalido': 'That email address is not valid.',
+  'erroAuth.semLigacao': 'No internet connection. Please try again.',
 
   /* ---- Marcar um evento na agenda ---- */
   'agenda.semPermissaoTitulo': 'The calendar belongs to whoever works on the farm',
