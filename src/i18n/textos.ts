@@ -529,7 +529,7 @@ const pt = {
   /* ---- O que a pessoa vem cá fazer (`data/intencao.ts`) ---- */
   'intencao.dono': 'Dono de exploração',
   'intencao.donoDescricao':
-    'Tenho animais meus para registar. A conta é aprovada pelo administrador.',
+    'Tenho animais meus para registar. A conta é aprovada por nós, sem qualquer custo.',
   'intencao.trabalhador': 'Trabalhador',
   'intencao.trabalhadorDescricao':
     'Trabalho numa exploração de outra pessoa. Entro com um código de convite.',
@@ -1331,7 +1331,7 @@ const pt = {
   'pendente.semEsperar':
     'Não tem de esperar por ninguém: com o código de convite de uma exploração entra de imediato. Peça-o a quem a gere.',
   'pendente.emAnalise':
-    'O administrador da plataforma vai analisar o pedido de acesso. Se tiver recebido um código de convite de um cliente, pode usá-lo já para entrar.',
+    'Vamos analisar o seu pedido de acesso e aprová-lo, sem qualquer custo. Se já tiver o código de convite de uma exploração, pode entrar já com ele, sem esperar.',
   'pendente.conta': 'Conta: {email}',
   'pendente.criarDescricao': 'Registar a minha exploração e começar a lançar animais.',
   'pendente.tenhoCodigo': 'Tenho um código',
@@ -1344,7 +1344,7 @@ const pt = {
   'pendente.verificarNovamente': 'Verificar novamente',
   'pendente.codigoInvalido': 'Código inválido.',
   'pendente.codigoUsado': 'Este código já foi utilizado.',
-  'pendente.codigoExpirado': 'Este código expirou. Peça um novo ao cliente.',
+  'pendente.codigoExpirado': 'Este código expirou. Peça um novo a quem gere a exploração.',
 
   /* ---- Notificações e alertas ---- */
   'notif.explicacao':
@@ -2220,7 +2220,7 @@ const en: Record<ChaveTexto, string> = {
   /* ---- O que a pessoa vem cá fazer (`data/intencao.ts`) ---- */
   'intencao.dono': 'Farm owner',
   'intencao.donoDescricao':
-    'I have animals of my own to record. The account is approved by the administrator.',
+    'I have animals of my own to record. We approve the account, free of charge.',
   'intencao.trabalhador': 'Farm worker',
   'intencao.trabalhadorDescricao':
     "I work on someone else's farm. I get in with an invite code.",
@@ -3016,7 +3016,7 @@ const en: Record<ChaveTexto, string> = {
   'pendente.semEsperar':
     'You do not have to wait for anyone: with a farm invite code you get in right away. Ask whoever runs it.',
   'pendente.emAnalise':
-    'The platform administrator will look at your request. If you have been given an invite code by a client, you can use it right now to get in.',
+    'We will look at your access request and approve it, free of charge. If you already have an invite code for a farm, you can use it right now and get in without waiting.',
   'pendente.conta': 'Account: {email}',
   'pendente.criarDescricao': 'Record my farm and start adding animals.',
   'pendente.tenhoCodigo': 'I have a code',
@@ -3029,7 +3029,7 @@ const en: Record<ChaveTexto, string> = {
   'pendente.verificarNovamente': 'Check again',
   'pendente.codigoInvalido': 'Invalid code.',
   'pendente.codigoUsado': 'This code has already been used.',
-  'pendente.codigoExpirado': 'This code has expired. Ask the client for a new one.',
+  'pendente.codigoExpirado': 'This code has expired. Ask whoever runs the farm for a new one.',
 
   /* ---- Notificações e alertas ---- */
   'notif.explicacao':

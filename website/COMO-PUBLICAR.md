@@ -123,6 +123,44 @@ Windows, e sem instalador não havia auto-update nenhum.
 > app depois de fazeres `push` — o que tens por committar localmente ainda não
 > conta até ser enviado.
 
+## O Cloudflare NÃO publica nada que esteja dentro de `node_modules`
+
+Vale para o conteúdo do `dist/`, não só para as dependências: qualquer ficheiro
+cujo caminho tenha uma pasta `node_modules` pelo meio **não é enviado**, e o
+endereço dele passa a devolver o `index.html` (o Pages serve a SPA a tudo o que
+não encontra). É a diferença silenciosa entre o Netlify, que os publicava, e o
+Cloudflare.
+
+Isto partiu a app na web durante três semanas, entre a mudança de alojamento
+(2026-08-11) e 2026-08-31. O `expo export` escreve as fontes onde o pacote
+delas vive:
+
+```
+dist/assets/node_modules/@expo-google-fonts/nunito/...    ← nunca publicado
+dist/assets/assets/fontes/...                             ← publicado
+```
+
+Sem as fontes, o `useFonts` do `src/app/_layout.tsx` nunca ficava pronto, o
+`return null` que lá estava não desenhava nada e **app.terrabovina.pt era um
+ecrã branco**, sem erro nenhum na consola. O que se vê são avisos do tipo
+`Failed to decode downloaded font` e `invalid sfntVersion: 1008813135` — esse
+número em hexadecimal é `3C 21 44 4F`, ou seja `<!DO`: o navegador está a
+receber HTML onde esperava um ttf. **Qualquer** avaria destas quer dizer que o
+ficheiro não foi publicado.
+
+A correção foi copiar as fontes para `assets/fontes/` (incluindo a dos ícones,
+ver o comentário no `_layout.tsx`) e deixar a app desenhar-se à mesma se elas
+falharem. Ao acrescentar um recurso novo que venha de dentro de um pacote,
+confirma o caminho com que ele sai:
+
+```
+npx expo export --platform web
+find dist/assets/node_modules -type f
+```
+
+O que aparecer aí não existe em produção. Sobram os desenhos internos do
+`expo-router` (o ecrã de rota não encontrada), que a app nunca mostra.
+
 ## Notas
 
 - **Custo:** o plano grátis do Cloudflare dá 500 builds/mês e largura de banda
