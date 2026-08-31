@@ -1,11 +1,4 @@
-import {
-  Nunito_400Regular,
-  Nunito_500Medium,
-  Nunito_600SemiBold,
-  Nunito_700Bold,
-  Nunito_800ExtraBold,
-  useFonts,
-} from '@expo-google-fonts/nunito';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -198,19 +191,57 @@ function AppRouter({ children }: { children: ReactNode }) {
 }
 
 export default function RootLayout() {
-  const [loaded] = useFonts({
-    Nunito_400Regular,
-    Nunito_500Medium,
-    Nunito_600SemiBold,
-    Nunito_700Bold,
-    Nunito_800ExtraBold,
+  /*
+   * AS FONTES SÃO FICHEIROS NOSSOS, e não os módulos do pacote.
+   * ------------------------------------------------------------------
+   * Isto era `useFonts({ Nunito_400Regular, ... })` com os módulos do
+   * `@expo-google-fonts/nunito`, e o ícone trazia o ttf de dentro do
+   * `@expo/vector-icons`. Funciona em todo o lado menos onde a app vive: o
+   * Cloudflare Pages NÃO PUBLICA nada que esteja numa pasta `node_modules`, e
+   * o `expo export` escreve esses ficheiros exatamente em
+   * `dist/assets/node_modules/...`. Em produção os pedidos das fontes
+   * devolviam o index.html (o Pages serve a SPA a tudo o que não encontra), o
+   * navegador rejeitava-os ("invalid sfntVersion", que em hexadecimal é
+   * `<!DO`), e a app ficava um ecrã BRANCO por causa do `return null` abaixo.
+   *
+   * Com os ficheiros em `assets/fontes/` o caminho exportado passa a ser
+   * `/assets/assets/fontes/...`, sem `node_modules` pelo meio, e o Pages
+   * publica-os. O pacote fica instalado na mesma: é de lá que estas cópias
+   * saíram (`assets/fontes/Nunito-LICENSE.txt` é a licença que as acompanha).
+   *
+   * A fonte dos ÍCONES está aqui pela mesma razão, e resolve-se por ordem de
+   * chegada: o `@expo/vector-icons` só carrega o ttf dele quando o primeiro
+   * ícone se desenha, e pergunta antes por `Font.isLoaded()`. Como nada se
+   * desenha antes destas fontes estarem prontas, quem regista a família é esta
+   * linha, com o nosso ficheiro.
+   *
+   * O nome tem de ser `material-community` e não `MaterialCommunityIcons`: é
+   * a string que o pacote passa ao `createIconSet` (ver
+   * `@expo/vector-icons/build/MaterialCommunityIcons.js`) e é por ela que ele
+   * pergunta. Registada com o nome do ficheiro, a família ficava carregada mas
+   * ninguém a usava, e os ícones continuavam a vir do `node_modules`.
+   */
+  const [fontesProntas, erroFontes] = useFonts({
+    Nunito_400Regular: require('../../assets/fontes/Nunito_400Regular.ttf'),
+    Nunito_500Medium: require('../../assets/fontes/Nunito_500Medium.ttf'),
+    Nunito_600SemiBold: require('../../assets/fontes/Nunito_600SemiBold.ttf'),
+    Nunito_700Bold: require('../../assets/fontes/Nunito_700Bold.ttf'),
+    Nunito_800ExtraBold: require('../../assets/fontes/Nunito_800ExtraBold.ttf'),
+    'material-community': require('../../assets/fontes/MaterialCommunityIcons.ttf'),
   });
 
-  useEffect(() => {
-    if (loaded) SplashScreen.hideAsync();
-  }, [loaded]);
+  // Uma fonte que não carrega NÃO PODE valer uma app que não abre. Foi o que
+  // aconteceu enquanto isto era só `if (!loaded)`: os ficheiros deixaram de ser
+  // servidos e a app deixou de ter ecrã, sem nada escrito em lado nenhum. Com
+  // o erro a contar como "já não vale a pena esperar", o pior caso passa a ser
+  // a app inteira desenhada com a letra do sistema.
+  const podeDesenhar = fontesProntas || erroFontes != null;
 
-  if (!loaded) return null;
+  useEffect(() => {
+    if (podeDesenhar) SplashScreen.hideAsync();
+  }, [podeDesenhar]);
+
+  if (!podeDesenhar) return null;
 
   return (
     // O limite de erro fica por FORA de tudo: se o portão de autenticação, os
