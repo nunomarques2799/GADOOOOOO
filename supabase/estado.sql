@@ -231,7 +231,10 @@ select * from (
         (to_regclass('public.push_token') is not null
          and exists (
            select 1 from pg_trigger where tgname = 'trg_chat_push'
-             and tgrelid = to_regclass('public.mensagem'))))
+             and tgrelid = to_regclass('public.mensagem')))),
+    (39, 'schema_codigo_barras.sql',  'coluna medicamento.codigo_barras',
+        (exists (select 1 from col
+                  where tabela = 'medicamento' and coluna = 'codigo_barras')))
 ) as t(ordem, ficheiro, marca, aplicado)
 order by ordem;
 -- Ler a coluna `aplicado`: true = já correu, false = FALTA aplicar.

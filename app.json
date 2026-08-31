@@ -42,7 +42,8 @@
         "INTERNET",
         "ACCESS_NETWORK_STATE",
         "POST_NOTIFICATIONS",
-        "SCHEDULE_EXACT_ALARM"
+        "SCHEDULE_EXACT_ALARM",
+        "CAMERA"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -83,8 +84,16 @@
         "expo-image-picker",
         {
           "photosPermission": "A Terrabovina precisa de aceder às suas fotografias para ilustrar a ficha do animal e guardar faturas e guias.",
-          "cameraPermission": "A Terrabovina precisa da câmara para fotografar o animal e os documentos da exploração.",
+          "cameraPermission": "A Terrabovina precisa da câmara para fotografar o animal e os documentos da exploração, e para ler os códigos impressos nas caixas de medicamento.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "A Terrabovina precisa da câmara para fotografar o animal e os documentos da exploração, e para ler os códigos impressos nas caixas de medicamento.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
         }
       ],
       [

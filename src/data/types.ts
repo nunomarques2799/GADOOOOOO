@@ -403,6 +403,17 @@ export interface Medicamento extends ComVersao {
   /** ISO aaaa-mm-dd. */
   dataCompra: string;
   notas?: string;
+  /**
+   * O código impresso na caixa, lido pela câmara e já normalizado (ver
+   * `data/codigos.ts`). É a MEMÓRIA de produtos da conta: ao dar entrada do
+   * mesmo produto outra vez, é por aqui que a app o reconhece e propõe o
+   * formulário preenchido.
+   *
+   * Guarda a CHAVE e não o que a câmara leu em cru, porque o mesmo produto lido
+   * do código de riscas e do Data Matrix dá números diferentes (13 e 14
+   * dígitos) e teriam de ser o mesmo para se reconhecerem um ao outro.
+   */
+  codigoBarras?: string;
   criadoPor?: string;
 }
 

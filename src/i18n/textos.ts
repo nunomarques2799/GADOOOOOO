@@ -432,6 +432,43 @@ const pt = {
   'existencias.restamDe': 'Restam {resta} de {total}',
   'existencias.seguranca': 'segurança {n} dia|segurança {n} dias',
 
+  /* ---- Ler o código da caixa ---- */
+  'leitor.titulo': 'Ler o código da caixa',
+  'leitor.ajuda': 'Aponte ao código de barras ou ao quadrado de pontos da caixa',
+  'leitor.lanterna': 'Lanterna',
+  'leitor.escreverAMao': 'Escrever à mão',
+  'leitor.semModuloTitulo': 'Precisa de uma versão nova',
+  'leitor.semModulo':
+    'A leitura de códigos só existe a partir da versão seguinte da app. Até lá, os dados escrevem-se à mão como sempre.',
+  'leitor.semPermissaoTitulo': 'Sem acesso à câmara',
+  'leitor.semPermissao':
+    'A Terrabovina precisa de autorização para usar a câmara. Pode dá-la nas definições do aparelho, na página desta app.',
+  'leitor.avariadaTitulo': 'A câmara não abriu',
+  'leitor.avariada':
+    'Feche outras aplicações que possam estar a usar a câmara e tente outra vez. Também pode escrever os dados à mão.',
+  'leitor.lido': 'Código lido',
+  'leitor.reconhecido': 'Produto reconhecido',
+  'leitor.reconhecidoTexto': 'Já tinha registado {nome}. Confira a quantidade e a validade.',
+  'leitor.novoTexto':
+    'Guardado neste lote. Da próxima vez que ler este código, a app preenche sozinha.',
+  'leitor.comLote': 'Lote {lote} lido da caixa',
+  'leitor.jaRegistadoTitulo': 'Este frasco já está registado',
+  'leitor.jaRegistado':
+    'Já existe uma entrada de {nome} com este lote. Quer abrir a ficha dela em vez de registar outra?',
+  'leitor.abrirFicha': 'Abrir a ficha',
+
+  /* ---- Etiquetas para colar no frasco ---- */
+  'etiqueta.titulo': 'Etiqueta para o frasco',
+  'etiqueta.ajuda':
+    'Imprima e cole no frasco. Ler esta etiqueta com a câmara abre logo este lote, sem o procurar na lista.',
+  'etiqueta.imprimir': 'Imprimir esta etiqueta',
+  'etiqueta.imprimirTodas': 'Imprimir etiquetas dos lotes',
+  'etiqueta.aImprimir': 'Janela de impressão aberta',
+  'etiqueta.semJanelaTitulo': 'O navegador bloqueou a janela',
+  'etiqueta.semJanela': 'Autorize as janelas para este site e tente outra vez.',
+  'etiqueta.nEtiquetas': '{n} etiqueta|{n} etiquetas',
+  'etiqueta.guardePrimeiro': 'A etiqueta aparece depois de guardar a entrada.',
+
   /* ---- Ecrã dos Terrenos ---- */
   'terrenos.subtitulo': 'Onde o gado anda',
   'terrenos.contagem': '{n} terreno|{n} terrenos',
@@ -1071,6 +1108,14 @@ const pt = {
   'formLote.lancaDespesa': 'Lança a despesa em Sanidade',
   'formLote.naoLancaDespesa': 'Não lançar despesa nas contas',
   'formLote.despesaLancada': 'despesa lançada em Sanidade',
+  'formLote.lerCodigo': 'Ler o código da caixa',
+  'formLote.lerCodigoAjuda':
+    'Poupa escrever. A app guarda o código neste lote e reconhece o produto na compra seguinte.',
+  'formLote.codigoGuardado': 'Código da caixa guardado',
+  'formLote.tirarCodigo': 'Tirar o código',
+  'formLote.codigoTirado': 'Código retirado',
+  'formLote.lerOutro': 'Ler outro código',
+  'existencias.lerCodigo': 'Ler o código de uma caixa',
 
   /* ---- Interruptores da conta (finanças, existências) ---- */
   'interruptor.soQuemGere': 'Só quem gere a exploração',
@@ -2277,6 +2322,44 @@ const en: Record<ChaveTexto, string> = {
   'existencias.restamDe': '{resta} left out of {total}',
   'existencias.seguranca': 'withdrawal {n} day|withdrawal {n} days',
 
+  /* ---- Ler o código da caixa ---- */
+  'leitor.titulo': 'Scan the code on the box',
+  'leitor.ajuda': 'Point at the barcode or at the square of dots on the box',
+  'leitor.lanterna': 'Torch',
+  'leitor.escreverAMao': 'Type it in instead',
+  'leitor.semModuloTitulo': 'You need a newer version',
+  'leitor.semModulo':
+    'Code scanning only arrives in the next version of the app. Until then, enter the details by hand as usual.',
+  'leitor.semPermissaoTitulo': 'No access to the camera',
+  'leitor.semPermissao':
+    'Terrabovina needs permission to use the camera. You can grant it in your device settings, on this app page.',
+  'leitor.avariadaTitulo': 'The camera did not open',
+  'leitor.avariada':
+    'Close any other app that might be using the camera and try again. You can also type the details in by hand.',
+  'leitor.lido': 'Code scanned',
+  'leitor.reconhecido': 'Product recognised',
+  'leitor.reconhecidoTexto':
+    'You had already recorded {nome}. Check the quantity and the expiry date.',
+  'leitor.novoTexto':
+    'Saved on this batch. Next time you scan this code, the app fills the form in for you.',
+  'leitor.comLote': 'Batch {lote} read from the box',
+  'leitor.jaRegistadoTitulo': 'This bottle is already recorded',
+  'leitor.jaRegistado':
+    'There is already an entry for {nome} with this batch number. Would you like to open it instead of recording another?',
+  'leitor.abrirFicha': 'Open it',
+
+  /* ---- Etiquetas para colar no frasco ---- */
+  'etiqueta.titulo': 'Label for the bottle',
+  'etiqueta.ajuda':
+    'Print it and stick it on the bottle. Scanning this label opens this batch straight away, with no searching.',
+  'etiqueta.imprimir': 'Print this label',
+  'etiqueta.imprimirTodas': 'Print labels for your batches',
+  'etiqueta.aImprimir': 'Print window opened',
+  'etiqueta.semJanelaTitulo': 'The browser blocked the window',
+  'etiqueta.semJanela': 'Allow pop-up windows for this site and try again.',
+  'etiqueta.nEtiquetas': '{n} label|{n} labels',
+  'etiqueta.guardePrimeiro': 'The label appears once you save the entry.',
+
   /* ---- Ecrã dos Terrenos ---- */
   'terrenos.subtitulo': 'Where the herd goes',
   'terrenos.contagem': '{n} plot|{n} plots',
@@ -2913,6 +2996,14 @@ const en: Record<ChaveTexto, string> = {
   'formLote.lancaDespesa': 'Enter the expense under Sanidade',
   'formLote.naoLancaDespesa': 'Do not enter an expense in the books',
   'formLote.despesaLancada': 'expense entered under Sanidade',
+  'formLote.lerCodigo': 'Scan the code on the box',
+  'formLote.lerCodigoAjuda':
+    'Saves typing. The app keeps the code on this batch and recognises the product on your next purchase.',
+  'formLote.codigoGuardado': 'Code from the box saved',
+  'formLote.tirarCodigo': 'Remove the code',
+  'formLote.codigoTirado': 'Code removed',
+  'formLote.lerOutro': 'Scan another code',
+  'existencias.lerCodigo': 'Scan the code on a box',
 
   /* ---- Interruptores da conta (finanças, existências) ---- */
   'interruptor.soQuemGere': 'Only for whoever runs the farm',

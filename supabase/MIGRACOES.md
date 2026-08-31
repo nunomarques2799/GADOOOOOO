@@ -65,6 +65,7 @@ seguro.
 | 36 | `schema_chat_anexos.sql` | Fotografia, áudio e localização nas mensagens: colunas `tipo`/`anexo`/`latitude`, o bucket privado `chat` e a lista `anexo_orfao` (apagar a linha de `storage.objects` por SQL **não apaga o ficheiro**, por isso é a app que o faz). | **35** |
 | 37 | `schema_chat_sondagens.sql` | Sondagens: `sondagem_opcao` + `sondagem_voto`, voto com nome e um por pessoa. A pergunta é o `texto` da mensagem. Refaz as duas restrições do 36 para conhecerem o tipo `sondagem`. | **36** |
 | 38 | `schema_chat_push.sql` | A mensagem nova toca no telemóvel: `push_token` + gatilho que chama a API da Expo pelo `pg_net`. **Não precisa de chave nenhuma** (ao contrário do Resend), mas precisa da chave APNs no EAS e de um build nativo novo para o token sequer ser emitido. | **35**, e o `pg_net` do **16** |
+| 39 | `schema_codigo_barras.sql` | `medicamento.codigo_barras`: o código impresso na caixa, lido pela câmara, guardado no lote. É a MEMÓRIA de produtos da conta, e por isso não é tabela nova: o catálogo é o histórico de lotes que já lá está. Sem índice e sem unicidade, de propósito (ver o cabeçalho do ficheiro). | **30** |
 
 Dependências a negrito são as que **partem em silêncio** se forem ignoradas:
 

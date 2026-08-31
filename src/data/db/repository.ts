@@ -164,6 +164,7 @@ function toMedicamento(r: Row): Medicamento {
     custo: asNum(r.custo),
     dataCompra: String(r.dataCompra),
     notas: asStr(r.notas),
+    codigoBarras: asStr(r.codigoBarras),
     criadoPor: asStr(r.criadoPor),
   };
 }
@@ -292,13 +293,14 @@ export function guardarMedicamento(db: SQLiteDatabase, m: Medicamento): void {
   db.runSync(
     `INSERT OR REPLACE INTO medicamento
      (id, exploracaoId, nome, tipo, lote, validade, quantidade, unidade,
-      intervaloSegurancaDias, fornecedor, custo, dataCompra, notas, criadoPor, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      intervaloSegurancaDias, fornecedor, custo, dataCompra, notas, codigoBarras,
+      criadoPor, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       m.id, m.exploracaoId, m.nome, m.tipo, txt(m.lote), txt(m.validade),
       m.quantidade, m.unidade, m.intervaloSegurancaDias,
       txt(m.fornecedor), num(m.custo), m.dataCompra, txt(m.notas),
-      txt(m.criadoPor), agora(),
+      txt(m.codigoBarras), txt(m.criadoPor), agora(),
     ],
   );
 }

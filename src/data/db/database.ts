@@ -169,6 +169,15 @@ export function inicializarBd(): SQLiteDatabase {
     );
   }
 
+  // v10 → v11: o código impresso na caixa do medicamento, lido pela câmara.
+  //
+  // Fica VAZIO no que já existe, e não há nada a adivinhar: o código só se sabe
+  // quando alguém aponta a câmara ao frasco. A memória de produtos da conta
+  // começa do zero e enche-se a usar (ver `data/codigos.ts`).
+  if (versao < 11) {
+    garantirColuna(db, 'medicamento', 'codigoBarras', 'TEXT');
+  }
+
   if (versao < SCHEMA_VERSION) {
     db.execSync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   }

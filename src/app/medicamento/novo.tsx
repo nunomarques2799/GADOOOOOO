@@ -8,7 +8,16 @@ import { t } from '@/i18n';
 import { colors } from '@/theme';
 
 export default function NovoMedicamentoScreen() {
-  const { exploracaoId } = useLocalSearchParams<{ exploracaoId?: string }>();
+  /**
+   * O `codigo` chega de quem leu uma caixa na aba das Existências. Vai em cru
+   * (é o que a câmara devolveu) e não já interpretado: quem sabe o que ele quer
+   * dizer é o formulário, e mandar o significado pela rota obrigava a repetir
+   * essa decisão nos dois sítios.
+   */
+  const { exploracaoId, codigo } = useLocalSearchParams<{
+    exploracaoId?: string;
+    codigo?: string;
+  }>();
   const { exploracoes } = useGado();
 
   const alvo =
@@ -29,5 +38,5 @@ export default function NovoMedicamentoScreen() {
     );
   }
 
-  return <FormularioMedicamento exploracaoId={alvo} />;
+  return <FormularioMedicamento exploracaoId={alvo} codigoLido={codigo} />;
 }
