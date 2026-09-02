@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ModalPapeis } from '@/components/ModalPapeis';
 import { Button, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { entraPorCodigo, intencoes, type Intencao } from '@/data/intencao';
@@ -22,25 +23,43 @@ export function EcraLogin() {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [palavra, setPalavra] = useState('');
+  /**
+   * A palavra-passe escrita a segundo. Só existe no REGISTO: a quem entra não
+   * se pede duas vezes, porque quem se engana descobre-o no mesmo instante. No
+   * registo não descobre — fica com uma conta cuja palavra-passe não conhece, e
+   * o caminho de volta é o email de recuperação.
+   */
+  const [palavra2, setPalavra2] = useState('');
   const [intencao, setIntencao] = useState<Intencao | null>(null);
   const [aProcessar, setAProcessar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [confirmacao, setConfirmacao] = useState(false);
   const [recuperado, setRecuperado] = useState(false);
+  const [papeisAbertos, setPapeisAbertos] = useState(false);
 
   const registo = modo === 'registar';
   const recuperar = modo === 'recuperar';
+  /**
+   * Só se aponta o erro quando já há alguma coisa escrita no segundo campo. A
+   * meio de escrever, as duas são sempre diferentes, e um aviso a piscar a cada
+   * letra é ruído a dizer que está tudo mal quando ainda não está nada.
+   */
+  const naoBatem = registo && palavra2.length > 0 && palavra !== palavra2;
   const valido =
     email.trim().length > 3 &&
     email.includes('@') &&
     (recuperar || palavra.length >= 6) &&
-    (!registo || (nome.trim().length > 0 && intencao !== null));
+    (!registo || (nome.trim().length > 0 && intencao !== null && palavra === palavra2));
 
   function irPara(novo: Modo) {
     setModo(novo);
     setErro(null);
     setConfirmacao(false);
     setRecuperado(false);
+    // A repetição não sobrevive à troca de modo: quem foi a "entrar" e voltou
+    // encontrava-a preenchida com o que escreveu antes, a dar por boa uma
+    // confirmação que já não confirmou nada.
+    setPalavra2('');
   }
 
   function trocarModo() {
@@ -156,6 +175,26 @@ export function EcraLogin() {
                     />
                   ))}
                 </View>
+                {/* Quatro descrições de uma linha não explicam quem convida
+                    quem, e é isso que decide o caminho da conta. O desenho
+                    fica atrás de um toque para não empurrar o formulário para
+                    fora do ecrã de quem já sabe o que veio cá fazer. */}
+                <Pressable
+                  onPress={() => setPapeisAbertos(true)}
+                  accessibilityRole="button"
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                    alignSelf: 'flex-start',
+                    marginTop: spacing.sm,
+                    paddingVertical: spacing.xs,
+                  }}>
+                  <Icon name="help-circle-outline" size="md" color={colors.primary} />
+                  <Text variant="secondary" color={colors.primary}>
+                    {t('login.verOQueCadaUmFaz')}
+                  </Text>
+                </Pressable>
               </View>
             ) : null}
             {registo ? (
@@ -186,11 +225,26 @@ export function EcraLogin() {
                 placeholder={t('login.palavraPassePlaceholder')}
                 secureTextEntry
               />
-            ) : (
+            ) : null}
+            {registo ? (
+              <Campo
+                label={t('login.confirmarPalavraPasse')}
+                icon="lock-check-outline"
+                value={palavra2}
+                onChangeText={setPalavra2}
+                placeholder={t('login.confirmarPalavraPassePlaceholder')}
+                secureTextEntry
+                // O aviso vive colado ao campo, e não no erro geral lá em baixo:
+                // é aqui que se corrige, e mandar a pessoa procurar a razão ao
+                // fundo do ecrã era pior do que não a dizer.
+                aviso={naoBatem ? t('login.palavrasNaoBatem') : undefined}
+              />
+            ) : null}
+            {recuperar ? (
               <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.lg }}>
                 {t('login.explicacaoRecuperar')}
               </Text>
-            )}
+            ) : null}
 
             {modo === 'entrar' ? (
               <Pressable
@@ -273,6 +327,8 @@ export function EcraLogin() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ModalPapeis visivel={papeisAbertos} onFechar={() => setPapeisAbertos(false)} />
     </View>
   );
 }
@@ -353,6 +409,7 @@ function Campo({
   autoCapitalize,
   keyboardType,
   secureTextEntry,
+  aviso,
 }: {
   label: string;
   icon: IconName;
@@ -362,9 +419,11 @@ function Campo({
   autoCapitalize?: 'none' | 'characters' | 'words' | 'sentences';
   keyboardType?: 'default' | 'email-address';
   secureTextEntry?: boolean;
+  /** O que está mal NESTE campo. Pinta a moldura e escreve por baixo. */
+  aviso?: string;
 }) {
   return (
-    <View style={{ marginBottom: spacing.lg }}>
+    <View style={{ marginBottom: aviso ? spacing.md : spacing.lg }}>
       <Text variant="label" style={{ marginBottom: spacing.xs }}>
         {label}
       </Text>
@@ -376,11 +435,11 @@ function Campo({
           height: sizes.input,
           borderRadius: radii.md,
           borderWidth: 1.5,
-          borderColor: colors.border,
+          borderColor: aviso ? colors.danger : colors.border,
           backgroundColor: colors.surface,
           paddingHorizontal: spacing.md,
         }}>
-        <Icon name={icon} size="md" color={colors.textMuted} />
+        <Icon name={icon} size="md" color={aviso ? colors.danger : colors.textMuted} />
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -393,6 +452,20 @@ function Campo({
           style={{ flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 17, color: colors.text }}
         />
       </View>
+      {aviso ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            marginTop: spacing.xs,
+          }}>
+          <Icon name="alert-circle-outline" size="sm" color={colors.danger} />
+          <Text variant="secondary" color={colors.danger} style={{ flex: 1 }}>
+            {aviso}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }

@@ -551,6 +551,10 @@ const pt = {
   'login.emailPlaceholder': 'nome@exemplo.pt',
   'login.palavraPasse': 'Palavra-passe',
   'login.palavraPassePlaceholder': 'Mínimo 6 caracteres',
+  'login.confirmarPalavraPasse': 'Repita a palavra-passe',
+  'login.confirmarPalavraPassePlaceholder': 'Escreva-a outra vez',
+  'login.palavrasNaoBatem': 'As duas palavras-passe não são iguais.',
+  'login.verOQueCadaUmFaz': 'Não sei qual é o meu caso',
   'login.explicacaoRecuperar':
     'Enviamos-lhe um email com um link para definir uma nova palavra-passe.',
   'login.esqueciMe': 'Esqueci-me da palavra-passe',
@@ -573,6 +577,27 @@ const pt = {
   'intencao.lider': 'Líder de exploração',
   'intencao.liderDescricao':
     'Dirijo uma exploração de uma sociedade agrícola. Entro com um código de convite.',
+
+  /* ---- Quem é quem (o desenho que o registo abre) ---- */
+  'papeis.titulo': 'Quem é quem na Terrabovina',
+  'papeis.intro':
+    'Há duas maneiras de entrar. Ou a exploração é sua, e aprovamos a conta sem custo nenhum, ou já lá anda alguém que lhe dá um código.',
+  'papeis.aprovadoPorNos': 'A exploração é sua',
+  'papeis.combinadoConnosco': 'A exploração é de uma sociedade',
+  'papeis.daUmCodigoA': 'dá um código a',
+  'papeis.sociedade': 'Sociedade agrícola',
+  'papeis.sociedadeFaz':
+    'Tem várias explorações e põe um líder à frente de cada uma. Vê tudo o que lá se passa e trata dos terrenos, mas não mexe no gado.',
+  'papeis.naoSeEscolheAqui': 'Não se escolhe aqui: é um plano que se combina connosco.',
+  'papeis.donoFaz':
+    'A quinta é sua. Regista os animais, os terrenos e as contas, e convida quem trabalha consigo.',
+  'papeis.liderFaz':
+    'Corre uma exploração da sociedade todos os dias, como se fosse sua: animais, terrenos, equipa e contas.',
+  'papeis.trabalhadorFaz': 'Trata do gado no dia a dia. Não mexe na equipa nem nas receitas.',
+  'papeis.veterinarioFaz':
+    'Escreve o que fez ao animal, e mais nada. Entra por um prazo e sai sozinho no fim.',
+  'papeis.qualEOMeuCaso':
+    'Deram-lhe um código? Então é uma das funções que aparecem debaixo de "dá um código a". Se não lhe deram nenhum e os animais são seus, é Dono de exploração.',
   'intencao.trabalhador': 'Trabalhador',
   'intencao.trabalhadorDescricao':
     'Trabalho numa exploração de outra pessoa. Entro com um código de convite.',
@@ -2459,6 +2484,10 @@ const en: Record<ChaveTexto, string> = {
   'login.emailPlaceholder': 'name@example.com',
   'login.palavraPasse': 'Password',
   'login.palavraPassePlaceholder': 'At least 6 characters',
+  'login.confirmarPalavraPasse': 'Repeat the password',
+  'login.confirmarPalavraPassePlaceholder': 'Type it once more',
+  'login.palavrasNaoBatem': 'The two passwords are not the same.',
+  'login.verOQueCadaUmFaz': 'I am not sure which one I am',
   'login.explicacaoRecuperar': 'We will email you a link to set a new password.',
   'login.esqueciMe': 'I forgot my password',
   'login.recuperadoAviso':
@@ -2480,6 +2509,27 @@ const en: Record<ChaveTexto, string> = {
     'I have animals of my own to record. We approve the account, free of charge.',
   'intencao.lider': 'Farm lead',
   'intencao.liderDescricao': 'I run a farm for an agricultural business. I get in with an invite code.',
+
+  /* ---- Quem é quem (o desenho que o registo abre) ---- */
+  'papeis.titulo': 'Who is who on Terrabovina',
+  'papeis.intro':
+    'There are two ways in. Either the farm is yours, and we approve the account free of charge, or somebody already there gives you a code.',
+  'papeis.aprovadoPorNos': 'The farm is yours',
+  'papeis.combinadoConnosco': 'The farm belongs to a business',
+  'papeis.daUmCodigoA': 'gives a code to',
+  'papeis.sociedade': 'Agricultural business',
+  'papeis.sociedadeFaz':
+    'Has several farms and puts a lead in charge of each one. Sees everything that happens there and looks after the land, but does not touch the livestock.',
+  'papeis.naoSeEscolheAqui': 'Not chosen here: it is a plan arranged with us.',
+  'papeis.donoFaz':
+    'The farm is yours. You record the animals, the land and the accounts, and invite whoever works with you.',
+  'papeis.liderFaz':
+    'Runs one of the business farms day to day, as if it were their own: animals, land, team and accounts.',
+  'papeis.trabalhadorFaz': 'Looks after the livestock day to day. No team changes, no income.',
+  'papeis.veterinarioFaz':
+    'Records what they did to the animal, and nothing else. Gets in for a set time and leaves on their own.',
+  'papeis.qualEOMeuCaso':
+    'Were you given a code? Then you are one of the roles shown under "gives a code to". If nobody gave you one and the animals are yours, you are a Farm owner.',
   'intencao.trabalhador': 'Farm worker',
   'intencao.trabalhadorDescricao':
     "I work on someone else's farm. I get in with an invite code.",
