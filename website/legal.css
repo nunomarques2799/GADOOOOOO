@@ -1,44 +1,110 @@
 /* ==================================================================
    Terrabovina — estilo das páginas legais (privacidade, termos)
-   Documento legível, na mesma paleta da app (verde folha, Nunito).
+   ------------------------------------------------------------------
+   Mesma direção do `styles.css`: papel neutro, verdes fundos e
+   dessaturados, um acento âmbar só, e a numeração das secções em mono
+   tabular. Aqui isso não é enfeite nenhum: um documento legal É uma
+   lista numerada, e os números alinhados em coluna são o que o faz
+   parecer um documento em vez de uma página de marketing com secções.
+
+   Os tokens estão repetidos deste lado de propósito. Estas páginas não
+   carregam o `styles.css` (não têm barra, hero, cartões nem badges) e
+   não vale a pena puxar 700 linhas de CSS para as duas páginas que a
+   App Review lê. Ao mexer na paleta lá, mexer aqui também.
    ================================================================== */
 :root {
-  --green-800: #124d2e; --green-700: #166b3d; --green-600: #1b7a48; --green-50: #eef8f1;
-  --bg: #f3f6f2; --surface: #fff; --text: #15251c; --text-2: #54655b; --text-muted: #869184;
-  --border: #e3eae0; --warning-tint: #fbf0dc; --warning: #9a6a12;
-  --r-md: 16px; --maxw: 760px;
+  --papel: #eeeee8;
+  --tinta: #14201a;
+  --tinta-2: #4c584f;
+  --tinta-3: #7c877e;
+  --mata: #1b3226;
+  --musgo: #3d5a45;
+  --ambar: #8a5713;
+  --ambar-veu: #f2e7d0;
+  --linha: #dcddd3;
+  --sobre-mata: #f4f4ee;
+
+  --display: "Bricolage Grotesque", "Nunito", system-ui, sans-serif;
+  --corpo: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  --maxw: 760px;
 }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-  font-family: "Nunito", system-ui, sans-serif; background: var(--bg); color: var(--text);
-  line-height: 1.65; -webkit-font-smoothing: antialiased;
+  font-family: var(--corpo);
+  background: var(--papel);
+  color: var(--tinta);
+  font-size: 17px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
 }
-.topbar {
-  background: linear-gradient(135deg, var(--green-800), var(--green-600)); color: #fff;
+
+:focus-visible { outline: 2px solid var(--musgo); outline-offset: 3px; border-radius: 3px; }
+
+/* A barra é uma faixa sólida, não um degradê. Um documento legal não
+   precisa de brilho nenhum em cima. */
+.topbar { background: var(--mata); color: var(--sobre-mata); }
+.topbar .inner { max-width: var(--maxw); margin: 0 auto; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+.topbar a { color: var(--sobre-mata); text-decoration: none; display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.02em; }
+.topbar img { width: 30px; height: 30px; border-radius: 7px; }
+.topbar .back { margin-left: auto; font-family: var(--mono); font-weight: 400; font-size: 0.78rem; letter-spacing: 0.06em; opacity: 0.8; }
+.topbar .back:hover { opacity: 1; }
+.topbar :focus-visible { outline-color: var(--ambar-veu); }
+
+main { max-width: var(--maxw); margin: 0 auto; padding: 48px 24px 72px; }
+
+h1 { font-family: var(--display); font-size: clamp(1.9rem, 4vw, 2.5rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.06; margin-bottom: 10px; }
+
+.updated {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  color: var(--tinta-3); font-size: 0.8rem; letter-spacing: 0.06em;
+  text-transform: uppercase; margin-bottom: 34px;
 }
-.topbar .inner { max-width: var(--maxw); margin: 0 auto; padding: 18px 24px; display: flex; align-items: center; gap: 12px; }
-.topbar a { color: #fff; text-decoration: none; display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.05rem; }
-.topbar img { width: 34px; height: 34px; }
-.topbar .back { margin-left: auto; font-weight: 600; font-size: .9rem; opacity: .9; }
-main { max-width: var(--maxw); margin: 0 auto; padding: 40px 24px 64px; }
-h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 800; letter-spacing: -.02em; margin-bottom: 6px; }
-.updated { color: var(--text-muted); font-weight: 600; font-size: .9rem; margin-bottom: 28px; }
-h2 { font-size: 1.25rem; font-weight: 800; margin: 32px 0 10px; }
-h2 .num { color: var(--green-600); font-variant-numeric: tabular-nums; margin-right: 8px; }
+
+h2 {
+  font-family: var(--display); font-size: 1.22rem; font-weight: 600;
+  letter-spacing: -0.02em; line-height: 1.25;
+  margin: 40px 0 12px; padding-top: 18px; border-top: 1px solid var(--linha);
+  display: flex; gap: 14px; align-items: baseline;
+}
+/* Largura fixa e algarismos tabulares: com dez e onze secções, os números
+   de um dígito e de dois têm de encostar à mesma linha, senão os títulos
+   ficam todos a começar em sítios diferentes. */
+h2 .num {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 0.86rem; font-weight: 500; color: var(--ambar);
+  flex: none; min-width: 2.2em; letter-spacing: 0;
+}
 /* Subtítulo dentro de uma secção numerada (o "Denunciar e bloquear" das
    conversas). Não leva número: a numeração é a das secções, e um 4.1 aqui
    obrigava a renumerar tudo à mão à próxima alteração. */
-h3 { font-size: 1.05rem; font-weight: 800; margin: 22px 0 8px; color: var(--green-700); }
-p, li { color: var(--text-2); font-size: 1rem; }
-p { margin-bottom: 12px; }
-ul, ol { margin: 0 0 14px 22px; }
-li { margin-bottom: 6px; }
-strong { color: var(--text); }
-a.link { color: var(--green-600); font-weight: 700; }
-.nota {
-  background: var(--warning-tint); border-left: 4px solid var(--warning); border-radius: var(--r-md);
-  padding: 14px 16px; margin: 0 0 28px; font-size: .92rem; color: #6b4d0e; font-weight: 600;
+h3 { font-family: var(--display); font-size: 1.03rem; font-weight: 600; letter-spacing: -0.01em; margin: 26px 0 8px; color: var(--musgo); }
+
+p, li { color: var(--tinta-2); font-size: 1rem; }
+p { margin-bottom: 13px; }
+ul, ol { margin: 0 0 16px 22px; }
+li { margin-bottom: 7px; }
+strong { color: var(--tinta); font-weight: 700; }
+
+a.link { color: var(--musgo); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+a.link:hover { color: var(--tinta); }
+
+
+
+footer.legal {
+  max-width: var(--maxw); margin: 0 auto; padding: 22px 24px 40px;
+  color: var(--tinta-3); font-size: 0.84rem; border-top: 1px solid var(--linha);
 }
-.placeholder { background: var(--green-50); border: 1px dashed var(--green-600); border-radius: 6px; padding: 1px 6px; font-weight: 700; color: var(--green-700); }
-footer.legal { max-width: var(--maxw); margin: 0 auto; padding: 24px; color: var(--text-muted); font-size: .85rem; border-top: 1px solid var(--border); }
-footer.legal a { color: var(--green-600); font-weight: 700; text-decoration: none; }
+footer.legal a { color: var(--musgo); font-weight: 600; text-decoration: none; }
+footer.legal a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  main { padding: 30px 20px 48px; }
+  h2 { margin-top: 30px; gap: 10px; }
+  .topbar .inner { padding: 13px 20px; }
+  footer.legal { padding: 18px 20px 32px; }
+}

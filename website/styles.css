@@ -1,70 +1,99 @@
 /* ==================================================================
    Terrabovina — landing site
-   Estética herdada do design system da app (verde folha, cartões muito
-   arredondados, sombras suaves, Nunito). PT-PT.
+   ------------------------------------------------------------------
+   Direção: REGISTO. A estética do cadastro e do livro de exploração,
+   não a do site de startup. Papel neutro, verdes fundos e
+   dessaturados, contornos finos em vez de sombras, e todos os
+   identificadores, datas e contagens em algarismos tabulares
+   monoespaçados — que é o mundo real deste produto (brincos, prazos,
+   marcas de exploração).
+
+   TRÊS REGRAS que explicam quase todas as decisões abaixo:
+
+   1. Peso 800 não existe aqui. A versão anterior punha 800 em títulos,
+      botões, marca, números, perguntas e pílulas; com tudo a berrar, a
+      hierarquia passava a ser só tamanho. O máximo agora é 700, e é
+      raro.
+   2. Um acento só (`--ambar`), reservado a PRAZO / ATENÇÃO. Se aparecer
+      âmbar, há uma data a contar. O verde-lima decorativo da versão
+      anterior saiu inteiro: era a cor mais saturada da página e servia
+      brilhos.
+   3. Profundidade uma vez só. A sombra é do telemóvel, que é um objeto
+      físico. Tudo o resto separa-se por linha de 1px. Nada levanta no
+      hover.
+
+   O MOCKUP É A EXCEÇÃO DE PROPÓSITO: por dentro mantém a estética da
+   app (cantos redondos, verde mais vivo, Nunito), porque é a app que
+   ele está a mostrar. O site é a moldura, a app é o conteúdo.
    ================================================================== */
 
 :root {
-  --green-900: #0c3a22;
-  --green-800: #124d2e;
-  --green-700: #166b3d;
-  --green-600: #1b7a48;
-  --green-500: #2e9e5b;
-  --green-400: #57b97d;
-  --green-300: #8fd3a9;
-  --green-100: #dcf2e4;
-  --green-50: #eef8f1;
+  /* ---- Papel ---- */
+  --papel: #eeeee8;        /* fundo geral: cinza quente com um sopro de verde */
+  --papel-2: #e5e6de;      /* secções alternadas */
+  --cartao: #fbfbf7;       /* cartões e faixas */
 
-  --lime: #c6f24e;
-  --lime-deep: #aadf3a;
+  /* ---- Tinta ---- */
+  --tinta: #14201a;        /* texto principal (verde quase preto) */
+  --tinta-2: #4c584f;      /* secundário */
+  --tinta-3: #7c877e;      /* rótulos, legendas, números de passo */
 
-  --bg: #f3f6f2;
-  --surface: #ffffff;
-  --surface-alt: #f0f4ee;
+  /* ---- Verdes de estrutura ---- */
+  --mata: #1b3226;         /* blocos escuros */
+  --mata-funda: #0d1912;   /* o mais escuro (banda final) */
+  --musgo: #3d5a45;        /* links, ícones, foco */
+  --musgo-claro: #6e8a75;
 
-  --text: #15251c;
-  --text-2: #54655b;
-  --text-muted: #869184;
-  --on-dark: #ffffff;
-  --on-dark-muted: rgba(255, 255, 255, 0.82);
+  /* ---- O único acento: prazo / atenção ---- */
+  --ambar: #8a5713;        /* sobre papel */
+  --ambar-claro: #e0b354;  /* sobre mata */
+  --ambar-veu: #f2e7d0;
 
-  --border: #e3eae0;
-  --border-strong: #d2dccd;
+  /* ---- Alerta (só dentro do mockup) ---- */
+  --alerta: #a33b1c;
+  --alerta-veu: #f4e3db;
 
-  --danger: #d45b3b;
-  --danger-tint: #fbe7e0;
-  --warning: #e39a2e;
-  --warning-tint: #fbf0dc;
-  --info: #3b82c4;
-  --info-tint: #e4eff8;
-  --success: #2e9e5b;
-  --success-tint: #e4f5ea;
+  /* ---- Linhas ---- */
+  --linha: #dcddd3;
+  --linha-forte: #c3c5b8;
+  --linha-clara: rgba(244, 244, 238, 0.16);
 
-  --r-sm: 10px;
-  --r-md: 16px;
-  --r-lg: 22px;
-  --r-xl: 28px;
-  --r-pill: 999px;
+  /* ---- Sobre fundo escuro ---- */
+  --sobre-mata: #f4f4ee;
+  --sobre-mata-2: rgba(244, 244, 238, 0.7);
 
-  --shadow-sm: 0 2px 8px rgba(12, 58, 34, 0.06);
-  --shadow-md: 0 6px 20px rgba(12, 58, 34, 0.09);
-  --shadow-lg: 0 18px 44px rgba(12, 58, 34, 0.14);
+  /* ---- Tipos ---- */
+  --display: "Bricolage Grotesque", "Nunito", system-ui, sans-serif;
+  --corpo: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  /* ---- Raios: precisos, não fofos ----
+     O 5px do `--r-sm` não é ao acaso: é o raio do badge da App Store
+     (5.5/40 da altura da arte), para os botões do site rimarem com ele. */
+  --r-xs: 3px;
+  --r-sm: 5px;
+  --r-md: 8px;
+  --r-lg: 12px;
+
+  /* Uma sombra só, e é do telemóvel. */
+  --sombra-objeto: 0 28px 64px rgba(13, 25, 18, 0.18), 0 4px 14px rgba(13, 25, 18, 0.07);
 
   --maxw: 1180px;
-  --nav-h: 74px;
+  --nav-h: 68px;
 }
 
 /* ---------- Reset / base ---------- */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; scroll-padding-top: 90px; }
+html { scroll-behavior: smooth; scroll-padding-top: 84px; }
 
 body {
-  font-family: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  color: var(--text);
-  background: var(--bg);
+  font-family: var(--corpo);
+  color: var(--tinta);
+  background: var(--papel);
   font-size: 17px;
-  line-height: 1.6;
+  font-weight: 400;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
@@ -72,400 +101,596 @@ body {
 img, svg { display: block; max-width: 100%; }
 a { color: inherit; text-decoration: none; }
 
-h1, h2, h3 { line-height: 1.12; letter-spacing: -0.02em; font-weight: 800; }
-h2 { font-size: clamp(1.9rem, 4vw, 2.8rem); }
-h3 { font-size: 1.25rem; font-weight: 800; }
+/* O anel de foco era o do navegador em botões-pílula verdes, onde mal se
+   via. Agora é explícito, e nos blocos escuros troca para âmbar. */
+:focus-visible { outline: 2px solid var(--musgo); outline-offset: 3px; border-radius: var(--r-xs); }
+.bloco-escuro :focus-visible { outline-color: var(--ambar-claro); }
 
-.container { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
-
-.eyebrow {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-size: 0.82rem; font-weight: 800; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--green-700);
-  background: var(--green-50); border: 1px solid var(--green-100);
-  padding: 7px 14px; border-radius: var(--r-pill);
+/* ---------- Tipografia ---------- */
+h1, h2, h3 {
+  font-family: var(--display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
 }
-.eyebrow .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green-500); }
+/* `text-wrap: balance` reparte as linhas de forma igual em vez de
+   encher a primeira e deixar uma palavra sozinha na última ("cálculo",
+   "minutos"). Onde não pega, o texto quebra como sempre. */
+h1, h2 { text-wrap: balance; }
+h1 { font-weight: 700; letter-spacing: -0.032em; line-height: 1.09; }
+h2 { font-size: clamp(1.85rem, 3.6vw, 2.85rem); }
+h3 { font-size: 1.16rem; }
 
-.section { padding: clamp(64px, 9vw, 120px) 0; }
-.section-head { max-width: 640px; margin: 0 auto clamp(40px, 6vw, 64px); text-align: center; }
-.section-head p { margin-top: 16px; color: var(--text-2); font-size: 1.12rem; }
-.section-head .eyebrow { margin-bottom: 18px; }
+/* O rótulo mono é a voz de dados do site: rótulos de secção, módulos,
+   plataformas, legendas de mockup. Sempre pequeno e sempre em caixa alta:
+   é a etiqueta do registo, não texto para ler devagar. */
+.rotulo {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--tinta-3);
+  font-variant-numeric: tabular-nums;
+}
 
-/* ---------- Buttons ---------- */
+/* Qualquer número, código ou data. `tabular-nums` para as colunas de
+   números não dançarem quando os dígitos mudam. */
+.dado {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.container { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+
+.section { padding: clamp(64px, 8vw, 108px) 0; }
+.section-head { max-width: 640px; margin: 0 0 clamp(38px, 5vw, 58px); }
+.section-head p { margin-top: 14px; color: var(--tinta-2); font-size: 1.08rem; }
+.section-head .rotulo { display: block; margin-bottom: 16px; }
+
+/* ---------- Botões ---------- */
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  font-weight: 800; font-size: 1.02rem; line-height: 1;
-  padding: 16px 26px; border-radius: var(--r-pill);
-  border: 1.5px solid transparent; cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  font-family: var(--corpo); font-weight: 700; font-size: 1rem; line-height: 1;
+  padding: 15px 24px; border-radius: var(--r-sm);
+  border: 1px solid transparent; cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
   white-space: nowrap;
 }
-.btn svg { width: 20px; height: 20px; }
-.btn-primary { background: var(--green-600); color: #fff; box-shadow: var(--shadow-md); }
-.btn-primary:hover { background: var(--green-700); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-.btn-lime { background: var(--lime); color: var(--green-900); box-shadow: 0 8px 22px rgba(150, 200, 40, 0.35); }
-.btn-lime:hover { background: var(--lime-deep); transform: translateY(-2px); }
-.btn-ghost { background: var(--surface); color: var(--green-700); border-color: var(--border-strong); }
-.btn-ghost:hover { border-color: var(--green-400); background: var(--green-50); transform: translateY(-2px); }
-.btn-lg { padding: 19px 32px; font-size: 1.1rem; }
-.btn-block { width: 100%; }
+.btn svg { width: 18px; height: 18px; }
+.btn-primario { background: var(--mata); color: var(--sobre-mata); }
+.btn-primario:hover { background: var(--mata-funda); }
+.btn-secundario { background: transparent; color: var(--tinta); border-color: var(--linha-forte); }
+.btn-secundario:hover { border-color: var(--tinta); background: rgba(20, 32, 26, 0.04); }
+.btn-lg { padding: 17px 28px; font-size: 1.05rem; }
 
 /* ---------- Nav ---------- */
 .nav {
   position: sticky; top: 0; z-index: 50; height: var(--nav-h);
   display: flex; align-items: center;
-  background: rgba(243, 246, 242, 0.82);
-  backdrop-filter: saturate(180%) blur(14px);
+  background: rgba(238, 238, 232, 0.86);
+  backdrop-filter: saturate(140%) blur(12px);
   border-bottom: 1px solid transparent;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
-.nav.scrolled { border-color: var(--border); box-shadow: var(--shadow-sm); background: rgba(243, 246, 242, 0.92); }
+.nav.scrolled { border-color: var(--linha); background: rgba(238, 238, 232, 0.95); }
 .nav .container { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.brand { display: flex; align-items: center; gap: 11px; font-weight: 800; font-size: 1.18rem; letter-spacing: -0.02em; }
-.brand svg, .brand img { width: 40px; height: 40px; border-radius: 12px; }
-.nav-links { display: flex; align-items: center; gap: 6px; }
+.marca {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--display); font-weight: 600; font-size: 1.1rem; letter-spacing: -0.02em;
+}
+.marca img, .marca svg { width: 32px; height: 32px; border-radius: var(--r-md); }
+.nav-links { display: flex; align-items: center; gap: 4px; }
 .nav-links a {
-  padding: 10px 15px; border-radius: var(--r-pill); font-weight: 700;
-  color: var(--text-2); font-size: 0.98rem; transition: background 0.15s, color 0.15s;
+  padding: 8px 13px; border-radius: var(--r-sm); font-weight: 600;
+  color: var(--tinta-2); font-size: 0.95rem;
+  transition: background 0.15s, color 0.15s;
 }
-.nav-links a:hover { background: var(--green-50); color: var(--green-700); }
+.nav-links a:hover { background: rgba(20, 32, 26, 0.05); color: var(--tinta); }
 .nav-cta { display: flex; align-items: center; gap: 10px; }
-.nav-toggle { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 46px; height: 46px; cursor: pointer; }
-.nav-toggle span { display: block; width: 20px; height: 2px; background: var(--text); margin: 4px auto; border-radius: 2px; transition: 0.2s; }
-
-/* ---------- Hero ---------- */
-.hero { position: relative; padding: clamp(48px, 7vw, 96px) 0 clamp(64px, 8vw, 110px); overflow: hidden; }
-.hero::before {
-  content: ""; position: absolute; inset: 0; z-index: -1;
-  background:
-    radial-gradient(60% 55% at 82% 8%, rgba(198, 242, 78, 0.22), transparent 60%),
-    radial-gradient(70% 60% at 6% 92%, rgba(27, 122, 72, 0.10), transparent 60%);
+.nav-cta .btn { padding: 11px 18px; font-size: 0.94rem; }
+.nav-toggle {
+  display: none; background: transparent; border: 1px solid var(--linha-forte);
+  border-radius: var(--r-sm); width: 42px; height: 42px; cursor: pointer;
 }
-.hero .container { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
-.hero-copy h1 { font-size: clamp(2.4rem, 5.2vw, 4rem); margin: 22px 0 20px; }
-.hero-copy h1 .hl { color: var(--green-600); position: relative; }
-.hero-copy .lead { font-size: 1.22rem; color: var(--text-2); max-width: 34ch; }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 14px; margin: 32px 0 14px; }
-.hero-plats { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 0 0 22px; }
-.hero-plats span {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px; border-radius: 999px;
-  background: var(--surface); border: 1px solid var(--border-strong);
-  font-weight: 700; font-size: 0.85rem; color: var(--green-700);
-}
-.hero-plats svg { width: 16px; height: 16px; color: var(--green-600); }
-.hero-trust { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-top: 8px; }
-.hero-trust span { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; color: var(--text-2); }
-.hero-trust svg { width: 19px; height: 19px; color: var(--green-600); }
+.nav-toggle span { display: block; width: 18px; height: 1.5px; background: var(--tinta); margin: 4px auto; border-radius: 2px; }
 
-/* ---------- Phone mockup ---------- */
-.mock-wrap { position: relative; display: flex; justify-content: center; }
-.mock-glow { position: absolute; inset: -8% -4%; background: radial-gradient(50% 50% at 50% 40%, rgba(27,122,72,0.18), transparent 70%); filter: blur(10px); z-index: 0; }
+/* ---------- Hero ----------
+   Sem manchas desfocadas. A versão anterior tinha quatro gradientes
+   radiais espalhados pela página (dois aqui, um atrás do telemóvel, um
+   no cartão da citação e outro na banda final) e era o sinal genérico
+   mais forte que o site dava. Se voltar a fazer falta um fundo, é uma
+   linha ou uma mudança de papel, não um brilho. */
+.hero { padding: clamp(44px, 6vw, 84px) 0 clamp(56px, 7vw, 96px); }
+.hero .container { display: grid; grid-template-columns: 1.06fr 0.94fr; gap: 60px; align-items: center; }
+/* Sem `<br />` a marcar a quebra à mão e com `text-wrap: balance`: o
+   navegador reparte as linhas de forma igual, em vez de deixar o "ser."
+   sozinho na terceira. Uma quebra fixa acertava para uma largura só e
+   estragava todas as outras. */
+.hero-copy h1 { font-size: clamp(2.4rem, 4.9vw, 3.9rem); margin: 20px 0 22px; text-wrap: balance; }
+.hero-copy .lead { font-size: 1.16rem; color: var(--tinta-2); max-width: 36ch; }
+.hero-acoes { display: flex; flex-wrap: wrap; gap: 12px; margin: 32px 0 28px; }
+
+/* A palavra realçada leva uma régua âmbar por baixo, e não outra cor de
+   letra: é o mesmo acento dos prazos e chega uma vez.
+   É um `text-decoration` e NÃO um `::after` com fundo, por causa de uma
+   letra só: o "p" de "simples" desce abaixo da linha, e uma barra
+   desenhada à mão passava-lhe por cima. O `skip-ink` abre a régua à volta
+   da descida sozinho, e continua a fazê-lo se a palavra realçada mudar. */
+.hl {
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: var(--ambar);
+  text-decoration-thickness: 0.07em;
+  text-underline-offset: 0.13em;
+  text-decoration-skip-ink: auto;
+}
+
+/* Plataformas: texto mono separado por barras, sem pílulas nem caixas.
+   SEM caixa alta, ao contrário dos outros rótulos: o `text-transform` do
+   `.rotulo` escrevia "IPHONE", e o nome do produto da Apple tem uma
+   maiúscula no sítio certo e uma minúscula no início. */
+.plataformas { text-transform: none; letter-spacing: 0.06em; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; list-style: none; }
+.plataformas li { display: flex; align-items: center; gap: 10px; }
+.plataformas li::after { content: "/"; color: var(--linha-forte); }
+.plataformas li:last-child::after { content: none; }
+
+/* ---------- Mockup do telemóvel ----------
+   Por dentro é a app, e a app tem a estética dela: cantos redondos,
+   verde mais vivo, Nunito. Os tokens ficam todos aqui em cima para que
+   mexer na paleta do SITE não descaracterize a captura da APP. */
+.mock { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.mock figcaption { color: var(--tinta-3); }
 .phone {
-  position: relative; z-index: 1; width: 320px; max-width: 82vw;
-  background: #10331f; border-radius: 42px; padding: 12px;
-  box-shadow: var(--shadow-lg); border: 1px solid rgba(255,255,255,0.08);
+  --ap-fundo: #f1f4ef;
+  --ap-cartao: #ffffff;
+  --ap-linha: #e2e8df;
+  --ap-verde: #1e4630;
+  --ap-verde-2: #2a5e3c;
+  --ap-texto: #15251c;
+  --ap-texto-2: #54655b;
+  --ap-muted: #869184;
+
+  position: relative; width: 318px; max-width: 82vw;
+  background: #0f2418; border-radius: 42px; padding: 11px;
+  box-shadow: var(--sombra-objeto);
 }
-.phone-screen { background: var(--bg); border-radius: 32px; overflow: hidden; height: 640px; }
-.app-header {
-  background: linear-gradient(155deg, var(--green-700), var(--green-600));
-  color: #fff; padding: 22px 20px 26px; border-radius: 0 0 26px 26px;
-}
-.app-header .hi { font-size: 0.9rem; opacity: 0.85; font-weight: 700; }
-.app-header .name { font-size: 1.5rem; font-weight: 800; margin-top: 2px; }
+.phone-screen { background: var(--ap-fundo); border-radius: 32px; overflow: hidden; height: 620px; font-family: var(--corpo); }
+.app-header { background: var(--ap-verde); color: #fff; padding: 22px 18px 24px; border-radius: 0 0 24px 24px; }
+.app-header .hi { font-size: 0.88rem; opacity: 0.8; font-weight: 600; }
+.app-header .name { font-size: 1.42rem; font-weight: 700; margin-top: 1px; letter-spacing: -0.01em; }
 .weather-chip {
-  margin-top: 16px; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.18);
-  border-radius: var(--r-md); padding: 12px 14px; display: flex; align-items: center; gap: 12px;
+  margin-top: 15px; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px; padding: 11px 13px; display: flex; align-items: center; gap: 12px;
 }
-.weather-chip .temp { font-size: 1.6rem; font-weight: 800; }
-.weather-chip .wx-t { font-size: 0.82rem; opacity: 0.9; font-weight: 700; }
-.weather-chip svg { width: 34px; height: 34px; margin-left: auto; }
-.app-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.app-section-t { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); margin: 4px 2px; }
-.mini-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 14px; box-shadow: var(--shadow-sm); }
-.alert-row { display: flex; align-items: center; gap: 12px; }
-.alert-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; }
-.alert-ic svg { width: 22px; height: 22px; }
-.alert-ic.danger { background: var(--danger-tint); color: var(--danger); }
-.alert-ic.warn { background: var(--warning-tint); color: var(--warning); }
-.alert-row .a-t { font-weight: 800; font-size: 0.92rem; }
-.alert-row .a-s { font-size: 0.8rem; color: var(--text-2); font-weight: 600; }
+.weather-chip .temp { font-size: 1.5rem; font-weight: 500; }
+.weather-chip .wx-t { font-size: 0.78rem; opacity: 0.85; font-weight: 600; }
+.weather-chip svg { width: 30px; height: 30px; margin-left: auto; }
+.app-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.app-section-t { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ap-muted); margin: 4px 2px; font-family: var(--mono); }
+.mini-card { background: var(--ap-cartao); border: 1px solid var(--ap-linha); border-radius: 14px; padding: 11px 13px; }
+.alert-row { display: flex; align-items: center; gap: 11px; }
+.alert-ic { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex-shrink: 0; }
+.alert-ic svg { width: 20px; height: 20px; }
+.alert-ic.danger { background: var(--alerta-veu); color: var(--alerta); }
+.alert-ic.warn { background: var(--ambar-veu); color: var(--ambar); }
+.alert-row .a-t { font-weight: 700; font-size: 0.9rem; color: var(--ap-texto); }
+/* O PRAZO é o que a app faz por si, por isso é a única coisa do mockup
+   escrita na voz de dados: mono, tabular e em âmbar. */
+.alert-row .a-s { font-size: 0.76rem; color: var(--ap-texto-2); font-weight: 500; }
+.alert-row .a-s .prazo { color: var(--ambar); font-weight: 600; }
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 14px; box-shadow: var(--shadow-sm); }
-.stat .n { font-size: 1.5rem; font-weight: 800; color: var(--green-700); }
-.stat .l { font-size: 0.8rem; color: var(--text-2); font-weight: 700; }
-.stat .l svg { width: 15px; height: 15px; display: inline; vertical-align: -2px; margin-right: 4px; color: var(--green-500); }
+.stat { background: var(--ap-cartao); border: 1px solid var(--ap-linha); border-radius: 14px; padding: 11px 13px; }
+.stat .n { font-size: 1.5rem; font-weight: 500; color: var(--ap-verde); line-height: 1.2; }
+.stat .l { font-size: 0.76rem; color: var(--ap-texto-2); font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.stat .l svg { width: 14px; height: 14px; color: var(--ap-verde-2); flex: none; }
+.app-acao { display: flex; align-items: center; gap: 10px; background: var(--ap-verde); color: #fff; border-radius: 14px; padding: 12px 13px; font-weight: 700; font-size: 0.9rem; }
+.app-acao svg { width: 19px; height: 19px; flex: none; }
 
-/* ---------- Logos / trust bar ---------- */
-.trustbar { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--surface); }
-.trustbar .container { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px 40px; padding-top: 26px; padding-bottom: 26px; }
-.trustbar .t-item { display: flex; align-items: center; gap: 12px; }
-.trustbar .t-item svg { width: 26px; height: 26px; color: var(--green-600); flex-shrink: 0; }
-.trustbar .t-item b { font-weight: 800; }
-.trustbar .t-item span { font-size: 0.92rem; color: var(--text-2); display: block; font-weight: 600; }
+/* ---------- Faixa de garantias ----------
+   Sem ícones. Quatro colunas de texto separadas por linha vertical: a
+   tipografia chega, e os ícones aqui só repetiam o que a frase já dizia. */
+.faixa { background: var(--cartao); border-top: 1px solid var(--linha); border-bottom: 1px solid var(--linha); }
+.faixa .container { display: grid; grid-template-columns: repeat(4, 1fr); }
+.faixa .item { padding: 28px 26px; border-left: 1px solid var(--linha); }
+.faixa .item:first-child { border-left: 0; padding-left: 0; }
+.faixa .item:last-child { padding-right: 0; }
+.faixa .rotulo { display: block; margin-bottom: 9px; }
+.faixa b { display: block; font-weight: 700; font-size: 1rem; letter-spacing: -0.01em; }
+/* `b + span` e NÃO `span`: o rótulo mono também é um `span`, e um
+   seletor de elemento aqui (0,1,1) ganhava ao `.rotulo` (0,1,0) e
+   desenhava-o a 14px em vez de 11,5px. É a armadilha clássica de misturar
+   seletores de classe com seletores de elemento na mesma folha. */
+.faixa b + span { display: block; font-size: 0.9rem; color: var(--tinta-2); line-height: 1.45; }
 
-/* ---------- Feature grid ---------- */
-.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
-.feature {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
-  padding: 30px 28px; box-shadow: var(--shadow-sm);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+/* ---------- Funcionalidades ----------
+   O rótulo mono de cada cartão nomeia o MÓDULO da app (animais,
+   terrenos, prazos...). Não é enfeite: é o mapa do produto, e é a mesma
+   palavra que o utilizador vê no separador lá dentro. */
+.grelha-func { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--linha); border: 1px solid var(--linha); border-radius: var(--r-lg); overflow: hidden; }
+.func { background: var(--cartao); padding: 30px 28px 32px; transition: background 0.18s ease; }
+.func:hover { background: #fff; }
+.func .fic { width: 40px; height: 40px; border-radius: var(--r-md); background: var(--papel-2); color: var(--musgo); display: grid; place-items: center; margin-bottom: 20px; }
+.func .fic svg { width: 22px; height: 22px; }
+.func .rotulo { display: block; margin-bottom: 8px; }
+.func h3 { margin-bottom: 9px; }
+.func p { color: var(--tinta-2); font-size: 0.97rem; line-height: 1.6; }
+/* O cartão dos prazos é o único escuro: é a razão de ser da app. */
+.func.destaque { background: var(--mata); color: var(--sobre-mata); }
+.func.destaque:hover { background: var(--mata); }
+.func.destaque .fic { background: rgba(244, 244, 238, 0.1); color: var(--ambar-claro); }
+.func.destaque .rotulo { color: var(--ambar-claro); }
+.func.destaque p { color: var(--sobre-mata-2); }
+
+/* ---------- Passos ----------
+   A numeração fica porque aqui É mesmo uma sequência: instalar, registar,
+   ser avisado. Sem cartões e sem quadrados verdes, só a régua em cima e o
+   número em mono, como um item de índice. */
+.passos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 38px; counter-reset: passo; }
+.passo { border-top: 1px solid var(--linha-forte); padding-top: 20px; }
+.passo .n {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 1.9rem; font-weight: 400; color: var(--tinta-3);
+  letter-spacing: -0.03em; line-height: 1; margin-bottom: 16px;
 }
-.feature:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--green-300); }
-.feature .fic { width: 56px; height: 56px; border-radius: var(--r-md); background: var(--green-50); color: var(--green-700); display: grid; place-items: center; margin-bottom: 18px; }
-.feature .fic svg { width: 30px; height: 30px; }
-.feature h3 { margin-bottom: 8px; }
-.feature p { color: var(--text-2); font-size: 1rem; }
-.feature.accent { background: linear-gradient(160deg, var(--green-700), var(--green-800)); border-color: transparent; color: #fff; }
-.feature.accent .fic { background: rgba(255,255,255,0.14); color: var(--lime); }
-.feature.accent p { color: var(--on-dark-muted); }
+.passo .n::before { counter-increment: passo; content: counter(passo, decimal-leading-zero); }
+.passo h3 { margin-bottom: 9px; }
+.passo p { color: var(--tinta-2); font-size: 0.97rem; }
 
-/* ---------- Steps ---------- */
-.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; counter-reset: step; }
-.step { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 32px 28px 28px; box-shadow: var(--shadow-sm); }
-.step .num { counter-increment: step; width: 46px; height: 46px; border-radius: 14px; background: var(--green-600); color: #fff; font-weight: 800; font-size: 1.2rem; display: grid; place-items: center; margin-bottom: 18px; }
-.step .num::before { content: counter(step); }
-.step h3 { margin-bottom: 8px; }
-.step p { color: var(--text-2); }
-
-/* ---------- Split (para quem / acessibilidade) ---------- */
-.split { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
-.split.reverse .split-media { order: -1; }
+/* ---------- Split: para quem é ---------- */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
 .split-copy h2 { margin-bottom: 18px; }
-.split-copy p { color: var(--text-2); font-size: 1.12rem; margin-bottom: 16px; }
-.check-list { list-style: none; display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
-.check-list li { display: flex; align-items: flex-start; gap: 13px; font-weight: 600; }
-.check-list svg { width: 26px; height: 26px; color: var(--green-600); flex-shrink: 0; margin-top: 1px; }
-.media-card {
-  background: linear-gradient(160deg, var(--green-700), var(--green-900));
-  border-radius: var(--r-xl); padding: 40px; color: #fff; box-shadow: var(--shadow-lg);
-  position: relative; overflow: hidden;
+.split-copy > p { color: var(--tinta-2); font-size: 1.08rem; margin-bottom: 20px; }
+.lista-check { list-style: none; display: flex; flex-direction: column; }
+.lista-check li {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 13px 0; border-top: 1px solid var(--linha); font-size: 0.99rem;
 }
-.media-card::after { content: ""; position: absolute; width: 260px; height: 260px; border-radius: 50%; background: rgba(198,242,78,0.16); top: -80px; right: -80px; }
-.quote { font-size: 1.5rem; font-weight: 800; line-height: 1.4; letter-spacing: -0.01em; }
-.quote-who { margin-top: 22px; display: flex; align-items: center; gap: 14px; }
-.quote-who .av { width: 52px; height: 52px; border-radius: 50%; background: var(--lime); color: var(--green-900); display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; }
-.quote-who .w-n { font-weight: 800; }
-.quote-who .w-s { font-size: 0.9rem; color: var(--on-dark-muted); }
-.big-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 34px; }
-.big-stats .bs { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: var(--r-md); padding: 16px; }
-.big-stats .bs .n { font-size: 1.8rem; font-weight: 800; color: var(--lime); }
-.big-stats .bs .l { font-size: 0.82rem; color: var(--on-dark-muted); font-weight: 700; }
+.lista-check li:last-child { border-bottom: 1px solid var(--linha); }
+.lista-check svg { width: 18px; height: 18px; color: var(--musgo); flex-shrink: 0; margin-top: 5px; }
 
-/* O cartão de preços (`.price-card`) saiu com a secção de preços do
-   index.html, em 2026-08-31. Ver lá o comentário. */
+/* O bloco escuro já não é uma citação com iniciais.
+   Um testemunho sem nome lê-se como inventado, e custava mais
+   credibilidade do que ganhava. Passou a princípio de desenho, na voz da
+   casa, que é uma coisa que se pode assinar. */
+.bloco-escuro { background: var(--mata); color: var(--sobre-mata); border-radius: var(--r-lg); padding: 44px 40px; }
+.bloco-escuro .rotulo { color: var(--ambar-claro); display: block; margin-bottom: 20px; }
+.principio { font-family: var(--display); font-size: 1.42rem; font-weight: 500; line-height: 1.32; letter-spacing: -0.015em; }
+.principio + .principio { margin-top: 16px; color: var(--sobre-mata-2); font-size: 1.06rem; line-height: 1.5; }
+.numeros { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 34px; border-top: 1px solid var(--linha-clara); }
+.numeros div { padding: 20px 14px 0 0; }
+.numeros div + div { border-left: 1px solid var(--linha-clara); padding-left: 18px; }
+.numeros .n { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.75rem; font-weight: 400; color: var(--ambar-claro); line-height: 1.1; letter-spacing: -0.03em; }
+.numeros .l { font-size: 0.79rem; color: var(--sobre-mata-2); line-height: 1.4; margin-top: 6px; }
 
-/* ---------- FAQ ---------- */
-.faq { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
-.faq-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
-.faq-q { width: 100%; text-align: left; background: none; border: none; cursor: pointer; padding: 22px 24px; font-family: inherit; font-size: 1.08rem; font-weight: 800; color: var(--text); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.faq-q .chev { width: 24px; height: 24px; color: var(--green-600); transition: transform 0.25s ease; flex-shrink: 0; }
-.faq-item.open .chev { transform: rotate(180deg); }
+/* ---------- FAQ ----------
+   Linhas, não caixas. Cada pergunta é uma entrada de índice. */
+.faq { max-width: 820px; border-top: 1px solid var(--linha); }
+.faq-item { border-bottom: 1px solid var(--linha); }
+.faq-q {
+  width: 100%; text-align: left; background: none; border: none; cursor: pointer;
+  padding: 24px 2px; font-family: var(--display); font-size: 1.1rem; font-weight: 600;
+  color: var(--tinta); letter-spacing: -0.015em;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.faq-q:hover { color: var(--musgo); }
+.faq-q .chev { width: 18px; height: 18px; color: var(--tinta-3); transition: transform 0.25s ease; flex-shrink: 0; }
+.faq-item.open .chev { transform: rotate(180deg); color: var(--musgo); }
 .faq-a { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-.faq-a-inner { padding: 0 24px 22px; color: var(--text-2); }
+.faq-a-inner { padding: 0 2px 24px; color: var(--tinta-2); max-width: 68ch; }
 
-/* ---------- Download CTA band ---------- */
-.cta-band { background: linear-gradient(155deg, var(--green-700), var(--green-900)); color: #fff; border-radius: var(--r-xl); padding: clamp(40px, 6vw, 64px); text-align: center; position: relative; overflow: hidden; box-shadow: var(--shadow-lg); }
-.cta-band::before { content: ""; position: absolute; width: 380px; height: 380px; border-radius: 50%; background: radial-gradient(circle, rgba(198,242,78,0.2), transparent 70%); top: -140px; left: -100px; }
-.cta-band h2 { color: #fff; margin-bottom: 16px; }
-.cta-band p { color: var(--on-dark-muted); font-size: 1.15rem; max-width: 52ch; margin: 0 auto 30px; }
-.cta-band .btn-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
-.cta-meta { margin-top: 20px; font-size: 0.9rem; color: var(--on-dark-muted); display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
-.cta-meta svg { width: 17px; height: 17px; }
+/* ---------- Banda final ----------
+   Já NÃO há brilho absoluto por cima do conteúdo. O `::before` da versão
+   anterior era um círculo lima que passava por cima dos badges e deixava
+   o da Apple esverdeado, o que as guidelines dela proíbem. Sem brilho,
+   sem problema: não voltar a pôr um. */
+.banda { background: var(--mata-funda); color: var(--sobre-mata); border-radius: var(--r-lg); padding: clamp(44px, 6vw, 72px) clamp(28px, 5vw, 64px); text-align: center; }
+.banda .rotulo { color: var(--ambar-claro); display: block; margin-bottom: 18px; }
+.banda h2 { color: var(--sobre-mata); margin-bottom: 14px; }
+.banda > p { color: var(--sobre-mata-2); font-size: 1.08rem; max-width: 50ch; margin: 0 auto 34px; }
+.banda .btn-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
 
-/* ---------- Footer ---------- */
-.footer { background: var(--surface); border-top: 1px solid var(--border); padding: 56px 0 32px; }
-.footer .grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 40px; }
-.footer .brand { margin-bottom: 14px; }
-.footer p { color: var(--text-2); font-size: 0.98rem; max-width: 40ch; }
-.footer h4 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 16px; }
-.footer ul { list-style: none; display: flex; flex-direction: column; gap: 11px; }
-.footer ul a { color: var(--text-2); font-weight: 600; }
-.footer ul a:hover { color: var(--green-700); }
-.footer-bottom { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; color: var(--text-muted); font-size: 0.88rem; }
+/* ---------- Badges das plataformas ----------
+   `--alt` é a altura da ARTE, e é dela que sai tudo o resto. O padding do
+   link é a margem livre que a Apple exige à volta do badge dela (10% da
+   altura), e é também o que faz os quatro darem a mesma altura total.
+   O badge da App Store é uma imagem e não se altera: nada de fundo,
+   borda ou filtro. O `transform` do hover é do LINK, e move o badge sem
+   lhe tocar — é o único movimento que sobrou na página, porque num
+   destino de clique ainda diz alguma coisa. */
+.badge-loja {
+  --alt: 48px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: calc(var(--alt) * 0.125); border-radius: var(--r-sm);
+  transition: transform 0.15s ease;
+}
+.badge-loja img { display: block; height: var(--alt); width: auto; }
+.badge-loja:hover { transform: translateY(-2px); }
 
-/* ---------- Reveal animation ---------- */
-.reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease, transform 0.6s ease; }
-.reveal.in { opacity: 1; transform: none; }
+/* Os três desenhados em CSS. As frações abaixo foram MEDIDAS no ficheiro
+   da Apple (120x40) e escritas como proporções da altura, para o conjunto
+   não se desalinhar quando a altura mudar no telemóvel:
+     raio 5.5/40 · entrada 9.5/40 · saída 11/40 · intervalo 7/40
+     ícone 22.5/40 · linha de cima 8.5/40 · linha de baixo 17/40
+   A moldura preta de 1px é a mesma que o badge branco da Apple tem, e foi
+   medida no mesmo sítio: não é cinzenta, é preta. */
+.badge-proprio .badge-arte {
+  display: inline-flex; align-items: center; box-sizing: border-box;
+  height: var(--alt); gap: calc(var(--alt) * 0.175);
+  padding-left: calc(var(--alt) * 0.2); padding-right: calc(var(--alt) * 0.275);
+  background: #fff; color: #000; border: 1px solid #000;
+  border-radius: calc(var(--alt) * 0.1375);
+  /* Explícito, e não herdado: as frações de texto abaixo foram acertadas
+     PARA A NUNITO. Se um dia o corpo do site trocar de tipo, o badge não
+     pode ir atrás sem se medir tudo outra vez. */
+  font-family: var(--corpo);
+}
+.badge-proprio .badge-icone { width: calc(var(--alt) * 0.5); height: calc(var(--alt) * 0.5); flex: none; }
+.badge-proprio .badge-txt { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
+/* O `nowrap` não é zelo a mais: sem ele, uma largura fixa parte "Descarregar
+   para" em duas linhas e o badge cresce em altura, que é a única medida que
+   TEM de ser igual à do badge da Apple. */
+/* As frações do texto NÃO são as do ficheiro da Apple, e é de propósito. Lá o
+   corpo é ~8.5/40 e ~17/40, mas em SF Pro; o site escreve em Nunito, que com o
+   mesmo corpo desenha letra maior (a 20.4px dava maiúsculas de 15px onde a
+   Apple tem 14.1). Estes números foram acertados pela TINTA medida no canvas,
+   não pelo `font-size`, que é o que faz as duas fontes parecerem do mesmo
+   tamanho lado a lado. Ao trocar de tipo de letra, medir outra vez. */
+.badge-proprio .badge-l1 { font-size: calc(var(--alt) * 0.1875); line-height: 1.2; letter-spacing: 0.01em; white-space: nowrap; }
+.badge-proprio .badge-l2 { font-size: calc(var(--alt) * 0.385); font-weight: 700; line-height: 1.12; letter-spacing: -0.01em; white-space: nowrap; }
 
-/* ---------- Responsive ---------- */
+.banda-nota {
+  margin: 28px auto 0; max-width: 62ch; font-size: 0.85rem; color: var(--sobre-mata-2);
+  display: flex; gap: 9px; align-items: flex-start; justify-content: center; text-align: left;
+  padding-top: 22px; border-top: 1px solid var(--linha-clara);
+}
+.banda-nota svg { width: 16px; height: 16px; flex: none; margin-top: 3px; color: var(--ambar-claro); }
+
+/* ---------- Rodapé ----------
+   QUATRO colunas, e não três. A versão anterior declarava
+   `1.6fr 1fr 1fr` com quatro filhos: a coluna "Legal" caía para uma
+   segunda linha e deixava 217px de vazio à direita. */
+.footer { background: var(--cartao); border-top: 1px solid var(--linha); padding: 60px 0 28px; }
+.footer .grid { display: grid; grid-template-columns: 1.7fr 1fr 1fr 1fr; gap: 40px; }
+.footer .marca { margin-bottom: 14px; }
+.footer .sobre p { color: var(--tinta-2); font-size: 0.95rem; max-width: 38ch; }
+.footer h4 { margin-bottom: 16px; }
+.footer ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.footer ul a { color: var(--tinta-2); font-size: 0.94rem; }
+.footer ul a:hover { color: var(--tinta); }
+.footer-bottom {
+  margin-top: 52px; padding-top: 22px; border-top: 1px solid var(--linha);
+  display: flex; flex-wrap: wrap; gap: 10px 28px; justify-content: space-between;
+  color: var(--tinta-3); font-size: 0.84rem;
+}
+/* Linha inteira, e não uma quinta coluna a espremer as outras. Discreta,
+   mas legível: é uma condição de licença, não letra pequena a esconder. */
+.creditos-marcas { flex-basis: 100%; font-size: 0.76rem; line-height: 1.55; }
+.creditos-marcas a { text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------- Revelar ao rolar ----------
+   AO CONTRÁRIO DA VERSÃO ANTERIOR. Antes, `.reveal` era `opacity: 0` no
+   CSS e só o JavaScript o ligava: se o `main.js` falhasse ou não
+   carregasse, o visitante via o fundo e mais nada. Agora o conteúdo está
+   visível por defeito e só se esconde quando a classe `js` confirma que
+   há quem o volte a mostrar. O script que a põe está no `<head>`, antes
+   da primeira pintura, para não haver salto.
+
+   E o movimento é agora por BLOCO (cabeçalho de secção, grelha inteira),
+   não por cartão: seis cartões a aparecerem um a um é o que fazia a
+   página parecer de catálogo. */
+.reveal { transition: opacity 0.5s ease, transform 0.5s ease; }
+/* Posta pela rede de segurança do `<head>` quando o `main.js` não chegou:
+   aí o conteúdo aparece de uma vez, sem desvanecimento nenhum. */
+.sem-animacao .reveal { transition: none; }
+.js .reveal { opacity: 0; transform: translateY(14px); }
+.js .reveal.in { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .js .reveal { opacity: 1; transform: none; }
+  .reveal, .faq-a, .faq-q .chev, .badge-loja { transition: none; }
+}
+
+/* ==================================================================
+   Responsivo
+   ================================================================== */
+
 /* Só aparece dentro do menu recolhido. */
 .nav-menu-cta { display: none; }
 
-/* A barra recolhe aos 900px e não aos 640: com os cinco links, os dois botões
-   e a marca, a barra media ~1000px e num tablet a 768px transbordava para fora
-   do ecrã — a página inteira ganhava scroll horizontal por causa dela. */
+/* A barra recolhe aos 900px e não aos 640: com os quatro links, o botão
+   e a marca, num tablet a 768px transbordava para fora do ecrã e a
+   página inteira ganhava scroll horizontal por causa dela. */
 @media (max-width: 900px) {
-  .nav-links, .nav-cta .btn-ghost { display: none; }
+  .nav-links { display: none; }
   .nav-toggle { display: block; }
   .nav.open .nav-links {
     display: flex; position: absolute; top: var(--nav-h); left: 0; right: 0;
     flex-direction: column; align-items: stretch; gap: 2px;
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 10px 16px 18px; box-shadow: var(--shadow-md);
+    background: var(--cartao); border-bottom: 1px solid var(--linha);
+    padding: 10px 16px 16px;
   }
-  .nav.open .nav-links a { padding: 15px 14px; font-size: 1.02rem; }
+  .nav.open .nav-links a { padding: 14px; font-size: 1rem; }
   .nav.open .nav-links .nav-menu-cta {
     display: block; margin-top: 10px; text-align: center;
-    background: var(--green-600); color: #fff; border-radius: var(--r-pill);
-    font-weight: 800;
+    background: var(--mata); color: var(--sobre-mata); font-weight: 700;
   }
 }
 
+@media (max-width: 1000px) {
+  .faixa .container { grid-template-columns: 1fr 1fr; }
+  .faixa .item { padding: 22px 24px; }
+  .faixa .item:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .faixa .item:nth-child(even) { padding-right: 0; }
+  .faixa .item:nth-child(n + 3) { border-top: 1px solid var(--linha); }
+}
+
 @media (max-width: 960px) {
-  .hero .container { grid-template-columns: 1fr; gap: 36px; }
-  /* O mockup NÃO vai para cima: numa só coluna são 640px de imagem antes da
-     primeira palavra, e quem chega ao site pelo telemóvel desiste antes de
-     saber o que a app faz. Primeiro o texto, depois a prova visual. */
-  .mock-wrap { order: 0; }
-  .hero-copy { text-align: center; }
-  .hero-copy .lead { margin: 0 auto; }
-  .hero-actions, .hero-trust, .hero-plats { justify-content: center; }
-  .features-grid, .steps, .big-stats { grid-template-columns: 1fr 1fr; }
-  /* `minmax(0, …)` e não `1fr`: uma coluna de grelha nunca encolhe abaixo do
-     conteúdo mais largo que tem dentro, e bastava um cartão teimoso para a
-     página inteira ganhar barra de scroll na horizontal. */
+  .hero .container { grid-template-columns: 1fr; gap: 40px; }
+  /* O mockup NÃO vai para cima: numa só coluna são 620px de imagem antes
+     da primeira palavra, e quem chega ao site pelo telemóvel desiste antes
+     de saber o que a app faz. Primeiro o texto, depois a prova visual. */
+  .mock { order: 0; }
+  .grelha-func { grid-template-columns: 1fr 1fr; }
+  /* `minmax(0, …)` e não `1fr`: uma coluna de grelha nunca encolhe abaixo
+     do conteúdo mais largo que tem dentro, e bastava um cartão teimoso
+     para a página inteira ganhar barra de scroll na horizontal. */
+  .passos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px; }
   .split { grid-template-columns: minmax(0, 1fr); gap: 36px; }
-  .split.reverse .split-media { order: 0; }
-  .footer .grid { grid-template-columns: 1fr 1fr; }
-  .footer .grid .about { grid-column: 1 / -1; }
+  .footer .grid { grid-template-columns: 1fr 1fr 1fr; gap: 32px; }
+  .footer .sobre { grid-column: 1 / -1; }
 }
 
 /* ==================================================================
    Telemóvel — a página tem de ser CURTA
-   Uma landing page de desktop empilhada numa coluna dá 8 metros de scroll.
-   Aqui os cartões passam a linhas (ícone à esquerda, texto à direita), o
-   espaçamento entre secções encolhe e o que está repetido desaparece.
+   Uma landing page de desktop empilhada numa coluna dá 8 metros de
+   scroll. Aqui os cartões passam a linhas (ícone à esquerda, texto à
+   direita), o espaçamento entre secções encolhe e o que está repetido
+   desaparece.
    ================================================================== */
 @media (max-width: 640px) {
   body { font-size: 16px; }
-  h2 { font-size: 1.45rem; }
+  h2 { font-size: 1.5rem; }
   h3 { font-size: 1.02rem; }
   .container { padding: 0 18px; }
-  .section { padding: 24px 0; }
-  .section-head { margin-bottom: 18px; }
-  .section-head p { font-size: 0.96rem; margin-top: 10px; }
-  .section-head .eyebrow { margin-bottom: 10px; }
-  .eyebrow { font-size: 0.72rem; padding: 5px 11px; }
-  .btn-lg { padding: 14px 22px; font-size: 1rem; }
+  .section { padding: 30px 0; }
+  .section-head { margin-bottom: 20px; }
+  .section-head p { font-size: 0.95rem; margin-top: 8px; }
+  .section-head .rotulo { margin-bottom: 10px; }
+  .rotulo { font-size: 0.66rem; letter-spacing: 0.13em; }
+  .btn-lg { padding: 15px 22px; font-size: 1rem; }
 
   /* ---- Barra (o menu recolhido está no bloco dos 900px) ---- */
-  .brand { font-size: 1.02rem; gap: 9px; }
-  .brand img, .brand svg { width: 32px; height: 32px; }
-  .nav-cta { gap: 8px; }
-  .nav-cta .btn-primary { padding: 11px 16px; font-size: 0.92rem; }
+  .marca { font-size: 1rem; gap: 9px; }
+  .marca img, .marca svg { width: 28px; height: 28px; }
 
   /* ---- Hero ---- */
-  .hero { padding: 22px 0 30px; }
-  .hero .container { gap: 18px; }
-  .hero-copy h1 { font-size: 1.9rem; margin: 12px 0 10px; }
-  .hero-copy .lead { font-size: 1rem; max-width: 32ch; }
-  .hero-actions { gap: 10px; margin: 16px 0 12px; }
-  .hero-actions .btn { width: 100%; }
-  .hero-plats { margin-bottom: 0; }
-  /* As três garantias repetem-se, palavra por palavra, na barra logo a
-     seguir. Duas vezes o mesmo é o dobro do scroll pela mesma informação. */
-  .hero-trust { display: none; }
+  .hero { padding: 26px 0 32px; }
+  .hero .container { gap: 24px; }
+  .hero-copy { text-align: center; }
+  .hero-copy h1 { font-size: 2rem; margin: 12px 0 12px; }
+  .hero-copy .lead { font-size: 1rem; max-width: 34ch; margin: 0 auto; }
+  .hero-acoes { gap: 10px; margin: 20px 0 16px; justify-content: center; }
+  .hero-acoes .btn { width: 100%; }
+  .plataformas { justify-content: center; }
 
-  /* Mockup só como amostra: o ecrã fica cortado e esbatido em baixo. */
-  .phone { width: 220px; padding: 8px; border-radius: 30px; }
+  /* Mockup só como amostra: o ecrã fica cortado e esbatido em baixo.
+     A LARGURA e a ALTURA aqui não são arredondamentos: a 218px a linha do
+     tempo ("Lameiro Grande · Céu limpo") partia em duas e empurrava o
+     primeiro aviso para fora do corte, e o que sobrava do mockup era um
+     cabeçalho verde sem nada dentro. A amostra tem de chegar para se ver
+     UM aviso de prazo, que é a coisa que a app faz. */
+  .phone { width: 286px; padding: 9px; border-radius: 32px; }
   .phone-screen {
-    height: 260px; border-radius: 24px;
-    -webkit-mask-image: linear-gradient(180deg, #000 68%, transparent 100%);
-    mask-image: linear-gradient(180deg, #000 68%, transparent 100%);
+    height: 312px; border-radius: 25px;
+    -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
   }
-  .app-header { padding: 14px 14px 18px; }
-  .app-header .name { font-size: 1.18rem; }
+  .app-header { padding: 14px 13px 16px; border-radius: 0 0 20px 20px; }
+  .app-header .name { font-size: 1.15rem; }
   .weather-chip { margin-top: 10px; padding: 9px 11px; }
   .app-body { padding: 10px; gap: 8px; }
 
-  /* ---- Barra de confiança: 2x2 em vez de 4 linhas ---- */
-  .trustbar .container {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 12px 12px;
-    padding-top: 14px; padding-bottom: 14px;
-  }
-  .trustbar .t-item { flex-direction: column; align-items: flex-start; gap: 5px; }
-  .trustbar .t-item svg { width: 21px; height: 21px; }
-  .trustbar .t-item b { font-size: 0.92rem; }
-  .trustbar .t-item span { font-size: 0.78rem; line-height: 1.35; }
+  /* ---- Faixa: 2x2 em vez de quatro linhas ---- */
+  .faixa .container { grid-template-columns: 1fr 1fr; }
+  .faixa .item { padding: 14px 12px; }
+  .faixa .rotulo { margin-bottom: 4px; }
+  .faixa b { font-size: 0.9rem; }
+  .faixa b + span { font-size: 0.78rem; line-height: 1.35; }
 
   /* ---- Funcionalidades e passos: cartão → linha ----
      O ícone passa para a esquerda e o texto ocupa a coluna restante. Sem
-     div extra no HTML: as áreas de grelha arrumam os filhos que já existem. */
-  .features-grid, .steps { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-  .feature, .step {
-    display: grid; grid-template-columns: 42px 1fr;
-    grid-template-areas: "ic titulo" "ic texto";
+     div extra no HTML: as áreas de grelha arrumam os filhos que já
+     existem. */
+  .grelha-func { grid-template-columns: minmax(0, 1fr); border-radius: var(--r-md); }
+  .func {
+    display: grid; grid-template-columns: 38px 1fr;
+    grid-template-areas: "ic rotulo" "ic titulo" "ic texto";
+    column-gap: 12px; row-gap: 1px; align-items: start;
+    padding: 13px 14px;
+  }
+  .func .fic { grid-area: ic; width: 38px; height: 38px; margin-bottom: 0; border-radius: var(--r-sm); }
+  .func .fic svg { width: 20px; height: 20px; }
+  .func .rotulo { grid-area: rotulo; margin-bottom: 2px; }
+  .func h3 { grid-area: titulo; margin-bottom: 3px; }
+  .func p { grid-area: texto; font-size: 0.87rem; line-height: 1.45; }
+
+  .passos { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .passo {
+    display: grid; grid-template-columns: 38px 1fr;
+    grid-template-areas: "n titulo" "n texto";
     column-gap: 12px; row-gap: 2px; align-items: start;
-    padding: 12px 14px; border-radius: var(--r-md);
+    padding: 13px 0;
   }
-  .feature:hover { transform: none; }
-  .feature .fic, .step .num {
-    grid-area: ic; width: 42px; height: 42px; margin-bottom: 0; border-radius: 11px;
-  }
-  .feature .fic svg { width: 24px; height: 24px; }
-  .step .num { font-size: 1.08rem; }
-  .feature h3, .step h3 { grid-area: titulo; margin-bottom: 0; }
-  .feature p, .step p { grid-area: texto; font-size: 0.88rem; line-height: 1.45; }
+  .passo .n { grid-area: n; font-size: 1.1rem; margin-bottom: 0; padding-top: 2px; }
+  .passo h3 { grid-area: titulo; margin-bottom: 0; }
+  .passo p { grid-area: texto; font-size: 0.87rem; line-height: 1.45; }
 
   /* ---- Para quem é ---- */
-  .split { gap: 18px; }
+  .split { gap: 20px; }
   .split-copy h2 { margin-bottom: 10px; }
-  .split-copy p { font-size: 0.96rem; margin-bottom: 10px; }
-  .check-list { gap: 8px; }
-  .check-list li { font-size: 0.92rem; }
-  .check-list svg { width: 20px; height: 20px; }
-  .media-card { padding: 18px; border-radius: var(--r-lg); }
-  .quote { font-size: 1.05rem; line-height: 1.35; }
-  .quote-who { margin-top: 12px; gap: 10px; }
-  .quote-who .av { width: 38px; height: 38px; font-size: 0.95rem; }
-  .quote-who .w-n { font-size: 0.92rem; }
-  .quote-who .w-s { font-size: 0.78rem; }
+  .split-copy > p { font-size: 0.95rem; margin-bottom: 12px; }
+  .lista-check li { font-size: 0.9rem; padding: 10px 0; gap: 11px; }
+  .lista-check svg { width: 16px; height: 16px; margin-top: 4px; }
+  .bloco-escuro { padding: 22px 18px; }
+  .bloco-escuro .rotulo { margin-bottom: 12px; }
+  .principio { font-size: 1.08rem; line-height: 1.35; }
+  .principio + .principio { font-size: 0.92rem; margin-top: 10px; }
   /* Três números lado a lado; empilhados eram três ecrãs de nada. */
-  .big-stats { grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 16px; }
-  .big-stats .bs { padding: 9px 7px; }
-  .big-stats .bs .n { font-size: 1.2rem; }
-  .big-stats .bs .l { font-size: 0.7rem; line-height: 1.25; }
+  .numeros { margin-top: 18px; }
+  .numeros div { padding: 12px 8px 0 0; }
+  .numeros div + div { padding-left: 10px; }
+  .numeros .n { font-size: 1.2rem; }
+  .numeros .l { font-size: 0.69rem; line-height: 1.25; margin-top: 3px; }
 
   /* ---- FAQ ---- */
-  .faq { gap: 8px; }
-  .faq-q { padding: 13px 14px; font-size: 0.96rem; gap: 10px; }
-  .faq-q .chev { width: 18px; height: 18px; }
-  .faq-a-inner { padding: 0 14px 14px; font-size: 0.9rem; }
+  .faq-q { padding: 15px 0; font-size: 0.98rem; gap: 12px; }
+  .faq-q .chev { width: 16px; height: 16px; }
+  .faq-a-inner { padding: 0 0 15px; font-size: 0.89rem; }
 
-  /* ---- CTA final ---- */
-  .cta-band { padding: 22px 18px; border-radius: var(--r-lg); }
-  .cta-band h2 { margin-top: 10px !important; margin-bottom: 8px; }
-  .cta-band p { font-size: 0.95rem; margin-bottom: 16px; }
-  .cta-band .btn-row { flex-direction: column; gap: 9px; }
-  .cta-band .btn-row .btn { width: 100%; }
-  .cta-meta { font-size: 0.8rem; margin-top: 12px; text-align: left; }
+  /* ---- Banda final ---- */
+  .banda { padding: 26px 18px; border-radius: var(--r-md); }
+  .banda > p { font-size: 0.95rem; margin-bottom: 20px; }
+  /* Aqui não há `.btn`: os quatro são badges, e a coluna estica-os
+     sozinha (o `align-items` da flex é `stretch`). */
+  .banda .btn-row { flex-direction: column; gap: 9px; }
+  /* A arte desce para os 40px, que é o mínimo que a Apple aceita e o
+     tamanho natural do ficheiro dela. Tudo o resto acompanha sozinho,
+     porque sai do `--alt`. A coluna estica os links a toda a largura, e é
+     o `justify-content` do `.badge-loja` que mantém a arte ao centro em
+     vez de encostada. */
+  .badge-loja { --alt: 40px; }
+  .banda-nota { font-size: 0.79rem; margin-top: 18px; padding-top: 16px; }
 
   /* ---- Rodapé ---- */
   /* No telemóvel a coluna "sobre" (marca + parágrafo) só repete o hero e
-     duplicava o rodapé em altura; escondemo-la e ficam só os links úteis. */
-  .footer { padding: 20px 0 14px; }
-  .footer .grid { grid-template-columns: 1fr 1fr 1fr; gap: 12px 14px; }
-  .footer .about { display: none; }
-  .footer p { font-size: 0.86rem; }
-  .footer h4 { margin-bottom: 6px; font-size: 0.72rem; }
-  .footer ul { gap: 5px; }
-  .footer ul a { font-size: 0.86rem; }
-  .footer-bottom { margin-top: 14px; padding-top: 12px; gap: 4px; font-size: 0.74rem; }
+     duplicava o rodapé em altura; escondemo-la e ficam só os links. */
+  .footer { padding: 24px 0 16px; }
+  .footer .grid { grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .footer .sobre { display: none; }
+  .footer h4 { margin-bottom: 8px; }
+  .footer ul { gap: 6px; }
+  .footer ul a { font-size: 0.85rem; }
+  .footer-bottom { margin-top: 18px; padding-top: 14px; gap: 5px; font-size: 0.74rem; }
 }
 
-/* Ecrãs muito estreitos (ou letra do sistema ampliada): o rótulo do botão da
-   barra sai e fica só a seta, para o nome da marca não partir em duas linhas.
-   O corte é aos 360px de propósito — a 375px (o iPhone mais pequeno ainda em
-   uso) o rótulo ainda cabe com folga e a barra fica mais clara com ele. */
+/* Ecrãs muito estreitos (ou letra do sistema ampliada): o rótulo do botão
+   da barra sai e fica só a seta, para o nome da marca não partir em duas
+   linhas. O corte é aos 360px de propósito — a 375px (o iPhone mais
+   pequeno ainda em uso) o rótulo ainda cabe com folga e a barra fica mais
+   clara com ele. */
 @media (max-width: 360px) {
-  .nav-cta .btn-primary .lbl { display: none; }
-  .nav-cta .btn-primary { padding: 12px 14px; }
-  .trustbar .container { grid-template-columns: 1fr; gap: 12px; }
-  .trustbar .t-item { flex-direction: row; align-items: center; }
+  .nav-cta .btn .lbl { display: none; }
+  .nav-cta .btn { padding: 11px 13px; }
+  .faixa .container { grid-template-columns: 1fr; }
+  .faixa .item { border-left: 0; padding-left: 0; padding-right: 0; }
+  .faixa .item + .item { border-top: 1px solid var(--linha); }
   /* Três números não cabem: as palavras deles ("pecuárias") deixam de
-     encolher e é o cartão inteiro que passa a ser mais largo do que o ecrã. */
-  .big-stats { grid-template-columns: 1fr 1fr; }
-  .cta-band, .media-card { padding-left: 16px; padding-right: 16px; }
+     encolher e é o bloco inteiro que passa a ser mais largo do que o ecrã. */
+  .numeros { grid-template-columns: 1fr 1fr; }
+  .numeros div:nth-child(3) { border-left: 0; padding-left: 0; }
+  .banda, .bloco-escuro { padding-left: 16px; padding-right: 16px; }
 }

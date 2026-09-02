@@ -3,7 +3,7 @@
 // Ano no rodapé
 document.getElementById('year').textContent = new Date().getFullYear();
 
-// Sombra da nav ao rolar
+// Linha da barra ao rolar
 const nav = document.getElementById('nav');
 const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
 onScroll();
@@ -26,7 +26,7 @@ navLinks?.addEventListener('click', (e) => {
 });
 // Um menu aberto tapa a página. Tocar fora, carregar em Escape ou rodar o
 // telemóvel para o formato de computador tem de o fechar — senão fica um
-// painel branco por cima do conteúdo sem forma óbvia de sair.
+// painel por cima do conteúdo sem forma óbvia de sair.
 document.addEventListener('click', (e) => {
   if (nav.classList.contains('open') && !nav.contains(e.target)) fecharMenu();
 });
@@ -64,7 +64,21 @@ window.addEventListener('resize', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
 // Revelar ao entrar no ecrã
+//
+// O CONTEÚDO ESTÁ VISÍVEL POR DEFEITO. Quem o esconde é o CSS, e só depois de
+// a classe `js` (posta no `<head>`) confirmar que este ficheiro tem hipótese de
+// correr. Feito ao contrário, como estava antes, um `main.js` bloqueado ou com
+// erro deixava a página inteira em branco: `opacity: 0` e mais nada.
+//
+// O `prefers-reduced-motion` é tratado no CSS e não aqui, porque assim vale
+// mesmo que este ficheiro não chegue a correr.
+//
+// O alvo do observador são BLOCOS (cabeçalho de secção, grelha inteira, banda),
+// não cada cartão: seis cartões a aparecerem um a um faziam a página parecer um
+// catálogo a carregar.
+// ---------------------------------------------------------------------------
 const io = new IntersectionObserver(
   (entries) => {
     entries.forEach((entry) => {
@@ -74,11 +88,11 @@ const io = new IntersectionObserver(
       }
     });
   },
-  { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+  { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
 );
 document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 
-// Fallback: se o utilizador prefere menos movimento, mostra tudo já
-if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-  document.querySelectorAll('.reveal').forEach((el) => el.classList.add('in'));
-}
+// A bandeira que desarma a rede de segurança do `<head>`. Só se levanta
+// DEPOIS de o observador estar a olhar: levantada mais acima, um erro entre
+// as duas linhas deixava a página escondida na mesma.
+window.revelarLigado = true;
