@@ -271,6 +271,14 @@ h3 { font-size: 1.25rem; font-weight: 800; }
 .cta-band h2 { color: #fff; margin-bottom: 16px; }
 .cta-band p { color: var(--on-dark-muted); font-size: 1.15rem; max-width: 52ch; margin: 0 auto 30px; }
 .cta-band .btn-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+/* Badge da App Store: os 6px de padding são a margem livre que a Apple exige
+   (10% da altura da arte), e são também o que o põe nos 60px dos `btn-lg` ao
+   lado. Nada de fundo, borda ou filtro: a arte não se altera. O `transform` do
+   hover é só do link, e move o badge sem lhe tocar. */
+.badge-loja { display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-radius: var(--r-md); transition: transform 0.15s ease; }
+.badge-loja img { display: block; height: 48px; width: auto; }
+.badge-loja:hover { transform: translateY(-2px); }
+.badge-loja:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
 .cta-meta { margin-top: 20px; font-size: 0.9rem; color: var(--on-dark-muted); display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
 .cta-meta svg { width: 17px; height: 17px; }
 
@@ -440,6 +448,13 @@ h3 { font-size: 1.25rem; font-weight: 800; }
   .cta-band p { font-size: 0.95rem; margin-bottom: 16px; }
   .cta-band .btn-row { flex-direction: column; gap: 9px; }
   .cta-band .btn-row .btn { width: 100%; }
+  /* Aqui os `btn-lg` encolhem para 50px de altura, e o badge tem de os
+     acompanhar: 40px de arte mais os 5px de margem livre de cada lado. Os 40px
+     são também o mínimo que a Apple aceita, por isso não desce daqui. A coluna
+     estica o link a toda a largura, e é o `justify-content` que impede a arte
+     de ficar encostada à esquerda enquanto os vizinhos têm o texto ao centro. */
+  .badge-loja { padding: 5px; }
+  .badge-loja img { height: 40px; }
   .cta-meta { font-size: 0.8rem; margin-top: 12px; text-align: left; }
 
   /* ---- Rodapé ---- */
