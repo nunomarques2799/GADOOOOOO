@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<!--
+  Página de erro do site de apresentação.
+
+  PORQUE É QUE ELA TEM DE EXISTIR: sem um `404.html`, o Cloudflare Pages
+  assume que o site é uma aplicação de página única e devolve o
+  `index.html` em QUALQUER endereço errado, com código 200. Era o "404
+  disfarçado" que estava anotado no `_headers`: um endereço mal escrito
+  dava a página inicial e dizia aos motores de busca que estava tudo bem,
+  o que faz o Google indexar endereços que não existem. O ficheiro chama-
+  se assim por convenção, e serve tanto o Cloudflare como o Netlify.
+
+  NÃO CARREGA O `main.js` e não precisa dele: não tem menu recolhido, nem
+  acordeão, nem nada para revelar ao rolar. O único script é o de baixo,
+  e a página lê-se inteira sem ele.
+
+  Usa o `styles.css` em vez de repetir a paleta num `<style>` próprio,
+  ao contrário do `recuperar.html`. A razão da exceção é outra lá: essa
+  página tem de abrir mesmo que o resto do site esteja em baixo, porque é
+  para onde o email de reposição de palavra-passe manda. Esta não; e uma
+  quarta cópia dos tokens era mais uma para manter alinhada à mão.
+-->
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Página não encontrada | Terrabovina</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#1B3226" />
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Mono:wght@400;500;600&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    /* Só a arrumação desta página. As cores, os tipos de letra e os raios
+       vêm todos do `styles.css`: aqui não se declara nem um hex. */
+    [hidden] { display: none !important; }
+
+    .erro-barra { height: var(--nav-h); display: flex; align-items: center; border-bottom: 1px solid var(--linha); }
+    .erro-barra .container { display: flex; align-items: center; }
+
+    .erro { padding: clamp(60px, 12vh, 130px) 0 clamp(70px, 14vh, 150px); }
+    .erro .container { max-width: 620px; margin: 0 auto; }
+    .erro .rotulo { display: block; margin-bottom: 18px; }
+    .erro h1 { font-size: clamp(2rem, 5vw, 3.1rem); margin-bottom: 18px; }
+    .erro p { color: var(--tinta-2); font-size: 1.06rem; max-width: 46ch; }
+
+    /* O endereço pedido, escrito como uma entrada de registo que a
+       consulta não encontrou. É a razão de esta página existir em vez de
+       devolver a inicial: quem escreveu mal vê ONDE escreveu mal. */
+    .pedido { margin: 26px 0 30px; border-top: 1px solid var(--linha); border-bottom: 1px solid var(--linha); padding: 16px 0; }
+    .pedido .rotulo { margin-bottom: 6px; }
+    .pedido code {
+      font-family: var(--mono); font-size: 0.98rem; color: var(--tinta);
+      word-break: break-all; display: block;
+    }
+
+    .erro-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 30px; }
+    .erro-links { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+    .erro-links a { color: var(--tinta-2); font-weight: 600; font-size: 0.96rem; text-decoration: underline; text-underline-offset: 3px; }
+    .erro-links a:hover { color: var(--tinta); }
+
+    @media (max-width: 640px) {
+      .erro { padding: 44px 0 56px; }
+      .erro p { font-size: 0.98rem; }
+      .erro-acoes { gap: 16px; }
+      .erro-acoes .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="erro-barra">
+    <div class="container">
+      <a class="marca" href="/" aria-label="Terrabovina, início">
+        <img src="/assets/logo.svg" alt="" width="32" height="32" />
+        <span>Terrabovina</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="erro">
+    <div class="container">
+      <span class="rotulo">Erro 404</span>
+      <h1>Este endereço não existe.</h1>
+
+      <!-- Fica escondido até o script confirmar que há um caminho para
+           mostrar. Sem JavaScript, a página lê-se na mesma: só não diz
+           qual foi o endereço, que é o detalhe e não a mensagem. -->
+      <div class="pedido" id="pedido" hidden>
+        <span class="rotulo">Endereço pedido</span>
+        <code id="endereco"></code>
+      </div>
+
+      <p>O mais provável é ter sido escrito à mão, ou vir de uma ligação antiga. A página inicial explica o que a aplicação faz e onde se descarrega.</p>
+
+      <div class="erro-acoes">
+        <a href="/" class="btn btn-primario">Ir para a página inicial</a>
+        <div class="erro-links">
+          <a href="/#funcionalidades">Funcionalidades</a>
+          <a href="/#descarregar">Descarregar</a>
+          <a href="/privacidade">Privacidade</a>
+          <a href="/termos">Termos</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Mostrar o endereço que o visitante pediu.
+    //
+    // DUAS PRECAUÇÕES, e nenhuma é zelo a mais. Isto é texto que vem do
+    // endereço, ou seja, escolhido por quem faz a ligação e não por nós:
+    //
+    // 1. Entra por `textContent` e nunca por `innerHTML`. Um endereço com
+    //    `<script>` lá dentro tem de aparecer como letras, não correr.
+    // 2. Só passam os caracteres que cabem num caminho, e no máximo 48.
+    //    Sem isto, uma ligação preparada de propósito
+    //    (`terrabovina.pt/ligue para o 900 000 000...`) desenhava uma
+    //    frase inteira numa página com a nossa marca em cima. Sem espaços
+    //    e cortado aos 48, um caminho mal escrito continua a ler-se e uma
+    //    frase forjada deixa de se ler.
+    (function () {
+      var caminho = location.pathname.replace(/[^A-Za-z0-9/._~-]/g, '');
+      if (caminho.length > 48) caminho = caminho.slice(0, 48) + '…';
+      if (caminho && caminho !== '/') {
+        document.getElementById('endereco').textContent = caminho;
+        document.getElementById('pedido').hidden = false;
+      }
+    })();
+  </script>
+
+</body>
+</html>
