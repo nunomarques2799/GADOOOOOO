@@ -33,6 +33,13 @@ export type FicheiroEscolhido = {
   tamanho: number;
 };
 
+export type OpcoesImagem = {
+  /** Largura a que a imagem é reduzida. */
+  larguraMax?: number;
+  /** Compressão do JPEG, de 0 a 1. */
+  qualidade?: number;
+};
+
 export type ResultadoFicheiro =
   | { estado: 'ok'; ficheiro: FicheiroEscolhido }
   | { estado: 'cancelado' }
@@ -56,11 +63,11 @@ const OPCOES: ImagePicker.ImagePickerOptions = {
 };
 
 /** Reduz, converte para JPEG e devolve os bytes. */
-async function preparar(uri: string): Promise<FicheiroEscolhido> {
+async function preparar(uri: string, o: OpcoesImagem = {}): Promise<FicheiroEscolhido> {
   const contexto = ImageManipulator.manipulate(uri);
-  contexto.resize({ width: LARGURA_MAX });
+  contexto.resize({ width: o.larguraMax ?? LARGURA_MAX });
   const imagem = await contexto.renderAsync();
-  const saida = await imagem.saveAsync({ format: SaveFormat.JPEG, compress: QUALIDADE });
+  const saida = await imagem.saveAsync({ format: SaveFormat.JPEG, compress: o.qualidade ?? QUALIDADE });
 
   // `fetch` sobre o `file://` que o manipulador devolveu é a via documentada
   // para chegar aos bytes em React Native sem mais um módulo nativo. Não passa
@@ -73,18 +80,18 @@ async function preparar(uri: string): Promise<FicheiroEscolhido> {
   return { bytes, mime: 'image/jpeg', extensao: 'jpg', tamanho: bytes.byteLength };
 }
 
-export async function fotografarDocumento(): Promise<ResultadoFicheiro> {
+export async function fotografarDocumento(o?: OpcoesImagem): Promise<ResultadoFicheiro> {
   const perm = await ImagePicker.requestCameraPermissionsAsync();
   if (!perm.granted) return { estado: 'sem-permissao' };
   const r = await ImagePicker.launchCameraAsync(OPCOES);
   if (r.canceled || !r.assets?.[0]) return { estado: 'cancelado' };
-  return { estado: 'ok', ficheiro: await preparar(r.assets[0].uri) };
+  return { estado: 'ok', ficheiro: await preparar(r.assets[0].uri, o) };
 }
 
-export async function escolherDocumento(): Promise<ResultadoFicheiro> {
+export async function escolherDocumento(o?: OpcoesImagem): Promise<ResultadoFicheiro> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) return { estado: 'sem-permissao' };
   const r = await ImagePicker.launchImageLibraryAsync(OPCOES);
   if (r.canceled || !r.assets?.[0]) return { estado: 'cancelado' };
-  return { estado: 'ok', ficheiro: await preparar(r.assets[0].uri) };
+  return { estado: 'ok', ficheiro: await preparar(r.assets[0].uri, o) };
 }

@@ -37,6 +37,7 @@ export type DestinoAviso = {
   toque: string;
   alertaId?: string;
   animalId?: string;
+  conversaId?: string;
 };
 
 /** Sem avisos agendados, nunca há toque nenhum para seguir. */

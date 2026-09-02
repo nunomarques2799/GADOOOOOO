@@ -1,10 +1,13 @@
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Platform, SectionList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CartaoIntroducao } from '@/components/CartaoIntroducao';
+import { LeitorCodigo } from '@/components/LeitorCodigo';
 import { Badge, Card, EmptyState, FAB, Icon, type IconName, Text } from '@/components/ui';
+import { destinoDoCodigo } from '@/data/codigos';
+import { etiquetasImprimiveis, imprimirEtiquetas } from '@/data/etiquetas';
 import { descarregarTabelaExcel, excelDisponivel } from '@/data/excelFicheiro';
 import { hojeISO } from '@/data/exportar';
 import { formatDataPt, formatEuro } from '@/data/helpers';
@@ -69,6 +72,32 @@ export default function MedicamentosScreen() {
 
   const primeiraGerivel = exploracoes.find((e) => podeGerir);
 
+  const [leitorAberto, setLeitorAberto] = useState(false);
+
+  /**
+   * Ler uma caixa a partir da lista responde a uma pergunta diferente da do
+   * formulário: ali é "dá entrada disto", aqui é "o que é isto que tenho na
+   * mão?". Por isso o destino muda com o que se leu.
+   *
+   * A etiqueta que a app imprimiu, ou um Data Matrix cujo lote já está
+   * registado, abrem a FICHA desse frasco: é o caminho para ver o que resta
+   * dele à frente da prateleira. Todo o resto segue para uma entrada nova, com
+   * o código em cru na rota, para o formulário decidir o que preenche (ver
+   * `medicamento/novo.tsx`).
+   */
+  function aoLerCodigo(bruto: string) {
+    setLeitorAberto(false);
+    const destino = destinoDoCodigo(bruto, medicamentos, primeiraGerivel?.id);
+    if (destino.tipo === 'lote') {
+      router.push(`/medicamento/editar/${destino.medicamento.id}`);
+      return;
+    }
+    router.push({
+      pathname: '/medicamento/novo',
+      params: { codigo: destino.codigo.bruto },
+    });
+  }
+
   function exportar() {
     try {
       descarregarTabelaExcel(
@@ -79,6 +108,28 @@ export default function MedicamentosScreen() {
       toast.sucesso(t('existencias.descarregado'), t('existencias.nLotes', { n: lotes.length }));
     } catch (e) {
       toast.erro(t('existencias.semDescarga'), mensagemDeErro(e));
+    }
+  }
+
+  /**
+   * Só os lotes que ainda servem levam etiqueta. Imprimir a de um frasco
+   * esgotado ou fora de validade é papel gasto num autocolante que vai ser
+   * colado num caixote: o que ficou para trás continua na lista e no registo,
+   * que é onde tem de estar.
+   */
+  const paraEtiquetar = useMemo(
+    () => lotes.filter((l) => l.disponivel).map((l) => l.medicamento),
+    [lotes],
+  );
+
+  function imprimir() {
+    if (imprimirEtiquetas(paraEtiquetar, t('etiqueta.imprimirTodas'))) {
+      toast.sucesso(
+        t('etiqueta.aImprimir'),
+        t('etiqueta.nEtiquetas', { n: paraEtiquetar.length }),
+      );
+    } else {
+      toast.erro(t('etiqueta.semJanelaTitulo'), t('etiqueta.semJanela'));
     }
   }
 
@@ -138,6 +189,20 @@ export default function MedicamentosScreen() {
                 t('existencias.intro4'),
               ]}
             />
+            {/* Ler fica ACIMA de exportar, e do lado de dentro do cabeçalho:
+                é a ação de quem está de pé na arrecadação com o frasco na mão,
+                e exportar é a de quem está sentado a preparar uma inspeção. */}
+            {podeGerir ? (
+              <Card onPress={() => setLeitorAberto(true)} accessibilityLabel={t('existencias.lerCodigo')}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <Icon name="barcode-scan" size="md" color={colors.primary} />
+                  <Text variant="body" style={{ flex: 1 }}>
+                    {t('existencias.lerCodigo')}
+                  </Text>
+                  <Icon name="chevron-right" size="sm" color={colors.textMuted} />
+                </View>
+              </Card>
+            ) : null}
             {comFicheiros && lotes.length > 0 ? (
               <Card onPress={exportar} accessibilityLabel={t('existencias.exportar')}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
@@ -145,6 +210,24 @@ export default function MedicamentosScreen() {
                   <Text variant="body" style={{ flex: 1 }}>
                     {t('existencias.exportar')}
                   </Text>
+                  <Icon name="chevron-right" size="sm" color={colors.textMuted} />
+                </View>
+              </Card>
+            ) : null}
+            {/* Imprimir só existe onde há impressora, tal como exportar: no
+                telemóvel que anda no bolso pela vacada não há para onde. */}
+            {etiquetasImprimiveis && podeGerir && paraEtiquetar.length > 0 ? (
+              <Card onPress={imprimir} accessibilityLabel={t('etiqueta.imprimirTodas')}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <Icon name="printer" size="md" color={colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text variant="body">
+                      {t('etiqueta.imprimirTodas')}
+                    </Text>
+                    <Text variant="caption" color={colors.textMuted}>
+                      {t('etiqueta.nEtiquetas', { n: paraEtiquetar.length })}
+                    </Text>
+                  </View>
                   <Icon name="chevron-right" size="sm" color={colors.textMuted} />
                 </View>
               </Card>
@@ -171,6 +254,14 @@ export default function MedicamentosScreen() {
           onPress={() => router.push('/medicamento/novo')}
         />
       ) : null}
+
+      <LeitorCodigo
+        aberto={leitorAberto}
+        titulo={t('leitor.titulo')}
+        ajuda={t('leitor.ajuda')}
+        onLer={aoLerCodigo}
+        onFechar={() => setLeitorAberto(false)}
+      />
     </View>
   );
 }

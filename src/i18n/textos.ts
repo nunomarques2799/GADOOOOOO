@@ -34,6 +34,9 @@ const pt = {
   'nav.exploracoes': 'Explorações',
   'nav.terrenos': 'Terrenos',
   'nav.animais': 'Animais',
+  'nav.chat': 'Conversas',
+  /* O rótulo curto da barra de baixo: 'Conversas' não cabe em sete colunas. */
+  'nav.chatCurto': 'Chat',
   'nav.alertas': 'Alertas',
   'nav.reproducao': 'Reprodução',
   'nav.existencias': 'Existências',
@@ -428,6 +431,43 @@ const pt = {
   'existencias.validade': 'validade {data}',
   'existencias.restamDe': 'Restam {resta} de {total}',
   'existencias.seguranca': 'segurança {n} dia|segurança {n} dias',
+
+  /* ---- Ler o código da caixa ---- */
+  'leitor.titulo': 'Ler o código da caixa',
+  'leitor.ajuda': 'Aponte ao código de barras ou ao quadrado de pontos da caixa',
+  'leitor.lanterna': 'Lanterna',
+  'leitor.escreverAMao': 'Escrever à mão',
+  'leitor.semModuloTitulo': 'Precisa de uma versão nova',
+  'leitor.semModulo':
+    'A leitura de códigos só existe a partir da versão seguinte da app. Até lá, os dados escrevem-se à mão como sempre.',
+  'leitor.semPermissaoTitulo': 'Sem acesso à câmara',
+  'leitor.semPermissao':
+    'A Terrabovina precisa de autorização para usar a câmara. Pode dá-la nas definições do aparelho, na página desta app.',
+  'leitor.avariadaTitulo': 'A câmara não abriu',
+  'leitor.avariada':
+    'Feche outras aplicações que possam estar a usar a câmara e tente outra vez. Também pode escrever os dados à mão.',
+  'leitor.lido': 'Código lido',
+  'leitor.reconhecido': 'Produto reconhecido',
+  'leitor.reconhecidoTexto': 'Já tinha registado {nome}. Confira a quantidade e a validade.',
+  'leitor.novoTexto':
+    'Guardado neste lote. Da próxima vez que ler este código, a app preenche sozinha.',
+  'leitor.comLote': 'Lote {lote} lido da caixa',
+  'leitor.jaRegistadoTitulo': 'Este frasco já está registado',
+  'leitor.jaRegistado':
+    'Já existe uma entrada de {nome} com este lote. Quer abrir a ficha dela em vez de registar outra?',
+  'leitor.abrirFicha': 'Abrir a ficha',
+
+  /* ---- Etiquetas para colar no frasco ---- */
+  'etiqueta.titulo': 'Etiqueta para o frasco',
+  'etiqueta.ajuda':
+    'Imprima e cole no frasco. Ler esta etiqueta com a câmara abre logo este lote, sem o procurar na lista.',
+  'etiqueta.imprimir': 'Imprimir esta etiqueta',
+  'etiqueta.imprimirTodas': 'Imprimir etiquetas dos lotes',
+  'etiqueta.aImprimir': 'Janela de impressão aberta',
+  'etiqueta.semJanelaTitulo': 'O navegador bloqueou a janela',
+  'etiqueta.semJanela': 'Autorize as janelas para este site e tente outra vez.',
+  'etiqueta.nEtiquetas': '{n} etiqueta|{n} etiquetas',
+  'etiqueta.guardePrimeiro': 'A etiqueta aparece depois de guardar a entrada.',
 
   /* ---- Ecrã dos Terrenos ---- */
   'terrenos.subtitulo': 'Onde o gado anda',
@@ -1068,6 +1108,14 @@ const pt = {
   'formLote.lancaDespesa': 'Lança a despesa em Sanidade',
   'formLote.naoLancaDespesa': 'Não lançar despesa nas contas',
   'formLote.despesaLancada': 'despesa lançada em Sanidade',
+  'formLote.lerCodigo': 'Ler o código da caixa',
+  'formLote.lerCodigoAjuda':
+    'Poupa escrever. A app guarda o código neste lote e reconhece o produto na compra seguinte.',
+  'formLote.codigoGuardado': 'Código da caixa guardado',
+  'formLote.tirarCodigo': 'Tirar o código',
+  'formLote.codigoTirado': 'Código retirado',
+  'formLote.lerOutro': 'Ler outro código',
+  'existencias.lerCodigo': 'Ler o código de uma caixa',
 
   /* ---- Interruptores da conta (finanças, existências) ---- */
   'interruptor.soQuemGere': 'Só quem gere a exploração',
@@ -1342,6 +1390,8 @@ const pt = {
   'pendente.pecaAoResponsavel': 'Peça o código ao responsável pela exploração.',
   'pendente.entrarComCodigo': 'Entrar com este código',
   'pendente.verificarNovamente': 'Verificar novamente',
+  'pendente.apagarExplicacao':
+    'Não quer continuar? Pode apagar a conta e os dados do registo. Ninguém tem de a aprovar primeiro.',
   'pendente.codigoInvalido': 'Código inválido.',
   'pendente.codigoUsado': 'Este código já foi utilizado.',
   'pendente.codigoExpirado': 'Este código expirou. Peça um novo a quem gere a exploração.',
@@ -1470,6 +1520,29 @@ const pt = {
   'avisos.entendido': 'Entendido',
   'erro.titulo': 'Alguma coisa correu mal',
   'erro.dadosSeguros': 'Os seus dados continuam guardados neste aparelho: não se perdeu nada.',
+
+  /* As mensagens de erro da autenticação (entrar, registar, recuperar a
+     palavra-passe). Vivem aqui, e não escritas à mão no `data/auth.tsx`, para
+     seguirem o idioma escolhido: com a app em inglês saíam na mesma em
+     português, e isso ficou à vista na gravação feita para a App Store. */
+  'erroAuth.credenciais': 'Email ou palavra-passe incorretos.',
+  'erroAuth.emailPorConfirmar': 'Confirme o email antes de entrar.',
+  'erroAuth.contaJaExiste': 'Já existe uma conta com este email.',
+  'erroAuth.palavraCurta': 'A palavra-passe é demasiado curta (mín. 6 caracteres).',
+  'erroAuth.emailInvalido': 'Email inválido.',
+  'erroAuth.semLigacao': 'Sem ligação à internet. Tente novamente.',
+
+  /* E as do servidor (Postgres e PostgREST), pela mesma razão. Estas são
+     mensagens LONGAS de propósito: dizem o que aconteceu e o que fazer a
+     seguir, porque quem as lê está a meio de guardar alguma coisa. */
+  'erroServidor.recusaExploracao':
+    'O servidor recusou criar a exploração. Ou a sessão expirou (feche e volte a entrar), ou a conta ainda não está aprovada para criar explorações.',
+  'erroServidor.semPermissao':
+    'Não tem permissão para gravar isto. Se acha que devia ter, peça ao administrador da exploração.',
+  'erroServidor.cacheSchema':
+    'O servidor foi atualizado há pouco e ainda não reconhece este campo. Tente daqui a um minuto; se continuar, avise quem gere a aplicação.',
+  'erroServidor.semLigacao':
+    'Sem ligação ao servidor. A alteração fica guardada e é enviada quando houver rede.',
 
   /* ---- Marcar um evento na agenda ---- */
   'agenda.semPermissaoTitulo': 'O calendário é de quem trabalha na exploração',
@@ -1718,6 +1791,133 @@ const pt = {
   'excel.partoNumMacho': 'Data de parto indicada num macho, por isso ignorada.',
   'excel.semBrincoNemNome':
     'Sem brinco nem nome, não conseguimos confirmar se este animal já existe na app. Confira que não o está a registar duas vezes.',
+
+  /* ---- Conversas (chat) ----
+     O grupo da exploração e as mensagens privadas. Ver `data/chat.ts`. ---- */
+  'chat.titulo': 'Conversas',
+  'chat.subtitulo': 'Falar com quem trabalha consigo',
+  'chat.semConversas': 'Ainda não tem conversas',
+  'chat.semConversasMensagem':
+    'O grupo da exploração aparece aqui assim que houver equipa. Também pode escrever a alguém em privado.',
+  'chat.grupoSemNome': 'Grupo da exploração',
+  'chat.grupo': 'Grupo da equipa',
+  'chat.privada': 'Conversa privada',
+  'chat.semMensagens': 'Ainda sem mensagens',
+  'chat.mensagemApagada': 'Mensagem apagada',
+  'chat.utilizadorRemovido': 'Utilizador removido',
+  'chat.euDisse': 'Eu: {texto}',
+  'chat.novaConversa': 'Nova conversa',
+  'chat.aQuemEscrever': 'A quem quer escrever?',
+  'chat.escreverA': 'Escrever a {nome}',
+  'chat.semPessoas': 'Não há mais ninguém',
+  'chat.semPessoasMensagem':
+    'Só pode escrever a quem trabalha nas suas explorações. Para juntar alguém, use a aba Trabalhadores.',
+  'chat.hoje': 'Hoje',
+  'chat.ontem': 'Ontem',
+  'chat.escrever': 'Escreva a mensagem',
+  'chat.enviar': 'Enviar',
+  'chat.porEnviar': 'Por enviar',
+  'chat.erroVazia': 'Escreva alguma coisa antes de enviar.',
+  'chat.erroComprida': 'A mensagem é comprida de mais (o máximo é {n} caracteres).',
+  'chat.semEnviar': 'Não foi possível enviar',
+  'chat.avisoSeisMeses': 'As mensagens com mais de {n} meses são apagadas.',
+  'chat.foraDoGrupo': 'Já não está neste grupo. Pode ler o que ficou, mas não escrever.',
+  'chat.conversaSumiu': 'Esta conversa já não está disponível.',
+  'chat.semEscrita': 'O seu acesso a esta exploração terminou. Pode ler, mas não escrever.',
+  'chat.info': 'Informação',
+  'chat.membrosN': '{n} pessoa|{n} pessoas',
+  'chat.naoLidasN': '{n} por ler',
+  'chat.nomeDoGrupo': 'Nome do grupo',
+  'chat.nomeDoGrupoAjuda': 'Deixe vazio para o grupo se chamar como a exploração.',
+  'chat.soDono': 'Só o dono da exploração muda isto.',
+  'chat.nomeMudado': 'Nome do grupo gravado',
+  'chat.silenciar': 'Silenciar esta conversa',
+  'chat.silenciarAjuda': 'Deixa de avisar quando chegam mensagens. Continua a poder abri-la.',
+  'chat.avisarNovas': 'Avisar de mensagens novas',
+  'chat.avisarNovasAjuda': 'Mostra um aviso curto quando chega uma mensagem com a app aberta.',
+  'chat.ajustes': 'Definições das conversas',
+  'chat.remover': 'Remover do grupo',
+  'chat.repor': 'Repor no grupo',
+  'chat.foraLista': 'Fora do grupo',
+  'chat.confirmarRemover':
+    'Remover {nome} do grupo? Continua na equipa da exploração e deixa de ver as mensagens novas.',
+  'chat.removido': 'Removido do grupo',
+  'chat.reposto': 'Reposto no grupo',
+  'chat.bloquear': 'Bloquear esta pessoa',
+  'chat.desbloquear': 'Desbloquear',
+  'chat.confirmarBloquear':
+    'Bloquear {nome}? Deixam de se poder escrever um ao outro. Pode desfazer quando quiser.',
+  'chat.bloqueada': 'Pessoa bloqueada',
+  'chat.desbloqueada': 'Pessoa desbloqueada',
+  'chat.bloqueadoAviso': 'Esta conversa está bloqueada. Desbloqueie para voltar a escrever.',
+  'chat.verBloqueados': 'Pessoas bloqueadas',
+  'chat.semBloqueados': 'Não tem ninguém bloqueado.',
+  'chat.denunciar': 'Denunciar mensagem',
+  'chat.denunciarTexto':
+    'A mensagem segue para quem administra a Terrabovina, com as três anteriores para dar contexto. O resto da conversa continua privado.',
+  'chat.denunciada': 'Mensagem denunciada',
+  'chat.denunciadaDetalhe': 'Vamos ver o que se passou.',
+  'chat.apagarMensagem': 'Apagar mensagem',
+  'chat.confirmarApagar':
+    'Apagar esta mensagem? Fica "Mensagem apagada" no lugar dela, para toda a gente.',
+  'chat.opcoes': 'O que quer fazer?',
+  'chat.mensagemNova': 'Mensagem nova',
+  'chat.regrasTitulo': 'Regras das conversas',
+  'chat.regrasTexto':
+    'Estas conversas são para o trabalho da exploração. Não é permitido conteúdo ofensivo, ameaças nem assédio. Qualquer mensagem pode ser denunciada, e quem a escreveu pode perder o acesso à app.',
+  'chat.semLigacao': 'Sem ligação: fica à espera',
+  'chat.semLigacaoDetalhe': 'A mensagem sai assim que houver rede.',
+
+
+  /* ---- Conversas: anexos, sondagens e avisos no telemóvel ---- */
+  'chat.umaFotografia': 'Fotografia',
+  'chat.umaMensagemDeVoz': 'Mensagem de voz',
+  'chat.umaLocalizacao': 'Localização',
+  'chat.umaSondagem': 'Sondagem',
+  'chat.anexar': 'Juntar à mensagem',
+  'chat.tirarFoto': 'Tirar fotografia',
+  'chat.escolherFoto': 'Escolher das fotografias',
+  'chat.gravarVoz': 'Gravar mensagem de voz',
+  'chat.marcarSitio': 'Marcar um sítio no mapa',
+  'chat.fazerSondagem': 'Fazer uma sondagem',
+  'chat.aEnviarFicheiro': 'A enviar…',
+  'chat.semAnexo': 'Não foi possível enviar o ficheiro',
+  'chat.semCamara': 'Sem acesso à câmara',
+  'chat.semGaleria': 'Sem acesso às fotografias',
+  'chat.semPermissaoAjuda': 'Autorize nas definições do telemóvel e volte a tentar.',
+  'chat.legenda': 'Legenda (opcional)',
+  'chat.fotoNaoAbre': 'Não foi possível abrir a fotografia.',
+  'chat.verFoto': 'Ver a fotografia',
+  'chat.aGravar': 'A gravar',
+  'chat.pararEEnviar': 'Parar e enviar',
+  'chat.descartar': 'Descartar',
+  'chat.semMicrofone': 'Sem acesso ao microfone',
+  'chat.gravacaoCurta': 'Gravou pouco tempo para se ouvir alguma coisa.',
+  'chat.tocar': 'Tocar',
+  'chat.parar': 'Parar',
+  'chat.escolherSitio': 'Toque no mapa para marcar o sítio.',
+  'chat.enviarSitio': 'Enviar este sítio',
+  'chat.verNoMapa': 'Ver no mapa',
+  'chat.semSitio': 'Marque um sítio primeiro.',
+  'chat.pergunta': 'Pergunta',
+  'chat.perguntaExemplo': 'Quem pode vir sábado?',
+  'chat.respostaN': 'Resposta {n}',
+  'chat.acrescentarResposta': 'Acrescentar resposta',
+  'chat.enviarSondagem': 'Enviar a sondagem',
+  'chat.votosN': '{n} voto|{n} votos',
+  'chat.semVotos': 'Ainda ninguém respondeu',
+  'chat.sondagemSemPergunta': 'Escreva a pergunta.',
+  'chat.sondagemPerguntaLonga': 'A pergunta é comprida de mais (o máximo é {n} caracteres).',
+  'chat.sondagemPoucasRespostas': 'Escreva pelo menos {n} respostas diferentes.',
+  'chat.sondagemMuitasRespostas': 'Uma sondagem leva no máximo {n} respostas.',
+  'chat.votar': 'Votar em: {opcao}',
+  'chat.avisosNoTelemovel': 'Avisar no telemóvel',
+  'chat.avisosNoTelemovelAjuda':
+    'Toca mesmo com a app fechada. Sem isto, só vê as mensagens quando abrir a app.',
+  'chat.avisosRecusados':
+    'O telemóvel não autorizou os avisos. Ligue-os nas definições do aparelho.',
+  'chat.avisosSoNoTelemovel': 'Os avisos com a app fechada são só no telemóvel.',
+
 } as const;
 
 export type ChaveTexto = keyof typeof pt;
@@ -1735,6 +1935,8 @@ const en: Record<ChaveTexto, string> = {
   'nav.exploracoes': 'Farms',
   'nav.terrenos': 'Land',
   'nav.animais': 'Animals',
+  'nav.chat': 'Chats',
+  'nav.chatCurto': 'Chats',
   'nav.alertas': 'Alerts',
   'nav.reproducao': 'Breeding',
   'nav.existencias': 'Stock',
@@ -2119,6 +2321,44 @@ const en: Record<ChaveTexto, string> = {
   'existencias.validade': 'expires {data}',
   'existencias.restamDe': '{resta} left out of {total}',
   'existencias.seguranca': 'withdrawal {n} day|withdrawal {n} days',
+
+  /* ---- Ler o código da caixa ---- */
+  'leitor.titulo': 'Scan the code on the box',
+  'leitor.ajuda': 'Point at the barcode or at the square of dots on the box',
+  'leitor.lanterna': 'Torch',
+  'leitor.escreverAMao': 'Type it in instead',
+  'leitor.semModuloTitulo': 'You need a newer version',
+  'leitor.semModulo':
+    'Code scanning only arrives in the next version of the app. Until then, enter the details by hand as usual.',
+  'leitor.semPermissaoTitulo': 'No access to the camera',
+  'leitor.semPermissao':
+    'Terrabovina needs permission to use the camera. You can grant it in your device settings, on this app page.',
+  'leitor.avariadaTitulo': 'The camera did not open',
+  'leitor.avariada':
+    'Close any other app that might be using the camera and try again. You can also type the details in by hand.',
+  'leitor.lido': 'Code scanned',
+  'leitor.reconhecido': 'Product recognised',
+  'leitor.reconhecidoTexto':
+    'You had already recorded {nome}. Check the quantity and the expiry date.',
+  'leitor.novoTexto':
+    'Saved on this batch. Next time you scan this code, the app fills the form in for you.',
+  'leitor.comLote': 'Batch {lote} read from the box',
+  'leitor.jaRegistadoTitulo': 'This bottle is already recorded',
+  'leitor.jaRegistado':
+    'There is already an entry for {nome} with this batch number. Would you like to open it instead of recording another?',
+  'leitor.abrirFicha': 'Open it',
+
+  /* ---- Etiquetas para colar no frasco ---- */
+  'etiqueta.titulo': 'Label for the bottle',
+  'etiqueta.ajuda':
+    'Print it and stick it on the bottle. Scanning this label opens this batch straight away, with no searching.',
+  'etiqueta.imprimir': 'Print this label',
+  'etiqueta.imprimirTodas': 'Print labels for your batches',
+  'etiqueta.aImprimir': 'Print window opened',
+  'etiqueta.semJanelaTitulo': 'The browser blocked the window',
+  'etiqueta.semJanela': 'Allow pop-up windows for this site and try again.',
+  'etiqueta.nEtiquetas': '{n} label|{n} labels',
+  'etiqueta.guardePrimeiro': 'The label appears once you save the entry.',
 
   /* ---- Ecrã dos Terrenos ---- */
   'terrenos.subtitulo': 'Where the herd goes',
@@ -2756,6 +2996,14 @@ const en: Record<ChaveTexto, string> = {
   'formLote.lancaDespesa': 'Enter the expense under Sanidade',
   'formLote.naoLancaDespesa': 'Do not enter an expense in the books',
   'formLote.despesaLancada': 'expense entered under Sanidade',
+  'formLote.lerCodigo': 'Scan the code on the box',
+  'formLote.lerCodigoAjuda':
+    'Saves typing. The app keeps the code on this batch and recognises the product on your next purchase.',
+  'formLote.codigoGuardado': 'Code from the box saved',
+  'formLote.tirarCodigo': 'Remove the code',
+  'formLote.codigoTirado': 'Code removed',
+  'formLote.lerOutro': 'Scan another code',
+  'existencias.lerCodigo': 'Scan the code on a box',
 
   /* ---- Interruptores da conta (finanças, existências) ---- */
   'interruptor.soQuemGere': 'Only for whoever runs the farm',
@@ -3027,6 +3275,8 @@ const en: Record<ChaveTexto, string> = {
   'pendente.pecaAoResponsavel': 'Ask whoever answers for the farm for the code.',
   'pendente.entrarComCodigo': 'Get in with this code',
   'pendente.verificarNovamente': 'Check again',
+  'pendente.apagarExplicacao':
+    'Changed your mind? You can delete your account and your sign-up details. Nobody has to approve it first.',
   'pendente.codigoInvalido': 'Invalid code.',
   'pendente.codigoUsado': 'This code has already been used.',
   'pendente.codigoExpirado': 'This code has expired. Ask whoever runs the farm for a new one.',
@@ -3155,6 +3405,22 @@ const en: Record<ChaveTexto, string> = {
   'avisos.entendido': 'Understood',
   'erro.titulo': 'Something went wrong',
   'erro.dadosSeguros': 'Your data is still saved on this device: nothing was lost.',
+
+  'erroAuth.credenciais': 'Wrong email or password.',
+  'erroAuth.emailPorConfirmar': 'Confirm your email address before signing in.',
+  'erroAuth.contaJaExiste': 'There is already an account with this email address.',
+  'erroAuth.palavraCurta': 'The password is too short (at least 6 characters).',
+  'erroAuth.emailInvalido': 'That email address is not valid.',
+  'erroAuth.semLigacao': 'No internet connection. Please try again.',
+
+  'erroServidor.recusaExploracao':
+    'The server refused to create the farm. Either the session has expired (close the app and sign in again), or the account is not approved to create farms yet.',
+  'erroServidor.semPermissao':
+    'You are not allowed to save this. If you think you should be, ask the farm administrator.',
+  'erroServidor.cacheSchema':
+    'The server was updated a moment ago and does not know this field yet. Try again in a minute; if it carries on, tell whoever runs the app.',
+  'erroServidor.semLigacao':
+    'No connection to the server. The change is kept here and is sent when there is a network.',
 
   /* ---- Marcar um evento na agenda ---- */
   'agenda.semPermissaoTitulo': 'The calendar belongs to whoever works on the farm',
@@ -3395,6 +3661,131 @@ const en: Record<ChaveTexto, string> = {
   'excel.partoNumMacho': 'A calving date was given for a male, so it was ignored.',
   'excel.semBrincoNemNome':
     'With no ear tag and no name we cannot tell whether this animal is already in the app. Check that you are not recording it twice.',
+
+  /* ---- Chats ---- */
+  'chat.titulo': 'Chats',
+  'chat.subtitulo': 'Talk to the people you work with',
+  'chat.semConversas': 'No chats yet',
+  'chat.semConversasMensagem':
+    'The farm group shows up here as soon as you have a team. You can also write to someone privately.',
+  'chat.grupoSemNome': 'Farm group',
+  'chat.grupo': 'Team group',
+  'chat.privada': 'Private chat',
+  'chat.semMensagens': 'No messages yet',
+  'chat.mensagemApagada': 'Message deleted',
+  'chat.utilizadorRemovido': 'Removed user',
+  'chat.euDisse': 'You: {texto}',
+  'chat.novaConversa': 'New chat',
+  'chat.aQuemEscrever': 'Who do you want to write to?',
+  'chat.escreverA': 'Write to {nome}',
+  'chat.semPessoas': 'There is nobody else',
+  'chat.semPessoasMensagem':
+    'You can only write to people who work on your farms. To add someone, use the Workers tab.',
+  'chat.hoje': 'Today',
+  'chat.ontem': 'Yesterday',
+  'chat.escrever': 'Write your message',
+  'chat.enviar': 'Send',
+  'chat.porEnviar': 'Waiting to be sent',
+  'chat.erroVazia': 'Write something before sending.',
+  'chat.erroComprida': 'That message is too long (the limit is {n} characters).',
+  'chat.semEnviar': 'Could not send',
+  'chat.avisoSeisMeses': 'Messages older than {n} months are deleted.',
+  'chat.foraDoGrupo': 'You are no longer in this group. You can read what is here, but not write.',
+  'chat.conversaSumiu': 'This chat is no longer available.',
+  'chat.semEscrita': 'Your access to this farm has ended. You can read, but not write.',
+  'chat.info': 'Details',
+  'chat.membrosN': '{n} person|{n} people',
+  'chat.naoLidasN': '{n} unread',
+  'chat.nomeDoGrupo': 'Group name',
+  'chat.nomeDoGrupoAjuda': 'Leave it empty and the group takes the name of the farm.',
+  'chat.soDono': 'Only the farm owner can change this.',
+  'chat.nomeMudado': 'Group name saved',
+  'chat.silenciar': 'Mute this chat',
+  'chat.silenciarAjuda': 'Stops telling you when messages arrive. You can still open it.',
+  'chat.avisarNovas': 'Tell me about new messages',
+  'chat.avisarNovasAjuda': 'Shows a short notice when a message arrives while the app is open.',
+  'chat.ajustes': 'Chat settings',
+  'chat.remover': 'Remove from the group',
+  'chat.repor': 'Put back in the group',
+  'chat.foraLista': 'Not in the group',
+  'chat.confirmarRemover':
+    'Remove {nome} from the group? They stay on the farm team and stop seeing new messages.',
+  'chat.removido': 'Removed from the group',
+  'chat.reposto': 'Put back in the group',
+  'chat.bloquear': 'Block this person',
+  'chat.desbloquear': 'Unblock',
+  'chat.confirmarBloquear':
+    'Block {nome}? Neither of you will be able to write to the other. You can undo this whenever you want.',
+  'chat.bloqueada': 'Person blocked',
+  'chat.desbloqueada': 'Person unblocked',
+  'chat.bloqueadoAviso': 'This chat is blocked. Unblock it to write again.',
+  'chat.verBloqueados': 'Blocked people',
+  'chat.semBloqueados': 'You have not blocked anyone.',
+  'chat.denunciar': 'Report message',
+  'chat.denunciarTexto':
+    'The message goes to whoever runs Terrabovina, with the three before it for context. The rest of the chat stays private.',
+  'chat.denunciada': 'Message reported',
+  'chat.denunciadaDetalhe': 'We will look into it.',
+  'chat.apagarMensagem': 'Delete message',
+  'chat.confirmarApagar': 'Delete this message? Everyone will see "Message deleted" in its place.',
+  'chat.opcoes': 'What would you like to do?',
+  'chat.mensagemNova': 'New message',
+  'chat.regrasTitulo': 'Chat rules',
+  'chat.regrasTexto':
+    'These chats are for farm work. Offensive content, threats and harassment are not allowed. Any message can be reported, and whoever wrote it can lose access to the app.',
+  'chat.semLigacao': 'No connection: it will wait',
+  'chat.semLigacaoDetalhe': 'The message goes out as soon as there is a network.',
+
+
+  /* ---- Chats: attachments, polls and phone notifications ---- */
+  'chat.umaFotografia': 'Photo',
+  'chat.umaMensagemDeVoz': 'Voice message',
+  'chat.umaLocalizacao': 'Location',
+  'chat.umaSondagem': 'Poll',
+  'chat.anexar': 'Attach to the message',
+  'chat.tirarFoto': 'Take a photo',
+  'chat.escolherFoto': 'Choose from your photos',
+  'chat.gravarVoz': 'Record a voice message',
+  'chat.marcarSitio': 'Mark a place on the map',
+  'chat.fazerSondagem': 'Create a poll',
+  'chat.aEnviarFicheiro': 'Sending…',
+  'chat.semAnexo': 'Could not send the file',
+  'chat.semCamara': 'No access to the camera',
+  'chat.semGaleria': 'No access to your photos',
+  'chat.semPermissaoAjuda': 'Allow it in your phone settings and try again.',
+  'chat.legenda': 'Caption (optional)',
+  'chat.fotoNaoAbre': 'Could not open the photo.',
+  'chat.verFoto': 'View the photo',
+  'chat.aGravar': 'Recording',
+  'chat.pararEEnviar': 'Stop and send',
+  'chat.descartar': 'Discard',
+  'chat.semMicrofone': 'No access to the microphone',
+  'chat.gravacaoCurta': 'That recording is too short to hear anything.',
+  'chat.tocar': 'Play',
+  'chat.parar': 'Pause',
+  'chat.escolherSitio': 'Tap the map to mark the place.',
+  'chat.enviarSitio': 'Send this place',
+  'chat.verNoMapa': 'Open in maps',
+  'chat.semSitio': 'Mark a place first.',
+  'chat.pergunta': 'Question',
+  'chat.perguntaExemplo': 'Who can come on Saturday?',
+  'chat.respostaN': 'Answer {n}',
+  'chat.acrescentarResposta': 'Add an answer',
+  'chat.enviarSondagem': 'Send the poll',
+  'chat.votosN': '{n} vote|{n} votes',
+  'chat.semVotos': 'Nobody has answered yet',
+  'chat.sondagemSemPergunta': 'Write the question.',
+  'chat.sondagemPerguntaLonga': 'That question is too long (the limit is {n} characters).',
+  'chat.sondagemPoucasRespostas': 'Write at least {n} different answers.',
+  'chat.sondagemMuitasRespostas': 'A poll takes at most {n} answers.',
+  'chat.votar': 'Vote for: {opcao}',
+  'chat.avisosNoTelemovel': 'Notify me on my phone',
+  'chat.avisosNoTelemovelAjuda':
+    'It rings even with the app closed. Without it, you only see messages when you open the app.',
+  'chat.avisosRecusados':
+    'Your phone did not allow notifications. Turn them on in the device settings.',
+  'chat.avisosSoNoTelemovel': 'Notifications with the app closed only work on a phone.',
+
 };
 
 const DICIONARIOS: Record<Idioma, Record<ChaveTexto, string>> = { pt, en };

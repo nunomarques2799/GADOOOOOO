@@ -194,7 +194,47 @@ select * from (
     -- `t` a uma base onde o criador não tem por onde ligar o interruptor.
     (34, 'schema_existencias_opcional.sql', 'perfil.existencias_ativas + definir_existencias_ativas()',
         (exists (select 1 from col where tabela = 'perfil' and coluna = 'existencias_ativas')
-         and exists (select 1 from func where nome = 'definir_existencias_ativas')))
+         and exists (select 1 from func where nome = 'definir_existencias_ativas'))),
+    -- TRÊS marcas, e a terceira é a que interessa. As duas primeiras (tabela e
+    -- RPC) dão `t` a uma base onde o chat abre, escreve e lê — e onde as
+    -- mensagens dos outros só aparecem a quem fechar e voltar a abrir o ecrã,
+    -- porque o passo do tempo real corre dentro de um bloco que engole o erro
+    -- (secção 11 do ficheiro). Sem esta linha, isso é uma avaria que ninguém
+    -- descobre a partir daqui.
+    (35, 'schema_chat.sql',            'tabela mensagem + abrir_conversa() + mensagem no tempo real',
+        (to_regclass('public.mensagem') is not null
+         and exists (select 1 from func where nome = 'abrir_conversa')
+         and exists (
+           select 1 from pg_publication_tables
+            where pubname = 'supabase_realtime'
+              and schemaname = 'public' and tablename = 'mensagem'))),
+    -- A marca é o BUCKET e não a coluna: as colunas entram com um `alter table`
+    -- que corre sempre, e o bucket é o que falta numa base onde o ficheiro
+    -- morreu a meio. Sem bucket, mandar uma fotografia falha no carregamento e
+    -- a mensagem nem chega a ser escrita.
+    (36, 'schema_chat_anexos.sql',    'coluna mensagem.tipo + bucket `chat`',
+        (exists (select 1 from col where tabela = 'mensagem' and coluna = 'tipo')
+         and exists (select 1 from storage.buckets where id = 'chat'))),
+    (37, 'schema_chat_sondagens.sql', 'sondagem_opcao + criar_sondagem()',
+        (to_regclass('public.sondagem_opcao') is not null
+         and exists (select 1 from func where nome = 'criar_sondagem'))),
+    -- O gatilho e não só a tabela: uma base com `push_token` e sem
+    -- `trg_chat_push` guarda os tokens e nunca envia nada, o que é exatamente
+    -- o estado que ninguém descobre sem ir ver.
+    -- `to_regclass(...)` e não `'public.mensagem'::regclass`: o cast REBENTA
+    -- quando a tabela não existe, e a base onde ela não existe é exatamente a
+    -- que este quadro serve para diagnosticar. A produção do dia 24 de agosto
+    -- parou aqui com "relation public.mensagem does not exist" e não chegou a
+    -- imprimir linha nenhuma. A função devolve `null`, o `=` fica `null`, o
+    -- `exists` fica falso, e a linha diz o que tem a dizer: falta aplicar.
+    (38, 'schema_chat_push.sql',      'push_token + gatilho trg_chat_push',
+        (to_regclass('public.push_token') is not null
+         and exists (
+           select 1 from pg_trigger where tgname = 'trg_chat_push'
+             and tgrelid = to_regclass('public.mensagem')))),
+    (39, 'schema_codigo_barras.sql',  'coluna medicamento.codigo_barras',
+        (exists (select 1 from col
+                  where tabela = 'medicamento' and coluna = 'codigo_barras')))
 ) as t(ordem, ficheiro, marca, aplicado)
 order by ordem;
 -- Ler a coluna `aplicado`: true = já correu, false = FALTA aplicar.

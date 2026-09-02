@@ -108,6 +108,21 @@ export const CHAVES = {
    * app de testes abria a mostrar os compromissos marcados em PRODUÇÃO.
    */
   agenda: `gado.${PROJETO}.agenda.v1`,
+  /**
+   * As conversas e as últimas mensagens de cada uma (`useChat.ts`), para o
+   * chat abrir sem rede com o que já se leu.
+   *
+   * Está À PARTE da `cache` geral, e não lá dentro, por uma razão de tamanho:
+   * aquela é lida INTEIRA e de forma síncrona no arranque para desenhar o
+   * primeiro ecrã, e um histórico de conversas a crescer lá dentro atrasava a
+   * abertura da app a quem nem chat usa. Esta só é lida quando o chat abre, e
+   * guarda no máximo as últimas mensagens de cada conversa (ver `MAX_CACHE`).
+   */
+  chat: `gado.${PROJETO}.chat.v1`,
+  /** As mensagens escritas sem rede, à espera de saírem daqui. */
+  chatFila: `gado.${PROJETO}.chat-fila.v1`,
+  /** As preferências do chat (avisar de mensagens novas). */
+  chatAjustes: `gado.${PROJETO}.chat-ajustes.v1`,
 } as const;
 
 const CHAVE_CACHE = CHAVES.cache;
@@ -309,6 +324,10 @@ export function limparCache(): void {
   remover(CHAVE_DONO);
   // A agenda é da exploração de quem saiu, como tudo o resto.
   remover(CHAVES.agenda);
+  // As conversas também, e estas com mais razão do que todas: são mensagens
+  // entre pessoas. O que ficou por enviar vai com elas, como o outbox acima.
+  remover(CHAVES.chat);
+  remover(CHAVES.chatFila);
 }
 
 /**

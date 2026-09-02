@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { t } from '@/i18n';
 import { garantirDono, limparCache } from './cacheLocal';
 import { traduzErroServidor } from './errosServidor';
 import type { Intencao } from './intencao';
@@ -16,15 +17,22 @@ import { supabase, supabaseConfigurado } from './supabase';
 /** Destino do link de recuperação de palavra-passe (página no site). */
 const URL_RECUPERACAO = 'https://terrabovina.pt/recuperar';
 
-/** Traduz as mensagens de erro mais comuns do Supabase para PT-PT. */
+/**
+ * Traduz as mensagens de erro mais comuns do Supabase para a língua da app.
+ *
+ * Os textos vêm do `i18n` e são lidos AQUI, no momento do erro, e não numa
+ * constante de módulo: o idioma é um valor de módulo do `i18n/idioma.ts` e uma
+ * tabela criada no arranque ficaria presa à língua desse instante.
+ */
 function traduzErro(msg: string): string {
   const m = msg.toLowerCase();
-  if (m.includes('invalid login credentials')) return 'Email ou palavra-passe incorretos.';
-  if (m.includes('email not confirmed')) return 'Confirme o email antes de entrar.';
-  if (m.includes('user already registered')) return 'Já existe uma conta com este email.';
-  if (m.includes('password should be at least')) return 'A palavra-passe é demasiado curta (mín. 6 caracteres).';
-  if (m.includes('unable to validate email') || m.includes('invalid email')) return 'Email inválido.';
-  if (m.includes('network') || m.includes('fetch')) return 'Sem ligação à internet. Tente novamente.';
+  if (m.includes('invalid login credentials')) return t('erroAuth.credenciais');
+  if (m.includes('email not confirmed')) return t('erroAuth.emailPorConfirmar');
+  if (m.includes('user already registered')) return t('erroAuth.contaJaExiste');
+  if (m.includes('password should be at least')) return t('erroAuth.palavraCurta');
+  if (m.includes('unable to validate email') || m.includes('invalid email'))
+    return t('erroAuth.emailInvalido');
+  if (m.includes('network') || m.includes('fetch')) return t('erroAuth.semLigacao');
   return msg;
 }
 

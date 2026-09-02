@@ -139,6 +139,7 @@ type MedicamentoRow = ComUpdatedAt & {
   custo?: number | null;
   data_compra: string;
   notas?: string | null;
+  codigo_barras?: string | null;
   criado_por?: string | null;
 };
 
@@ -251,6 +252,7 @@ const toMedicamento = (r: MedicamentoRow): Medicamento => ({
   custo: r.custo == null ? undefined : Number(r.custo),
   dataCompra: r.data_compra,
   notas: r.notas ?? undefined,
+  codigoBarras: r.codigo_barras ?? undefined,
   criadoPor: r.criado_por ?? undefined,
 });
 
@@ -377,6 +379,7 @@ const medicamentoPayload = (m: Medicamento) => ({
   custo: m.custo ?? null,
   data_compra: diaIso(m.dataCompra),
   notas: m.notas ?? null,
+  codigo_barras: m.codigoBarras ?? null,
   // `criado_por` fica ao servidor (default `auth.uid()`), como no `movimento`:
   // a política de insert exige que seja o próprio, e deixá-lo ao cliente abria
   // a porta a um aparelho desatualizado dar entrada de stock em nome de outro.

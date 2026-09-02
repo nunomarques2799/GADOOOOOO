@@ -39,3 +39,8 @@ schema_privilegios.sql
 schema_convite_seguro.sql
 schema_lint.sql
 schema_existencias_opcional.sql
+schema_chat.sql
+schema_chat_anexos.sql
+schema_chat_sondagens.sql
+schema_chat_push.sql
+schema_codigo_barras.sql

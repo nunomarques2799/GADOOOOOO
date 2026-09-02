@@ -10,7 +10,7 @@
  * sugere a câmara).
  */
 
-import type { FicheiroEscolhido, ResultadoFicheiro } from './ficheiroDocumento';
+import type { FicheiroEscolhido, OpcoesImagem, ResultadoFicheiro } from './ficheiroDocumento';
 
 export const suportaCamera = false;
 
@@ -42,7 +42,7 @@ function abrirSeletor(sugereCamera: boolean): Promise<File | null> {
 }
 
 /** Reduz para JPEG de largura máxima `LARGURA_MAX` e devolve os bytes. */
-async function preparar(ficheiro: File): Promise<FicheiroEscolhido> {
+async function preparar(ficheiro: File, o: OpcoesImagem = {}): Promise<FicheiroEscolhido> {
   const url = URL.createObjectURL(ficheiro);
   try {
     const img = await new Promise<HTMLImageElement>((res, rej) => {
@@ -53,7 +53,7 @@ async function preparar(ficheiro: File): Promise<FicheiroEscolhido> {
     });
     // Só encolhe. Ampliar uma fotografia pequena não lhe acrescenta detalhe
     // nenhum e triplica o tamanho do ficheiro.
-    const escala = Math.min(1, LARGURA_MAX / img.width);
+    const escala = Math.min(1, (o.larguraMax ?? LARGURA_MAX) / img.width);
     const largura = Math.round(img.width * escala);
     const altura = Math.round(img.height * escala);
 
@@ -65,7 +65,7 @@ async function preparar(ficheiro: File): Promise<FicheiroEscolhido> {
     ctx.drawImage(img, 0, 0, largura, altura);
 
     const blob = await new Promise<Blob | null>((res) =>
-      canvas.toBlob(res, 'image/jpeg', QUALIDADE),
+      canvas.toBlob(res, 'image/jpeg', o.qualidade ?? QUALIDADE),
     );
     if (!blob) throw new Error('Não foi possível preparar a imagem.');
 
@@ -76,17 +76,17 @@ async function preparar(ficheiro: File): Promise<FicheiroEscolhido> {
   }
 }
 
-async function escolher(sugereCamera: boolean): Promise<ResultadoFicheiro> {
+async function escolher(sugereCamera: boolean, o?: OpcoesImagem): Promise<ResultadoFicheiro> {
   if (typeof document === 'undefined') return { estado: 'cancelado' };
   const ficheiro = await abrirSeletor(sugereCamera);
   if (!ficheiro) return { estado: 'cancelado' };
-  return { estado: 'ok', ficheiro: await preparar(ficheiro) };
+  return { estado: 'ok', ficheiro: await preparar(ficheiro, o) };
 }
 
-export function fotografarDocumento(): Promise<ResultadoFicheiro> {
-  return escolher(true);
+export function fotografarDocumento(o?: OpcoesImagem): Promise<ResultadoFicheiro> {
+  return escolher(true, o);
 }
 
-export function escolherDocumento(): Promise<ResultadoFicheiro> {
-  return escolher(false);
+export function escolherDocumento(o?: OpcoesImagem): Promise<ResultadoFicheiro> {
+  return escolher(false, o);
 }

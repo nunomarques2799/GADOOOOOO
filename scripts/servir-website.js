@@ -29,9 +29,18 @@ http
     if (!path.extname(caminho)) caminho += '.html';
 
     const ficheiro = path.join(RAIZ, path.normalize(caminho));
+    // Serve o mesmo `404.html` que o Cloudflare serve em producao, e com o
+    // mesmo codigo. Antes respondia uma linha de texto simples, o que fazia a
+    // pagina de erro ser a unica do site que nao se conseguia ver aqui.
     if (!ficheiro.startsWith(RAIZ) || !fs.existsSync(ficheiro)) {
-      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('Não encontrado: ' + caminho);
+      const pagina404 = path.join(RAIZ, '404.html');
+      const temPagina = fs.existsSync(pagina404);
+      res.writeHead(404, {
+        'Content-Type': temPagina ? TIPOS['.html'] : 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store',
+      });
+      if (temPagina) fs.createReadStream(pagina404).pipe(res);
+      else res.end('Nao encontrado: ' + caminho);
       return;
     }
 

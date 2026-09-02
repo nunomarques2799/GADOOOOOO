@@ -195,6 +195,15 @@ export type DestinoAviso = {
   toque: string;
   alertaId?: string;
   animalId?: string;
+  /**
+   * A conversa a abrir, quando o aviso é de uma MENSAGEM.
+   *
+   * Esses avisos não são agendados aqui: chegam por push, do gatilho de
+   * `supabase/schema_chat_push.sql`. O `useLastNotificationResponse` do Expo
+   * não distingue uns dos outros, e é por isso que o toque numa notificação de
+   * mensagem entra por esta mesma porta.
+   */
+  conversaId?: string;
 };
 
 /**
@@ -213,7 +222,11 @@ export function useToqueEmAviso(): DestinoAviso | null {
   const resposta = Notifications.useLastNotificationResponse();
   if (!resposta) return null;
   const pedido = resposta.notification.request;
-  const dados = (pedido.content.data ?? {}) as { alertaId?: unknown; animalId?: unknown };
+  const dados = (pedido.content.data ?? {}) as {
+    alertaId?: unknown;
+    animalId?: unknown;
+    conversaId?: unknown;
+  };
   const texto = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
   return {
     // O identificador do PEDIDO, e não da resposta: é o mesmo enquanto for o
@@ -221,5 +234,6 @@ export function useToqueEmAviso(): DestinoAviso | null {
     toque: pedido.identifier,
     alertaId: texto(dados.alertaId),
     animalId: texto(dados.animalId),
+    conversaId: texto(dados.conversaId),
   };
 }

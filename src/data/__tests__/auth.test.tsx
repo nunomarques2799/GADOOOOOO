@@ -15,7 +15,7 @@
  * outro lado, e não se fica pelo caminho de casa.
  */
 
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { Text } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
@@ -33,6 +33,8 @@ const mockAuth = {
   servidor: 'ok' as 'ok' | 'rejeita' | 'devolve-erro',
   /** O que o `signOut({ scope: 'local' })` faz. */
   local: 'ok' as 'ok' | 'rejeita',
+  /** A mensagem com que o `signUp` falha, tal como o servidor a escreve. */
+  erroRegisto: null as string | null,
   /** Os `scope` com que o `signOut` foi chamado, por ordem. */
   chamadas: [] as (string | undefined)[],
   ouvintes: [] as Ouvinte[],
@@ -91,6 +93,10 @@ jest.mock('../supabase', () => ({
         };
       },
       signOut: (opcoes?: { scope?: string }) => mockSignOut(opcoes),
+      signUp: async () => ({
+        data: { session: null },
+        error: mockAuth.erroRegisto ? { message: mockAuth.erroRegisto } : null,
+      }),
     },
   },
 }));
@@ -102,6 +108,7 @@ jest.mock('../cacheLocal', () => ({
   },
 }));
 
+import { definirIdiomaParaTestes, IDIOMA_OMISSAO } from '@/i18n/idioma';
 import { AuthProvider, useAuth } from '../auth';
 
 /* ---- Andaime ---- */
@@ -180,6 +187,7 @@ beforeEach(() => {
   mockAuth.sessao = null;
   mockAuth.servidor = 'ok';
   mockAuth.local = 'ok';
+  mockAuth.erroRegisto = null;
   mockAuth.chamadas = [];
   mockAuth.ouvintes = [];
   mockAuth.cacheLimpa = 0;
@@ -241,5 +249,56 @@ describe('sair()', () => {
     // armazenamento em baixo, um ecrã de entrada que voltasse atrás no arranque
     // seguinte seria uma saída a mentir. Não há aqui nada mais a fazer — o
     // token caduca sozinho.
+  });
+});
+
+/**
+ * As mensagens de erro da autenticação têm de sair na língua da app.
+ *
+ * Estiveram escritas à mão em português dentro do `traduzErro`, fora do
+ * `t()`. O resultado é que uma app posta em inglês recusava um registo em
+ * português — e foi assim que apareceu na gravação de ecrã feita para a revisão
+ * da App Store, no ecrã de criar conta.
+ */
+describe('erros da autenticação, na língua da app', () => {
+  afterEach(() => definirIdiomaParaTestes(IDIOMA_OMISSAO));
+
+  /** Abre a app sem sessão, como quem chega ao ecrã de entrada. */
+  async function abrirSemSessao(): Promise<() => Ctx> {
+    mockAuth.sessao = null;
+    let atual: Ctx | null = null;
+    let arvore!: ReactTestRenderer;
+    await act(async () => {
+      arvore = create(
+        <AuthProvider>
+          <Sonda aoRender={(c) => (atual = c)} />
+        </AuthProvider>,
+      );
+    });
+    expect(texto(arvore)).toBe('ecra-de-entrada');
+    return () => atual as Ctx;
+  }
+
+  /** Tenta criar conta com um email que já lá está, e devolve o que se lê. */
+  async function registarComEmailRepetido(): Promise<string> {
+    mockAuth.erroRegisto = 'User already registered';
+    const ctx = await abrirSemSessao();
+    let mensagem = 'não houve erro nenhum';
+    await act(async () => {
+      const r = await ctx().registar('ja@existe.pt', 'segredo123', 'Teste');
+      if ('erro' in r) mensagem = r.erro;
+    });
+    return mensagem;
+  }
+
+  it('em português, que é a língua por omissão', async () => {
+    expect(await registarComEmailRepetido()).toBe('Já existe uma conta com este email.');
+  });
+
+  it('e em inglês, com a app em inglês', async () => {
+    definirIdiomaParaTestes('en');
+    expect(await registarComEmailRepetido()).toBe(
+      'There is already an account with this email address.',
+    );
   });
 });
