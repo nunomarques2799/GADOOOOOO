@@ -14,7 +14,6 @@
    ================================================================== */
 :root {
   --papel: #eeeee8;
-  --cartao: #fbfbf7;
   --tinta: #14201a;
   --tinta-2: #4c584f;
   --tinta-3: #7c877e;
@@ -29,7 +28,6 @@
   --corpo: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 
-  --r-sm: 5px;
   --maxw: 760px;
 }
 
@@ -94,13 +92,6 @@ strong { color: var(--tinta); font-weight: 700; }
 a.link { color: var(--musgo); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
 a.link:hover { color: var(--tinta); }
 
-/* Âmbar, que é o acento de atenção em todo o site. Sem fundo colorido:
-   a régua à esquerda e o papel chegam. */
-.nota {
-  background: var(--ambar-veu); border-left: 2px solid var(--ambar); border-radius: 0 var(--r-sm) var(--r-sm) 0;
-  padding: 14px 18px; margin: 0 0 30px; font-size: 0.93rem; color: #5f3d0c;
-}
-.nota p:last-child { margin-bottom: 0; }
 
 
 footer.legal {
