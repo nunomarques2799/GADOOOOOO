@@ -222,8 +222,18 @@ export default function PerfilScreen() {
               icon="account-edit"
               label={t('perfil.editarDados')}
               onPress={() => router.push('/conta/editar')}
-              last={!configurado}
             />
+            {/* Uma conta, várias maneiras de lá chegar. Fica ao lado de
+                "Editar os meus dados" porque é a mesma pergunta: o que é que
+                esta conta é. */}
+            {configurado ? (
+              <Linha
+                icon="link-variant"
+                label={t('perfil.formasDeEntrar')}
+                onPress={() => router.push('/conta/entrar')}
+                last={!configurado}
+              />
+            ) : null}
             {configurado ? (
               <Linha
                 icon="logout"

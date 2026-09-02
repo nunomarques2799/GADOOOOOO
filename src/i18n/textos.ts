@@ -557,6 +557,20 @@ const pt = {
   'login.confirmarPalavraPassePlaceholder': 'Escreva-a outra vez',
   'login.palavrasNaoBatem': 'As duas palavras-passe não são iguais.',
   'login.verOQueCadaUmFaz': 'Não sei qual é o meu caso',
+  'login.ouEntreCom': 'ou entre com',
+  'login.comGoogle': 'Continuar com o Google',
+  'login.comApple': 'Continuar com a Apple',
+  'login.comTelemovel': 'Continuar com o telemóvel',
+  'login.telemovel': 'Telemóvel',
+  'login.telemovelPlaceholder': '912 345 678',
+  'login.telemovelInvalido': 'Esse número não parece um telemóvel. Escreva os nove dígitos.',
+  'login.telemovelExplicacao':
+    'Enviamos-lhe uma mensagem com um código de seis dígitos. Pode demorar um minuto a chegar.',
+  'login.codigoSms': 'Código recebido',
+  'login.codigoSmsPlaceholder': '123456',
+  'login.codigoEnviadoPara': 'Enviámos o código para {numero}.',
+  'login.enviarCodigo': 'Enviar o código',
+  'login.confirmarCodigo': 'Entrar',
   'login.explicacaoRecuperar':
     'Enviamos-lhe um email com um link para definir uma nova palavra-passe.',
   'login.esqueciMe': 'Esqueci-me da palavra-passe',
@@ -669,6 +683,21 @@ const pt = {
   'perfil.estado': 'Estado',
   'perfil.porAprovar': 'Por aprovar (só de leitura)',
   'perfil.editarDados': 'Editar dados pessoais',
+  'perfil.formasDeEntrar': 'Formas de entrar nesta conta',
+  'entrarConta.explicacao':
+    'Pode entrar nesta conta por várias vias. Todas abrem a mesma conta, com as mesmas explorações e os mesmos animais.',
+  'entrarConta.juntarTitulo': 'Juntar outra',
+  'entrarConta.juntar': 'Juntar a conta {servico}',
+  'entrarConta.tirar': 'Tirar',
+  'entrarConta.tirarTitulo': 'Tirar {servico}?',
+  'entrarConta.tirarPergunta':
+    'Deixa de poder entrar nesta conta pelo {servico}. As outras formas continuam a funcionar, e pode voltar a juntá-la quando quiser.',
+  'entrarConta.ligou': 'Já pode entrar por aqui',
+  'entrarConta.naoLigou': 'Não foi possível juntar',
+  'entrarConta.tirou': 'Já não entra por aí',
+  'entrarConta.naoTirou': 'Não foi possível tirar',
+  'entrarConta.aviso':
+    'A última forma de entrar não se tira: sem nenhuma, ninguém voltava a abrir esta conta.',
   'perfil.terminarSessao': 'Terminar sessão',
   'perfil.apagarConta': 'Apagar a minha conta',
   'perfil.abrirDefinicoes': 'Abrir definições',
@@ -1568,6 +1597,9 @@ const pt = {
   'erroAuth.palavraCurta': 'A palavra-passe é demasiado curta (mín. 6 caracteres).',
   'erroAuth.emailInvalido': 'Email inválido.',
   'erroAuth.semLigacao': 'Sem ligação à internet. Tente novamente.',
+  'erroAuth.metodoIndisponivel':
+    'Esta forma de entrar ainda não está disponível nesta versão da app.',
+  'erroAuth.identidadeNaoEncontrada': 'Essa forma de entrar já não está ligada a esta conta.',
 
   /* E as do servidor (Postgres e PostgREST), pela mesma razão. Estas são
      mensagens LONGAS de propósito: dizem o que aconteceu e o que fazer a
@@ -2494,6 +2526,20 @@ const en: Record<ChaveTexto, string> = {
   'login.confirmarPalavraPassePlaceholder': 'Type it once more',
   'login.palavrasNaoBatem': 'The two passwords are not the same.',
   'login.verOQueCadaUmFaz': 'I am not sure which one I am',
+  'login.ouEntreCom': 'or continue with',
+  'login.comGoogle': 'Continue with Google',
+  'login.comApple': 'Continue with Apple',
+  'login.comTelemovel': 'Continue with your phone',
+  'login.telemovel': 'Phone number',
+  'login.telemovelPlaceholder': '912 345 678',
+  'login.telemovelInvalido': 'That does not look like a phone number. Type the nine digits.',
+  'login.telemovelExplicacao':
+    'We will text you a six digit code. It can take a minute to arrive.',
+  'login.codigoSms': 'Code received',
+  'login.codigoSmsPlaceholder': '123456',
+  'login.codigoEnviadoPara': 'We sent the code to {numero}.',
+  'login.enviarCodigo': 'Send the code',
+  'login.confirmarCodigo': 'Sign in',
   'login.explicacaoRecuperar': 'We will email you a link to set a new password.',
   'login.esqueciMe': 'I forgot my password',
   'login.recuperadoAviso':
@@ -2604,6 +2650,21 @@ const en: Record<ChaveTexto, string> = {
   'perfil.estado': 'Status',
   'perfil.porAprovar': 'Awaiting approval (read only)',
   'perfil.editarDados': 'Edit your details',
+  'perfil.formasDeEntrar': 'Ways to sign in to this account',
+  'entrarConta.explicacao':
+    'You can sign in to this account in several ways. They all open the same account, with the same farms and the same animals.',
+  'entrarConta.juntarTitulo': 'Add another',
+  'entrarConta.juntar': 'Add your {servico} account',
+  'entrarConta.tirar': 'Remove',
+  'entrarConta.tirarTitulo': 'Remove {servico}?',
+  'entrarConta.tirarPergunta':
+    'You will no longer be able to sign in with {servico}. The other ways keep working, and you can add it back whenever you like.',
+  'entrarConta.ligou': 'You can now sign in this way',
+  'entrarConta.naoLigou': 'Could not add it',
+  'entrarConta.tirou': 'That way is gone',
+  'entrarConta.naoTirou': 'Could not remove it',
+  'entrarConta.aviso':
+    'The last way in cannot be removed: with none left, nobody could open this account again.',
   'perfil.terminarSessao': 'Sign out',
   'perfil.apagarConta': 'Delete my account',
   'perfil.abrirDefinicoes': 'Open settings',
@@ -3491,6 +3552,8 @@ const en: Record<ChaveTexto, string> = {
   'erroAuth.palavraCurta': 'The password is too short (at least 6 characters).',
   'erroAuth.emailInvalido': 'That email address is not valid.',
   'erroAuth.semLigacao': 'No internet connection. Please try again.',
+  'erroAuth.metodoIndisponivel': 'This way in is not available in this version of the app yet.',
+  'erroAuth.identidadeNaoEncontrada': 'That way in is no longer linked to this account.',
 
   'erroServidor.recusaExploracao':
     'The server refused to create the farm. Either the session has expired (close the app and sign in again), or the account is not approved to create farms yet.',

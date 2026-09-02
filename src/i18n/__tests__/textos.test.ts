@@ -100,6 +100,10 @@ describe('o dicionário está completo', () => {
     'meteo.grausC',
     // "Supervisor" escreve-se igual nas duas línguas.
     'papel.supervisor',
+    // Exemplos de números, não frases: um telemóvel e um código de seis
+    // dígitos escrevem-se com os mesmos algarismos em qualquer língua.
+    'login.telemovelPlaceholder',
+    'login.codigoSmsPlaceholder',
   ];
 
   it('e nenhuma tradução ficou igual ao português por esquecimento', () => {
