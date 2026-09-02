@@ -96,12 +96,12 @@ const PERMISSOES: Record<RoleMembro, readonly Capacidade[]> = {
    * é quem traz a fatura da ração, e quem lança receitas é quem vendeu o
    * animal. A agenda também não: o que aí vem é o plano de quem lá anda.
    *
-   * `eliminarExploracao` fica de fora, e junto com o líder também não a poder
-   * apagar quer dizer que uma exploração de sociedade não se apaga pela app.
-   * É pedido ao superadmin, e é de propósito: a exploração é a coisa que a
-   * sociedade paga, e leva o efetivo e o histórico atrás.
+   * `eliminarExploracao` é dele, e só dele: apagar uma exploração é de quem ela
+   * é. Numa exploração de sociedade o líder perde essa e mais nenhuma — foi
+   * convidado para a correr, e apagar leva o efetivo e o histórico de outra
+   * pessoa atrás. Onde não há supervisor nada muda: o dono apaga a sua.
    */
-  supervisor: ['editarExploracao', 'gerirEquipa', 'gerirTerrenos'],
+  supervisor: ['editarExploracao', 'eliminarExploracao', 'gerirEquipa', 'gerirTerrenos'],
   admin: [
     'editarExploracao',
     'eliminarExploracao',
@@ -363,9 +363,9 @@ export type ContextoAcesso = {
   /**
    * Esta exploração pertence a uma sociedade, ou seja, tem um supervisor?
    *
-   * Só serve para uma coisa: tirar ao líder o poder de a apagar. Ele é `admin`
-   * dela e faz lá tudo o resto, mas a exploração não é dele. Espelha o
-   * `not tem_supervisor(id)` da política `exploracao_admin_delete`.
+   * Só serve para uma coisa: dizer de quem é o botão de apagar. Onde há
+   * supervisor é dele e só dele; onde não há é do `admin`, o dono de sempre.
+   * Espelha a política `exploracao_admin_delete`.
    */
   exploracaoSupervisionada?: boolean;
 };
@@ -385,10 +385,13 @@ export function podeEscrever(ctx: ContextoAcesso, capacidade: Capacidade): boole
   if (ctx.isSuperadmin) return true;
   // Suspensa (ou ainda por aprovar): consulta sim, escrita não.
   if (ctx.estadoPerfil !== 'ativo') return false;
-  // Numa exploração de sociedade ninguém carrega no botão de apagar: o líder
-  // porque ela não é dele, o supervisor porque nunca a teve no conjunto dele.
-  // Apagar uma delas é pedido ao superadmin.
-  if (capacidade === 'eliminarExploracao' && ctx.exploracaoSupervisionada) return false;
+  // Numa exploração de sociedade, apagar é do supervisor e mais ninguém. O
+  // líder é `admin` e por isso o `rolePode` diria que sim: ele faz lá tudo o
+  // resto, mas a exploração não é dele. Espelha o `not tem_supervisor(id)` da
+  // política `exploracao_admin_delete`.
+  if (capacidade === 'eliminarExploracao' && ctx.exploracaoSupervisionada && ctx.role === 'admin') {
+    return false;
+  }
   return rolePode(ctx.role, capacidade, ctx.permissoes);
 }
 

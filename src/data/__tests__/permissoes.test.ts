@@ -61,9 +61,9 @@ describe('rolePode', () => {
     ['supervisor', 'registarSaida', false],
     ['supervisor', 'eliminarAnimais', false],
     ['supervisor', 'marcarEventos', false],
-    // Apagar a exploração não é dele nem de ninguém pela app: leva o efetivo e
-    // o histórico atrás, e é a coisa que a sociedade paga.
-    ['supervisor', 'eliminarExploracao', false],
+    // Apagar a exploração É dele: ela é da sociedade que ele paga. É a única
+    // coisa que o líder perde por a exploração não ser dele (ver `podeEscrever`).
+    ['supervisor', 'eliminarExploracao', true],
 
     // O veterinário é uma VISITA: escreve o que fez ao animal e mais nada.
     //
@@ -128,12 +128,11 @@ describe('rolePode', () => {
     }
   });
 
-  it('apagar a exploração é só do dono', () => {
-    // O supervisor fica de fora com o trabalhador e o veterinário: numa
-    // exploração de sociedade, apagar é pedido ao superadmin. Ver
-    // `podeEscrever` para o outro lado disto (o líder, que é `admin`).
+  it('apagar a exploração é de quem ela é', () => {
+    // O dono de sempre e o supervisor, cada um da sua. Quem lá trabalha nunca.
+    // Ver `podeEscrever` para o líder, que é `admin` de uma que não é dele.
     expect(rolePode('admin', 'eliminarExploracao')).toBe(true);
-    expect(rolePode('supervisor', 'eliminarExploracao')).toBe(false);
+    expect(rolePode('supervisor', 'eliminarExploracao')).toBe(true);
     expect(rolePode('trabalhador', 'eliminarExploracao')).toBe(false);
     expect(rolePode('veterinario', 'eliminarExploracao')).toBe(false);
   });
@@ -243,8 +242,10 @@ describe('podeEscrever — modo da app + estado da conta + papel', () => {
 
   it('o líder faz tudo na exploração da sociedade, menos apagá-la', () => {
     // Ele é `admin` e corre a exploração: animais, terrenos, equipa, contas.
-    // O que não pode é apagar uma exploração que não é dele — e a exploração
-    // dele própria continua a apagar-se, que é o caso de sempre.
+    // O que não pode é apagar uma exploração que não é dele — e o dono de
+    // sempre, `admin` de uma exploração SEM supervisor, continua a apagar a
+    // sua. A segunda linha é que prende isto: sem ela, a regra podia estar a
+    // tirar o botão a toda a gente e o teste passava na mesma.
     const lider = { ...base, role: 'admin' as const, exploracaoSupervisionada: true };
     expect(podeEscrever(lider, 'editarAnimais')).toBe(true);
     expect(podeEscrever(lider, 'gerirEquipa')).toBe(true);
@@ -260,7 +261,9 @@ describe('podeEscrever — modo da app + estado da conta + papel', () => {
     expect(podeEscrever(supervisor, 'gerirEquipa')).toBe(true);
     expect(podeEscrever(supervisor, 'editarAnimais')).toBe(false);
     expect(podeEscrever(supervisor, 'registarTratamentos')).toBe(false);
-    expect(podeEscrever(supervisor, 'eliminarExploracao')).toBe(false);
+    // Apagar É dele: a exploração é da sociedade que ele paga. E o mesmo
+    // interruptor que a tira ao líder não lha pode tirar a ele.
+    expect(podeEscrever(supervisor, 'eliminarExploracao')).toBe(true);
   });
 
   it('a sociedade suspensa congela também o supervisor', () => {

@@ -16,9 +16,10 @@
 --   SUPERVISOR (`role = 'supervisor'`). A conta que a sociedade paga. Cria as
 --   explorações, convida um líder para cada uma, e daí em diante SUPERVISIONA:
 --   lê tudo o que lá se passa (animais, histórico, contas, atividade), trata do
---   património (terrenos, dados da exploração) e da equipa. Não regista
---   animais, não escreve tratamentos, não dá saídas, não apaga nada. O gado é
---   de quem trata dele.
+--   património (terrenos, dados da exploração), da equipa, e é o único que pode
+--   apagar uma exploração da sociedade. Não regista animais, não escreve
+--   tratamentos, não dá saídas, não apaga um registo que seja. O gado é de quem
+--   trata dele.
 --
 --   LÍDER DE EXPLORAÇÃO. Não é papel novo nenhum — é o `admin` de sempre, agora
 --   a poder entrar por convite. Corre a exploração como o dono de sempre a
@@ -122,8 +123,17 @@ exception when duplicate_object then null; end $$;
 -- a conta ativa, `superadmin_aprovar_cliente`, `superadmin_definir_tipo_conta`)
 -- correm como dono e passam. O superadmin também passa: o painel dele é o sítio
 -- onde estas colunas se mudam.
+--
+-- E é por isso que esta função, ao contrário de quase todas as outras deste
+-- ficheiro, **não é `security definer`**. Dentro de uma função dessas o
+-- `current_user` é o DONO da função e não quem está a escrever, por isso a
+-- condição de cima nunca podia ser verdadeira: o gatilho deixava passar tudo,
+-- em silêncio, e parecia estar a defender a coluna. Foi assim que ele nasceu, e
+-- foi a prova no psql que o apanhou (`update perfil set is_superadmin = true`
+-- na sessão de uma conta normal passou à primeira). Aqui não é preciso
+-- privilégio nenhum: a função só olha para o `old` e o `new`.
 create or replace function public.perfil_colunas_reservadas()
-returns trigger language plpgsql security definer set search_path = 'public' as $$
+returns trigger language plpgsql set search_path = 'public' as $$
 begin
   if current_user in ('authenticated', 'anon')
      and not public.eh_superadmin()
@@ -232,16 +242,15 @@ alter table public.membro_exploracao
 -- perguntar, e sem esta linha o trabalhador perdia hoje a agenda que usa desde
 -- que ela existe.
 --
--- E `eliminarExploracao` fica de fora de propósito, o que junto com a secção 9
--- quer dizer uma coisa que é preciso ver escrita: **uma exploração de sociedade
--- não se apaga pela app**. Nem o líder (não é dele), nem o supervisor (foi a
--- escolha de quem desenhou isto). Apagar uma delas é pedido ao superadmin.
+-- `eliminarExploracao` é dele, e é a única coisa que o LÍDER perde por a
+-- exploração ser de uma sociedade: apagar é de quem a exploração é. Onde não há
+-- supervisor, o `admin` continua a apagar a sua, como sempre apagou (secção 9).
 create or replace function public.role_padrao_pode(r public.role_membro, cap text)
 returns boolean language sql immutable set search_path = '' as $$
   select case r::text
     when 'admin' then true
     when 'supervisor' then cap = any (array[
-      'gerirTerrenos', 'editarExploracao', 'gerirEquipa'
+      'gerirTerrenos', 'editarExploracao', 'gerirEquipa', 'eliminarExploracao'
     ])
     when 'trabalhador' then cap = any (array[
       'gerirTerrenos', 'editarAnimais', 'registarTratamentos', 'eliminarAnimais',
@@ -516,10 +525,13 @@ create policy exploracao_admin_update on public.exploracao
     and (public.role_em(id) in ('admin', 'supervisor') or public.eh_superadmin())
   );
 
--- Apagar continua a ser do dono — e uma exploração com supervisor não tem
--- dono nesse sentido: tem quem a paga e quem a corre, e nenhum dos dois a
--- apaga. O líder porque não é dele; o supervisor por escolha de quem desenhou
--- isto (ver a secção 3). Fica com o superadmin, a pedido.
+-- Apagar é de quem a exploração é, e a pergunta "de quem é?" tem duas
+-- respostas: onde há supervisor é dele, e só dele; onde não há é do `admin`,
+-- que é o dono de sempre.
+--
+-- O líder fica de fora quando há supervisor — não porque não saiba o que faz,
+-- mas porque a exploração não é dele: ele foi convidado para a correr, e apagar
+-- leva o efetivo e o histórico de outra pessoa atrás.
 --
 -- Nas explorações sem supervisor — as de sempre — não muda nada.
 drop policy if exists exploracao_admin_delete on public.exploracao;
@@ -528,8 +540,10 @@ create policy exploracao_admin_delete on public.exploracao
     public.eh_superadmin()
     or (
       public.pode_escrever_em(id)
-      and public.role_em(id) = 'admin'
-      and not public.tem_supervisor(id)
+      and (
+        public.role_em(id) = 'supervisor'
+        or (public.role_em(id) = 'admin' and not public.tem_supervisor(id))
+      )
     )
   );
 
@@ -720,8 +734,8 @@ end;
 $$;
 
 -- Recriada só por causa da assinatura: o `superadmin_obter_cliente` devolve as
--- colunas desta, e a coluna `tipo_conta` nova tem de aparecer nas duas.
-drop function if exists public.superadmin_obter_cliente(uuid);
+-- colunas desta, e a coluna `tipo_conta` nova tem de aparecer nas duas. Já foi
+-- apagada acima, antes da que ela lê.
 create or replace function public.superadmin_obter_cliente(alvo uuid)
 returns table (
   user_id uuid, nome text, email text, telefone text, nif text,
@@ -825,7 +839,15 @@ $$;
 -- função criada ou substituída acima tem de repetir aqui o que o lint lhe teria
 -- feito: fechada a `anon`/`public`, aberta a `authenticated` — e as de GATILHO
 -- fechadas também a `authenticated`, que não têm que ser chamáveis por `/rpc/`.
-revoke execute on function public.perfil_colunas_reservadas() from anon, public, authenticated;
+-- O `perfil_colunas_reservadas` é a exceção: fica com o `EXECUTE` a
+-- `authenticated`, ao contrário das outras funções de gatilho. Não é
+-- `security definer` (ver a secção 1), e uma função de gatilho normal não tem
+-- que se arriscar a uma verificação de permissão no momento em que dispara —
+-- perder essa aposta era cada gravação do perfil a falhar com «permission
+-- denied for function». Expô-la não abre nada: o PostgREST não publica funções
+-- que devolvam `trigger`, e chamá-la à mão dá «can only be called as trigger».
+revoke execute on function public.perfil_colunas_reservadas() from anon, public;
+grant  execute on function public.perfil_colunas_reservadas() to authenticated;
 revoke execute on function public.handle_new_exploracao() from anon, public, authenticated;
 
 revoke execute on function public.role_padrao_pode(public.role_membro, text) from anon, public;
@@ -888,7 +910,7 @@ notify pgrst, 'reload schema';
 --          public.role_padrao_pode('supervisor','gerirEquipa')      as s_equipa,  -- t
 --          public.role_padrao_pode('supervisor','editarAnimais')    as s_animais, -- f
 --          public.role_padrao_pode('supervisor','marcarEventos')    as s_agenda,  -- f
---          public.role_padrao_pode('supervisor','eliminarExploracao') as s_apaga; -- f
+--          public.role_padrao_pode('supervisor','eliminarExploracao') as s_apaga; -- t
 --
 -- 2. Nada mudou para os papéis que já existiam (tem de dar tudo `t`):
 --
@@ -914,9 +936,9 @@ notify pgrst, 'reload schema';
 --      security policy";
 --    - `insert into public.evento_agenda …` idem;
 --    - `insert into public.movimento …` idem;
---    - `delete from public.exploracao where id = …` tem de apagar 0 linhas
---      (uma política de DELETE que não encontra linha não dá erro — é preciso
---      olhar para o "DELETE 0");
+--    - `delete from public.exploracao where id = …` tem de apagar 1 linha (é a
+--      exploração dele: criou-a e paga-a). Fazer isto por último, e com o
+--      rollback à espera;
 --    - `select count(*) from public.movimento where exploracao_id = …` tem de
 --      contar os movimentos TODOS, e não só os dele.
 --
@@ -925,7 +947,9 @@ notify pgrst, 'reload schema';
 --    - registar um animal tem de FUNCIONAR;
 --    - `delete from public.membro_exploracao where role = 'supervisor'` tem de
 --      apagar 0 linhas;
---    - `delete from public.exploracao where id = …` tem de apagar 0 linhas;
+--    - `delete from public.exploracao where id = …` tem de apagar 0 linhas
+--      (uma política de DELETE que não encontra linha não dá erro — é preciso
+--      olhar para o "DELETE 0");
 --    - `insert into public.exploracao …` tem de dar "new row violates
 --      row-level security policy" (é convidado: nunca criou nenhuma).
 --
