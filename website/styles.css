@@ -334,6 +334,9 @@ h3 { font-size: 1.25rem; font-weight: 800; }
 .footer ul a { color: var(--text-2); font-weight: 600; }
 .footer ul a:hover { color: var(--green-700); }
 .footer-bottom { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; color: var(--text-muted); font-size: 0.88rem; }
+/* Linha inteira, e não uma quarta coluna a espremer as outras três. Discreta,
+   mas legível: é uma condição de licença, não letra pequena a esconder. */
+.creditos-marcas { flex-basis: 100%; font-size: 0.78rem; line-height: 1.55; opacity: 0.8; }
 
 /* ---------- Reveal animation ---------- */
 .reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease, transform 0.6s ease; }
