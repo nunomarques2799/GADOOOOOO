@@ -23,7 +23,7 @@ const mockDados = {
 };
 
 const mockNotif = { preferencias: { noTelemovel: false } };
-const mockPlataforma = { suportaNotificacoes: false };
+const mockPlataforma = { suportaNotificacoes: false, autorizado: false };
 const mockAcesso = { podeEmAlguma: (_c: string) => true };
 const mockRotas: string[] = [];
 
@@ -43,7 +43,7 @@ jest.mock('@/data/notificacoesLocais', () => ({
   get suportaNotificacoes() {
     return mockPlataforma.suportaNotificacoes;
   },
-  temPermissao: () => Promise.resolve(false),
+  temPermissao: () => Promise.resolve(mockPlataforma.autorizado),
 }));
 jest.mock('@/data/membros', () => ({ useMembros: () => mockAcesso }));
 
@@ -75,9 +75,17 @@ function tocar(r: ReactTestRenderer, rotulo: string) {
   act(() => (no.props.onPress as () => void)());
 }
 
-function abrir(): ReactTestRenderer {
+/**
+ * Monta o painel e deixa a autorizacao do sistema assentar.
+ *
+ * O `act` assincrono nao e decoracao: desde 2026-09-02 o painel nao desenha
+ * nada enquanto nao souber se a app tem autorizacao para avisar (era isso que
+ * o fazia piscar no arranque de quem ja tinha tudo configurado). Sem esperar
+ * pela microtarefa da resposta, todos os testes veem um ecra vazio.
+ */
+async function abrir(): Promise<ReactTestRenderer> {
   let r!: ReactTestRenderer;
-  act(() => {
+  await act(async () => {
     r = create(<PainelPrimeirosPassos />);
   });
   return r;
@@ -91,12 +99,13 @@ describe('painel de primeiros passos', () => {
     mockDados.animais = [];
     mockNotif.preferencias.noTelemovel = false;
     mockPlataforma.suportaNotificacoes = false;
+    mockPlataforma.autorizado = false;
     mockAcesso.podeEmAlguma = () => true;
     mockRotas.length = 0;
   });
 
-  it('numa conta nova, lista o caminho todo e conta só o essencial', () => {
-    const t = textos(abrir());
+  it('numa conta nova, lista o caminho todo e conta só o essencial', async () => {
+    const t = textos(await abrir());
     // O número vem num nó de texto próprio, daí os espaços.
     expect(t).toMatch(/0\s+de\s+3\s+feito/);
     expect(t).toContain('Criar a sua exploração');
@@ -104,8 +113,8 @@ describe('painel de primeiros passos', () => {
     expect(t).toContain('Registar o primeiro animal');
   });
 
-  it('abre sozinho o passo seguinte, explicado e com a porta para lá ir', () => {
-    const r = abrir();
+  it('abre sozinho o passo seguinte, explicado e com a porta para lá ir', async () => {
+    const r = await abrir();
     // A explicação por extenso do primeiro passo, e só dele.
     expect(textos(r)).toContain('é dentro dela que ficam os terrenos');
     expect(tocaveis(r)).toContain('Criar a exploração');
@@ -113,27 +122,27 @@ describe('painel de primeiros passos', () => {
     expect(mockRotas).toEqual(['/exploracao/nova']);
   });
 
-  it('tocar noutro passo troca a explicação em vez de as somar', () => {
+  it('tocar noutro passo troca a explicação em vez de as somar', async () => {
     // Seis explicações abertas ao mesmo tempo eram um muro de texto em cima do
     // Início — que é o oposto de um guia.
-    const r = abrir();
+    const r = await abrir();
     tocar(r, 'Registar os seus terrenos. As pastagens, os cercados e os currais onde o gado anda.');
     const t = textos(r);
     expect(t).toContain('Um terreno é cada sítio onde os animais podem estar');
     expect(t).not.toContain('é dentro dela que ficam os terrenos');
   });
 
-  it('o passo já cumprido risca-se e deixa de se abrir', () => {
+  it('o passo já cumprido risca-se e deixa de se abrir', async () => {
     mockDados.exploracoes = [{ id: 'e1', nome: 'Monte do Avô' } as Exploracao];
-    const r = abrir();
+    const r = await abrir();
     expect(textos(r)).toMatch(/1\s+de\s+3\s+feito/);
     // Agora o passo apontado é o dos terrenos, aberto sozinho.
     expect(textos(r)).toContain('Um terreno é cada sítio onde os animais podem estar');
     expect(tocaveis(r)).not.toContain('Criar a exploração');
   });
 
-  it('os opcionais ficam à parte e não entram na conta', () => {
-    const r = abrir();
+  it('os opcionais ficam à parte e não entram na conta', async () => {
+    const r = await abrir();
     const t = textos(r);
     expect(t).toContain('SE QUISER, NÃO É PRECISO');
     expect(t).toContain('Ligar a gestão do dinheiro');
@@ -142,35 +151,62 @@ describe('painel de primeiros passos', () => {
     expect(t).toMatch(/0\s+de\s+3\s+feito/);
   });
 
-  it('um opcional explica-se e leva ao ecrã que o liga', () => {
-    const r = abrir();
+  it('um opcional explica-se e leva ao ecrã que o liga', async () => {
+    const r = await abrir();
     tocar(r, 'Ligar a gestão do dinheiro. Só se quiser apontar despesas e vendas na app.');
     expect(textos(r)).toContain('desligar esconde, não apaga');
     tocar(r, 'Ver a gestão do dinheiro');
     expect(mockRotas).toEqual(['/conta/financas']);
   });
 
-  it('a quem não é dono, não mostra os interruptores da conta', () => {
+  it('a quem não é dono, não mostra os interruptores da conta', async () => {
     mockAcesso.podeEmAlguma = () => false;
-    expect(textos(abrir())).not.toContain('SE QUISER — NÃO É PRECISO');
+    expect(textos(await abrir())).not.toContain('SE QUISER — NÃO É PRECISO');
   });
 
-  it('no telemóvel acrescenta o passo dos avisos', () => {
+  it('no telemóvel acrescenta o passo dos avisos', async () => {
     mockPlataforma.suportaNotificacoes = true;
-    expect(textos(abrir())).toMatch(/0\s+de\s+4\s+feito/);
+    expect(textos(await abrir())).toMatch(/0\s+de\s+4\s+feito/);
   });
 
-  it('esconder faz o painel sumir e fica guardado', () => {
-    const r = abrir();
+  it('esconder faz o painel sumir e fica guardado', async () => {
+    const r = await abrir();
     tocar(r, 'Esconder o guia de primeiros passos');
     expect(r.toJSON()).toBeNull();
-    expect(textos(abrir())).toEqual('');
+    expect(textos(await abrir())).toEqual('');
   });
 
-  it('com o caminho andado, sai do Início mesmo com opcionais por ligar', () => {
+  it('com o caminho andado, sai do Início mesmo com opcionais por ligar', async () => {
     mockDados.exploracoes = [{ id: 'e1', nome: 'Monte do Avô' } as Exploracao];
     mockDados.terrenos = [{ id: 't1', nome: 'Courela', exploracaoId: 'e1' } as Terreno];
     mockDados.animais = [{ id: 'a1', exploracaoId: 'e1' } as Animal];
-    expect(abrir().toJSON()).toBeNull();
+    expect((await abrir()).toJSON()).toBeNull();
+  });
+
+  /**
+   * A queixa de 2026-09-02: "entro na conta e aparece-me o tutorial, mas como
+   * eu já tinha coisas criadas ele desaparece logo".
+   *
+   * A autorização do sistema chega por uma promessa, e enquanto ela era um
+   * `false` de partida o passo dos avisos nascia por fazer — o guia desenhava-se
+   * inteiro e sumia no render seguinte. A cada arranque, a quem tinha a app
+   * configurada há meses.
+   *
+   * O teste olha para o PRIMEIRO render, antes de a promessa assentar: é o
+   * fotograma onde o guia aparecia, e tem de estar vazio.
+   */
+  it('não pisca no arranque de quem já tem o caminho andado', () => {
+    mockPlataforma.suportaNotificacoes = true;
+    mockPlataforma.autorizado = true;
+    mockNotif.preferencias.noTelemovel = true;
+    mockDados.exploracoes = [{ id: 'e1', nome: 'Monte' } as Exploracao];
+    mockDados.terrenos = [{ id: 't1', nome: 'Courela', exploracaoId: 'e1' } as Terreno];
+    mockDados.animais = [{ id: 'a1', exploracaoId: 'e1' } as Animal];
+
+    let r!: ReactTestRenderer;
+    act(() => {
+      r = create(<PainelPrimeirosPassos />);
+    });
+    expect(r.toJSON()).toBeNull();
   });
 });

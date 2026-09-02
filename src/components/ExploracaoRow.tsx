@@ -8,7 +8,21 @@ import type { Exploracao } from '@/data/types';
 import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
-export function ExploracaoRow({ exploracao }: { exploracao: Exploracao }) {
+export function ExploracaoRow({
+  exploracao,
+  lider,
+}: {
+  exploracao: Exploracao;
+  /**
+   * Quem corre esta exploração, quando ela é de uma sociedade.
+   *
+   * `undefined` é "não se aplica" (uma exploração normal, ou quem está a olhar
+   * não é o supervisor) e a linha nem aparece. A string vazia é o caso que o
+   * supervisor precisa de ver de relance: exploração criada, líder por
+   * convidar, e portanto ninguém que lá possa registar um animal.
+   */
+  lider?: string;
+}) {
   const router = useRouter();
   const { animaisByExploracao, terrenosByExploracao } = useGado();
   const nAnimais = animaisByExploracao(exploracao.id).length;
@@ -41,6 +55,23 @@ export function ExploracaoRow({ exploracao }: { exploracao: Exploracao }) {
                 {exploracao.localizacao ?? 'Sem localização'}
               </Text>
             </View>
+            {/* Quem a corre. É a pergunta que o supervisor faz ao olhar para
+                esta lista, e sem isto ele tinha de abrir uma a uma para saber. */}
+            {lider !== undefined ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Icon
+                  name={lider ? 'shield-crown' : 'shield-alert-outline'}
+                  size={13}
+                  color={lider ? colors.primary : colors.warning}
+                />
+                <Text
+                  variant="caption"
+                  color={lider ? colors.textSecondary : colors.warning}
+                  numberOfLines={1}>
+                  {lider ? t('exploracao.lider', { nome: lider }) : t('exploracao.semLider')}
+                </Text>
+              </View>
+            ) : null}
           </View>
           <Icon name="chevron-right" size="md" color={colors.textMuted} />
         </View>

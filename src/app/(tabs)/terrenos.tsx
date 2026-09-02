@@ -10,6 +10,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { agruparTerrenosPorExploracao, emLinhas } from '@/data/terrenos';
 import type { Terreno } from '@/data/types';
+import { useVoltarAoTopo } from '@/data/voltarAoTopo';
 import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -30,6 +31,7 @@ import { colors, layout, radii, spacing } from '@/theme';
  * na primeira da lista.
  */
 export default function TerrenosScreen() {
+  const refTopo = useVoltarAoTopo('terrenos');
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
@@ -121,6 +123,7 @@ export default function TerrenosScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SectionList
+        ref={refTopo}
         // Ver nota em animais.tsx: mudar o número de colunas exige remontar.
         key={desktop ? 'grelha' : 'pilha'}
         sections={secoes}

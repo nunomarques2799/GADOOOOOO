@@ -28,6 +28,7 @@ import { saiuDoEfetivo } from '@/data/historicoAnimais';
 import { useMembros } from '@/data/membros';
 import { SINAIS, sinaisDe, type Sinal } from '@/data/sinaisAlerta';
 import { useGado } from '@/data/store';
+import { useVoltarAoTopo } from '@/data/voltarAoTopo';
 import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -102,6 +103,7 @@ const ICONE_ORDEM: Record<Ordenacao, IconName> = {
 };
 
 export default function AnimaisScreen() {
+  const refTopo = useVoltarAoTopo('animais');
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
@@ -244,6 +246,7 @@ export default function AnimaisScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <FlatList
+        ref={refTopo}
         // numColumns não muda a quente — a key força a lista a remontar
         // quando se passa de telemóvel (pilha) para desktop (grelha).
         key={desktop ? 'grelha' : 'pilha'}

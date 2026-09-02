@@ -55,9 +55,21 @@ export function PainelPrimeirosPassos() {
   const { preferencias } = useNotificacoes();
   const { podeEmAlguma } = useMembros();
 
-  // Só se recalcula quando o painel monta ou os dados mudam; a permissão do
-  // sistema é assíncrona, por isso começa por `false` e corrige-se a seguir.
-  const [permitido, setPermitido] = useState(false);
+  /**
+   * A app tem autorização do sistema para avisar? `null` é "ainda não sei".
+   *
+   * A distinção não é zelo: perguntar ao sistema é assíncrono, e enquanto isto
+   * era um `false` de partida o passo dos avisos nascia por fazer. Quem já
+   * tinha a app configurada há meses via o guia dos primeiros passos aparecer
+   * no topo do Início e desaparecer meio segundo depois, a cada arranque, sem
+   * nunca ter chegado a tempo de o ler. Com `null`, o painel não decide nada
+   * enquanto não souber.
+   */
+  const [permitido, setPermitido] = useState<boolean | null>(
+    // Onde não há avisos (web, computador) não há nada por que esperar, e o
+    // `passosTutorial` já trata o `suportaAvisos: false`.
+    suportaNotificacoes ? null : false,
+  );
   useEffect(() => {
     if (suportaNotificacoes) void temPermissao().then(setPermitido);
   }, []);
@@ -75,6 +87,10 @@ export function PainelPrimeirosPassos() {
    * terceiro estado, fechar o passo em foco voltava a `null` e ele reabria.
    */
   const [aberto, setAberto] = useState<ChavePasso | 'nenhum' | null>(null);
+
+  // Enquanto não se souber da autorização, o painel não aparece. Um guia que
+  // pisca é pior do que um guia que chega meio segundo depois.
+  if (permitido === null) return null;
 
   const passos = passosTutorial({
     temExploracoes: exploracoes.length > 0,

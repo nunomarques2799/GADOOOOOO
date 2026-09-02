@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useVoltarAoTopo } from '@/data/voltarAoTopo';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, spacing } from '@/theme';
 
@@ -24,6 +25,14 @@ type Props = {
   topInset?: boolean;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
+  /**
+   * Nome do separador da barra de baixo a que este ecra pertence.
+   *
+   * Dado, tocar outra vez no icone desse separador volta ao topo desta lista
+   * (ver `data/voltarAoTopo.ts`). So faz sentido nos ecras que sao um
+   * separador; nos outros nao ha icone nenhum onde tocar.
+   */
+  separador?: string;
 } & Pick<ScrollViewProps, 'stickyHeaderIndices' | 'onScroll' | 'refreshControl'>;
 
 /**
@@ -39,10 +48,14 @@ export function Screen({
   topInset = false,
   style,
   contentStyle,
+  separador,
   ...scrollProps
 }: Props) {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
+  // `''` quando o ecrã não é um separador: o `registarLista` guarda-o à mesma,
+  // numa chave que a barra nunca procura, e não há um caminho a mais no hook.
+  const refTopo = useVoltarAoTopo(separador ?? '');
 
   const paddingTop = topInset ? insets.top : 0;
   const paddingBottom = insets.bottom + spacing.xxl;
@@ -66,6 +79,7 @@ export function Screen({
 
   return (
     <ScrollView
+      ref={refTopo}
       style={[{ flex: 1, backgroundColor: background }, style]}
       contentContainerStyle={[
         { paddingTop, paddingBottom, paddingHorizontal, alignItems: 'center' },

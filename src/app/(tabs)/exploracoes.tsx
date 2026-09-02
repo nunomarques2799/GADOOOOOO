@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -6,18 +7,70 @@ import { ExploracaoRow } from '@/components/ExploracaoRow';
 import { EmptyState, FAB, Text } from '@/components/ui';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { useVoltarAoTopo } from '@/data/voltarAoTopo';
 import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, spacing } from '@/theme';
 
 export default function ExploracoesScreen() {
+  const refTopo = useVoltarAoTopo('exploracoes');
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
   const { exploracoes } = useGado();
-  const { podeCriarExploracoes } = useMembros();
+  const { podeCriarExploracoes, roleEm, listarMembrosDe } = useMembros();
   const { controlo: controloAtualizar } = useAtualizarPuxando();
+
+  /**
+   * Quem corre cada exploração supervisionada, pelo nome.
+   *
+   * Só se pergunta pelas que EU supervisiono, e por duas razões: é a única
+   * lista onde a resposta interessa (numa exploração minha, o líder sou eu), e
+   * é a única onde a RLS ma dá — o `membro_self_select` só deixa ver a equipa a
+   * quem é admin ou supervisor dela. Perguntar pelas outras era um pedido por
+   * exploração para receber uma lista com uma linha, a minha.
+   *
+   * A chave é o id da exploração; o valor é o nome do líder, ou `''` quando
+   * ainda não há nenhum.
+   */
+  const [lideres, setLideres] = useState<Record<string, string>>({});
+  const idsSupervisionadas = exploracoes
+    .filter((e) => roleEm(e.id) === 'supervisor')
+    .map((e) => e.id);
+  // Uma string e não o array: o array é novo a cada render e punha o efeito a
+  // correr em ciclo.
+  const chaveSupervisionadas = idsSupervisionadas.join(',');
+
+  useEffect(() => {
+    const ids = chaveSupervisionadas ? chaveSupervisionadas.split(',') : [];
+    if (ids.length === 0) {
+      setLideres({});
+      return;
+    }
+    let vivo = true;
+    void (async () => {
+      const pares = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const equipa = await listarMembrosDe(id);
+            return [id, equipa.find((m) => m.role === 'admin')?.nome ?? ''] as const;
+          } catch {
+            // Sem rede fica-se sem a linha do líder, e não com uma a mentir que
+            // não há nenhum: `undefined` faz a linha desaparecer.
+            return [id, undefined] as const;
+          }
+        }),
+      );
+      if (!vivo) return;
+      setLideres(
+        Object.fromEntries(pares.filter((p): p is readonly [string, string] => p[1] !== undefined)),
+      );
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, [chaveSupervisionadas, listarMembrosDe]);
   // Quem pode criar: perfil ativo E conta que não entrou por convite de outra
   // pessoa. A decisão vive em `permissoes.ts` (`podeCriarExploracao`) e espelha
   // a política `exploracao_ativo_insert` — a UI segue a RLS, não a contraria.
@@ -32,6 +85,7 @@ export default function ExploracoesScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <FlatList
+        ref={refTopo}
         // Ver nota em animais.tsx: numColumns exige remontar a lista.
         key={desktop ? 'grelha' : 'pilha'}
         data={exploracoes}
@@ -41,10 +95,10 @@ export default function ExploracoesScreen() {
         renderItem={({ item }) =>
           desktop ? (
             <View style={{ flex: 1 }}>
-              <ExploracaoRow exploracao={item} />
+              <ExploracaoRow exploracao={item} lider={lideres[item.id]} />
             </View>
           ) : (
-            <ExploracaoRow exploracao={item} />
+            <ExploracaoRow exploracao={item} lider={lideres[item.id]} />
           )
         }
         showsVerticalScrollIndicator={false}

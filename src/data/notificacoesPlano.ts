@@ -8,6 +8,8 @@
  * aviso não tocou.
  */
 
+import { t } from '@/i18n';
+
 import type { Preferencias } from './notificacoes';
 import type { Alerta } from './types';
 
@@ -21,11 +23,23 @@ export const HORA_AVISO = 8;
 export const TETO_IOS = 64;
 
 /**
- * Quantos prazos se agendam, no máximo. Fica abaixo do `TETO_IOS` para sobrar
- * espaço aos avisos de acesso e para um efetivo grande nunca empurrar os avisos
- * mais próximos para fora do teto do sistema.
+ * Quantos avisos de prazo se agendam, no máximo. Fica abaixo do `TETO_IOS` para
+ * sobrar espaço aos avisos de acesso e para um efetivo grande nunca empurrar os
+ * avisos mais próximos para fora do teto do sistema.
+ *
+ * Desde que os avisos são um por DIA (ver `planear`), 50 são 50 dias e não 50
+ * alertas: com o horizonte de 60 dias, é quase tudo o que há para agendar.
  */
 export const MAX_AGENDADAS = 50;
+
+/**
+ * Quantos nomes cabem no corpo de um aviso de dia antes do "e mais N".
+ *
+ * Três: é o que se lê de relance no ecrã bloqueado sem o sistema cortar a
+ * meio, e é o que responde à pergunta que a pessoa faz ao pegar no telemóvel
+ * ("o que é que eu tenho para hoje?"). A lista completa está na app.
+ */
+export const NOMES_NO_CORPO = 3;
 
 /**
  * Quantos avisos de prazo cabem, descontando os do fim de acesso.
@@ -95,26 +109,97 @@ export function destinoDoAviso(
  *  - toca no dia em que o alerta entra na janela de antecedência escolhida
  *    pelo criador, ou já amanhã se essa altura passou;
  *  - categorias desligadas não tocam, mesmo que o alerta exista;
- *  - o mais urgente fica em primeiro, para ser o último a ser cortado pelo
+ *  - **um aviso por DIA**, com o que esse dia traz lá dentro;
+ *  - o dia mais próximo fica em primeiro, para ser o último a ser cortado pelo
  *    limite do sistema.
+ *
+ * UM POR DIA, E NÃO UM POR ALERTA (2026-09-02). Cada aviso tocava à sua hora, e
+ * a hora era sempre a mesma: as 8 da manhã. Numa exploração com trinta animais,
+ * todos os prazos que já tinham entrado na janela caíam no mesmo instante e o
+ * telemóvel dava dezenas de apitos seguidos — o criador acordava com o ecrã
+ * cheio de avisos e não tinha por onde começar a lê-los. Um aviso que se
+ * dispensa em bloco não avisa de nada, e o passo seguinte de quem o recebe é
+ * desligar as notificações.
+ *
+ * Agora as 8 da manhã trazem UMA linha: "3 avisos para hoje", com os nomes lá
+ * dentro. O que a pessoa quer saber ao pegar no telemóvel é quantas coisas tem
+ * para fazer, e a lista completa está a um toque de distância.
  */
+export type AvisoDoDia = {
+  /** O instante em que toca: `HORA_AVISO` do dia em que estes alertas entram. */
+  quando: Date;
+  /** O que esse dia traz, do mais urgente para o menos. */
+  alertas: Alerta[];
+};
+
 export function planear(
   alertas: Alerta[],
   p: Preferencias,
   agora = new Date(),
-  /** Quantos cabem — ver `orcamentoParaAlertas`. Por omissão, o máximo. */
+  /** Quantos DIAS cabem — ver `orcamentoParaAlertas`. Por omissão, o máximo. */
   orcamento = MAX_AGENDADAS,
-): { alerta: Alerta; quando: Date }[] {
+): AvisoDoDia[] {
   const horizonte = agora.getTime() + HORIZONTE_DIAS * 86_400_000;
-  return alertas
-    .filter((a) => p.ativa[a.categoria] && a.diasRestantes !== undefined)
-    .map((a) => {
-      const entra = (a.diasRestantes as number) - p.antecedenciaDias[a.categoria];
-      return { alerta: a, quando: quandoTocar(entra, agora) };
-    })
-    .filter((x) => x.quando.getTime() <= horizonte)
-    .sort((x, y) => x.quando.getTime() - y.quando.getTime())
-    .slice(0, Math.min(orcamento, MAX_AGENDADAS));
+
+  const porDia = new Map<number, Alerta[]>();
+  for (const a of alertas) {
+    if (!p.ativa[a.categoria] || a.diasRestantes === undefined) continue;
+    const entra = a.diasRestantes - p.antecedenciaDias[a.categoria];
+    const quando = quandoTocar(entra, agora);
+    if (quando.getTime() > horizonte) continue;
+    const chave = quando.getTime();
+    const lista = porDia.get(chave);
+    if (lista) lista.push(a);
+    else porDia.set(chave, [a]);
+  }
+
+  return [...porDia.entries()]
+    .sort(([x], [y]) => x - y)
+    .slice(0, Math.min(orcamento, MAX_AGENDADAS))
+    .map(([quando, doDia]) => ({
+      quando: new Date(quando),
+      // Dentro do dia, o que falta menos tempo primeiro: é esse que dá o nome
+      // ao aviso quando ele é só um, e é o primeiro da lista quando são vários.
+      alertas: [...doDia].sort(
+        (a, b) => (a.diasRestantes ?? 0) - (b.diasRestantes ?? 0),
+      ),
+    }));
+}
+
+/**
+ * O que o aviso de um dia diz, e para onde leva.
+ *
+ * Com um alerta só, é o alerta: o título dele, a descrição dele, e o toque
+ * abre a ficha do animal. Não se ganha nada em dizer "1 aviso para hoje" e
+ * esconder qual é.
+ *
+ * Com vários, é a conta e os nomes: "3 avisos para hoje" e as três primeiras
+ * linhas. O toque abre a lista de alertas, porque não há uma ficha para onde
+ * ir — e é lá que estão os outros.
+ */
+export function textoDoAviso(dia: AvisoDoDia): {
+  titulo: string;
+  corpo: string;
+  /** Vai no `data` da notificação; é o que decide o destino do toque. */
+  alertaId?: string;
+  animalId?: string;
+} {
+  const [primeiro, ...resto] = dia.alertas;
+  if (resto.length === 0) {
+    return {
+      titulo: primeiro.titulo,
+      corpo: primeiro.descricao,
+      alertaId: primeiro.id,
+      animalId: primeiro.animalId,
+    };
+  }
+
+  const nomes = dia.alertas.slice(0, NOMES_NO_CORPO).map((a) => a.titulo);
+  const sobram = dia.alertas.length - nomes.length;
+  return {
+    titulo: t('avisos.nParaHoje', { n: dia.alertas.length }),
+    corpo: sobram > 0 ? t('avisos.eMais', { lista: nomes.join(', '), n: sobram }) : nomes.join(', '),
+  };
 }
 
 /* ==================================================================

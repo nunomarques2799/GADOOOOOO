@@ -110,6 +110,12 @@ type MembrosContext = {
   /** true se o utilizador é admin de pelo menos uma exploração. */
   isAdminEmAlguma: boolean;
   /**
+   * true se supervisiona pelo menos uma exploração, ou seja, se esta conta é o
+   * chefe de uma sociedade agrícola. Muda o que a barra de baixo mostra: quem
+   * não mexe em animais não quer os Animais no primeiro lugar da barra.
+   */
+  isSupervisorEmAlguma: boolean;
+  /**
    * true se esta conta pode criar uma exploração nova.
    *
    * Fica à parte do `pode(...)` porque não é uma capacidade DENTRO de uma
@@ -580,6 +586,10 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     supabaseConfigurado && !!userId && !isSuperadmin && estadoPerfil !== 'ativo';
 
   const isAdminEmAlguma = useMemo(() => membros.some((m) => m.role === 'admin'), [membros]);
+  const isSupervisorEmAlguma = useMemo(
+    () => membros.some((m) => m.role === 'supervisor'),
+    [membros],
+  );
 
   /**
    * TODOS os vínculos, não só os vivos: um veterinário cujo prazo caiu ontem
@@ -816,6 +826,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       podeEmAlguma,
       contaSuspensa,
       isAdminEmAlguma,
+      isSupervisorEmAlguma,
       podeCriarExploracoes,
       recarregar,
       listarPendentes,
@@ -836,7 +847,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       aCarregar, membros, membrosExpirados, acessoExpirado,
       isSuperadmin, estadoPerfil, tipoConta, supervisionada, roleEm, permissoesEm,
       pode, podeVer, podeEmAlguma,
-      contaSuspensa, isAdminEmAlguma, podeCriarExploracoes,
+      contaSuspensa, isAdminEmAlguma, isSupervisorEmAlguma, podeCriarExploracoes,
       recarregar, listarPendentes, aprovarCliente, bloquearCliente,
       listarConvites, criarConvite, removerConvite, listarMembrosDe,
       listarSaidasDaEquipa,
