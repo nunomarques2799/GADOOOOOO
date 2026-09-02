@@ -13,11 +13,15 @@
 # de mudar de alojamento — parte em silêncio e só se dá por isso quando alguém
 # precisa mesmo dele.
 #
-# Falta aqui um `404.html`, e isso tem consequência: sem ele o Cloudflare assume
-# que o site é uma aplicação de página única e devolve o `index.html` em
-# qualquer endereço errado, com código 200. Na app é exatamente o que se quer;
-# aqui é um "404 disfarçado". Não parte nada, mas quando houver folga vale a
-# pena criar `website/404.html` — passa a haver página de erro a sério.
+# O `404.html` JA EXISTE (criado a 2026-09-02). Sem ele, o Cloudflare assumia
+# que o site era uma aplicacao de pagina unica e devolvia o `index.html` em
+# qualquer endereco errado, com codigo 200: um "404 disfarcado", que faz os
+# motores de busca indexarem enderecos que nao existem. Agora um endereco
+# errado devolve a pagina de erro com o codigo 404 a serio.
+#
+# O nome do ficheiro e convencao, nao configuracao: nem aqui nem no
+# `netlify.toml` ha regra nenhuma a apontar para ele. Renomea-lo desliga-o em
+# silencio, e volta o 200 em todo o lado.
 
 /assets/*
   Cache-Control: public, max-age=86400
