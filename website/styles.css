@@ -270,15 +270,57 @@ h3 { font-size: 1.25rem; font-weight: 800; }
 .cta-band::before { content: ""; position: absolute; width: 380px; height: 380px; border-radius: 50%; background: radial-gradient(circle, rgba(198,242,78,0.2), transparent 70%); top: -140px; left: -100px; }
 .cta-band h2 { color: #fff; margin-bottom: 16px; }
 .cta-band p { color: var(--on-dark-muted); font-size: 1.15rem; max-width: 52ch; margin: 0 auto 30px; }
-.cta-band .btn-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
-/* Badge da App Store: os 6px de padding são a margem livre que a Apple exige
-   (10% da altura da arte), e são também o que o põe nos 60px dos `btn-lg` ao
-   lado. Nada de fundo, borda ou filtro: a arte não se altera. O `transform` do
-   hover é só do link, e move o badge sem lhe tocar. */
-.badge-loja { display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-radius: var(--r-md); transition: transform 0.15s ease; }
-.badge-loja img { display: block; height: 48px; width: auto; }
+/* O `position` aqui não é enfeite. O `::before` da banda é um brilho lima
+   ABSOLUTO, e um elemento posicionado pinta por cima do conteúdo que não o
+   está: o brilho caía em cima dos badges e deixava o da esquerda esverdeado em
+   vez de branco. Com os botões antigos passava despercebido; num badge branco
+   vê-se, e no da Apple seria alterar-lhe a aparência, que é o que as guidelines
+   dela proíbem. O texto da banda fica de fora de propósito, porque aí o brilho
+   por cima é o efeito que se quer. */
+.cta-band .btn-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; position: relative; z-index: 1; }
+/* ---------- Badges das plataformas ----------
+   `--alt` é a altura da ARTE, e é dela que sai tudo o resto. O padding do link
+   é a margem livre que a Apple exige à volta do badge dela (10% da altura), e é
+   também o que faz os quatro darem a mesma altura total.
+   O badge da App Store é uma imagem e não se altera: nada de fundo, borda ou
+   filtro. O `transform` do hover é do LINK, e move o badge sem lhe tocar. */
+.badge-loja {
+  --alt: 48px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: calc(var(--alt) * 0.125); border-radius: var(--r-md);
+  transition: transform 0.15s ease;
+}
+.badge-loja img { display: block; height: var(--alt); width: auto; }
 .badge-loja:hover { transform: translateY(-2px); }
 .badge-loja:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+
+/* Os três desenhados em CSS. As frações abaixo foram MEDIDAS no ficheiro da
+   Apple (120x40) e escritas como proporções da altura, para o conjunto não se
+   desalinhar quando a altura mudar no telemóvel:
+     raio 5.5/40 · entrada 9.5/40 · saída 11/40 · intervalo 7/40
+     ícone 22.5/40 · linha de cima 8.5/40 · linha de baixo 17/40
+   A moldura preta de 1px é a mesma que o badge branco da Apple tem, e foi
+   medida no mesmo sítio: não é cinzenta, é preta. */
+.badge-proprio .badge-arte {
+  display: inline-flex; align-items: center; box-sizing: border-box;
+  height: var(--alt); gap: calc(var(--alt) * 0.175);
+  padding-left: calc(var(--alt) * 0.2); padding-right: calc(var(--alt) * 0.275);
+  background: #fff; color: #000; border: 1px solid #000;
+  border-radius: calc(var(--alt) * 0.1375);
+}
+.badge-proprio .badge-icone { width: calc(var(--alt) * 0.5); height: calc(var(--alt) * 0.5); flex: none; }
+.badge-proprio .badge-txt { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
+/* O `nowrap` não é zelo a mais: sem ele, uma largura fixa parte "Descarregar
+   para" em duas linhas e o badge cresce em altura, que é a única medida que
+   TEM de ser igual à do badge da Apple. */
+/* As frações do texto NÃO são as do ficheiro da Apple, e é de propósito. Lá o
+   corpo é ~8.5/40 e ~17/40, mas em SF Pro; o site escreve em Nunito, que com o
+   mesmo corpo desenha letra maior (a 20.4px dava maiúsculas de 15px onde a
+   Apple tem 14.1). Estes números foram acertados pela TINTA medida no canvas,
+   não pelo `font-size`, que é o que faz as duas fontes parecerem do mesmo
+   tamanho lado a lado. Ao trocar de tipo de letra, medir outra vez. */
+.badge-proprio .badge-l1 { font-size: calc(var(--alt) * 0.1875); line-height: 1.2; letter-spacing: 0.01em; white-space: nowrap; }
+.badge-proprio .badge-l2 { font-size: calc(var(--alt) * 0.385); font-weight: 800; line-height: 1.12; letter-spacing: -0.01em; white-space: nowrap; }
 .cta-meta { margin-top: 20px; font-size: 0.9rem; color: var(--on-dark-muted); display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
 .cta-meta svg { width: 17px; height: 17px; }
 
@@ -446,15 +488,15 @@ h3 { font-size: 1.25rem; font-weight: 800; }
   .cta-band { padding: 22px 18px; border-radius: var(--r-lg); }
   .cta-band h2 { margin-top: 10px !important; margin-bottom: 8px; }
   .cta-band p { font-size: 0.95rem; margin-bottom: 16px; }
+  /* Já não há aqui um `.btn`: os quatro são badges, e a coluna estica-os
+     sozinha (o `align-items` da flex é `stretch`). A regra que punha
+     `.btn { width: 100% }` saiu por ter deixado de encontrar alguém. */
   .cta-band .btn-row { flex-direction: column; gap: 9px; }
-  .cta-band .btn-row .btn { width: 100%; }
-  /* Aqui os `btn-lg` encolhem para 50px de altura, e o badge tem de os
-     acompanhar: 40px de arte mais os 5px de margem livre de cada lado. Os 40px
-     são também o mínimo que a Apple aceita, por isso não desce daqui. A coluna
-     estica o link a toda a largura, e é o `justify-content` que impede a arte
-     de ficar encostada à esquerda enquanto os vizinhos têm o texto ao centro. */
-  .badge-loja { padding: 5px; }
-  .badge-loja img { height: 40px; }
+  /* A arte desce para os 40px, que é o mínimo que a Apple aceita e o tamanho
+     natural do ficheiro dela. Tudo o resto acompanha sozinho, porque sai do
+     `--alt`. A coluna estica os links a toda a largura, e é o `justify-content`
+     do `.badge-loja` que mantém a arte ao centro em vez de encostada. */
+  .badge-loja { --alt: 40px; }
   .cta-meta { font-size: 0.8rem; margin-top: 12px; text-align: left; }
 
   /* ---- Rodapé ---- */
