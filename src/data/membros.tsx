@@ -3,9 +3,12 @@
  * ------------------------------------------------------------------
  * Hierarquia:
  *   1. Superadmin (dono da plataforma) — aprova clientes pendentes.
- *   2. Cliente (perfil `ativo`) — cria explorações; é admin delas.
+ *   2. Cliente (perfil `ativo`) — cria explorações. Fica `admin` delas se a
+ *      conta for `individual`, e `supervisor` se for de `sociedade`: aí quem
+ *      as corre é o LÍDER que ela convida, que é um `admin` que entrou por
+ *      código. Ver `supabase/schema_sociedade.sql`.
  *   3. Trabalhador / veterinário — só entra via CÓDIGO DE CONVITE
- *      gerado pelo admin de uma exploração.
+ *      gerado por quem gere a exploração.
  */
 
 import {
@@ -39,6 +42,7 @@ import type {
   EstadoPerfil,
   MembroExploracao,
   RoleMembro,
+  TipoConta,
   UtilizadorPendente,
 } from './types';
 
@@ -59,6 +63,18 @@ type MembrosContext = {
   acessoExpirado: boolean;
   isSuperadmin: boolean;
   estadoPerfil: EstadoPerfil | null;
+  /**
+   * O que esta CONTA é: `individual` (cria explorações e fica dona delas) ou
+   * `sociedade` (cria explorações e supervisiona-as, com um líder à frente de
+   * cada uma). Quem marca é o superadmin.
+   */
+  tipoConta: TipoConta;
+  /**
+   * true se esta exploração tem um supervisor por cima, ou seja, se pertence a
+   * uma sociedade. Serve para chamar ao `admin` dela LÍDER em vez de dono, e
+   * para lhe esconder o botão de a apagar.
+   */
+  supervisionada: (exploracaoId: string) => boolean;
   /** Devolve o role do utilizador nesta exploração (ou undefined). */
   roleEm: (exploracaoId: string) => RoleMembro | undefined;
   /** Ajustes de permissões do próprio utilizador nesta exploração, se houver. */
@@ -334,6 +350,18 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
   const [estadoPerfil, setEstadoPerfil] = useState<EstadoPerfil | null>(
     acessoInicial?.estadoPerfil ?? null,
   );
+  const [tipoConta, setTipoConta] = useState<TipoConta>(acessoInicial?.tipoConta ?? 'individual');
+  /**
+   * As explorações que esta conta CRIOU, e não aquelas a que pertence.
+   *
+   * A diferença passou a decidir duas coisas desde que há sociedades: quem pode
+   * criar explorações novas (quem nunca criou nenhuma entrou pela porta de
+   * outra pessoa) e se uma exploração tem um supervisor por cima. Ver
+   * `supervisionada` e `podeCriarExploracoes` mais abaixo.
+   */
+  const [exploracoesCriadas, setExploracoesCriadas] = useState<string[]>(
+    acessoInicial?.exploracoesCriadas ?? [],
+  );
   const [aCarregar, setACarregar] = useState(!acessoInicial);
 
   const recarregar = useCallback(async () => {
@@ -341,16 +369,18 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       setMembros([]);
       setIsSuperadmin(false);
       setEstadoPerfil(null);
+      setTipoConta('individual');
+      setExploracoesCriadas([]);
       setACarregar(false);
       return;
     }
     setACarregar(true);
 
-    // Perfil (estado + flag superadmin).
+    // Perfil (estado + flag superadmin + tipo de conta).
     const { data: perfil, error: erroPerfil } = await comPrazo(
       supabase
         .from('perfil')
-        .select('estado, is_superadmin')
+        .select('estado, is_superadmin, tipo_conta')
         .eq('id', userId)
         .maybeSingle(),
     );
@@ -363,11 +393,19 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const perfilLinha = perfil as { estado?: EstadoPerfil; is_superadmin?: boolean } | null;
+    const perfilLinha = perfil as {
+      estado?: EstadoPerfil;
+      is_superadmin?: boolean;
+      tipo_conta?: TipoConta;
+    } | null;
     const novoSuperadmin = !!perfilLinha?.is_superadmin;
     const novoEstado: EstadoPerfil = perfilLinha?.estado ?? 'pendente';
+    // Uma base a que ainda falte o `schema_sociedade.sql` não devolve a coluna,
+    // e a conta é o que sempre foi.
+    const novoTipo: TipoConta = perfilLinha?.tipo_conta === 'sociedade' ? 'sociedade' : 'individual';
     setIsSuperadmin(novoSuperadmin);
     setEstadoPerfil(novoEstado);
+    setTipoConta(novoTipo);
 
     // Membros do próprio user (para saber a que explorações pertence).
     const { data: rows, error: erroMembros } = await comPrazo(
@@ -383,15 +421,38 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     const novosMembros = ((rows ?? []) as RowMembro[]).map(toMembro);
     setMembros(novosMembros);
 
+    // Quais destas explorações é que fui EU que criei. A RLS já só devolve as
+    // que me dizem respeito, por isso não é preciso filtrar por ids.
+    //
+    // Uma falha aqui não apaga o que se sabia, pela mesma razão das outras duas:
+    // sem rede, dar isto por vazio dizia à app que a conta nunca criou nada, e
+    // uma conta assim é uma convidada, que não pode criar explorações. A app
+    // ficava a esconder o botão de criar exploração ao dono, sem uma palavra.
+    const { data: exps, error: erroExps } = await comPrazo(
+      supabase.from('exploracao').select('id, user_id'),
+    );
+    const novasCriadas = erroExps
+      ? exploracoesCriadas
+      : ((exps ?? []) as { id: string; user_id: string }[])
+          .filter((e) => e.user_id === userId)
+          .map((e) => e.id);
+    setExploracoesCriadas(novasCriadas);
+
     if (cacheDisponivel) {
       guardarAcesso({
         estadoPerfil: novoEstado,
         isSuperadmin: novoSuperadmin,
         membros: novosMembros,
+        tipoConta: novoTipo,
+        exploracoesCriadas: novasCriadas,
       });
     }
 
     setACarregar(false);
+    // `exploracoesCriadas` entra aqui só como valor de recurso quando a rede
+    // falha; não é o que manda recarregar, e pô-lo nas dependências punha o
+    // efeito a correr outra vez a cada resposta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   useEffect(() => {
@@ -454,6 +515,29 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     [userId, isSuperadmin, estadoPerfil],
   );
 
+  /**
+   * Esta exploração é de uma sociedade, ou seja, tem um supervisor por cima?
+   *
+   * Responde-se sem perguntar ao servidor, com o que a conta já sabe: o meu
+   * papel aqui e quem criou esta exploração. Ser `supervisor` responde à
+   * pergunta sozinho. Ser `admin` numa exploração que NÃO criei só acontece de
+   * uma maneira: fui convidado para líder dela.
+   *
+   * Ao trabalhador e ao veterinário responde sempre `false`, e é o limite
+   * conhecido disto: a RLS não lhes deixa ver a linha do supervisor, e sem ela
+   * a app não tem por onde saber. Não lhes muda nada do que podem fazer (nunca
+   * tiveram `eliminarExploracao`) — muda só a palavra com que veem o líder
+   * escrito na lista da equipa, que lhes aparece como "Dono".
+   */
+  const supervisionada = useCallback(
+    (exploracaoId: string): boolean => {
+      const meu = roleEm(exploracaoId);
+      if (meu === 'supervisor') return true;
+      return meu === 'admin' && !exploracoesCriadas.includes(exploracaoId);
+    },
+    [roleEm, exploracoesCriadas],
+  );
+
   const pode = useCallback(
     (exploracaoId: string | undefined, capacidade: Capacidade): boolean =>
       podeEscrever(
@@ -461,10 +545,11 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
           ...contexto,
           role: exploracaoId ? roleEm(exploracaoId) : undefined,
           permissoes: exploracaoId ? permissoesEm(exploracaoId) : undefined,
+          exploracaoSupervisionada: exploracaoId ? supervisionada(exploracaoId) : false,
         },
         capacidade,
       ),
-    [contexto, roleEm, permissoesEm],
+    [contexto, roleEm, permissoesEm, supervisionada],
   );
 
   const podeEmAlguma = useCallback(
@@ -508,8 +593,9 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
         // Não se pergunta por uma exploração: a decisão é sobre a conta inteira.
         role: undefined,
         papeis: todosMembros.map((m) => m.role),
+        criouExploracao: exploracoesCriadas.length > 0,
       }),
-    [contexto, todosMembros],
+    [contexto, todosMembros, exploracoesCriadas],
   );
 
   // "Tinha e já não tem", que é diferente de "nunca teve": a quem nunca teve, a
@@ -721,6 +807,8 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
       acessoExpirado,
       isSuperadmin,
       estadoPerfil,
+      tipoConta,
+      supervisionada,
       roleEm,
       permissoesEm,
       pode,
@@ -746,7 +834,7 @@ export function MembrosProvider({ children }: { children: ReactNode }) {
     }),
     [
       aCarregar, membros, membrosExpirados, acessoExpirado,
-      isSuperadmin, estadoPerfil, roleEm, permissoesEm,
+      isSuperadmin, estadoPerfil, tipoConta, supervisionada, roleEm, permissoesEm,
       pode, podeVer, podeEmAlguma,
       contaSuspensa, isAdminEmAlguma, podeCriarExploracoes,
       recarregar, listarPendentes, aprovarCliente, bloquearCliente,

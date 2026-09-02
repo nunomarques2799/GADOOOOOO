@@ -26,6 +26,7 @@ import { t } from '@/i18n';
 import { colors, layout, spacing } from '@/theme';
 
 const ICONE_PAPEL: Record<RoleMembro, IconName> = {
+  supervisor: 'account-tie',
   admin: 'shield-crown',
   veterinario: 'medical-bag',
   trabalhador: 'account-hard-hat',

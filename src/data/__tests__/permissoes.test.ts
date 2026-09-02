@@ -47,6 +47,24 @@ describe('rolePode', () => {
     ['trabalhador', 'eliminarExploracao', false],
     ['trabalhador', 'gerirEquipa', false],
 
+    // O SUPERVISOR de uma sociedade agrícola trata do património e da equipa, e
+    // não do gado. As cinco linhas a `false` do lado dos animais são o coração
+    // deste papel: ele criou a exploração, paga-a e vê tudo o que lá se passa,
+    // mas quem regista um animal, lhe escreve um tratamento ou lhe dá a saída é
+    // o líder que ele pôs à frente dela. Se alguma passar a `true`, o
+    // supervisor deixa de ser supervisor e passa a ser um segundo dono.
+    ['supervisor', 'gerirTerrenos', true],
+    ['supervisor', 'editarExploracao', true],
+    ['supervisor', 'gerirEquipa', true],
+    ['supervisor', 'editarAnimais', false],
+    ['supervisor', 'registarTratamentos', false],
+    ['supervisor', 'registarSaida', false],
+    ['supervisor', 'eliminarAnimais', false],
+    ['supervisor', 'marcarEventos', false],
+    // Apagar a exploração não é dele nem de ninguém pela app: leva o efetivo e
+    // o histórico atrás, e é a coisa que a sociedade paga.
+    ['supervisor', 'eliminarExploracao', false],
+
     // O veterinário é uma VISITA: escreve o que fez ao animal e mais nada.
     //
     // As três linhas a `false` que se seguem ao `registarTratamentos` são o
@@ -82,6 +100,13 @@ describe('rolePode', () => {
     ['veterinario', 'registarDespesa', false],
     ['veterinario', 'registarReceita', false],
 
+    // O supervisor VÊ as contas todas das explorações dele (ver `podeConsultar`
+    // mais abaixo) e não lança nem uma: quem lança despesas é quem traz a
+    // fatura da ração, e quem lança receitas é quem vendeu o animal.
+    ['supervisor', 'registarDespesa', false],
+    ['supervisor', 'registarReceita', false],
+    ['supervisor', 'registarCustoTratamento', false],
+
     // Quem não é membro não faz nada — é o caso de quem abre uma exploração
     // de outra pessoa por um link antigo.
     [undefined, 'editarAnimais', false],
@@ -93,21 +118,45 @@ describe('rolePode', () => {
     expect(rolePode(papel, capacidade)).toBe(esperado);
   });
 
-  it('só o admin pode mexer na exploração e na equipa', () => {
-    const donoApenas: Capacidade[] = ['editarExploracao', 'eliminarExploracao', 'gerirEquipa'];
-    for (const cap of donoApenas) {
+  it('quem responde pela exploração mexe nela e na equipa', () => {
+    const deQuemResponde: Capacidade[] = ['editarExploracao', 'gerirEquipa'];
+    for (const cap of deQuemResponde) {
       expect(rolePode('admin', cap)).toBe(true);
+      expect(rolePode('supervisor', cap)).toBe(true);
       expect(rolePode('trabalhador', cap)).toBe(false);
       expect(rolePode('veterinario', cap)).toBe(false);
     }
   });
 
-  it('o veterinário não marca eventos na agenda de outra pessoa', () => {
-    // A agenda diz quando é a feira e a que horas se carrega o camião — o
-    // movimento da casa de quem o convidou, não trabalho dele.
+  it('apagar a exploração é só do dono', () => {
+    // O supervisor fica de fora com o trabalhador e o veterinário: numa
+    // exploração de sociedade, apagar é pedido ao superadmin. Ver
+    // `podeEscrever` para o outro lado disto (o líder, que é `admin`).
+    expect(rolePode('admin', 'eliminarExploracao')).toBe(true);
+    expect(rolePode('supervisor', 'eliminarExploracao')).toBe(false);
+    expect(rolePode('trabalhador', 'eliminarExploracao')).toBe(false);
+    expect(rolePode('veterinario', 'eliminarExploracao')).toBe(false);
+  });
+
+  it('a agenda é de quem lá anda', () => {
+    // O veterinário não a marca porque a agenda diz quando é a feira e a que
+    // horas se carrega o camião — o movimento da casa de quem o convidou, não
+    // trabalho dele. O supervisor pela razão gémea: ele lê o plano, quem o faz
+    // é quem está na exploração.
     expect(rolePode('admin', 'marcarEventos')).toBe(true);
     expect(rolePode('trabalhador', 'marcarEventos')).toBe(true);
     expect(rolePode('veterinario', 'marcarEventos')).toBe(false);
+    expect(rolePode('supervisor', 'marcarEventos')).toBe(false);
+  });
+
+  it('o supervisor não se ajusta pessoa a pessoa, como o dono não se ajusta', () => {
+    // Quem lhe abriria a folha de permissões era o líder que ele convidou — e
+    // o convidado ficava a poder tirar os terrenos a quem o convidou.
+    expect(rolePode('supervisor', 'gerirTerrenos', { gerirTerrenos: false })).toBe(true);
+    expect(rolePode('supervisor', 'editarAnimais', { editarAnimais: true })).toBe(false);
+    // E o trabalhador continua a ajustar-se, que é para isso que a coluna
+    // existe: sem esta linha, a de cima passava com o ajuste desligado a torto.
+    expect(rolePode('trabalhador', 'eliminarAnimais', { eliminarAnimais: false })).toBe(false);
   });
 
   it('marcar eventos não se ajusta pessoa a pessoa', () => {
@@ -191,6 +240,39 @@ describe('podeEscrever — modo da app + estado da conta + papel', () => {
     expect(podeEscrever({ ...base, role: 'veterinario' }, 'editarAnimais')).toBe(false);
     expect(podeEscrever({ ...base, role: 'veterinario' }, 'eliminarAnimais')).toBe(false);
   });
+
+  it('o líder faz tudo na exploração da sociedade, menos apagá-la', () => {
+    // Ele é `admin` e corre a exploração: animais, terrenos, equipa, contas.
+    // O que não pode é apagar uma exploração que não é dele — e a exploração
+    // dele própria continua a apagar-se, que é o caso de sempre.
+    const lider = { ...base, role: 'admin' as const, exploracaoSupervisionada: true };
+    expect(podeEscrever(lider, 'editarAnimais')).toBe(true);
+    expect(podeEscrever(lider, 'gerirEquipa')).toBe(true);
+    expect(podeEscrever(lider, 'gerirTerrenos')).toBe(true);
+    expect(podeEscrever(lider, 'eliminarExploracao')).toBe(false);
+    expect(podeEscrever({ ...base, role: 'admin' }, 'eliminarExploracao')).toBe(true);
+  });
+
+  it('o supervisor cuida do património e não do gado', () => {
+    const supervisor = { ...base, role: 'supervisor' as const, exploracaoSupervisionada: true };
+    expect(podeEscrever(supervisor, 'gerirTerrenos')).toBe(true);
+    expect(podeEscrever(supervisor, 'editarExploracao')).toBe(true);
+    expect(podeEscrever(supervisor, 'gerirEquipa')).toBe(true);
+    expect(podeEscrever(supervisor, 'editarAnimais')).toBe(false);
+    expect(podeEscrever(supervisor, 'registarTratamentos')).toBe(false);
+    expect(podeEscrever(supervisor, 'eliminarExploracao')).toBe(false);
+  });
+
+  it('a sociedade suspensa congela também o supervisor', () => {
+    // Quem paga é ele: se a subscrição parar, para tudo, a começar por ele.
+    const ctx = {
+      ...base,
+      role: 'supervisor' as const,
+      estadoPerfil: 'pendente' as const,
+      exploracaoSupervisionada: true,
+    };
+    expect(podeEscrever(ctx, 'gerirTerrenos')).toBe(false);
+  });
 });
 
 /**
@@ -234,6 +316,14 @@ describe('podeConsultar — quem vê as contas', () => {
     ['trabalhador', 'verAgenda', true],
     ['veterinario', 'verAgenda', false],
     [undefined, 'verAgenda', false],
+
+    // O supervisor vê TUDO o que o dono vê, e é a razão de existir: paga a
+    // subscrição para saber o que se passa nas explorações que criou. Fechar-lhe
+    // as contas fazia dele um dono cego da sua própria sociedade.
+    ['supervisor', 'verFinancas', true],
+    ['supervisor', 'verBalancoAnimal', true],
+    ['supervisor', 'verDocumentos', true],
+    ['supervisor', 'verAgenda', true],
   ];
 
   it.each(casos)('papel %s + %s → %s', (papel, capacidade, esperado) => {
@@ -410,8 +500,17 @@ describe('legendas das capacidades', () => {
 describe('legendaRole', () => {
   it('traduz os papéis para PT-PT', () => {
     expect(legendaRole('admin')).toBe('Dono');
+    expect(legendaRole('supervisor')).toBe('Supervisor');
     expect(legendaRole('trabalhador')).toBe('Trabalhador');
     expect(legendaRole('veterinario')).toBe('Veterinário');
+  });
+
+  it('o admin de uma exploração de sociedade é o LÍDER, não o dono', () => {
+    // É o mesmo papel e o mesmo poder do dia a dia. O que muda é de quem é a
+    // exploração, e chamar-lhe "dono" dizia a quem lê o contrário do que é.
+    expect(legendaRole('admin', true)).toBe('Líder de exploração');
+    expect(legendaRole('supervisor', true)).toBe('Supervisor');
+    expect(legendaRole('trabalhador', true)).toBe('Trabalhador');
   });
 });
 
@@ -420,7 +519,7 @@ describe('legendaRole', () => {
  * sobre a conta inteira. Errar aqui tem dois lados e os dois são maus — deixar
  * um convidado abrir quinta na conta de outra pessoa, ou fechar a porta a quem
  * acaba de se registar e ainda não tem nada. Espelha a política
- * `exploracao_ativo_insert` de `supabase/schema_papel_veterinario.sql`.
+ * `exploracao_ativo_insert` de `supabase/schema_sociedade.sql`.
  */
 describe('eConvidado / podeCriarExploracao', () => {
   const base: ContextoAcesso = {
@@ -434,37 +533,83 @@ describe('eConvidado / podeCriarExploracao', () => {
   it('sem vínculo nenhum não é convidado', () => {
     // O caso da conta acabada de aprovar. Tratá-la como convidada fechava a
     // app a toda a gente nova: sem exploração não há nada que se possa fazer.
-    expect(eConvidado([])).toBe(false);
-    expect(podeCriarExploracao({ ...base, papeis: [] })).toBe(true);
+    expect(eConvidado({ papeis: [], criouExploracao: false })).toBe(false);
+    expect(podeCriarExploracao({ ...base, papeis: [], criouExploracao: false })).toBe(true);
   });
 
   it('quem só entrou por código é convidado', () => {
-    expect(eConvidado(['veterinario'])).toBe(true);
-    expect(eConvidado(['trabalhador'])).toBe(true);
-    expect(eConvidado(['trabalhador', 'veterinario'])).toBe(true);
-    expect(podeCriarExploracao({ ...base, papeis: ['veterinario'] })).toBe(false);
+    expect(eConvidado({ papeis: ['veterinario'], criouExploracao: false })).toBe(true);
+    expect(eConvidado({ papeis: ['trabalhador'], criouExploracao: false })).toBe(true);
+    expect(eConvidado({ papeis: ['trabalhador', 'veterinario'], criouExploracao: false })).toBe(
+      true,
+    );
+    expect(
+      podeCriarExploracao({ ...base, papeis: ['veterinario'], criouExploracao: false }),
+    ).toBe(false);
   });
 
-  it('quem é dono nalgum lado não é convidado de ninguém', () => {
+  it('quem criou uma exploração não é convidado de ninguém', () => {
     // O veterinário que também tem a sua quinta. Bloqueá-lo seria castigá-lo
     // por prestar serviço a outros.
-    expect(eConvidado(['veterinario', 'admin'])).toBe(false);
-    expect(podeCriarExploracao({ ...base, papeis: ['veterinario', 'admin'] })).toBe(true);
+    expect(eConvidado({ papeis: ['veterinario', 'admin'], criouExploracao: true })).toBe(false);
+    expect(
+      podeCriarExploracao({ ...base, papeis: ['veterinario', 'admin'], criouExploracao: true }),
+    ).toBe(true);
+  });
+
+  it('o LÍDER de exploração é convidado, apesar de ser admin', () => {
+    // A armadilha das sociedades. Ele é `admin` da exploração que corre, mas
+    // quem a criou e a paga é o supervisor — e a pergunta antiga ("é admin
+    // nalgum lado?") dava-lhe o direito de abrir quintas suas à conta da
+    // subscrição de outra pessoa. Espelha `eh_convidado()`.
+    expect(eConvidado({ papeis: ['admin'], criouExploracao: false })).toBe(true);
+    expect(podeCriarExploracao({ ...base, papeis: ['admin'], criouExploracao: false })).toBe(false);
+  });
+
+  it('a conta de sociedade continua a poder criar mais explorações', () => {
+    // Ela é `supervisor` das que já tem, e criou-as: é o oposto de uma
+    // convidada. Se isto falhasse, a sociedade criava a primeira exploração e
+    // ficava presa a ela.
+    expect(eConvidado({ papeis: ['supervisor'], criouExploracao: true })).toBe(false);
+    expect(
+      podeCriarExploracao({ ...base, papeis: ['supervisor'], criouExploracao: true }),
+    ).toBe(true);
   });
 
   it('conta por aprovar não cria, seja quem for', () => {
     // A política exige `perfil_ativo()` e não abre exceção: sem isto, o botão
     // "Nova" aparecia a quem ainda espera aprovação e a gravação rebentava com
     // um "new row violates row-level security policy" em cru.
-    expect(podeCriarExploracao({ ...base, estadoPerfil: 'pendente', papeis: [] })).toBe(false);
-    expect(podeCriarExploracao({ ...base, estadoPerfil: null, papeis: [] })).toBe(false);
+    expect(
+      podeCriarExploracao({
+        ...base,
+        estadoPerfil: 'pendente',
+        papeis: [],
+        criouExploracao: false,
+      }),
+    ).toBe(false);
+    expect(
+      podeCriarExploracao({ ...base, estadoPerfil: null, papeis: [], criouExploracao: false }),
+    ).toBe(false);
   });
 
   it('modo local e superadmin passam', () => {
     // Sem servidor não há equipa nem papéis: quem está no aparelho é o dono.
     expect(
-      podeCriarExploracao({ ...base, supabaseConfigurado: false, papeis: ['veterinario'] }),
+      podeCriarExploracao({
+        ...base,
+        supabaseConfigurado: false,
+        papeis: ['veterinario'],
+        criouExploracao: false,
+      }),
     ).toBe(true);
-    expect(podeCriarExploracao({ ...base, isSuperadmin: true, papeis: ['veterinario'] })).toBe(true);
+    expect(
+      podeCriarExploracao({
+        ...base,
+        isSuperadmin: true,
+        papeis: ['veterinario'],
+        criouExploracao: false,
+      }),
+    ).toBe(true);
   });
 });

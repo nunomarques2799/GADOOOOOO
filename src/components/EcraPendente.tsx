@@ -44,7 +44,7 @@ export function EcraPendente() {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
   const { utilizador, sair, apagarConta } = useAuth();
-  const { recarregar, aCarregar, estadoPerfil, resgatarConvite } = useMembros();
+  const { recarregar, aCarregar, estadoPerfil, resgatarConvite, tipoConta } = useMembros();
 
   const nome = utilizador?.user_metadata?.nome as string | undefined;
   const email = utilizador?.email ?? '';
@@ -260,7 +260,15 @@ export function EcraPendente() {
             <CartaoOpcao
               icone="barn"
               titulo={t('exploracoes.nova')}
-              descricao={t('pendente.criarDescricao')}
+              // Numa conta de sociedade a primeira exploração não é para ela
+              // trabalhar: é para pôr lá um líder. Dizê-lo aqui evita que ela
+              // crie a exploração à espera de registar animais e depois não
+              // encontre o botão.
+              descricao={
+                tipoConta === 'sociedade'
+                  ? t('pendente.criarDescricaoSociedade')
+                  : t('pendente.criarDescricao')
+              }
               escolhida={escolha === 'criar'}
               onPress={() => setEscolha('criar')}
             />

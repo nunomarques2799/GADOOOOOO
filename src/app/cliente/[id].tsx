@@ -8,6 +8,7 @@ import { formatDataHora } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import {
   definirSubscricao,
+  definirTipoConta,
   historicoSubscricao,
   listarExploracoesDoCliente,
   obterCliente,
@@ -103,6 +104,24 @@ export default function ClienteDetalheScreen() {
     await carregar();
   }
 
+  async function alternarTipoConta() {
+    if (!cliente) return;
+    setErro(null);
+    setOkMsg(null);
+    const novo = cliente.tipoConta === 'sociedade' ? 'individual' : 'sociedade';
+    const e = await definirTipoConta(cliente.userId, novo);
+    if (e) {
+      setErro(e);
+      return;
+    }
+    setOkMsg(
+      novo === 'sociedade'
+        ? 'Conta marcada como sociedade agrícola.'
+        : 'Conta voltou a ser normal.',
+    );
+    await carregar();
+  }
+
   if (aCarregar) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -154,18 +173,35 @@ export default function ClienteDetalheScreen() {
                   icon={cliente.estado === 'ativo' ? 'check-circle' : 'clock-outline'}
                   label={cliente.estado === 'ativo' ? 'Ativo' : 'Pendente'}
                 />
+                {cliente.tipoConta === 'sociedade' ? (
+                  <Badge tone="info" icon="account-tie" label="Sociedade agrícola" />
+                ) : null}
                 {cliente.nif ? <Badge tone="neutral" icon="card-account-details-outline" label={`NIF ${cliente.nif}`} /> : null}
               </View>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+          <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, flexWrap: 'wrap' }}>
             <Button
               label={cliente.estado === 'ativo' ? 'Bloquear' : 'Aprovar'}
               icon={cliente.estado === 'ativo' ? 'block-helper' : 'check'}
               variant={cliente.estado === 'ativo' ? 'ghost' : 'primary'}
               onPress={alternarEstado}
             />
+            <Button
+              label={cliente.tipoConta === 'sociedade' ? 'Voltar a conta normal' : 'Marcar como sociedade'}
+              icon="account-tie"
+              variant="ghost"
+              onPress={alternarTipoConta}
+            />
           </View>
+          {/* O que a marca faz, escrito onde ela se carrega: é uma decisão
+              comercial que muda o que a conta passa a poder, e "sociedade"
+              sozinho não diz nada a quem volte cá daqui a seis meses. */}
+          <Text variant="secondary" color={colors.textSecondary} style={{ marginTop: spacing.sm }}>
+            {cliente.tipoConta === 'sociedade'
+              ? 'As explorações que esta conta criar de novo nascem supervisionadas: ela vê tudo o que lá se passa e convida um líder para cada uma, em vez de mexer no gado. As que já criou não mudam.'
+              : 'Conta normal: as explorações que criar são dela, e é ela que trata do gado.'}
+          </Text>
         </Card>
 
         {/* Stats */}

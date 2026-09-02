@@ -339,6 +339,15 @@ export default function TrabalhadoresScreen() {
                     label={t('equipa.nDonos', { n: conta.admin })}
                   />
                 ) : null}
+                {/* Só aparece a quem trabalha numa exploração de sociedade: aí
+                    há uma pessoa na equipa que não é dona nem trabalhadora. */}
+                {conta.supervisor > 0 ? (
+                  <Badge
+                    tone="neutral"
+                    icon="account-tie"
+                    label={t('equipa.nSupervisores', { n: conta.supervisor })}
+                  />
+                ) : null}
               </View>
             </Card>
           ) : null}
@@ -527,7 +536,11 @@ function nomeDe(lista: { id: string; nome: string }[], id: string): string {
   return lista.find((e) => e.id === id)?.nome ?? t('equipa.exploracao');
 }
 
-const ICONE_PAPEL: Record<RoleMembro, 'shield-crown' | 'medical-bag' | 'account-hard-hat'> = {
+const ICONE_PAPEL: Record<
+  RoleMembro,
+  'shield-crown' | 'medical-bag' | 'account-hard-hat' | 'account-tie'
+> = {
+  supervisor: 'account-tie',
   admin: 'shield-crown',
   veterinario: 'medical-bag',
   trabalhador: 'account-hard-hat',

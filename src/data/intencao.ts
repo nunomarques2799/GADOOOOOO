@@ -5,11 +5,18 @@
  *
  *   - o **dono** de uma exploração espera pela aprovação do administrador e
  *     depois cria a sua exploração;
- *   - o **trabalhador** e o **veterinário** nunca são aprovados por ninguém —
- *     entram com um CÓDIGO DE CONVITE que o dono lhes dá (ver `membros.tsx`).
+ *   - o **líder de exploração**, o **trabalhador** e o **veterinário** nunca
+ *     são aprovados por ninguém — entram com um CÓDIGO DE CONVITE que quem
+ *     gere a exploração lhes dá (ver `membros.tsx`).
  *
- * Sem esta pergunta, os três caíam no mesmo ecrã de espera e o trabalhador
- * ficava à espera de uma aprovação que nunca chega, com o código no bolso.
+ * Sem esta pergunta, todos caíam no mesmo ecrã de espera e quem tinha o código
+ * no bolso ficava à espera de uma aprovação que nunca chega.
+ *
+ * O `intencao_de_equipa()` do servidor só conhece 'trabalhador' e
+ * 'veterinario', e é por isso que o código de líder entra seja qual for a
+ * escolha aqui: essa conferência existe para não trocar um trabalhador por um
+ * veterinário (dois papéis que se parecem), e o líder não se confunde com
+ * nenhum deles. Ver `supabase/schema_convite_por_papel.sql`.
  *
  * A escolha vive no `user_metadata` da conta (é lá que já vive o nome). Não dá
  * permissões nenhumas — quem decide isso é a RLS, a partir do papel gravado em
@@ -21,7 +28,7 @@
 import type { IconName } from '@/components/ui';
 import { t } from '@/i18n';
 
-export type Intencao = 'dono' | 'trabalhador' | 'veterinario';
+export type Intencao = 'dono' | 'lider' | 'trabalhador' | 'veterinario';
 
 export type IntencaoMeta = {
   id: Intencao;
@@ -51,6 +58,17 @@ export function intencoes(): readonly IntencaoMeta[] {
       precisaCodigo: false,
     },
     {
+      // O líder de uma exploração de sociedade agrícola. Entra por código como
+      // o trabalhador, e por isso está deste lado da lista — o que ele NÃO faz
+      // é esperar por aprovação, e sem esta entrada escolhia "dono" e ficava à
+      // espera de uma aprovação que nunca chega, com o código no bolso.
+      id: 'lider',
+      rotulo: t('intencao.lider'),
+      icone: 'shield-crown',
+      descricao: t('intencao.liderDescricao'),
+      precisaCodigo: true,
+    },
+    {
       id: 'trabalhador',
       rotulo: t('intencao.trabalhador'),
       icone: 'account-hard-hat',
@@ -68,7 +86,7 @@ export function intencoes(): readonly IntencaoMeta[] {
 }
 
 /** Os ids conhecidos, sem passar por texto nenhum. */
-const IDS_INTENCAO = ['dono', 'trabalhador', 'veterinario'] as const;
+const IDS_INTENCAO = ['dono', 'lider', 'trabalhador', 'veterinario'] as const;
 
 export function intencaoMeta(id: Intencao): IntencaoMeta {
   // O `find` nunca falha para um `Intencao` válido; o `?? [0]` existe para o

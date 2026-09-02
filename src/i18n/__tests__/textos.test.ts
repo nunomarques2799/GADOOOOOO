@@ -98,6 +98,8 @@ describe('o dicionário está completo', () => {
     'sinc.offline',
     // Símbolo da unidade, não uma palavra.
     'meteo.grausC',
+    // "Supervisor" escreve-se igual nas duas línguas.
+    'papel.supervisor',
   ];
 
   it('e nenhuma tradução ficou igual ao português por esquecimento', () => {

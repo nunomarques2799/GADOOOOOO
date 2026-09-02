@@ -43,11 +43,31 @@ export type Finalidade =
  */
 export type EstadoAnimal = 'ativo' | 'falecido' | 'vendido' | 'eliminado';
 
-/** Papel de um utilizador dentro de uma exploração (multi-tenant). */
-export type RoleMembro = 'admin' | 'trabalhador' | 'veterinario';
+/**
+ * Papel de um utilizador dentro de uma exploração (multi-tenant).
+ *
+ * `admin` é quem corre a exploração todos os dias. Numa exploração de uma
+ * sociedade agrícola chama-se LÍDER e entrou por convite; numa exploração
+ * normal é o dono, que a criou. É o mesmo papel: o que muda é quem o deu.
+ *
+ * `supervisor` é a conta que paga a subscrição de uma sociedade: criou a
+ * exploração, convidou o líder, e daí em diante vê tudo o que lá se passa sem
+ * mexer no gado. Ver `supabase/schema_sociedade.sql`.
+ */
+export type RoleMembro = 'admin' | 'supervisor' | 'trabalhador' | 'veterinario';
 
 /** Estado do perfil (aprovação de cliente pelo superadmin). */
 export type EstadoPerfil = 'pendente' | 'ativo';
+
+/**
+ * O que esta CONTA é, ao contrário do papel, que é o que ela é em cada
+ * exploração.
+ *
+ * `individual` cria explorações e fica dona delas. `sociedade` cria explorações
+ * e supervisiona-as: quem as corre é o líder que ela convida. Quem marca isto é
+ * o superadmin, no painel dele, porque é um plano que se vende.
+ */
+export type TipoConta = 'individual' | 'sociedade';
 
 export interface MembroExploracao {
   id: string;

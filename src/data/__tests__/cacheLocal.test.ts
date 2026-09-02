@@ -251,9 +251,31 @@ describe('acesso — quem sou e onde pertenço, para a app abrir sem rede', () =
       estadoPerfil: 'ativo' as const,
       isSuperadmin: false,
       membros: [{ id: 'm1', userId: 'u1', exploracaoId: 'exp-1', role: 'admin' }],
+      tipoConta: 'sociedade' as const,
+      exploracoesCriadas: ['exp-1'],
     };
     guardarAcesso(acesso);
     expect(lerAcesso()).toEqual(acesso);
+  });
+
+  it('uma cache antiga não faz da conta uma sociedade nem lhe apaga o passado', () => {
+    // As duas chaves nasceram com as sociedades (2026-09-02) e não estão nas
+    // caches escritas antes disso. Lidas como `undefined`, a app julgava que a
+    // conta nunca tinha criado exploração nenhuma — e uma conta assim é uma
+    // convidada, que não pode criar explorações. O botão de criar exploração
+    // desaparecia ao dono no primeiro arranque sem rede depois de atualizar.
+    guardarAcesso({
+      estadoPerfil: 'ativo',
+      isSuperadmin: false,
+      membros: [],
+    } as Parameters<typeof guardarAcesso>[0]);
+    expect(lerAcesso()).toEqual({
+      estadoPerfil: 'ativo',
+      isSuperadmin: false,
+      membros: [],
+      tipoConta: 'individual',
+      exploracoesCriadas: [],
+    });
   });
 
   it('trata lixo como "não sei", em vez de inventar um estado', () => {

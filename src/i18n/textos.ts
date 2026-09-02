@@ -570,6 +570,9 @@ const pt = {
   'intencao.dono': 'Dono de exploração',
   'intencao.donoDescricao':
     'Tenho animais meus para registar. A conta é aprovada por nós, sem qualquer custo.',
+  'intencao.lider': 'Líder de exploração',
+  'intencao.liderDescricao':
+    'Dirijo uma exploração de uma sociedade agrícola. Entro com um código de convite.',
   'intencao.trabalhador': 'Trabalhador',
   'intencao.trabalhadorDescricao':
     'Trabalho numa exploração de outra pessoa. Entro com um código de convite.',
@@ -619,6 +622,10 @@ const pt = {
 
   /* ---- Papéis de quem entra numa exploração ---- */
   'papel.dono': 'Dono',
+  // O mesmo papel `admin` chama-se líder quando a exploração é de uma
+  // sociedade: ele corre-a, mas quem a criou e a paga é o supervisor.
+  'papel.lider': 'Líder de exploração',
+  'papel.supervisor': 'Supervisor',
   'papel.trabalhador': 'Trabalhador',
   'papel.veterinario': 'Veterinário',
   'papel.emExploracao': '{papel} em {nome}',
@@ -674,6 +681,7 @@ const pt = {
   'equipa.nTrabalhadores': '{n} trabalhador|{n} trabalhadores',
   'equipa.nVeterinarios': '{n} veterinário|{n} veterinários',
   'equipa.nDonos': '{n} dono|{n} donos',
+  'equipa.nSupervisores': '{n} supervisor|{n} supervisores',
   'equipa.semEquipaTitulo': 'Sem equipa para gerir',
   'equipa.semEquipaMensagem':
     'Só o dono de uma exploração vê e convida a equipa. Se entrou por convite, fale com quem o convidou.',
@@ -1382,6 +1390,8 @@ const pt = {
     'Vamos analisar o seu pedido de acesso e aprová-lo, sem qualquer custo. Se já tiver o código de convite de uma exploração, pode entrar já com ele, sem esperar.',
   'pendente.conta': 'Conta: {email}',
   'pendente.criarDescricao': 'Registar a minha exploração e começar a lançar animais.',
+  'pendente.criarDescricaoSociedade':
+    'Registar uma exploração da sociedade e convidar quem a vai correr.',
   'pendente.tenhoCodigo': 'Tenho um código',
   'pendente.tenhoCodigoDescricao': 'Entrar na exploração de outra pessoa com um código de convite.',
   'pendente.criarEContinuar': 'Criar e continuar',
@@ -1604,8 +1614,15 @@ const pt = {
   'equipaExp.titulo': 'Equipa',
   'equipaExp.semPermissao': 'Só o administrador desta exploração pode gerir a equipa.',
   'equipaExp.gerarCodigo': 'Gerar código',
+  'equipaExp.oQueOLiderFaz':
+    'O líder corre esta exploração no dia a dia: animais, terrenos, equipa e contas. Não a pode apagar nem criar explorações suas. O acesso dele não tem prazo.',
+  'equipaExp.faltaLiderTitulo': 'Esta exploração ainda não tem líder',
+  'equipaExp.faltaLiderTexto':
+    'Enquanto não houver um, ninguém pode registar animais aqui: o supervisor trata dos terrenos e da equipa, não do gado. Gere um código de líder aqui em baixo.',
   'equipaExp.apagarConvite': 'Apagar convite',
   'permissoes.reporPapel': 'Repor o que o papel dá',
+  'permissoes.supervisorNaoSeAjusta':
+    'O supervisor criou esta exploração e é quem a paga. Cuida dos terrenos, dos dados da exploração e da equipa, e não mexe nos animais nem nas contas. Isto não se ajusta, para que quem foi convidado não possa limitar quem o convidou.',
 
   /* ---- Prazo de acesso de um convidado ---- */
   'acesso.duranteUmTempo': 'Durante um tempo',
@@ -2461,6 +2478,8 @@ const en: Record<ChaveTexto, string> = {
   'intencao.dono': 'Farm owner',
   'intencao.donoDescricao':
     'I have animals of my own to record. We approve the account, free of charge.',
+  'intencao.lider': 'Farm lead',
+  'intencao.liderDescricao': 'I run a farm for an agricultural business. I get in with an invite code.',
   'intencao.trabalhador': 'Farm worker',
   'intencao.trabalhadorDescricao':
     "I work on someone else's farm. I get in with an invite code.",
@@ -2511,6 +2530,8 @@ const en: Record<ChaveTexto, string> = {
 
   /* ---- Papéis de quem entra numa exploração ---- */
   'papel.dono': 'Owner',
+  'papel.lider': 'Farm lead',
+  'papel.supervisor': 'Supervisor',
   'papel.trabalhador': 'Farm worker',
   'papel.veterinario': 'Vet',
   'papel.emExploracao': '{papel} at {nome}',
@@ -2566,6 +2587,7 @@ const en: Record<ChaveTexto, string> = {
   'equipa.nTrabalhadores': '{n} worker|{n} workers',
   'equipa.nVeterinarios': '{n} vet|{n} vets',
   'equipa.nDonos': '{n} owner|{n} owners',
+  'equipa.nSupervisores': '{n} supervisor|{n} supervisors',
   'equipa.semEquipaTitulo': 'No team to manage',
   'equipa.semEquipaMensagem':
     'Only a farm owner sees and invites the team. If you came in by invitation, speak to whoever invited you.',
@@ -3267,6 +3289,7 @@ const en: Record<ChaveTexto, string> = {
     'We will look at your access request and approve it, free of charge. If you already have an invite code for a farm, you can use it right now and get in without waiting.',
   'pendente.conta': 'Account: {email}',
   'pendente.criarDescricao': 'Record my farm and start adding animals.',
+  'pendente.criarDescricaoSociedade': 'Record a farm for the business and invite whoever will run it.',
   'pendente.tenhoCodigo': 'I have a code',
   'pendente.tenhoCodigoDescricao': "Join someone else's farm with an invite code.",
   'pendente.criarEContinuar': 'Create and carry on',
@@ -3481,8 +3504,15 @@ const en: Record<ChaveTexto, string> = {
   'equipaExp.titulo': 'Team',
   'equipaExp.semPermissao': 'Only the administrator of this farm can manage the team.',
   'equipaExp.gerarCodigo': 'Generate a code',
+  'equipaExp.oQueOLiderFaz':
+    'The farm lead runs this farm day to day: animals, land, team and accounts. They cannot delete it or start farms of their own. Their access has no time limit.',
+  'equipaExp.faltaLiderTitulo': 'This farm has no lead yet',
+  'equipaExp.faltaLiderTexto':
+    'Until there is one, nobody can add animals here: the supervisor looks after the land and the team, not the livestock. Generate a farm lead code below.',
   'equipaExp.apagarConvite': 'Delete invitation',
   'permissoes.reporPapel': 'Back to what the role gives',
+  'permissoes.supervisorNaoSeAjusta':
+    'The supervisor created this farm and pays for it. They look after the land, the farm details and the team, and do not touch the animals or the accounts. This cannot be adjusted, so that whoever was invited cannot limit whoever invited them.',
 
   /* ---- Prazo de acesso de um convidado ---- */
   'acesso.duranteUmTempo': 'For a while',

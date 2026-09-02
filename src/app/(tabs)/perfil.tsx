@@ -200,7 +200,7 @@ export default function PerfilScreen() {
                   label={papeis.length > 1 ? t('perfil.osSeusPapeis') : t('perfil.oSeuPapel')}
                   valor={
                     papeis.length > 0
-                      ? papeis.map(legendaRole).join(' · ')
+                      ? papeis.map((p) => legendaRole(p)).join(' · ')
                       : t('perfil.semExploracao')
                   }
                 />

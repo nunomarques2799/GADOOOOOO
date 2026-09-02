@@ -29,6 +29,7 @@ import {
 import { confirmar } from '@/data/avisos';
 import { formatDataCurta as formatarDia, formatDataHora, parseDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
+import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
 import { useToasts } from '@/data/toasts';
 import type { Convite, MembroExploracao, RoleMembro } from '@/data/types';
@@ -37,10 +38,32 @@ import { colors, radii, spacing } from '@/theme';
 
 type MembroComNome = MembroExploracao & { nome: string };
 
-const rolesOpcoes: { valor: Exclude<RoleMembro, 'admin'>; label: string; icon: IconName }[] = [
-  { valor: 'trabalhador', label: 'Trabalhador', icon: 'account-hard-hat' },
-  { valor: 'veterinario', label: 'Veterinário', icon: 'medical-bag' },
-];
+/** Os papéis que um convite pode dar. O de supervisor não se convida. */
+type RoleConvidavel = Exclude<RoleMembro, 'supervisor'>;
+
+/**
+ * As funções que se podem convidar para esta exploração.
+ *
+ * `admin` só aparece a quem é SUPERVISOR dela, e aí chama-se líder de
+ * exploração: é a pessoa que a vai correr por conta da sociedade. Quem tem a
+ * sua própria exploração já é o dono dela e não tem um segundo para convidar
+ * — o servidor recusa esse código (ver `criar_convite` em
+ * `supabase/schema_sociedade.sql`), e um chip que gera sempre um erro é pior
+ * do que um chip que não existe.
+ */
+function rolesOpcoes(souSupervisor: boolean): {
+  valor: RoleConvidavel;
+  label: string;
+  icon: IconName;
+}[] {
+  return [
+    ...(souSupervisor
+      ? [{ valor: 'admin' as const, label: t('papel.lider'), icon: 'shield-crown' as IconName }]
+      : []),
+    { valor: 'trabalhador', label: t('papel.trabalhador'), icon: 'account-hard-hat' },
+    { valor: 'veterinario', label: t('papel.veterinario'), icon: 'medical-bag' },
+  ];
+}
 
 /** Ecrã para o admin duma exploração gerir a equipa (membros + convites). */
 export default function EquipaExploracaoScreen() {
@@ -58,6 +81,7 @@ export default function EquipaExploracaoScreen() {
     definirFimDeAcesso,
     pode,
     isSuperadmin,
+    supervisionada,
   } = useMembros();
 
   const toast = useToasts();
@@ -68,14 +92,19 @@ export default function EquipaExploracaoScreen() {
   // não e trocava-lhe o ecrã por um "sem permissão" que não é o que se passa.
   // O `pode` entra a seguir para cobrir o modo local/demo, onde não há equipa
   // nem papéis e quem está no aparelho é o dono.
-  const podeGerir = id ? roleEm(id) === 'admin' || isSuperadmin || pode(id, 'gerirEquipa') : false;
+  const meuPapel = id ? roleEm(id) : undefined;
+  const souSupervisor = meuPapel === 'supervisor';
+  const podeGerir = id
+    ? meuPapel === 'admin' || souSupervisor || isSuperadmin || pode(id, 'gerirEquipa')
+    : false;
+  const eDaSociedade = id ? supervisionada(id) : false;
 
   const [membros, setMembros] = useState<MembroComNome[]>([]);
   const [convites, setConvites] = useState<Convite[]>([]);
   const [aCarregar, setACarregar] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
-  const [rolePedido, setRolePedido] = useState<Exclude<RoleMembro, 'admin'>>('trabalhador');
+  const [rolePedido, setRolePedido] = useState<RoleConvidavel>('trabalhador');
   const [descricao, setDescricao] = useState('');
   const [aGerar, setAGerar] = useState(false);
   const [codigoNovo, setCodigoNovo] = useState<{
@@ -178,7 +207,7 @@ export default function EquipaExploracaoScreen() {
         : horas
           ? ` · ${rotuloDuracao(horas)}`
           : '';
-      toast.sucesso('Código criado', `${r.codigo} · ${legendaRole(rolePedido)}${prazo}`);
+      toast.sucesso('Código criado', `${r.codigo} · ${legendaRole(rolePedido, souSupervisor)}${prazo}`);
       await carregar();
     }
   }
@@ -341,6 +370,27 @@ export default function EquipaExploracaoScreen() {
           </Card>
         ) : null}
 
+        {/* Uma exploração de sociedade acabada de criar não tem ninguém que
+            possa registar um animal: o supervisor não mexe no gado e ainda não
+            há líder. Sem este aviso, ele criava a exploração, procurava o botão
+            de registar e não o encontrava, sem uma palavra que explicasse
+            porquê. */}
+        {souSupervisor && !aCarregar && !membros.some((m) => m.role === 'admin') ? (
+          <Card style={{ backgroundColor: colors.primaryTint, marginTop: spacing.md }}>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Icon name="shield-crown" size="md" color={colors.primaryDark} />
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyStrong" color={colors.primaryDark}>
+                  {t('equipaExp.faltaLiderTitulo')}
+                </Text>
+                <Text variant="secondary" color={colors.textSecondary}>
+                  {t('equipaExp.faltaLiderTexto')}
+                </Text>
+              </View>
+            </View>
+          </Card>
+        ) : null}
+
         {/* ---- Membros atuais ---- */}
         <Text variant="h3" style={{ marginTop: spacing.lg, marginBottom: spacing.sm }}>
           Membros ({membros.length})
@@ -354,6 +404,21 @@ export default function EquipaExploracaoScreen() {
             <View style={{ paddingHorizontal: spacing.md }}>
               {membros.map((m, i) => {
                 const terminou = acessoTerminou(m.expiraEm);
+                // Quem responde pela exploração não tem prazo a mexer nem sai
+                // por um toque nesta lista.
+                const eChefia = m.role === 'admin' || m.role === 'supervisor';
+                /**
+                 * A linha do SUPERVISOR não se apaga por ninguém: era assim que
+                 * o líder trancava fora da exploração a pessoa que a criou e a
+                 * paga (a RLS também o recusa, ver `membro_admin_write`).
+                 *
+                 * A do LÍDER apaga-se, mas só pelo supervisor: é como se troca
+                 * de responsável por uma exploração da sociedade. Numa
+                 * exploração normal não há linha de admin para apagar sem ser a
+                 * do próprio dono, e essa continua sem botão.
+                 */
+                const podeRemover =
+                  m.role === 'supervisor' ? false : m.role === 'admin' ? souSupervisor : true;
                 return (
                   <View
                     key={m.id}
@@ -380,8 +445,10 @@ export default function EquipaExploracaoScreen() {
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text variant="bodyStrong">{m.nome}</Text>
-                        <Text variant="secondary" color={colors.textSecondary}>{legendaRole(m.role)}</Text>
-                        {m.role !== 'admin' && m.expiraEm ? (
+                        <Text variant="secondary" color={colors.textSecondary}>
+                          {legendaRole(m.role, eDaSociedade)}
+                        </Text>
+                        {!eChefia && m.expiraEm ? (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
                             <Icon
                               name={terminou ? 'clock-alert-outline' : 'clock-outline'}
@@ -397,8 +464,10 @@ export default function EquipaExploracaoScreen() {
                           </View>
                         ) : null}
                       </View>
-                      {m.role === 'admin' ? (
-                        <Text variant="caption" color={colors.textMuted}>dono</Text>
+                      {!podeRemover ? (
+                        <Text variant="caption" color={colors.textMuted}>
+                          {legendaRole(m.role, eDaSociedade).toLowerCase()}
+                        </Text>
                       ) : (
                         <Pressable
                           onPress={() => confirmarRemover(m)}
@@ -410,9 +479,9 @@ export default function EquipaExploracaoScreen() {
                       )}
                     </View>
 
-                    {/* Mexer no relógio de quem já cá está. Fora do dono, que
-                        não tem prazo nenhum a mexer. */}
-                    {m.role !== 'admin' ? (
+                    {/* Mexer no relógio de quem já cá está. Fora de quem
+                        responde pela exploração, que não tem prazo a mexer. */}
+                    {!eChefia ? (
                       <View
                         style={{
                           flexDirection: 'row',
@@ -537,7 +606,7 @@ export default function EquipaExploracaoScreen() {
             Ao entrar com o código, fica automaticamente associado a esta exploração.
           </Text>
           <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
-            {rolesOpcoes.map((r) => (
+            {rolesOpcoes(souSupervisor).map((r) => (
               <Chip
                 key={r.valor}
                 label={r.label}
@@ -547,6 +616,15 @@ export default function EquipaExploracaoScreen() {
               />
             ))}
           </View>
+          {rolePedido === 'admin' ? (
+            <Text
+              variant="secondary"
+              color={colors.textSecondary}
+              style={{ marginTop: spacing.sm }}
+            >
+              {t('equipaExp.oQueOLiderFaz')}
+            </Text>
+          ) : null}
 
           {/* Quanto tempo o acesso dura. Só ao veterinário: ele vem cá fazer uma
               coisa e vai-se embora, e é isso que o prazo escreve. */}
@@ -717,7 +795,7 @@ export default function EquipaExploracaoScreen() {
                     <View style={{ flex: 1 }}>
                       <Text variant="bodyStrong" style={{ letterSpacing: 2 }}>{c.codigo}</Text>
                       <Text variant="secondary" color={colors.textSecondary}>
-                        {legendaRole(c.role)}
+                        {legendaRole(c.role, eDaSociedade)}
                         {c.acessoAte
                           ? ` · acesso até ${formatDataHora(c.acessoAte)}`
                           : c.acessoHoras
@@ -763,21 +841,16 @@ export default function EquipaExploracaoScreen() {
 }
 
 function iconeDoRole(r: RoleMembro): IconName {
+  if (r === 'supervisor') return 'account-tie';
   if (r === 'admin') return 'shield-crown';
   if (r === 'veterinario') return 'medical-bag';
   return 'account-hard-hat';
 }
 
 function corDoRole(r: RoleMembro): string {
-  if (r === 'admin') return colors.primary;
+  if (r === 'admin' || r === 'supervisor') return colors.primary;
   if (r === 'veterinario') return colors.info;
   return colors.warning;
-}
-
-function legendaRole(r: RoleMembro): string {
-  if (r === 'admin') return 'Administrador';
-  if (r === 'veterinario') return 'Veterinário';
-  return 'Trabalhador';
 }
 
 function formatDataCurta(iso: string): string {

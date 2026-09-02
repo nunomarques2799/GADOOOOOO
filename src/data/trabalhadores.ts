@@ -71,6 +71,9 @@ const ORDEM_PAPEL: Record<RoleMembro, number> = {
   trabalhador: 0,
   veterinario: 1,
   admin: 2,
+  // O supervisor fecha a lista pela mesma razão que os donos: manda na
+  // exploração, não é equipa contratada.
+  supervisor: 3,
 };
 
 /**
@@ -132,7 +135,12 @@ export function agruparTrabalhadores(
 
 /** Quantas pessoas há de cada papel, para o resumo do topo do ecrã. */
 export function contarPorPapel(lista: Trabalhador[]): Record<RoleMembro, number> {
-  const conta: Record<RoleMembro, number> = { trabalhador: 0, veterinario: 0, admin: 0 };
+  const conta: Record<RoleMembro, number> = {
+    trabalhador: 0,
+    veterinario: 0,
+    admin: 0,
+    supervisor: 0,
+  };
   for (const t of lista) conta[t.papelPrincipal]++;
   return conta;
 }

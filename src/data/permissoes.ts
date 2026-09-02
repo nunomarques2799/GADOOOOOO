@@ -86,6 +86,22 @@ export type Capacidade =
  * para o camião.
  */
 const PERMISSOES: Record<RoleMembro, readonly Capacidade[]> = {
+  /**
+   * O supervisor de uma sociedade agrícola trata do PATRIMÓNIO e da EQUIPA, e
+   * não do gado: terrenos, dados da exploração, convidar e remover pessoas.
+   *
+   * Não regista animais, não escreve tratamentos, não marca saídas e não apaga
+   * nada — quem trata do gado é o líder que ele pôs à frente da exploração. As
+   * contas vê-as todas (ver `LEITURA`) e não lança nem uma: quem lança despesas
+   * é quem traz a fatura da ração, e quem lança receitas é quem vendeu o
+   * animal. A agenda também não: o que aí vem é o plano de quem lá anda.
+   *
+   * `eliminarExploracao` fica de fora, e junto com o líder também não a poder
+   * apagar quer dizer que uma exploração de sociedade não se apaga pela app.
+   * É pedido ao superadmin, e é de propósito: a exploração é a coisa que a
+   * sociedade paga, e leva o efetivo e o histórico atrás.
+   */
+  supervisor: ['editarExploracao', 'gerirEquipa', 'gerirTerrenos'],
   admin: [
     'editarExploracao',
     'eliminarExploracao',
@@ -155,6 +171,10 @@ export type CapacidadeLeitura =
  * ficheiro Excel a caminho da quinta seguinte.
  */
 const LEITURA: Record<RoleMembro, readonly CapacidadeLeitura[]> = {
+  // O supervisor vê o mesmo que o dono, e é a razão de existir: ele paga a
+  // subscrição para saber o que se passa nas explorações que criou. Ler é tudo
+  // o que faz do lado do gado e do dinheiro.
+  supervisor: ['verFinancas', 'verBalancoAnimal', 'verDocumentos', 'verAgenda'],
   admin: ['verFinancas', 'verBalancoAnimal', 'verDocumentos', 'verAgenda'],
   trabalhador: ['verDocumentos', 'verAgenda'],
   veterinario: [],
@@ -233,6 +253,10 @@ export function capacidadeGerivel(capacidade: Capacidade): boolean {
  * `PermissoesMembro`). Não se aplicam ao `admin` — o dono não se limita a si
  * próprio, e uma linha de ajustes na conta dele fechava-o fora da sua
  * exploração sem ninguém para o desbloquear.
+ *
+ * Nem ao `supervisor`, pela razão inversa: quem lhe abriria a folha de
+ * permissões era o líder que ele convidou, e o convidado ficava a poder tirar
+ * os terrenos a quem o convidou.
  */
 export function rolePode(
   role: RoleMembro | undefined,
@@ -241,7 +265,7 @@ export function rolePode(
 ): boolean {
   if (!role) return false;
   const padrao = PERMISSOES[role].includes(capacidade);
-  if (role === 'admin' || !capacidadeGerivel(capacidade)) return padrao;
+  if (role === 'admin' || role === 'supervisor' || !capacidadeGerivel(capacidade)) return padrao;
   const ajuste = ajustes?.[capacidade];
   return typeof ajuste === 'boolean' ? ajuste : padrao;
 }
@@ -336,6 +360,14 @@ export type ContextoAcesso = {
   role: RoleMembro | undefined;
   /** Ajustes que o dono fez a esta pessoa nesta exploração, se houver. */
   permissoes?: PermissoesMembro;
+  /**
+   * Esta exploração pertence a uma sociedade, ou seja, tem um supervisor?
+   *
+   * Só serve para uma coisa: tirar ao líder o poder de a apagar. Ele é `admin`
+   * dela e faz lá tudo o resto, mas a exploração não é dele. Espelha o
+   * `not tem_supervisor(id)` da política `exploracao_admin_delete`.
+   */
+  exploracaoSupervisionada?: boolean;
 };
 
 /**
@@ -353,6 +385,10 @@ export function podeEscrever(ctx: ContextoAcesso, capacidade: Capacidade): boole
   if (ctx.isSuperadmin) return true;
   // Suspensa (ou ainda por aprovar): consulta sim, escrita não.
   if (ctx.estadoPerfil !== 'ativo') return false;
+  // Numa exploração de sociedade ninguém carrega no botão de apagar: o líder
+  // porque ela não é dele, o supervisor porque nunca a teve no conjunto dele.
+  // Apagar uma delas é pedido ao superadmin.
+  if (capacidade === 'eliminarExploracao' && ctx.exploracaoSupervisionada) return false;
   return rolePode(ctx.role, capacidade, ctx.permissoes);
 }
 
@@ -372,24 +408,38 @@ export function podeConsultar(ctx: ContextoAcesso, capacidade: CapacidadeLeitura
   return LEITURA[ctx.role].includes(capacidade);
 }
 
+/** O que a app sabe sobre como esta conta chegou às explorações que tem. */
+export type VinculosDaConta = {
+  /**
+   * TODOS os vínculos, incluindo os que já expiraram: o veterinário cujo acesso
+   * caiu ontem continua a ser uma visita, e a alternativa era ele ganhar o
+   * direito de criar explorações no instante exato em que o prazo acabou.
+   */
+  papeis: readonly RoleMembro[];
+  /** Alguma das explorações a que pertence foi criada por esta conta? */
+  criouExploracao: boolean;
+};
+
 /**
  * Esta conta entrou pela porta de outra pessoa?
  *
- * "Convidada" é a conta que tem vínculos e nenhum deles é de dono. A pergunta é
- * feita assim, e não "é veterinário?", porque o que importa não é o papel: é a
- * conta ter chegado por um código. Um veterinário que também tenha a sua
- * exploração é admin nalgum lado e não é convidado de ninguém.
+ * "Convidada" é a conta que tem vínculos e nunca criou uma exploração. A
+ * pergunta é feita assim, e não "é veterinário?" nem "é dono nalgum lado?",
+ * porque o que importa não é o papel: é a conta ter chegado por um código.
+ *
+ * Até as sociedades existirem bastava perguntar se algum vínculo era de
+ * `admin`, porque só quem criava uma exploração ficava admin dela. O líder de
+ * exploração desfez isso: é admin de uma exploração que outra pessoa criou e
+ * paga, e por essa pergunta ficava a poder abrir quintas suas à conta da
+ * subscrição dela.
  *
  * Uma conta NOVA, ainda sem vínculo nenhum, não é convidada — e tem de o não
  * ser, ou ninguém conseguiria criar a primeira exploração.
  *
- * Recebe TODOS os vínculos, incluindo os que já expiraram: o veterinário cujo
- * acesso caiu ontem continua a ser uma visita, e a alternativa era ele ganhar o
- * direito de criar explorações no instante exato em que o prazo acabou.
- * Espelha `eh_convidado()` em `supabase/schema_papel_veterinario.sql`.
+ * Espelha `eh_convidado()` em `supabase/schema_sociedade.sql`.
  */
-export function eConvidado(papeis: readonly RoleMembro[]): boolean {
-  return papeis.length > 0 && !papeis.includes('admin');
+export function eConvidado(vinculos: VinculosDaConta): boolean {
+  return vinculos.papeis.length > 0 && !vinculos.criouExploracao;
 }
 
 /**
@@ -401,18 +451,26 @@ export function eConvidado(papeis: readonly RoleMembro[]): boolean {
  *
  * Espelha a política `exploracao_ativo_insert`.
  */
-export function podeCriarExploracao(
-  ctx: ContextoAcesso & { papeis: readonly RoleMembro[] },
-): boolean {
+export function podeCriarExploracao(ctx: ContextoAcesso & VinculosDaConta): boolean {
   if (!ctx.supabaseConfigurado || !ctx.temSessao) return true;
   if (ctx.isSuperadmin) return true;
   if (ctx.estadoPerfil !== 'ativo') return false;
-  return !eConvidado(ctx.papeis);
+  return !eConvidado(ctx);
 }
 
-/** Nome do papel para mostrar ao utilizador. */
-export function legendaRole(role: RoleMembro): string {
-  if (role === 'admin') return t('papel.dono');
+/**
+ * Nome do papel para mostrar ao utilizador.
+ *
+ * O `admin` tem dois nomes, e é o mesmo papel: numa exploração que alguém criou
+ * para si é o DONO; numa exploração de uma sociedade agrícola é o LÍDER, que a
+ * corre por conta de quem a paga. Quem lê a palavra tem de reconhecer o seu
+ * lugar, e "dono" numa exploração que não é dele seria mentira.
+ */
+export function legendaRole(role: RoleMembro, exploracaoSupervisionada = false): string {
+  if (role === 'supervisor') return t('papel.supervisor');
+  if (role === 'admin') {
+    return exploracaoSupervisionada ? t('papel.lider') : t('papel.dono');
+  }
   if (role === 'trabalhador') return t('papel.trabalhador');
   return t('papel.veterinario');
 }
