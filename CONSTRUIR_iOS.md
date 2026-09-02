@@ -81,21 +81,38 @@ da Apple** — o build fica disponível em minutos.
 funcionou, com as três armadilhas que custaram a apanhar:
 
 ```bash
-powershell $env:USERPROFILE\.appstoreconnect\build-ios.ps1 -IssuerId "..." -SemSincronizarCapacidades
+git checkout main
+powershell scripts/build-ios.ps1 -IssuerId "..." -SemSincronizarCapacidades -Enviar
 ```
 
 O [`scripts/build-ios.ps1`](scripts/build-ios.ps1) trata das variáveis da API
-Key. Corre-se de uma cópia fora do repositório porque exige o `main` e ainda
-só existe no `dev` — o `git checkout main` apagava-o a meio.
+Key. **Usa-se a cópia de `scripts/`, não a de `~/.appstoreconnect/`.** Houve
+uma cópia fora do repositório enquanto o script exigia o `main` e só existia no
+`dev` (o `git checkout main` apagava-o a meio), mas isso acabou a 2026-08-11,
+quando ele chegou ao `main`. A cópia de fora é de 7 de agosto e está velha:
+falta-lhe o `--latest` no `eas submit`, sem o qual o envio morre em modo não
+interativo.
 
 **1. O primeiro build TEM de ser interativo, mesmo com a API Key.** Em
 `--non-interactive` o EAS recusa-se a criar credenciais de raiz
 (*"Credentials are not set up. Run this command again in interactive mode"*).
 Depois do primeiro, o certificado e o perfil ficam guardados na conta Expo e
 os seguintes já correm sozinhos. Responde-se **Yes** ao certificado e ao
-perfil, e **No** a *"set up Push Notifications for your project"* — essa
-pergunta é sobre uma chave **APNs**, para *enviar* avisos de um servidor, e a
-app só tem avisos locais.
+perfil.
+
+A *"set up Push Notifications for your project"* responde-se **No** — mas já
+não pela razão que aqui esteve escrita até 2026-09-02 ("a app só tem avisos
+locais"). Desde as conversas a app manda avisos de mensagem nova, por isso a
+chave APNs faz falta; o que não dá é criá-la por aqui. O **Yes** manda o EAS
+gerá-la no portal da Apple, e isso exige login com Apple ID (*"Only user
+authentication is supported. Reauthenticating as user..."*), que a API Key
+**não** substitui. Num build corrido por um agente, ou por quem não tenha à
+mão o Apple ID do titular, o **Yes** deixa o build pendurado à espera de uma
+palavra-passe.
+
+Responder **No** não estraga nada: a chave APNs vive no servidor da Expo e
+nunca dentro do binário, por isso acrescenta-se depois **sem repetir o build**.
+Ver a secção das notificações, mais abaixo.
 
 **2. A sincronização automática de capacidades está partida.** O EAS manda um
 pedido que a Apple já não aceita (*"not a valid request document object"* em
@@ -117,6 +134,28 @@ se, e desfaz-se com `git checkout -- eas.json`.
 ```bash
 eas submit --platform ios --profile production --id <build-id> --non-interactive
 ```
+
+**4. Um acordo da Apple por assinar mata o envio no ÚLTIMO passo.** A
+2026-09-02 o build 8 compilou, o `eas submit` correu, o `.ipa` subiu inteiro
+(os seis pedaços) e foi o `Committing upload` que levou com um 403:
+
+    "code"  : "FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED",
+    "title" : "A required agreement is missing or has expired."
+
+É o Acordo de licença do Apple Developer Program, atualizado e por aceitar.
+Assina-o **o titular da conta**, em <https://appstoreconnect.apple.com/business>
+(`/business` é o link que a própria Apple devolve no erro), e mais ninguém.
+
+Vê-se antes de gastar tempo: o App Store Connect põe uma faixa na página das
+Apps — *"o titular da conta tem de rever e aceitar o acordo atualizado"*. Vale
+a pena confirmar isso ANTES de construir, como já se faz com as capacidades do
+Bundle ID. Nada se perde quando acontece: o build fica feito e repete-se só o
+envio, que não gasta quota.
+
+Ao mesmo tempo apareceu outro aviso lá, que não trava nada mas fica por fazer:
+a Apple acrescentou perguntas de classificação etária sobre **capacidades de
+redes sociais**, e com as conversas isso passou a aplicar-se. É na Informação
+da app, e só interessa quando se publicar ao público.
 
 Depois, no [App Store Connect](https://appstoreconnect.apple.com) → TestFlight
 → **Internal Testing**, cria-se o grupo e convida-se a pessoa por email. Ela
@@ -200,10 +239,47 @@ eas credentials -p ios       # Push Notifications → criar/ligar a chave APNs
 eas credentials -p android   # carregar as credenciais FCM V1
 ```
 
-E, depois disso, **um build nativo novo**. Sem a chave, o
-`getExpoPushTokenAsync` nem chega a devolver token: a app não rebenta (o
-`push.ts` engole o erro), fica é sem avisos com a app fechada, exatamente como
-estava antes.
+Sem a chave, o `getExpoPushTokenAsync` nem chega a devolver token: a app não
+rebenta (o `push.ts` engole o erro), fica é sem avisos com a app fechada,
+exatamente como estava antes.
+
+**O que precisa de build e o que não precisa** (apurado a 2026-09-02, porque
+aqui dizia só "um build nativo novo" e isso baralhava as duas coisas):
+
+- Precisa de build o `aps-environment` nos entitlements, que vem do plugin
+  `expo-notifications` e do perfil de aprovisionamento. **O build 8 já o
+  traz**, porque a capacidade Push Notifications está ligada no Bundle ID.
+- **Não precisa de build a chave APNs.** Vive no servidor da Expo, que é quem
+  fala com a Apple, e nunca entra no binário. Acrescenta-se quando aparecer.
+
+**Como se arranja a chave, que não é pelo caminho óbvio:**
+
+- O `eas credentials -p ios` autentica-se com a API Key para tudo o resto, mas
+  para *gerar* a chave responde *"Only user authentication is supported"* e
+  pede Apple ID e palavra-passe.
+- A App Store Connect API **não tem endpoints de chaves**: `/v1/keys`,
+  `/v1/apnsKeys`, `/v1/pushKeys` e `/v1/authKeys` devolvem 404. Não há como
+  automatizar isto pelo `asc.js`, ao contrário das capacidades.
+- O Apple ID do Nuno **não serve**: o portal responde *"Unable to find a team
+  with the given Team ID ... to which you belong"*, e a página de conta pede
+  para comprar a subscrição. Ser Admin no App Store Connect não é pertencer à
+  equipa no portal de programador — é a mesma armadilha que está no cabeçalho
+  do `scripts/build-ios.ps1`.
+
+Sobra um caminho: **o titular da conta** cria a chave em developer.apple.com →
+Certificates, Identifiers & Profiles → **Keys** → **+** → *Apple Push
+Notification service (APNs)*, e passa o ficheiro `.p8` (a Apple só o deixa
+descarregar uma vez). Depois carrega-se à mão, sem login nenhum:
+
+    eas credentials -p ios
+      -> perfil production
+      -> Push Notifications: Manage your Apple Push Notifications Key
+      -> Add a new push key
+      -> "Generate a new Apple Push Notifications service key?"   No
+      -> Path to P8 file:   <caminho do .p8>
+
+O menu só aparece com terminal a sério: em stdin redirecionado o `eas
+credentials` recusa-se logo (*"Input is required, but stdin is not readable"*).
 
 Para confirmar que está a funcionar, depois de instalar o build novo em dois
 aparelhos com contas diferentes:
