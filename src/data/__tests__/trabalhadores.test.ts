@@ -108,7 +108,12 @@ describe('contarPorPapel', () => {
         membro('u3', 'Vet', 'veterinario'),
       ]),
     ]);
-    expect(contarPorPapel(lista)).toEqual({ trabalhador: 2, veterinario: 1, admin: 0 });
+    expect(contarPorPapel(lista)).toEqual({
+      trabalhador: 2,
+      veterinario: 1,
+      admin: 0,
+      supervisor: 0,
+    });
   });
 });
 

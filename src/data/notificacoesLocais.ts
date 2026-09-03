@@ -24,6 +24,7 @@ import {
   orcamentoParaAlertas,
   planear,
   planearFimDeAcesso,
+  textoDoAviso,
   type AcessoComPrazo,
 } from './notificacoesPlano';
 import type { Alerta } from './types';
@@ -160,17 +161,21 @@ export async function agendar(
       });
     }
 
+    // Um aviso por DIA, com o que esse dia traz lá dentro. Ver o cabeçalho do
+    // `planear`: um por alerta punha o telemóvel a apitar dezenas de vezes
+    // seguidas às 8 da manhã, que é a hora de todos eles.
     const plano = planear(alertas, p, new Date(), orcamento);
-    for (const { alerta, quando } of plano) {
+    for (const dia of plano) {
+      const texto = textoDoAviso(dia);
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: alerta.titulo,
-          body: alerta.descricao,
-          data: { alertaId: alerta.id, animalId: alerta.animalId },
+          title: texto.titulo,
+          body: texto.corpo,
+          data: { alertaId: texto.alertaId, animalId: texto.animalId },
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: quando,
+          date: dia.quando,
           channelId: CANAL_ANDROID,
         },
       });

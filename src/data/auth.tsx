@@ -12,6 +12,7 @@ import { t } from '@/i18n';
 import { garantirDono, limparCache } from './cacheLocal';
 import { traduzErroServidor } from './errosServidor';
 import type { Intencao } from './intencao';
+import { desistiu, entrarComApple, entrarComGoogle } from './loginExterno';
 import { supabase, supabaseConfigurado } from './supabase';
 
 /** Destino do link de recuperação de palavra-passe (página no site). */
@@ -86,6 +87,26 @@ type AuthContext = {
    * podem chamá-la com `void sair()`.
    */
   sair: () => Promise<void>;
+
+  /* ---- As outras portas de entrada (ver `loginExterno.ts`) ---- */
+  /**
+   * Entra pelo Google ou pela Apple. Devolve a razão da recusa, ou `null` —
+   * incluindo quando a pessoa desiste a meio, que não é erro nenhum e por isso
+   * não tem mensagem.
+   */
+  entrarCom: (metodo: 'google' | 'apple') => Promise<string | null>;
+  /** Manda o código de seis dígitos por SMS. O número vem já normalizado. */
+  pedirCodigoSms: (telemovel: string) => Promise<string | null>;
+  /** Confere o código e abre a sessão. */
+  entrarComCodigoSms: (telemovel: string, codigo: string) => Promise<string | null>;
+
+  /* ---- Ligar contas à mesma pessoa (ecrã do Perfil) ---- */
+  /** Que formas de entrar esta conta já tem: `email`, `google`, `apple`, `phone`. */
+  identidades: () => Promise<{ id: string; provider: string; detalhe?: string }[]>;
+  /** Junta mais uma forma de entrar à conta que está aberta. */
+  ligarIdentidade: (metodo: 'google' | 'apple') => Promise<string | null>;
+  /** Tira uma. O servidor recusa tirar a última — e ainda bem. */
+  desligarIdentidade: (id: string) => Promise<string | null>;
 };
 
 const Ctx = createContext<AuthContext | null>(null);
@@ -182,6 +203,98 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  /* ---------------- As outras portas de entrada ---------------- */
+
+  /**
+   * Google e Apple, os dois pelo mesmo caminho: o SDK do sistema identifica a
+   * pessoa e devolve um token, e o Supabase troca-o por uma sessão.
+   *
+   * O NOME da Apple só vem à primeira vez (é ela que o decide), por isso grava-se
+   * logo — sem isto, quem entrasse pela Apple ficava para sempre com um perfil
+   * sem nome e sem forma de o recuperar a não ser escrevê-lo à mão.
+   */
+  const entrarCom = useCallback(async (metodo: 'google' | 'apple'): Promise<string | null> => {
+    if (!supabase) return 'Supabase não configurado.';
+    const cred = metodo === 'google' ? await entrarComGoogle() : await entrarComApple();
+    // Desistir não é falhar: quem carregou em cancelar não quer ler um aviso.
+    if (desistiu(cred)) return null;
+    if ('erro' in cred) {
+      return cred.erro === 'SEM_MODULO' || cred.erro === 'SEM_CREDENCIAIS'
+        ? t('erroAuth.metodoIndisponivel')
+        : traduzErro(cred.erro);
+    }
+
+    const { error } = await supabase.auth.signInWithIdToken({
+      provider: metodo,
+      token: cred.idToken,
+    });
+    if (error) return traduzErro(error.message);
+
+    if (cred.nome) {
+      // A falha aqui não impede a entrada: a sessão já está aberta, e o nome
+      // corrige-se no Perfil. Rejeitar agora era fechar a porta a quem acabou
+      // de entrar por causa de um campo.
+      await supabase.auth.updateUser({ data: { nome: cred.nome } }).catch(() => undefined);
+    }
+    return null;
+  }, []);
+
+  const pedirCodigoSms = useCallback(async (telemovel: string): Promise<string | null> => {
+    if (!supabase) return 'Supabase não configurado.';
+    const { error } = await supabase.auth.signInWithOtp({ phone: telemovel });
+    return error ? traduzErro(error.message) : null;
+  }, []);
+
+  const entrarComCodigoSms = useCallback(
+    async (telemovel: string, codigo: string): Promise<string | null> => {
+      if (!supabase) return 'Supabase não configurado.';
+      const { error } = await supabase.auth.verifyOtp({
+        phone: telemovel,
+        token: codigo.replace(/\s/g, ''),
+        type: 'sms',
+      });
+      return error ? traduzErro(error.message) : null;
+    },
+    [],
+  );
+
+  /* ---------------- Ligar contas à mesma pessoa ---------------- */
+
+  const identidades = useCallback(async () => {
+    if (!supabase) return [];
+    const { data, error } = await supabase.auth.getUserIdentities();
+    if (error || !data) return [];
+    return data.identities.map((i) => ({
+      id: i.identity_id ?? i.id,
+      provider: i.provider,
+      // O que distingue esta identidade das outras, para a pessoa a reconhecer:
+      // o email da conta Google, o número do telemóvel. A Apple costuma não dar
+      // nenhum (o email escondido é dela), e aí fica só o nome do serviço.
+      detalhe:
+        (i.identity_data?.email as string | undefined) ??
+        (i.identity_data?.phone as string | undefined) ??
+        undefined,
+    }));
+  }, []);
+
+  const ligarIdentidade = useCallback(
+    async (metodo: 'google' | 'apple'): Promise<string | null> => {
+      if (!supabase) return 'Supabase não configurado.';
+      const { error } = await supabase.auth.linkIdentity({ provider: metodo });
+      return error ? traduzErro(error.message) : null;
+    },
+    [],
+  );
+
+  const desligarIdentidade = useCallback(async (id: string): Promise<string | null> => {
+    if (!supabase) return 'Supabase não configurado.';
+    const { data } = await supabase.auth.getUserIdentities();
+    const alvo = data?.identities.find((i) => (i.identity_id ?? i.id) === id);
+    if (!alvo) return t('erroAuth.identidadeNaoEncontrada');
+    const { error } = await supabase.auth.unlinkIdentity(alvo);
+    return error ? traduzErro(error.message) : null;
+  }, []);
+
   const recuperarPalavra = useCallback(async (email: string): Promise<string | null> => {
     if (!supabase) return 'Supabase não configurado.';
     // O link do email abre a página de recuperação no site (funciona em qualquer
@@ -276,10 +389,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       atualizarPerfil,
       apagarConta,
       sair,
+      entrarCom,
+      pedirCodigoSms,
+      entrarComCodigoSms,
+      identidades,
+      ligarIdentidade,
+      desligarIdentidade,
     }),
     [
       sessao, aCarregar, emRecuperacao, entrar, registar,
       recuperarPalavra, definirNovaPalavra, atualizarPerfil, apagarConta, sair,
+      entrarCom, pedirCodigoSms, entrarComCodigoSms,
+      identidades, ligarIdentidade, desligarIdentidade,
     ],
   );
 

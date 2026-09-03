@@ -73,7 +73,7 @@ export default function AlertasScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Screen topInset refreshControl={controloAtualizar}>
+      <Screen topInset separador="alertas" refreshControl={controloAtualizar}>
         {/* Título como o dos outros separadores (grande e à esquerda), e não o
             `<Header>` dos ecrãs de detalhe que aqui esteve: num separador não
             há para onde o botão de voltar levar. */}

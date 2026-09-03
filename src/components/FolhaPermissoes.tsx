@@ -252,6 +252,13 @@ export function FolhaPermissoes({
                   ficar sem ninguém que lhe consiga mexer.
                 </Text>
               </Card>
+            ) : vinculo.role === 'supervisor' ? (
+              <Card>
+                <Text variant="bodyStrong">{t('papel.supervisor')}</Text>
+                <Text variant="secondary" color={colors.textSecondary}>
+                  {t('permissoes.supervisorNaoSeAjusta')}
+                </Text>
+              </Card>
             ) : (
               <>
                 <ResumoPapel role={vinculo.role} />
@@ -345,7 +352,7 @@ export function FolhaPermissoes({
             ) : null}
           </ScrollView>
 
-          {vinculo && vinculo.role !== 'admin' ? (
+          {vinculo && vinculo.role !== 'admin' && vinculo.role !== 'supervisor' ? (
             <View
               style={{
                 paddingHorizontal: spacing.lg,

@@ -21,6 +21,7 @@ import {
   planearFimDeAcesso,
   quandoTocar,
   TETO_IOS,
+  textoDoAviso,
 } from '../notificacoesPlano';
 import type { Alerta } from '../types';
 
@@ -105,10 +106,11 @@ describe('planear', () => {
     expect(planear([longe], PREF_OMISSAO, AGORA)).toEqual([]);
   });
 
-  it('corta pelo limite do sistema, deixando passar os mais próximos', () => {
+  it('corta pelo limite do sistema, deixando passar os dias mais próximos', () => {
     // O iOS guarda 64 pendentes e descarta o resto em silêncio. Se o corte
     // fosse pela ordem de chegada, um efetivo grande podia empurrar para fora
-    // precisamente o prazo que está a vencer.
+    // precisamente o prazo que está a vencer. Um alerta por dia, para que cada
+    // um caia no seu — é o corte de DIAS que se mede aqui.
     const muitos = Array.from({ length: MAX_AGENDADAS + 20 }, (_, i) =>
       alerta(`a${i}`, { diasRestantes: 21 + i }),
     );
@@ -118,7 +120,7 @@ describe('planear', () => {
     expect(plano).toHaveLength(MAX_AGENDADAS);
     const datas = plano.map((p) => p.quando.getTime());
     expect([...datas].sort((a, b) => a - b)).toEqual(datas); // por ordem
-    expect(plano[0].alerta.id).toBe('a0'); // o mais próximo sobrevive
+    expect(plano[0].alertas[0].id).toBe('a0'); // o mais próximo sobrevive
   });
 
   it('respeita o orçamento quando os avisos de acesso ocupam lugar', () => {
@@ -127,7 +129,76 @@ describe('planear', () => {
     );
     const plano = planear(muitos, PREF_OMISSAO, AGORA, 12);
     expect(plano).toHaveLength(12);
-    expect(plano[0].alerta.id).toBe('a0');
+    expect(plano[0].alertas[0].id).toBe('a0');
+  });
+
+  /**
+   * O caso que motivou a mudança de 2026-09-02: numa exploração com trinta
+   * animais, todos os prazos já dentro da janela caíam no MESMO instante (as 8
+   * da manhã do dia seguinte) e o telemóvel dava dezenas de apitos seguidos.
+   * Um aviso que se dispensa em bloco não avisa de nada.
+   */
+  it('junta num só aviso tudo o que cai no mesmo dia', () => {
+    const doMesmoDia = Array.from({ length: 30 }, (_, i) =>
+      alerta(`a${i}`, { diasRestantes: 3 }),
+    );
+    const plano = planear(doMesmoDia, PREF_OMISSAO, AGORA);
+
+    expect(plano).toHaveLength(1);
+    expect(plano[0].alertas).toHaveLength(30);
+  });
+
+  it('mantém dias diferentes em avisos diferentes', () => {
+    const plano = planear(
+      [alerta('hoje', { diasRestantes: 3 }), alerta('daqui-a-10', { diasRestantes: 30 })],
+      PREF_OMISSAO,
+      AGORA,
+    );
+    expect(plano).toHaveLength(2);
+    expect(plano[0].alertas[0].id).toBe('hoje');
+    expect(plano[1].alertas[0].id).toBe('daqui-a-10');
+  });
+
+  it('dentro do dia, o que falta menos tempo vem primeiro', () => {
+    // É esse que dá o nome ao aviso quando ele é só um, e é a primeira linha
+    // do corpo quando são vários.
+    const plano = planear(
+      [
+        alerta('folgado', { diasRestantes: 3 }),
+        alerta('urgente', { diasRestantes: 1 }),
+      ],
+      PREF_OMISSAO,
+      AGORA,
+    );
+    expect(plano[0].alertas.map((a) => a.id)).toEqual(['urgente', 'folgado']);
+  });
+});
+
+describe('textoDoAviso', () => {
+  it('com um alerta só, o aviso É o alerta e leva à ficha do animal', () => {
+    // Dizer "1 aviso para hoje" e esconder qual é seria trabalho a mais para
+    // quem lê e informação a menos.
+    const [dia] = planear([alerta('x', { diasRestantes: 3 })], PREF_OMISSAO, AGORA);
+    const texto = textoDoAviso(dia);
+    expect(texto.titulo).toBe(dia.alertas[0].titulo);
+    expect(texto.corpo).toBe(dia.alertas[0].descricao);
+    expect(texto.animalId).toBe(dia.alertas[0].animalId);
+  });
+
+  it('com vários, conta-os e diz os primeiros nomes', () => {
+    const cinco = Array.from({ length: 5 }, (_, i) =>
+      alerta(`a${i}`, { diasRestantes: 3, titulo: `Alerta ${i}` }),
+    );
+    const [dia] = planear(cinco, PREF_OMISSAO, AGORA);
+    const texto = textoDoAviso(dia);
+
+    expect(texto.titulo).toContain('5');
+    expect(texto.corpo).toContain('Alerta 0');
+    // Três nomes e o resto contado: o corpo não pode crescer com o efetivo.
+    expect(texto.corpo).toContain('2');
+    expect(texto.corpo).not.toContain('Alerta 4');
+    // Sem ficha para onde ir — o toque abre a lista de alertas.
+    expect(texto.animalId).toBeUndefined();
   });
 });
 

@@ -29,7 +29,8 @@
             }
           }
         }
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.gestaogado.app",
@@ -104,7 +105,9 @@
           "enableBackgroundPlayback": false,
           "enableBackgroundRecording": false
         }
-      ]
+      ],
+      "@react-native-google-signin/google-signin",
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -179,6 +179,8 @@ const pt = {
   'calendario.soEuVejo': 'Só eu vejo',
   'exploracao.animais': 'animais',
   'exploracao.terrenos': 'terrenos',
+  'exploracao.lider': 'Líder: {nome}',
+  'exploracao.semLider': 'Ainda sem líder',
   'exploracao.escolher': 'Ver que exploração?',
   'exploracao.filtroRotulo': 'Exploração: {nome}',
   'exploracao.filtroAjuda': 'Abre a lista das suas explorações',
@@ -551,6 +553,24 @@ const pt = {
   'login.emailPlaceholder': 'nome@exemplo.pt',
   'login.palavraPasse': 'Palavra-passe',
   'login.palavraPassePlaceholder': 'Mínimo 6 caracteres',
+  'login.confirmarPalavraPasse': 'Repita a palavra-passe',
+  'login.confirmarPalavraPassePlaceholder': 'Escreva-a outra vez',
+  'login.palavrasNaoBatem': 'As duas palavras-passe não são iguais.',
+  'login.verOQueCadaUmFaz': 'Não sei qual é o meu caso',
+  'login.ouEntreCom': 'ou entre com',
+  'login.comGoogle': 'Continuar com o Google',
+  'login.comApple': 'Continuar com a Apple',
+  'login.comTelemovel': 'Continuar com o telemóvel',
+  'login.telemovel': 'Telemóvel',
+  'login.telemovelPlaceholder': '912 345 678',
+  'login.telemovelInvalido': 'Esse número não parece um telemóvel. Escreva os nove dígitos.',
+  'login.telemovelExplicacao':
+    'Enviamos-lhe uma mensagem com um código de seis dígitos. Pode demorar um minuto a chegar.',
+  'login.codigoSms': 'Código recebido',
+  'login.codigoSmsPlaceholder': '123456',
+  'login.codigoEnviadoPara': 'Enviámos o código para {numero}.',
+  'login.enviarCodigo': 'Enviar o código',
+  'login.confirmarCodigo': 'Entrar',
   'login.explicacaoRecuperar':
     'Enviamos-lhe um email com um link para definir uma nova palavra-passe.',
   'login.esqueciMe': 'Esqueci-me da palavra-passe',
@@ -570,6 +590,30 @@ const pt = {
   'intencao.dono': 'Dono de exploração',
   'intencao.donoDescricao':
     'Tenho animais meus para registar. A conta é aprovada por nós, sem qualquer custo.',
+  'intencao.lider': 'Líder de exploração',
+  'intencao.liderDescricao':
+    'Dirijo uma exploração de uma sociedade agrícola. Entro com um código de convite.',
+
+  /* ---- Quem é quem (o desenho que o registo abre) ---- */
+  'papeis.titulo': 'Quem é quem na Terrabovina',
+  'papeis.intro':
+    'Há duas maneiras de entrar. Ou a exploração é sua, e aprovamos a conta sem custo nenhum, ou já lá anda alguém que lhe dá um código.',
+  'papeis.aprovadoPorNos': 'A exploração é sua',
+  'papeis.combinadoConnosco': 'A exploração é de uma sociedade',
+  'papeis.daUmCodigoA': 'dá um código a',
+  'papeis.sociedade': 'Sociedade agrícola',
+  'papeis.sociedadeFaz':
+    'Tem várias explorações e põe um líder à frente de cada uma. Vê tudo o que lá se passa e trata dos terrenos, mas não mexe no gado.',
+  'papeis.naoSeEscolheAqui': 'Não se escolhe aqui: é um plano que se combina connosco.',
+  'papeis.donoFaz':
+    'A quinta é sua. Regista os animais, os terrenos e as contas, e convida quem trabalha consigo.',
+  'papeis.liderFaz':
+    'Corre uma exploração da sociedade todos os dias, como se fosse sua: animais, terrenos, equipa e contas.',
+  'papeis.trabalhadorFaz': 'Trata do gado no dia a dia. Não mexe na equipa nem nas receitas.',
+  'papeis.veterinarioFaz':
+    'Escreve o que fez ao animal, e mais nada. Entra por um prazo e sai sozinho no fim.',
+  'papeis.qualEOMeuCaso':
+    'Deram-lhe um código? Então é uma das funções que aparecem debaixo de "dá um código a". Se não lhe deram nenhum e os animais são seus, é Dono de exploração.',
   'intencao.trabalhador': 'Trabalhador',
   'intencao.trabalhadorDescricao':
     'Trabalho numa exploração de outra pessoa. Entro com um código de convite.',
@@ -619,6 +663,10 @@ const pt = {
 
   /* ---- Papéis de quem entra numa exploração ---- */
   'papel.dono': 'Dono',
+  // O mesmo papel `admin` chama-se líder quando a exploração é de uma
+  // sociedade: ele corre-a, mas quem a criou e a paga é o supervisor.
+  'papel.lider': 'Líder de exploração',
+  'papel.supervisor': 'Supervisor',
   'papel.trabalhador': 'Trabalhador',
   'papel.veterinario': 'Veterinário',
   'papel.emExploracao': '{papel} em {nome}',
@@ -635,6 +683,21 @@ const pt = {
   'perfil.estado': 'Estado',
   'perfil.porAprovar': 'Por aprovar (só de leitura)',
   'perfil.editarDados': 'Editar dados pessoais',
+  'perfil.formasDeEntrar': 'Formas de entrar nesta conta',
+  'entrarConta.explicacao':
+    'Pode entrar nesta conta por várias vias. Todas abrem a mesma conta, com as mesmas explorações e os mesmos animais.',
+  'entrarConta.juntarTitulo': 'Juntar outra',
+  'entrarConta.juntar': 'Juntar a conta {servico}',
+  'entrarConta.tirar': 'Tirar',
+  'entrarConta.tirarTitulo': 'Tirar {servico}?',
+  'entrarConta.tirarPergunta':
+    'Deixa de poder entrar nesta conta pelo {servico}. As outras formas continuam a funcionar, e pode voltar a juntá-la quando quiser.',
+  'entrarConta.ligou': 'Já pode entrar por aqui',
+  'entrarConta.naoLigou': 'Não foi possível juntar',
+  'entrarConta.tirou': 'Já não entra por aí',
+  'entrarConta.naoTirou': 'Não foi possível tirar',
+  'entrarConta.aviso':
+    'A última forma de entrar não se tira: sem nenhuma, ninguém voltava a abrir esta conta.',
   'perfil.terminarSessao': 'Terminar sessão',
   'perfil.apagarConta': 'Apagar a minha conta',
   'perfil.abrirDefinicoes': 'Abrir definições',
@@ -674,6 +737,7 @@ const pt = {
   'equipa.nTrabalhadores': '{n} trabalhador|{n} trabalhadores',
   'equipa.nVeterinarios': '{n} veterinário|{n} veterinários',
   'equipa.nDonos': '{n} dono|{n} donos',
+  'equipa.nSupervisores': '{n} supervisor|{n} supervisores',
   'equipa.semEquipaTitulo': 'Sem equipa para gerir',
   'equipa.semEquipaMensagem':
     'Só o dono de uma exploração vê e convida a equipa. Se entrou por convite, fale com quem o convidou.',
@@ -1382,6 +1446,8 @@ const pt = {
     'Vamos analisar o seu pedido de acesso e aprová-lo, sem qualquer custo. Se já tiver o código de convite de uma exploração, pode entrar já com ele, sem esperar.',
   'pendente.conta': 'Conta: {email}',
   'pendente.criarDescricao': 'Registar a minha exploração e começar a lançar animais.',
+  'pendente.criarDescricaoSociedade':
+    'Registar uma exploração da sociedade e convidar quem a vai correr.',
   'pendente.tenhoCodigo': 'Tenho um código',
   'pendente.tenhoCodigoDescricao': 'Entrar na exploração de outra pessoa com um código de convite.',
   'pendente.criarEContinuar': 'Criar e continuar',
@@ -1531,6 +1597,9 @@ const pt = {
   'erroAuth.palavraCurta': 'A palavra-passe é demasiado curta (mín. 6 caracteres).',
   'erroAuth.emailInvalido': 'Email inválido.',
   'erroAuth.semLigacao': 'Sem ligação à internet. Tente novamente.',
+  'erroAuth.metodoIndisponivel':
+    'Esta forma de entrar ainda não está disponível nesta versão da app.',
+  'erroAuth.identidadeNaoEncontrada': 'Essa forma de entrar já não está ligada a esta conta.',
 
   /* E as do servidor (Postgres e PostgREST), pela mesma razão. Estas são
      mensagens LONGAS de propósito: dizem o que aconteceu e o que fazer a
@@ -1604,8 +1673,15 @@ const pt = {
   'equipaExp.titulo': 'Equipa',
   'equipaExp.semPermissao': 'Só o administrador desta exploração pode gerir a equipa.',
   'equipaExp.gerarCodigo': 'Gerar código',
+  'equipaExp.oQueOLiderFaz':
+    'O líder corre esta exploração no dia a dia: animais, terrenos, equipa e contas. Não a pode apagar nem criar explorações suas. O acesso dele não tem prazo.',
+  'equipaExp.faltaLiderTitulo': 'Esta exploração ainda não tem líder',
+  'equipaExp.faltaLiderTexto':
+    'Enquanto não houver um, ninguém pode registar animais aqui: o supervisor trata dos terrenos e da equipa, não do gado. Gere um código de líder aqui em baixo.',
   'equipaExp.apagarConvite': 'Apagar convite',
   'permissoes.reporPapel': 'Repor o que o papel dá',
+  'permissoes.supervisorNaoSeAjusta':
+    'O supervisor criou esta exploração e é quem a paga. Cuida dos terrenos, dos dados da exploração e da equipa, e não mexe nos animais nem nas contas. Isto não se ajusta, para que quem foi convidado não possa limitar quem o convidou.',
 
   /* ---- Prazo de acesso de um convidado ---- */
   'acesso.duranteUmTempo': 'Durante um tempo',
@@ -1657,6 +1733,8 @@ const pt = {
   'foto.remover': 'Remover a fotografia',
   'agenda.toqueParaVer': 'Toque para ver ou alterar',
   'avisos.toqueParaFechar': 'Toque para fechar este aviso',
+  'avisos.nParaHoje': '{n} aviso para hoje|{n} avisos para hoje',
+  'avisos.eMais': '{lista} e mais {n}',
   'alertas.dispensarAjuda': 'Deixa de mostrar este aviso. Volta se a situação se agravar.',
   'erro.tentarDeNovo': 'Tentar de novo',
   'erro.enviarDetalhes': 'Enviar detalhes do erro',
@@ -2073,6 +2151,8 @@ const en: Record<ChaveTexto, string> = {
   'calendario.soEuVejo': 'Only I can see it',
   'exploracao.animais': 'animals',
   'exploracao.terrenos': 'land',
+  'exploracao.lider': 'Lead: {nome}',
+  'exploracao.semLider': 'No lead yet',
   'exploracao.escolher': 'Which farm?',
   'exploracao.filtroRotulo': 'Farm: {nome}',
   'exploracao.filtroAjuda': 'Opens the list of your farms',
@@ -2442,6 +2522,24 @@ const en: Record<ChaveTexto, string> = {
   'login.emailPlaceholder': 'name@example.com',
   'login.palavraPasse': 'Password',
   'login.palavraPassePlaceholder': 'At least 6 characters',
+  'login.confirmarPalavraPasse': 'Repeat the password',
+  'login.confirmarPalavraPassePlaceholder': 'Type it once more',
+  'login.palavrasNaoBatem': 'The two passwords are not the same.',
+  'login.verOQueCadaUmFaz': 'I am not sure which one I am',
+  'login.ouEntreCom': 'or continue with',
+  'login.comGoogle': 'Continue with Google',
+  'login.comApple': 'Continue with Apple',
+  'login.comTelemovel': 'Continue with your phone',
+  'login.telemovel': 'Phone number',
+  'login.telemovelPlaceholder': '912 345 678',
+  'login.telemovelInvalido': 'That does not look like a phone number. Type the nine digits.',
+  'login.telemovelExplicacao':
+    'We will text you a six digit code. It can take a minute to arrive.',
+  'login.codigoSms': 'Code received',
+  'login.codigoSmsPlaceholder': '123456',
+  'login.codigoEnviadoPara': 'We sent the code to {numero}.',
+  'login.enviarCodigo': 'Send the code',
+  'login.confirmarCodigo': 'Sign in',
   'login.explicacaoRecuperar': 'We will email you a link to set a new password.',
   'login.esqueciMe': 'I forgot my password',
   'login.recuperadoAviso':
@@ -2461,6 +2559,29 @@ const en: Record<ChaveTexto, string> = {
   'intencao.dono': 'Farm owner',
   'intencao.donoDescricao':
     'I have animals of my own to record. We approve the account, free of charge.',
+  'intencao.lider': 'Farm lead',
+  'intencao.liderDescricao': 'I run a farm for an agricultural business. I get in with an invite code.',
+
+  /* ---- Quem é quem (o desenho que o registo abre) ---- */
+  'papeis.titulo': 'Who is who on Terrabovina',
+  'papeis.intro':
+    'There are two ways in. Either the farm is yours, and we approve the account free of charge, or somebody already there gives you a code.',
+  'papeis.aprovadoPorNos': 'The farm is yours',
+  'papeis.combinadoConnosco': 'The farm belongs to a business',
+  'papeis.daUmCodigoA': 'gives a code to',
+  'papeis.sociedade': 'Agricultural business',
+  'papeis.sociedadeFaz':
+    'Has several farms and puts a lead in charge of each one. Sees everything that happens there and looks after the land, but does not touch the livestock.',
+  'papeis.naoSeEscolheAqui': 'Not chosen here: it is a plan arranged with us.',
+  'papeis.donoFaz':
+    'The farm is yours. You record the animals, the land and the accounts, and invite whoever works with you.',
+  'papeis.liderFaz':
+    'Runs one of the business farms day to day, as if it were their own: animals, land, team and accounts.',
+  'papeis.trabalhadorFaz': 'Looks after the livestock day to day. No team changes, no income.',
+  'papeis.veterinarioFaz':
+    'Records what they did to the animal, and nothing else. Gets in for a set time and leaves on their own.',
+  'papeis.qualEOMeuCaso':
+    'Were you given a code? Then you are one of the roles shown under "gives a code to". If nobody gave you one and the animals are yours, you are a Farm owner.',
   'intencao.trabalhador': 'Farm worker',
   'intencao.trabalhadorDescricao':
     "I work on someone else's farm. I get in with an invite code.",
@@ -2511,6 +2632,8 @@ const en: Record<ChaveTexto, string> = {
 
   /* ---- Papéis de quem entra numa exploração ---- */
   'papel.dono': 'Owner',
+  'papel.lider': 'Farm lead',
+  'papel.supervisor': 'Supervisor',
   'papel.trabalhador': 'Farm worker',
   'papel.veterinario': 'Vet',
   'papel.emExploracao': '{papel} at {nome}',
@@ -2527,6 +2650,21 @@ const en: Record<ChaveTexto, string> = {
   'perfil.estado': 'Status',
   'perfil.porAprovar': 'Awaiting approval (read only)',
   'perfil.editarDados': 'Edit your details',
+  'perfil.formasDeEntrar': 'Ways to sign in to this account',
+  'entrarConta.explicacao':
+    'You can sign in to this account in several ways. They all open the same account, with the same farms and the same animals.',
+  'entrarConta.juntarTitulo': 'Add another',
+  'entrarConta.juntar': 'Add your {servico} account',
+  'entrarConta.tirar': 'Remove',
+  'entrarConta.tirarTitulo': 'Remove {servico}?',
+  'entrarConta.tirarPergunta':
+    'You will no longer be able to sign in with {servico}. The other ways keep working, and you can add it back whenever you like.',
+  'entrarConta.ligou': 'You can now sign in this way',
+  'entrarConta.naoLigou': 'Could not add it',
+  'entrarConta.tirou': 'That way is gone',
+  'entrarConta.naoTirou': 'Could not remove it',
+  'entrarConta.aviso':
+    'The last way in cannot be removed: with none left, nobody could open this account again.',
   'perfil.terminarSessao': 'Sign out',
   'perfil.apagarConta': 'Delete my account',
   'perfil.abrirDefinicoes': 'Open settings',
@@ -2566,6 +2704,7 @@ const en: Record<ChaveTexto, string> = {
   'equipa.nTrabalhadores': '{n} worker|{n} workers',
   'equipa.nVeterinarios': '{n} vet|{n} vets',
   'equipa.nDonos': '{n} owner|{n} owners',
+  'equipa.nSupervisores': '{n} supervisor|{n} supervisors',
   'equipa.semEquipaTitulo': 'No team to manage',
   'equipa.semEquipaMensagem':
     'Only a farm owner sees and invites the team. If you came in by invitation, speak to whoever invited you.',
@@ -3267,6 +3406,7 @@ const en: Record<ChaveTexto, string> = {
     'We will look at your access request and approve it, free of charge. If you already have an invite code for a farm, you can use it right now and get in without waiting.',
   'pendente.conta': 'Account: {email}',
   'pendente.criarDescricao': 'Record my farm and start adding animals.',
+  'pendente.criarDescricaoSociedade': 'Record a farm for the business and invite whoever will run it.',
   'pendente.tenhoCodigo': 'I have a code',
   'pendente.tenhoCodigoDescricao': "Join someone else's farm with an invite code.",
   'pendente.criarEContinuar': 'Create and carry on',
@@ -3412,6 +3552,8 @@ const en: Record<ChaveTexto, string> = {
   'erroAuth.palavraCurta': 'The password is too short (at least 6 characters).',
   'erroAuth.emailInvalido': 'That email address is not valid.',
   'erroAuth.semLigacao': 'No internet connection. Please try again.',
+  'erroAuth.metodoIndisponivel': 'This way in is not available in this version of the app yet.',
+  'erroAuth.identidadeNaoEncontrada': 'That way in is no longer linked to this account.',
 
   'erroServidor.recusaExploracao':
     'The server refused to create the farm. Either the session has expired (close the app and sign in again), or the account is not approved to create farms yet.',
@@ -3481,8 +3623,15 @@ const en: Record<ChaveTexto, string> = {
   'equipaExp.titulo': 'Team',
   'equipaExp.semPermissao': 'Only the administrator of this farm can manage the team.',
   'equipaExp.gerarCodigo': 'Generate a code',
+  'equipaExp.oQueOLiderFaz':
+    'The farm lead runs this farm day to day: animals, land, team and accounts. They cannot delete it or start farms of their own. Their access has no time limit.',
+  'equipaExp.faltaLiderTitulo': 'This farm has no lead yet',
+  'equipaExp.faltaLiderTexto':
+    'Until there is one, nobody can add animals here: the supervisor looks after the land and the team, not the livestock. Generate a farm lead code below.',
   'equipaExp.apagarConvite': 'Delete invitation',
   'permissoes.reporPapel': 'Back to what the role gives',
+  'permissoes.supervisorNaoSeAjusta':
+    'The supervisor created this farm and pays for it. They look after the land, the farm details and the team, and do not touch the animals or the accounts. This cannot be adjusted, so that whoever was invited cannot limit whoever invited them.',
 
   /* ---- Prazo de acesso de um convidado ---- */
   'acesso.duranteUmTempo': 'For a while',
@@ -3532,6 +3681,8 @@ const en: Record<ChaveTexto, string> = {
   'foto.remover': 'Remove the photo',
   'agenda.toqueParaVer': 'Tap to see it or change it',
   'avisos.toqueParaFechar': 'Tap to close this message',
+  'avisos.nParaHoje': '{n} alert for today|{n} alerts for today',
+  'avisos.eMais': '{lista} and {n} more',
   'alertas.dispensarAjuda': 'Stops showing this alert. It comes back if things get worse.',
   'erro.tentarDeNovo': 'Try again',
   'erro.enviarDetalhes': 'Send the error details',

@@ -71,6 +71,17 @@ export type AcessoLocal = {
   estadoPerfil: 'pendente' | 'ativo';
   isSuperadmin: boolean;
   membros: unknown[];
+  /**
+   * `individual` ou `sociedade`. Ausente nas caches escritas antes de as
+   * sociedades existirem, e é por isso que quem lê usa `??` em vez de confiar.
+   */
+  tipoConta?: 'individual' | 'sociedade';
+  /**
+   * As explorações que ESTA conta criou (e não aquelas a que pertence). Decide
+   * se a app mostra o botão de criar exploração e se chama líder ao admin de
+   * uma delas — ver `membros.tsx`.
+   */
+  exploracoesCriadas?: string[];
 };
 
 /**
@@ -238,7 +249,14 @@ export function lerAcesso(): AcessoLocal | null {
     // Um valor corrompido não pode virar acesso: melhor não saber nada do que
     // afirmar 'ativo' ou 'superadmin' a partir de lixo.
     if (!a || (a.estadoPerfil !== 'ativo' && a.estadoPerfil !== 'pendente')) return null;
-    return { ...a, membros: Array.isArray(a.membros) ? a.membros : [] };
+    return {
+      ...a,
+      membros: Array.isArray(a.membros) ? a.membros : [],
+      tipoConta: a.tipoConta === 'sociedade' ? 'sociedade' : 'individual',
+      exploracoesCriadas: Array.isArray(a.exploracoesCriadas)
+        ? a.exploracoesCriadas.filter((id): id is string => typeof id === 'string')
+        : [],
+    };
   } catch {
     return null;
   }

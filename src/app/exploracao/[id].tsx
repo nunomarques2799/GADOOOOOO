@@ -33,7 +33,7 @@ export default function ExploracaoDetalheScreen() {
   const router = useRouter();
   const { exploracaoById, terrenosByExploracao, animaisByExploracao, alertas } = useGado();
   const porAnimal = useMemo(() => mapaAlertas(alertas), [alertas]);
-  const { roleEm, pode } = useMembros();
+  const { roleEm, pode, supervisionada } = useMembros();
   const { meteo, estado, recarregar } = useMeteorologia(id);
   // Os controlos seguem as permissões do papel (ver `permissoes.ts`): um
   // veterinário não vê "editar" nem "adicionar terreno", porque o servidor
@@ -44,6 +44,7 @@ export default function ExploracaoDetalheScreen() {
   const podeGerirTerrenos = pode(id, 'gerirTerrenos');
   const podeRegistarAnimais = pode(id, 'editarAnimais');
   const meuRole = id ? roleEm(id) : undefined;
+  const eDaSociedade = id ? supervisionada(id) : false;
 
   const exploracao = exploracaoById(id);
 
@@ -127,14 +128,26 @@ export default function ExploracaoDetalheScreen() {
           </View>
         </LinearGradient>
 
-        {/* Quem entrou por convite não é dono desta exploração e vê menos
-            botões. Dizer o papel evita a pergunta "porque não consigo editar?" */}
-        {meuRole && meuRole !== 'admin' ? (
+        {/* Quem não é dono desta exploração vê menos botões. Dizer o papel evita
+            a pergunta "porque não consigo editar?" — e o líder de uma
+            exploração de sociedade também o vê, apesar de ser `admin`: ele faz
+            lá tudo menos apagá-la, e é melhor saber isso antes de a procurar. */}
+        {meuRole && (meuRole !== 'admin' || eDaSociedade) ? (
           <View style={{ flexDirection: 'row', marginTop: spacing.md }}>
             <Badge
               tone="info"
-              icon={meuRole === 'veterinario' ? 'medical-bag' : 'account-hard-hat'}
-              label={t('detExploracao.entrouComo', { papel: legendaRole(meuRole).toLowerCase() })}
+              icon={
+                meuRole === 'veterinario'
+                  ? 'medical-bag'
+                  : meuRole === 'supervisor'
+                    ? 'account-tie'
+                    : meuRole === 'admin'
+                      ? 'shield-crown'
+                      : 'account-hard-hat'
+              }
+              label={t('detExploracao.entrouComo', {
+                papel: legendaRole(meuRole, eDaSociedade).toLowerCase(),
+              })}
             />
           </View>
         ) : null}

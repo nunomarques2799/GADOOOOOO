@@ -234,7 +234,13 @@ select * from (
              and tgrelid = to_regclass('public.mensagem')))),
     (39, 'schema_codigo_barras.sql',  'coluna medicamento.codigo_barras',
         (exists (select 1 from col
-                  where tabela = 'medicamento' and coluna = 'codigo_barras')))
+                  where tabela = 'medicamento' and coluna = 'codigo_barras'))),
+    (40, 'schema_sociedade.sql',      'papel supervisor + perfil.tipo_conta',
+        (exists (select 1 from pg_enum e
+                  join pg_type t on t.oid = e.enumtypid
+                 where t.typname = 'role_membro' and e.enumlabel = 'supervisor')
+         and exists (select 1 from col
+                      where tabela = 'perfil' and coluna = 'tipo_conta')))
 ) as t(ordem, ficheiro, marca, aplicado)
 order by ordem;
 -- Ler a coluna `aplicado`: true = já correu, false = FALTA aplicar.

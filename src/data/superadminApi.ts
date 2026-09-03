@@ -15,6 +15,7 @@ import type {
   RoleMembro,
   Sexo,
   Terreno,
+  TipoConta,
   TipoTerreno,
 } from './types';
 
@@ -36,6 +37,12 @@ export interface ClienteResumo {
   precoMensal?: number;
   estadoSubscricao?: EstadoSubscricao;
   proximaCobranca?: string;
+  /**
+   * `sociedade` quer dizer que as explorações que esta conta criar nascem
+   * SUPERVISIONADAS: ela vê-as todas e põe um líder à frente de cada uma, em vez
+   * de as correr ela própria. É o plano que se vende a uma sociedade agrícola.
+   */
+  tipoConta: TipoConta;
 }
 
 export interface ExploracaoResumo {
@@ -106,6 +113,7 @@ type ClienteRow = {
   preco_mensal?: number | string | null;
   estado_subscricao?: EstadoSubscricao | null;
   proxima_cobranca?: string | null;
+  tipo_conta?: TipoConta | null;
 };
 
 const toCliente = (r: ClienteRow): ClienteResumo => ({
@@ -123,6 +131,9 @@ const toCliente = (r: ClienteRow): ClienteResumo => ({
   precoMensal: r.preco_mensal == null ? undefined : num(r.preco_mensal),
   estadoSubscricao: r.estado_subscricao ?? undefined,
   proximaCobranca: r.proxima_cobranca ?? undefined,
+  // Numa base a que ainda falte o `schema_sociedade.sql` a coluna não vem, e a
+  // conta é o que sempre foi.
+  tipoConta: r.tipo_conta === 'sociedade' ? 'sociedade' : 'individual',
 });
 
 /* ---------- Chamadas ---------- */
@@ -343,6 +354,21 @@ export async function metricasMensais(meses = 6): Promise<MetricasMensais[]> {
     ativosFim: num(r.ativos_fim),
     churnRate: num(r.churn_rate),
   }));
+}
+
+/**
+ * Marca (ou desmarca) uma conta como sociedade agrícola.
+ *
+ * O que muda é o que acontece nas explorações que ela criar A PARTIR DE AGORA:
+ * ela fica supervisor delas em vez de dona, e convida um líder para cada uma.
+ * As que já tem não se tocam — continuam dela, com o gado e tudo. Uma conta
+ * pode assim ficar com as duas coisas ao mesmo tempo, e não é engano: o papel é
+ * por exploração.
+ */
+export async function definirTipoConta(alvo: string, tipo: TipoConta): Promise<string | null> {
+  if (!supabase) return 'Supabase não configurado.';
+  const { error } = await supabase.rpc('superadmin_definir_tipo_conta', { alvo, tipo });
+  return error?.message ?? null;
 }
 
 export async function definirSubscricao(

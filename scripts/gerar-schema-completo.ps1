@@ -15,8 +15,19 @@
     estava. Dez colagens separadas são dez transações — falhar na sexta deixa a
     base num estado intermédio que não corresponde a versão nenhuma.
     (Isto só é verdade porque nenhum destes ficheiros usa `create index
-    concurrently`, `alter type ... add value` ou `begin`/`commit` próprios.
-    Se algum dia passar a usar, deixa de se poder juntar assim.)
+    concurrently` ou `begin`/`commit` próprios. Se algum dia passar a usar,
+    deixa de se poder juntar assim.)
+
+    O `alter type ... add value` esteve nesta lista até ao
+    `schema_sociedade.sql` (40.º), que precisou de um. Continua a poder
+    colar-se tudo de uma vez, mas por um triz: o Postgres deixa acrescentar um
+    valor a um enum dentro de uma transação e NÃO deixa usá-lo antes de ela
+    fechar, e "usar" inclui escrever o literal no corpo de uma função
+    `language sql`, na condição de uma política ou numa restrição `check`. É
+    por isso que esse ficheiro compara o valor novo sempre contra texto
+    (`role::text = 'supervisor'`). Um ficheiro futuro que acrescente um valor
+    de enum tem de seguir a mesma regra — ou este script deixa de servir para
+    o que existe.
 
     O ficheiro gerado é derivado — está no .gitignore. Regenera-o sempre que
     acrescentares um schema novo.

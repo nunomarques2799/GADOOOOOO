@@ -3,44 +3,103 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BotoesLoginExterno } from '@/components/BotoesLoginExterno';
+import { ModalPapeis } from '@/components/ModalPapeis';
 import { Button, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { entraPorCodigo, intencoes, type Intencao } from '@/data/intencao';
+import { codigoSmsValido, normalizarTelemovel, type MetodoLogin } from '@/data/loginExterno';
 import { t } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
-type Modo = 'entrar' | 'registar' | 'recuperar';
+/**
+ * `telemovel` é a única que tem DOIS passos no mesmo modo: escreve-se o número,
+ * chega um código por SMS, escreve-se o código. O `codigoPedido` é que diz em
+ * qual dos dois se está — um modo a mais para o segundo passo obrigava a
+ * duplicar o cabeçalho e o rodapé por causa de um campo.
+ */
+type Modo = 'entrar' | 'registar' | 'recuperar' | 'telemovel';
 
 /** Ecrã de entrada — mostrado quando há Supabase configurado mas sem sessão. */
 export function EcraLogin() {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
-  const { entrar, registar, recuperarPalavra } = useAuth();
+  const { entrar, registar, recuperarPalavra, entrarCom, pedirCodigoSms, entrarComCodigoSms } =
+    useAuth();
 
   const [modo, setModo] = useState<Modo>('entrar');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [palavra, setPalavra] = useState('');
+  /**
+   * A palavra-passe escrita a segundo. Só existe no REGISTO: a quem entra não
+   * se pede duas vezes, porque quem se engana descobre-o no mesmo instante. No
+   * registo não descobre — fica com uma conta cuja palavra-passe não conhece, e
+   * o caminho de volta é o email de recuperação.
+   */
+  const [palavra2, setPalavra2] = useState('');
   const [intencao, setIntencao] = useState<Intencao | null>(null);
   const [aProcessar, setAProcessar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [confirmacao, setConfirmacao] = useState(false);
   const [recuperado, setRecuperado] = useState(false);
+  const [papeisAbertos, setPapeisAbertos] = useState(false);
+  /** O número, tal como foi escrito. A normalização é feita ao enviar. */
+  const [telemovel, setTelemovel] = useState('');
+  const [codigoSms, setCodigoSms] = useState('');
+  /** Já foi pedido o SMS? É isso que troca o campo do número pelo do código. */
+  const [codigoPedido, setCodigoPedido] = useState(false);
 
   const registo = modo === 'registar';
   const recuperar = modo === 'recuperar';
-  const valido =
-    email.trim().length > 3 &&
-    email.includes('@') &&
-    (recuperar || palavra.length >= 6) &&
-    (!registo || (nome.trim().length > 0 && intencao !== null));
+  const porTelemovel = modo === 'telemovel';
+  /**
+   * Só se aponta o erro quando já há alguma coisa escrita no segundo campo. A
+   * meio de escrever, as duas são sempre diferentes, e um aviso a piscar a cada
+   * letra é ruído a dizer que está tudo mal quando ainda não está nada.
+   */
+  const naoBatem = registo && palavra2.length > 0 && palavra !== palavra2;
+  /** O número em E.164, ou `null` se ainda não dá para aproveitar nada. */
+  const numeroPronto = porTelemovel ? normalizarTelemovel(telemovel) : null;
+  const valido = porTelemovel
+    ? codigoPedido
+      ? codigoSmsValido(codigoSms)
+      : numeroPronto !== null
+    : email.trim().length > 3 &&
+      email.includes('@') &&
+      (recuperar || palavra.length >= 6) &&
+      (!registo || (nome.trim().length > 0 && intencao !== null && palavra === palavra2));
 
   function irPara(novo: Modo) {
     setModo(novo);
     setErro(null);
     setConfirmacao(false);
     setRecuperado(false);
+    // A repetição não sobrevive à troca de modo: quem foi a "entrar" e voltou
+    // encontrava-a preenchida com o que escreveu antes, a dar por boa uma
+    // confirmação que já não confirmou nada.
+    setPalavra2('');
+    // O código do SMS também não: um código velho no campo dava um "código
+    // inválido" a quem acabou de pedir um novo.
+    setCodigoSms('');
+    setCodigoPedido(false);
+  }
+
+  /** Uma das outras portas: Google e Apple entram já, o telemóvel abre o modo. */
+  async function escolherMetodo(metodo: MetodoLogin) {
+    if (metodo === 'telemovel') {
+      irPara('telemovel');
+      return;
+    }
+    setAProcessar(true);
+    setErro(null);
+    const e = await entrarCom(metodo);
+    setAProcessar(false);
+    if (e) setErro(e);
+    // Sem erro e sem sessão quer dizer que a pessoa desistiu a meio. Não se diz
+    // nada: ela sabe o que fez, e um aviso a seguir a um cancelamento lê-se
+    // como se a app tivesse falhado.
   }
 
   function trocarModo() {
@@ -54,7 +113,20 @@ export function EcraLogin() {
     setConfirmacao(false);
     setRecuperado(false);
 
-    if (recuperar) {
+    if (porTelemovel) {
+      if (!codigoPedido) {
+        // O `numeroPronto` não pode ser nulo aqui (o `valido` já o exigiu), mas
+        // o `??` evita mandar a string vazia ao servidor se um dia deixar de ser
+        // verdade.
+        const e = await pedirCodigoSms(numeroPronto ?? '');
+        if (e) setErro(e);
+        else setCodigoPedido(true);
+      } else {
+        const e = await entrarComCodigoSms(numeroPronto ?? '', codigoSms);
+        if (e) setErro(e);
+        // Sem erro, a sessão abre e o portão de autenticação troca o ecrã.
+      }
+    } else if (recuperar) {
       const e = await recuperarPalavra(email);
       if (e) setErro(e);
       else setRecuperado(true);
@@ -139,6 +211,55 @@ export function EcraLogin() {
               acontece a seguir a criar a conta (esperar por aprovação, ou pedir
               um código de convite ao dono da exploração — ver `intencao.ts`).
             */}
+            {porTelemovel ? (
+              <>
+                {!codigoPedido ? (
+                  <>
+                    <Campo
+                      label={t('login.telemovel')}
+                      icon="cellphone"
+                      value={telemovel}
+                      onChangeText={setTelemovel}
+                      placeholder={t('login.telemovelPlaceholder')}
+                      autoCapitalize="none"
+                      keyboardType="phone-pad"
+                      // Só se aponta o engano depois de haver o suficiente para
+                      // julgar: a piscar a cada dígito, dizia "número inválido"
+                      // a quem ainda vai no terceiro.
+                      aviso={
+                        telemovel.replace(/\D/g, '').length >= 9 && !numeroPronto
+                          ? t('login.telemovelInvalido')
+                          : undefined
+                      }
+                    />
+                    <Text
+                      variant="secondary"
+                      color={colors.textSecondary}
+                      style={{ marginTop: -spacing.sm, marginBottom: spacing.lg }}>
+                      {t('login.telemovelExplicacao')}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Campo
+                      label={t('login.codigoSms')}
+                      icon="message-text-outline"
+                      value={codigoSms}
+                      onChangeText={setCodigoSms}
+                      placeholder={t('login.codigoSmsPlaceholder')}
+                      autoCapitalize="none"
+                      keyboardType="number-pad"
+                    />
+                    <Text
+                      variant="secondary"
+                      color={colors.textSecondary}
+                      style={{ marginTop: -spacing.sm, marginBottom: spacing.lg }}>
+                      {t('login.codigoEnviadoPara', { numero: numeroPronto ?? telemovel })}
+                    </Text>
+                  </>
+                )}
+              </>
+            ) : null}
             {registo ? (
               <View style={{ marginBottom: spacing.lg }}>
                 <Text variant="label" style={{ marginBottom: spacing.xs }}>
@@ -156,6 +277,26 @@ export function EcraLogin() {
                     />
                   ))}
                 </View>
+                {/* Quatro descrições de uma linha não explicam quem convida
+                    quem, e é isso que decide o caminho da conta. O desenho
+                    fica atrás de um toque para não empurrar o formulário para
+                    fora do ecrã de quem já sabe o que veio cá fazer. */}
+                <Pressable
+                  onPress={() => setPapeisAbertos(true)}
+                  accessibilityRole="button"
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                    alignSelf: 'flex-start',
+                    marginTop: spacing.sm,
+                    paddingVertical: spacing.xs,
+                  }}>
+                  <Icon name="help-circle-outline" size="md" color={colors.primary} />
+                  <Text variant="secondary" color={colors.primary}>
+                    {t('login.verOQueCadaUmFaz')}
+                  </Text>
+                </Pressable>
               </View>
             ) : null}
             {registo ? (
@@ -168,16 +309,18 @@ export function EcraLogin() {
                 autoCapitalize="words"
               />
             ) : null}
-            <Campo
-              label={t('login.email')}
-              icon="email-outline"
-              value={email}
-              onChangeText={setEmail}
-              placeholder={t('login.emailPlaceholder')}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-            {!recuperar ? (
+            {!porTelemovel ? (
+              <Campo
+                label={t('login.email')}
+                icon="email-outline"
+                value={email}
+                onChangeText={setEmail}
+                placeholder={t('login.emailPlaceholder')}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            ) : null}
+            {!recuperar && !porTelemovel ? (
               <Campo
                 label={t('login.palavraPasse')}
                 icon="lock-outline"
@@ -186,11 +329,26 @@ export function EcraLogin() {
                 placeholder={t('login.palavraPassePlaceholder')}
                 secureTextEntry
               />
-            ) : (
+            ) : null}
+            {registo ? (
+              <Campo
+                label={t('login.confirmarPalavraPasse')}
+                icon="lock-check-outline"
+                value={palavra2}
+                onChangeText={setPalavra2}
+                placeholder={t('login.confirmarPalavraPassePlaceholder')}
+                secureTextEntry
+                // O aviso vive colado ao campo, e não no erro geral lá em baixo:
+                // é aqui que se corrige, e mandar a pessoa procurar a razão ao
+                // fundo do ecrã era pior do que não a dizer.
+                aviso={naoBatem ? t('login.palavrasNaoBatem') : undefined}
+              />
+            ) : null}
+            {recuperar ? (
               <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.lg }}>
                 {t('login.explicacaoRecuperar')}
               </Text>
-            )}
+            ) : null}
 
             {modo === 'entrar' ? (
               <Pressable
@@ -236,19 +394,40 @@ export function EcraLogin() {
 
             <Button
               label={
-                recuperar
-                  ? t('login.enviarLink')
-                  : registo
-                    ? t('login.criarContaBotao')
-                    : t('login.entrar')
+                porTelemovel
+                  ? codigoPedido
+                    ? t('login.confirmarCodigo')
+                    : t('login.enviarCodigo')
+                  : recuperar
+                    ? t('login.enviarLink')
+                    : registo
+                      ? t('login.criarContaBotao')
+                      : t('login.entrar')
               }
-              icon={recuperar ? 'email-fast-outline' : registo ? 'account-plus' : 'login'}
+              icon={
+                porTelemovel
+                  ? codigoPedido
+                    ? 'login'
+                    : 'message-text-outline'
+                  : recuperar
+                    ? 'email-fast-outline'
+                    : registo
+                      ? 'account-plus'
+                      : 'login'
+              }
               onPress={submeter}
               disabled={!valido}
               loading={aProcessar}
             />
 
-            {recuperar ? (
+            {/* As outras portas so aparecem em "entrar": no registo o que decide
+                o caminho da conta e a pergunta de cima, e a recuperar so ha uma
+                coisa a fazer. */}
+            {modo === 'entrar' ? (
+              <BotoesLoginExterno aProcessar={aProcessar} onEscolher={escolherMetodo} />
+            ) : null}
+
+            {recuperar || porTelemovel ? (
               <Pressable
                 onPress={() => irPara('entrar')}
                 accessibilityRole="button"
@@ -273,6 +452,8 @@ export function EcraLogin() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ModalPapeis visivel={papeisAbertos} onFechar={() => setPapeisAbertos(false)} />
     </View>
   );
 }
@@ -353,6 +534,7 @@ function Campo({
   autoCapitalize,
   keyboardType,
   secureTextEntry,
+  aviso,
 }: {
   label: string;
   icon: IconName;
@@ -360,11 +542,13 @@ function Campo({
   onChangeText: (t: string) => void;
   placeholder: string;
   autoCapitalize?: 'none' | 'characters' | 'words' | 'sentences';
-  keyboardType?: 'default' | 'email-address';
+  keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'number-pad';
   secureTextEntry?: boolean;
+  /** O que está mal NESTE campo. Pinta a moldura e escreve por baixo. */
+  aviso?: string;
 }) {
   return (
-    <View style={{ marginBottom: spacing.lg }}>
+    <View style={{ marginBottom: aviso ? spacing.md : spacing.lg }}>
       <Text variant="label" style={{ marginBottom: spacing.xs }}>
         {label}
       </Text>
@@ -376,11 +560,11 @@ function Campo({
           height: sizes.input,
           borderRadius: radii.md,
           borderWidth: 1.5,
-          borderColor: colors.border,
+          borderColor: aviso ? colors.danger : colors.border,
           backgroundColor: colors.surface,
           paddingHorizontal: spacing.md,
         }}>
-        <Icon name={icon} size="md" color={colors.textMuted} />
+        <Icon name={icon} size="md" color={aviso ? colors.danger : colors.textMuted} />
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -393,6 +577,20 @@ function Campo({
           style={{ flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 17, color: colors.text }}
         />
       </View>
+      {aviso ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            marginTop: spacing.xs,
+          }}>
+          <Icon name="alert-circle-outline" size="sm" color={colors.danger} />
+          <Text variant="secondary" color={colors.danger} style={{ flex: 1 }}>
+            {aviso}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }

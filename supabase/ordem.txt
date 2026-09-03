@@ -44,3 +44,4 @@ schema_chat_anexos.sql
 schema_chat_sondagens.sql
 schema_chat_push.sql
 schema_codigo_barras.sql
+schema_sociedade.sql

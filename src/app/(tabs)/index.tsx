@@ -25,6 +25,7 @@ import { saiuDoEfetivo } from '@/data/historicoAnimais';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useFinancas } from '@/data/useFinancas';
+import { useVoltarAoTopo } from '@/data/voltarAoTopo';
 import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -33,6 +34,8 @@ import { temaEscuro } from '@/theme/preferencia';
 
 export default function InicioScreen() {
   const insets = useSafeAreaInsets();
+  // Tocar outra vez no Início, já estando nele, volta ao topo desta lista.
+  const refTopo = useVoltarAoTopo('index');
   const router = useRouter();
   const desktop = useDesktop();
   const { isSuperadmin, podeVer, podeEmAlguma, estadoPerfil, acessoExpirado } = useMembros();
@@ -246,6 +249,7 @@ export default function InicioScreen() {
           (ícones escuros). */}
       <StatusBar style={temaEscuro() ? 'dark' : 'light'} />
       <ScrollView
+        ref={refTopo}
         showsVerticalScrollIndicator={false}
         refreshControl={controloAtualizar}
         contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxxl }}>

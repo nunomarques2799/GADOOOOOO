@@ -10,6 +10,7 @@ import { useMembros } from '@/data/membros';
 import type { CapacidadeLeitura } from '@/data/permissoes';
 import { useNaoLidas } from '@/data/useChat';
 import { useExistencias } from '@/data/useExistencias';
+import { voltarAoTopo } from '@/data/voltarAoTopo';
 import { t, type ChaveTexto } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, spacing } from '@/theme';
@@ -152,8 +153,22 @@ const DESTINOS: Destino[] = [
  */
 const BARRA_TELEMOVEL = ['index', 'animais', 'terrenos', '+', 'alertas', 'chat'] as const;
 
-/** Os destinos que a barra mostra (o `'+'` não é destino). */
-const NO_TELEMOVEL: string[] = BARRA_TELEMOVEL.filter((n) => n !== '+');
+/**
+ * A mesma barra, para quem SUPERVISIONA uma sociedade agrícola: as Explorações
+ * no lugar dos Animais.
+ *
+ * O supervisor não regista animais nem lhes escreve tratamentos (ver
+ * `permissoes.ts`), portanto a lista do efetivo é, para ele, um sítio onde não
+ * há nada a fazer — e ocupava o lugar mais fácil de acertar com o polegar. O
+ * que ele abre a toda a hora é a lista de explorações, para ver o que se passa
+ * em cada uma. Tudo o resto fica igual, incluindo o "+" ao meio: as ações
+ * rápidas dele são os terrenos, e essas continuam a ser suas.
+ */
+const BARRA_SUPERVISOR = ['index', 'exploracoes', 'terrenos', '+', 'alertas', 'chat'] as const;
+
+function barraDoTelemovel(supervisiona: boolean): readonly string[] {
+  return supervisiona ? BARRA_SUPERVISOR : BARRA_TELEMOVEL;
+}
 
 /**
  * Os destinos que esta pessoa pode ver. A rota continua declarada (quem chegar
@@ -190,8 +205,12 @@ function TabBar({ state, navigation }: TabBarProps) {
   const [maisAberto, setMaisAberto] = useState(false);
   const [registarAberto, setRegistarAberto] = useState(false);
   const naoLidas = useNaoLidas();
+  const { isSupervisorEmAlguma } = useMembros();
 
-  const escondidos = destinos.filter((d) => !NO_TELEMOVEL.includes(d.nome));
+  // A barra do supervisor troca os Animais pelas Explorações, e o "Mais"
+  // guarda o que ela deixou de fora — por isso as duas leem a MESMA lista.
+  const naBarra = barraDoTelemovel(isSupervisorEmAlguma);
+  const escondidos = destinos.filter((d) => !naBarra.includes(d.nome));
   const rotaAtual = state.routes[state.index]?.name;
   // O "Mais" acende-se quando se está num dos destinos que ele guarda — senão
   // a barra não mostrava nada selecionado e a app parecia ter-se perdido.
@@ -218,7 +237,7 @@ function TabBar({ state, navigation }: TabBarProps) {
           },
           shadow.lg,
         ]}>
-        {BARRA_TELEMOVEL.map((nome) => {
+        {naBarra.map((nome) => {
           if (nome === '+') return <BotaoRegistar key="+" onPress={() => setRegistarAberto(true)} />;
 
           const route = state.routes.find((r) => r.name === nome);
@@ -227,12 +246,21 @@ function TabBar({ state, navigation }: TabBarProps) {
           const focused = rotaAtual === nome;
 
           const onPress = () => {
+            // Já se está neste separador: o toque volta ao topo da lista, que é
+            // o que este gesto faz em todo o lado. Antes não fazia nada, e quem
+            // tinha rolado até ao fim do Início voltava para trás a arrastar o
+            // dedo. Sem lista registada (um ecrã que não rola) não acontece
+            // nada, como dantes.
+            if (focused) {
+              voltarAoTopo(nome);
+              return;
+            }
             const event = navigation.emit({
               type: 'tabPress',
               target: route.key,
               canPreventDefault: true,
             });
-            if (!focused && !event.defaultPrevented) navigation.navigate(nome);
+            if (!event.defaultPrevented) navigation.navigate(nome);
           };
 
           return (
