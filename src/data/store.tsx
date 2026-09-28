@@ -32,6 +32,7 @@ import {
 import {
   adicionarOutbox,
   cacheDisponivel,
+  comVersaoNova,
   guardarCache,
   guardarOutbox,
   lerCache,
@@ -75,12 +76,14 @@ import {
   eliminarMedicamentoSupabase,
   eliminarMovimentoSupabase,
   eliminarTerrenoSupabase,
+  servidorResponde,
   upsertAnimalSupabase,
   upsertEventoSupabase,
   upsertExploracaoSupabase,
   upsertMedicamentoSupabase,
   upsertMovimentoSupabase,
   upsertTerrenoSupabase,
+  type ResultadoGravacao,
 } from './supabaseRepo';
 import type {
   Alerta,
@@ -105,22 +108,35 @@ import type {
  */
 const USA_SQLITE_LOCAL = Platform.OS !== 'web' && !supabaseConfigurado;
 
-/** Envia uma operação da fila ao Supabase. Devolve msg de erro ou null. */
-async function enviarOp(op: OpPendente): Promise<string | null> {
+/**
+ * Quantas vezes uma operação pode falhar com um erro que PARECE de rede estando
+ * o servidor a responder, antes de se aceitar que não é rede nenhuma.
+ *
+ * `pareceErroDeRede` pesca por palavras ("failed to", "connection"…) e, em caso
+ * de dúvida, diz que é rede: é a escolha certa para um erro isolado, que fica na
+ * fila em vez de se perder. Mas uma recusa do servidor que calhe ter uma dessas
+ * palavras ficava à cabeça da fila PARA SEMPRE, e a fila é por ordem: nada do
+ * que estava atrás dela voltava a sair do aparelho. Três vezes com o servidor a
+ * responder a um pedido vazio logo a seguir já não é um azar da rede.
+ */
+const MAX_TENTATIVAS = 3;
+
+/** Envia uma operação da fila ao Supabase. Devolve o erro (ou null) e a versão nova. */
+async function enviarOp(op: OpPendente): Promise<ResultadoGravacao> {
   if (op.op === 'delete') {
     switch (op.entidade) {
       case 'exploracao':
-        return eliminarExploracaoSupabase(op.id);
+        return { erro: await eliminarExploracaoSupabase(op.id) };
       case 'terreno':
-        return eliminarTerrenoSupabase(op.id);
+        return { erro: await eliminarTerrenoSupabase(op.id) };
       case 'animal':
-        return eliminarAnimalSupabase(op.id);
+        return { erro: await eliminarAnimalSupabase(op.id) };
       case 'movimento':
-        return eliminarMovimentoSupabase(op.id);
+        return { erro: await eliminarMovimentoSupabase(op.id) };
       case 'medicamento':
-        return eliminarMedicamentoSupabase(op.id);
+        return { erro: await eliminarMedicamentoSupabase(op.id) };
       case 'evento':
-        return null; // sem eliminação de eventos no domínio atual
+        return { erro: null }; // sem eliminação de eventos no domínio atual
     }
   }
   switch (op.entidade) {
@@ -525,6 +541,42 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
+   * Regista num registo do ecrã a versão com que ele ficou no servidor, para a
+   * alteração seguinte a esse registo não ser tomada por conflito (ver
+   * `ResultadoGravacao` no `supabaseRepo.ts`). Só muda `atualizadoEm`: o
+   * resto do registo pode já ter uma alteração mais recente por cima.
+   */
+  const aplicarVersao = useCallback((op: OpPendente, versao: string) => {
+    if (op.op !== 'upsert') return;
+    const id = op.dados.id;
+    function comVersao<T extends { id: string; atualizadoEm?: string }>(prev: T[]): T[] {
+      return prev.map((r) => (r.id === id ? { ...r, atualizadoEm: versao } : r));
+    }
+    switch (op.entidade) {
+      case 'exploracao':
+        return setExploracoes(comVersao);
+      case 'terreno':
+        return setTerrenos(comVersao);
+      case 'animal':
+        return setAnimais(comVersao);
+      case 'evento':
+        return setEventos(comVersao);
+      case 'movimento':
+        return setMovimentos(comVersao);
+      case 'medicamento':
+        return setMedicamentos(comVersao);
+    }
+  }, []);
+
+  // A sincronização é declarada depois do `empurrar`, que lhe chega por aqui;
+  // o `onlineRef` é o estado de ligação lido dentro dele sem entrar nas
+  // dependências.
+  const sincronizacaoRef = useRef<Promise<boolean> | null>(null);
+  const sincronizarRef = useRef<() => Promise<boolean>>(() => Promise.resolve(true));
+  const onlineRef = useRef(online);
+  onlineRef.current = online;
+
+  /**
    * Envia uma alteração ao Supabase. Se falhar por falta de rede, guarda-a na
    * fila para reenviar depois (não propaga erro — a UI já atualizou). Devolve
    * true se ficou efetivamente enviada. Erros lógicos do servidor propagam.
@@ -532,17 +584,34 @@ export function GadoProvider({ children }: { children: ReactNode }) {
   const empurrar = useCallback(async (op: OpPendente): Promise<boolean> => {
     if (!cacheDisponivel) {
       // Sem cache local (nativo): comportamento antigo — envia e propaga erro.
-      const erro = await enviarOp(op);
+      const { erro, versao } = await enviarOp(op);
       if (erro) throw new Error(erro);
+      if (versao) aplicarVersao(op, versao);
       return true;
     }
-    let erro: string | null = null;
-    try {
-      erro = await enviarOp(op);
-    } catch (e) {
-      erro = e instanceof Error ? e.message : String(e);
+    // Com alterações ainda na fila, esta vai para o FIM dela em vez de passar à
+    // frente. A fila é por ordem, e saltá-la dava dois desfechos maus: um
+    // evento enviado antes do animal que ainda estava na fila era recusado (o
+    // animal não existia no servidor), e uma alteração mais recente a um
+    // registo chegava primeiro e fazia a mais antiga ser recusada como
+    // conflito, apesar de ser a mesma pessoa a fazer as duas por ordem.
+    if (lerOutbox().length > 0) {
+      setPendentesSinc(adicionarOutbox(op));
+      // Só se tenta já quando a última ida ao servidor correu bem. Sem rede,
+      // uma importação de centenas de animais disparava centenas de tentativas
+      // falhadas; quem esvazia a fila nesse caso é o regresso da rede.
+      if (onlineRef.current) void sincronizarRef.current();
+      return false;
     }
+    let resultado: ResultadoGravacao;
+    try {
+      resultado = await enviarOp(op);
+    } catch (e) {
+      resultado = { erro: e instanceof Error ? e.message : String(e) };
+    }
+    const { erro, versao } = resultado;
     if (!erro) {
+      if (versao) aplicarVersao(op, versao);
       setOnline(true);
       return true;
     }
@@ -557,35 +626,70 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     // Erro real de validação/RLS/conflito → mostra na UI. Sem o marcador
     // técnico à frente: quem lê isto é o criador, não o código.
     throw new Error(mensagemLegivel(erro));
-  }, []);
+  }, [aplicarVersao]);
 
   /**
-   * Esvazia a fila por ordem e, se conseguir, puxa a verdade do servidor.
+   * `empurrar`, mas a desfazer no ecrã a escrita otimista quando o servidor a
+   * RECUSA (falta de permissão, conta suspensa, validação). Uma falha de rede
+   * não desfaz nada: essa fica na fila e sai mais tarde.
    *
-   * Devolve se ficou com os dados do servidor. `false` cobre três coisas
-   * diferentes que dão o mesmo resultado para quem está a olhar: sem rede, o
-   * servidor recusou a leitura, ou a fila não esvaziou. Sem sessão Supabase
-   * devolve `true` — não há servidor nenhum de quem estar à espera, e chamar a
-   * isso "sem ligação" seria mentir a quem trabalha em modo offline.
+   * Sem isto o criador via o erro e, por trás dele, o registo com ar de
+   * gravado; a sincronização seguinte tirava-o sem uma palavra. Os apagamentos,
+   * o `updateEvento` e o `addMedicamento` já se desfaziam à mão; as outras
+   * gravações não, e é para elas que isto existe.
    */
-  const sincronizar = useCallback(async () => {
-    if (!usaSupabase || !cacheDisponivel) return true;
-    let ops = lerOutbox();
-    while (ops.length > 0) {
-      const [proxima, ...resto] = ops;
-      let erro: string | null = null;
+  const empurrarOuDesfazer = useCallback(
+    async (op: OpPendente, desfazer: () => void): Promise<boolean> => {
       try {
-        erro = await enviarOp(proxima);
+        return await empurrar(op);
       } catch (e) {
-        erro = e instanceof Error ? e.message : String(e);
+        desfazer();
+        throw e;
       }
+    },
+    [empurrar],
+  );
+
+  /**
+   * Envia a fila por ordem. Devolve se ela ficou vazia.
+   *
+   * A fila RELÊ-SE do armazenamento a cada passo, e é isso que a torna segura:
+   * enquanto uma operação está a caminho do servidor, outra pode ser acrescentada
+   * ao fim (uma gravação feita nesse meio segundo). Guardar por cima a cópia lida
+   * no início apagava essa alteração em silêncio. Só esta função tira coisas da
+   * fila, e só corre uma sincronização de cada vez, por isso a cabeça relida é
+   * sempre a operação que acabou de ser enviada.
+   */
+  const esvaziarFila = useCallback(async (): Promise<boolean> => {
+    let proxima: OpPendente | undefined;
+    while ((proxima = lerOutbox()[0])) {
+      let resultado: ResultadoGravacao;
+      try {
+        resultado = await enviarOp(proxima);
+      } catch (e) {
+        resultado = { erro: e instanceof Error ? e.message : String(e) };
+      }
+      const { erro, versao } = resultado;
       // O conflito é verificado ANTES da heurística de rede: a sua mensagem
       // fala de ligação, e `pareceErroDeRede` pesca por palavras. Sem esta
       // ordem, um conflito voltava à fila e ficava a repetir-se para sempre,
       // porque a versão do servidor nunca mais recuaria.
       if (erro && !eConflito(erro) && pareceErroDeRede(erro)) {
-        setOnline(false);
-        return false; // continua offline — tenta na próxima vez
+        // Parece rede. Pergunta-se ao servidor se está lá, com um pedido vazio:
+        // se não responder, é mesmo falta de rede e a operação espera.
+        const semRede =
+          (typeof navigator !== 'undefined' && navigator.onLine === false) ||
+          !(await servidorResponde());
+        const tentativas = (proxima.tentativas ?? 0) + 1;
+        if (semRede || tentativas < MAX_TENTATIVAS) {
+          if (!semRede) {
+            guardarOutbox([{ ...proxima, tentativas }, ...lerOutbox().slice(1)]);
+          }
+          setOnline(false);
+          return false; // tenta na próxima vez
+        }
+        // O servidor responde e esta operação continua a falhar: não é rede, é
+        // uma recusa com palavras enganadoras. Segue o caminho das recusas.
       }
       if (erro) {
         // Erro lógico (RLS, validação) ou conflito de versão: repetir daria o
@@ -596,21 +700,60 @@ export function GadoProvider({ children }: { children: ReactNode }) {
         registarFalhada(proxima, erro, eConflito(erro) ? 'conflito' : 'recusada');
         setFalhadas(lerFalhadas());
       }
-      ops = resto;
-      guardarOutbox(ops);
-      setPendentesSinc(ops.length);
+      let resto = lerOutbox().slice(1);
+      if (versao) {
+        aplicarVersao(proxima, versao);
+        if (proxima.op === 'upsert') {
+          resto = comVersaoNova(resto, proxima.entidade, proxima.dados.id, versao);
+        }
+      }
+      guardarOutbox(resto);
+      setPendentesSinc(resto.length);
     }
-    // O estado de ligação segue o RESULTADO da leitura, não o facto de a fila
-    // ter esvaziado. Marcar `online` antes de puxar escondia a única falha que
-    // interessa: com o servidor a recusar a leitura, a app ficava a mostrar a
-    // cache — dados antigos, ou nenhuns — a dizer que estava tudo bem. Sem
-    // aviso, sem erro, e sem nada que distinga isso de uma conta mesmo vazia.
-    // Agora aparece o cartão de "sem ligação" do ecrã Início, que é o que dá ao
-    // criador alguma coisa em que reparar.
-    const leu = await puxarDoServidor();
-    setOnline(leu);
-    return leu;
-  }, [usaSupabase, puxarDoServidor]);
+    return true;
+  }, [aplicarVersao]);
+
+  /**
+   * Esvazia a fila por ordem e, se conseguir, puxa a verdade do servidor.
+   *
+   * Devolve se ficou com os dados do servidor. `false` cobre três coisas
+   * diferentes que dão o mesmo resultado para quem está a olhar: sem rede, o
+   * servidor recusou a leitura, ou a fila não esvaziou. Sem sessão Supabase
+   * devolve `true` — não há servidor nenhum de quem estar à espera, e chamar a
+   * isso "sem ligação" seria mentir a quem trabalha em modo offline.
+   */
+  const sincronizar = useCallback((): Promise<boolean> => {
+    if (!usaSupabase || !cacheDisponivel) return Promise.resolve(true);
+    // UMA sincronização de cada vez. Dispara-se de vários sítios (arranque,
+    // regresso da rede, app a voltar ao primeiro plano, puxar para atualizar,
+    // gravações com fila), e duas ao mesmo tempo liam a mesma fila: a mesma
+    // alteração ia duas vezes, e a segunda voltava como conflito com a versão
+    // que a primeira acabara de escrever. Quem chega a meio espera pela que já
+    // está a correr, que relê a fila a cada passo e apanha o que entrou.
+    if (sincronizacaoRef.current) return sincronizacaoRef.current;
+    const corrida = (async () => {
+      // Uma alteração pode entrar na fila enquanto se lê o servidor. Dá-se mais
+      // uma volta por ela, mas com teto: uma fila a encher sem parar não pode
+      // prender a sincronização num ciclo.
+      for (let volta = 0; ; volta++) {
+        if (!(await esvaziarFila())) return false;
+        // O estado de ligação segue o RESULTADO da leitura, não o facto de a
+        // fila ter esvaziado. Marcar `online` antes de puxar escondia a única
+        // falha que interessa: com o servidor a recusar a leitura, a app ficava
+        // a mostrar a cache — dados antigos, ou nenhuns — a dizer que estava
+        // tudo bem. Agora aparece o cartão de "sem ligação" do ecrã Início, que
+        // é o que dá ao criador alguma coisa em que reparar.
+        const leu = await puxarDoServidor();
+        setOnline(leu);
+        if (!leu || lerOutbox().length === 0 || volta >= 2) return leu;
+      }
+    })().finally(() => {
+      sincronizacaoRef.current = null;
+    });
+    sincronizacaoRef.current = corrida;
+    return corrida;
+  }, [usaSupabase, esvaziarFila, puxarDoServidor]);
+  sincronizarRef.current = sincronizar;
 
   /** Recarrega tudo do Supabase (envia pendentes + puxa o servidor). */
   const recarregar = useCallback(async () => sincronizar(), [sincronizar]);
@@ -707,11 +850,14 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     async (a: Omit<Animal, 'id'>): Promise<Animal> => {
       const novo: Animal = { ...a, id: novoId() };
       setAnimais((prev) => [novo, ...prev]); // otimista — aparece já, mesmo offline
-      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'animal', dados: novo });
-      else gravarSqlite((db) => guardarAnimal(db, novo));
+      if (usaSupabase) {
+        await empurrarOuDesfazer({ op: 'upsert', entidade: 'animal', dados: novo }, () =>
+          setAnimais((prev) => prev.filter((a) => a.id !== novo.id)),
+        );
+      } else gravarSqlite((db) => guardarAnimal(db, novo));
       return novo;
     },
-    [usaSupabase, gravarSqlite, empurrar],
+    [usaSupabase, gravarSqlite, empurrarOuDesfazer],
   );
 
   const importarAnimais = useCallback(
@@ -758,10 +904,13 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       if (!atual) return;
       const atualizado: Animal = { ...atual, ...patch };
       setAnimais((prev) => prev.map((a) => (a.id === id ? atualizado : a)));
-      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'animal', dados: atualizado });
-      else gravarSqlite((db) => guardarAnimal(db, atualizado));
+      if (usaSupabase) {
+        await empurrarOuDesfazer({ op: 'upsert', entidade: 'animal', dados: atualizado }, () =>
+          setAnimais((prev) => prev.map((a) => (a.id === id ? atual : a))),
+        );
+      } else gravarSqlite((db) => guardarAnimal(db, atualizado));
     },
-    [usaSupabase, gravarSqlite, empurrar],
+    [usaSupabase, gravarSqlite, empurrarOuDesfazer],
   );
 
   const deleteAnimal = useCallback(
@@ -913,10 +1062,13 @@ export function GadoProvider({ children }: { children: ReactNode }) {
         saidaEm: undefined,
       };
       setAnimais((prev) => prev.map((a) => (a.id === id ? atualizado : a)));
-      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'animal', dados: atualizado });
-      else gravarSqlite((db) => guardarAnimal(db, atualizado));
+      if (usaSupabase) {
+        await empurrarOuDesfazer({ op: 'upsert', entidade: 'animal', dados: atualizado }, () =>
+          setAnimais((prev) => prev.map((a) => (a.id === id ? atual : a))),
+        );
+      } else gravarSqlite((db) => guardarAnimal(db, atualizado));
     },
-    [usaSupabase, gravarSqlite, empurrar],
+    [usaSupabase, gravarSqlite, empurrarOuDesfazer],
   );
 
   const addExploracao = useCallback(
@@ -924,7 +1076,10 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       const nova: Exploracao = { ...e, id: novoId(), utilizadorId: utilizador.id };
       setExploracoes((prev) => [...prev, nova]); // otimista
       if (usaSupabase) {
-        const enviado = await empurrar({ op: 'upsert', entidade: 'exploracao', dados: nova });
+        const enviado = await empurrarOuDesfazer(
+          { op: 'upsert', entidade: 'exploracao', dados: nova },
+          () => setExploracoes((prev) => prev.filter((e) => e.id !== nova.id)),
+        );
         // O trigger no Supabase cria o membro admin e atribui o user_id real
         // (auth.uid). Puxa para apanhar esses valores — só se foi mesmo enviado.
         if (enviado) await puxarDoServidor();
@@ -933,7 +1088,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       }
       return nova;
     },
-    [usaSupabase, gravarSqlite, empurrar, puxarDoServidor, utilizador.id],
+    [usaSupabase, gravarSqlite, empurrarOuDesfazer, puxarDoServidor, utilizador.id],
   );
 
   const updateExploracao = useCallback(
@@ -942,10 +1097,13 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       if (!atual) return;
       const atualizada: Exploracao = { ...atual, ...patch, id, utilizadorId: atual.utilizadorId };
       setExploracoes((prev) => prev.map((e) => (e.id === id ? atualizada : e)));
-      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'exploracao', dados: atualizada });
-      else gravarSqlite((db) => guardarExploracao(db, atualizada));
+      if (usaSupabase) {
+        await empurrarOuDesfazer({ op: 'upsert', entidade: 'exploracao', dados: atualizada }, () =>
+          setExploracoes((prev) => prev.map((e) => (e.id === id ? atual : e))),
+        );
+      } else gravarSqlite((db) => guardarExploracao(db, atualizada));
     },
-    [usaSupabase, gravarSqlite, empurrar],
+    [usaSupabase, gravarSqlite, empurrarOuDesfazer],
   );
 
   const deleteExploracao = useCallback(
@@ -996,11 +1154,14 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     async (t: Omit<Terreno, 'id'>): Promise<Terreno> => {
       const novo: Terreno = { ...t, id: novoId() };
       setTerrenos((prev) => [...prev, novo]);
-      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'terreno', dados: novo });
-      else gravarSqlite((db) => guardarTerreno(db, novo));
+      if (usaSupabase) {
+        await empurrarOuDesfazer({ op: 'upsert', entidade: 'terreno', dados: novo }, () =>
+          setTerrenos((prev) => prev.filter((t) => t.id !== novo.id)),
+        );
+      } else gravarSqlite((db) => guardarTerreno(db, novo));
       return novo;
     },
-    [usaSupabase, gravarSqlite, empurrar],
+    [usaSupabase, gravarSqlite, empurrarOuDesfazer],
   );
 
   const updateTerreno = useCallback(
@@ -1009,10 +1170,13 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       if (!atual) return;
       const atualizado: Terreno = { ...atual, ...patch, id, exploracaoId: atual.exploracaoId };
       setTerrenos((prev) => prev.map((t) => (t.id === id ? atualizado : t)));
-      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'terreno', dados: atualizado });
-      else gravarSqlite((db) => guardarTerreno(db, atualizado));
+      if (usaSupabase) {
+        await empurrarOuDesfazer({ op: 'upsert', entidade: 'terreno', dados: atualizado }, () =>
+          setTerrenos((prev) => prev.map((t) => (t.id === id ? atual : t))),
+        );
+      } else gravarSqlite((db) => guardarTerreno(db, atualizado));
     },
-    [usaSupabase, gravarSqlite, empurrar],
+    [usaSupabase, gravarSqlite, empurrarOuDesfazer],
   );
 
   const deleteTerreno = useCallback(
@@ -1049,11 +1213,14 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     async (e: Omit<Evento, 'id'>): Promise<Evento> => {
       const novo: Evento = { ...e, id: novoId() };
       setEventos((prev) => [novo, ...prev]);
-      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'evento', dados: novo });
-      else gravarSqlite((db) => guardarEvento(db, novo));
+      if (usaSupabase) {
+        await empurrarOuDesfazer({ op: 'upsert', entidade: 'evento', dados: novo }, () =>
+          setEventos((prev) => prev.filter((ev) => ev.id !== novo.id)),
+        );
+      } else gravarSqlite((db) => guardarEvento(db, novo));
       return novo;
     },
-    [usaSupabase, gravarSqlite, empurrar],
+    [usaSupabase, gravarSqlite, empurrarOuDesfazer],
   );
 
   const updateEvento = useCallback(
@@ -1138,11 +1305,14 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       // no servidor quem manda é o default `auth.uid()` da coluna.
       const novo: Movimento = { ...m, id: novoId(), criadoPor: m.criadoPor ?? utilizador.id };
       setMovimentos((prev) => [novo, ...prev]); // otimista — aparece já, mesmo offline
-      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'movimento', dados: novo });
-      else gravarSqlite((db) => guardarMovimento(db, novo));
+      if (usaSupabase) {
+        await empurrarOuDesfazer({ op: 'upsert', entidade: 'movimento', dados: novo }, () =>
+          setMovimentos((prev) => prev.filter((m) => m.id !== novo.id)),
+        );
+      } else gravarSqlite((db) => guardarMovimento(db, novo));
       return novo;
     },
-    [usaSupabase, gravarSqlite, empurrar, utilizador.id],
+    [usaSupabase, gravarSqlite, empurrarOuDesfazer, utilizador.id],
   );
 
   const updateMovimento = useCallback(
@@ -1151,10 +1321,13 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       if (!atual) return;
       const atualizado: Movimento = { ...atual, ...patch, id, exploracaoId: atual.exploracaoId };
       setMovimentos((prev) => prev.map((m) => (m.id === id ? atualizado : m)));
-      if (usaSupabase) await empurrar({ op: 'upsert', entidade: 'movimento', dados: atualizado });
-      else gravarSqlite((db) => guardarMovimento(db, atualizado));
+      if (usaSupabase) {
+        await empurrarOuDesfazer({ op: 'upsert', entidade: 'movimento', dados: atualizado }, () =>
+          setMovimentos((prev) => prev.map((m) => (m.id === id ? atual : m))),
+        );
+      } else gravarSqlite((db) => guardarMovimento(db, atualizado));
     },
-    [usaSupabase, gravarSqlite, empurrar],
+    [usaSupabase, gravarSqlite, empurrarOuDesfazer],
   );
 
   const deleteMovimento = useCallback(
