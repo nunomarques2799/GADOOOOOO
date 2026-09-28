@@ -35,13 +35,22 @@ export type Entidade =
   | 'medicamento';
 
 /** Operação por sincronizar: gravar (upsert) ou eliminar uma entidade. */
-export type OpPendente =
+export type OpPendente = (
   | {
       op: 'upsert';
       entidade: Entidade;
       dados: Exploracao | Terreno | Animal | Evento | Movimento | Medicamento;
     }
-  | { op: 'delete'; entidade: Entidade; id: string };
+  | { op: 'delete'; entidade: Entidade; id: string }
+) & {
+  /**
+   * Quantas vezes falhou com um erro que PARECIA de rede estando o servidor a
+   * responder. Ver `MAX_TENTATIVAS` no `store.tsx`: sem esta conta, um erro
+   * mal classificado ficava à cabeça da fila para sempre e prendia tudo o
+   * que estava atrás dele.
+   */
+  tentativas?: number;
+};
 
 /**
  * Porque é que a operação não passou. Muda a mensagem e o que se pode fazer:
@@ -226,6 +235,28 @@ export function lerOutbox(): OpPendente[] {
 
 export function guardarOutbox(ops: OpPendente[]): void {
   guardar(CHAVE_OUTBOX, JSON.stringify(ops));
+}
+
+/**
+ * Depois de uma gravação passar, as alterações seguintes ao MESMO registo que
+ * ainda estão na fila seguem com a versão com que ele ficou no servidor.
+ *
+ * Todas foram feitas em cima da versão antiga, e é a mesma pessoa a fazê-las
+ * por ordem: sem isto, a primeira passava e a segunda era recusada como
+ * conflito, com o criador a perder a segunda alteração por causa da primeira.
+ * Só mexe em gravações (`upsert`) desse registo; o resto da fila fica igual.
+ */
+export function comVersaoNova(
+  ops: OpPendente[],
+  entidade: Entidade,
+  id: string,
+  versao: string,
+): OpPendente[] {
+  return ops.map((o) =>
+    o.op === 'upsert' && o.entidade === entidade && o.dados.id === id
+      ? { ...o, dados: { ...o.dados, atualizadoEm: versao } }
+      : o,
+  );
 }
 
 /** Acrescenta uma operação ao fim da fila e devolve o novo total pendente. */

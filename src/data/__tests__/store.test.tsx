@@ -77,7 +77,54 @@ const mockServidor = {
   erroSeguinte: null as string | null,
   recebidas: [] as string[],
   falhasCarregar: 0,
+  /**
+   * A versão de cada linha no servidor, avançada a cada gravação como faz o
+   * trigger `toca_updated_at`. Uma gravação com versão só passa se o servidor
+   * não estiver à frente dela, que é o `.lte('updated_at', …)` verdadeiro.
+   */
+  versoes: new Map<string, string>(),
+  /** Erro que um registo dá SEMPRE (o `erroSeguinte` só dá uma vez). */
+  errosPorId: new Map<string, string>(),
+  /** O que `servidorResponde()` diz: por omissão, sem rede é sem servidor. */
+  alcancavel: false,
+  /** Corre a meio de uma gravação, antes da resposta: o sítio das corridas. */
+  aMeioDaEscrita: null as null | (() => Promise<void>),
 };
+
+let mockRelogio = 0;
+function mockVersaoNova(): string {
+  mockRelogio += 1;
+  return new Date(Date.UTC(2026, 0, 1) + mockRelogio * 1000).toISOString();
+}
+
+/**
+ * Gravação com versão, com as regras do `gravarComVersao`: sem versão é um
+ * INSERT (que não a lê de volta); com versão é um UPDATE que recusa como
+ * conflito quando o servidor já está à frente, e devolve a versão nova.
+ */
+async function mockGravacao(
+  etiqueta: string,
+  dados: { id: string; atualizadoEm?: string },
+): Promise<{ erro: string | null; versao?: string }> {
+  const gancho = mockServidor.aMeioDaEscrita;
+  if (gancho) {
+    mockServidor.aMeioDaEscrita = null;
+    await gancho();
+  }
+  const sempre = mockServidor.errosPorId.get(dados.id);
+  if (sempre) return { erro: sempre };
+  if (mockServidor.erroSeguinte) return { erro: mockRespostaEscrita(etiqueta) };
+  const noServidor = mockServidor.versoes.get(dados.id);
+  if (dados.atualizadoEm !== undefined && noServidor !== undefined && noServidor > dados.atualizadoEm) {
+    return {
+      erro: 'CONFLITO_DE_VERSAO: outra pessoa alterou este registo antes de esta alteração chegar ao servidor.',
+    };
+  }
+  mockRespostaEscrita(etiqueta);
+  const versao = mockVersaoNova();
+  mockServidor.versoes.set(dados.id, versao);
+  return dados.atualizadoEm !== undefined ? { erro: null, versao } : { erro: null };
+}
 
 function mockRespostaEscrita(etiqueta: string): string | null {
   if (mockServidor.erroSeguinte) {
@@ -103,17 +150,17 @@ jest.mock('../supabaseRepo', () => ({
       medicamentos: mockServidor.snapshot.medicamentos ?? [],
     };
   },
-  upsertAnimalSupabase: async (a: Animal) => mockRespostaEscrita(`upsert:animal:${a.id}`),
-  upsertEventoSupabase: async (e: Evento) => mockRespostaEscrita(`upsert:evento:${e.id}`),
-  upsertExploracaoSupabase: async (e: Exploracao) => mockRespostaEscrita(`upsert:exploracao:${e.id}`),
-  upsertTerrenoSupabase: async (t: Terreno) => mockRespostaEscrita(`upsert:terreno:${t.id}`),
+  servidorResponde: async () => mockServidor.alcancavel,
+  upsertAnimalSupabase: (a: Animal) => mockGravacao(`upsert:animal:${a.id}`, a),
+  upsertEventoSupabase: (e: Evento) => mockGravacao(`upsert:evento:${e.id}`, e),
+  upsertExploracaoSupabase: (e: Exploracao) => mockGravacao(`upsert:exploracao:${e.id}`, e),
+  upsertTerrenoSupabase: (t: Terreno) => mockGravacao(`upsert:terreno:${t.id}`, t),
   eliminarAnimalSupabase: async (id: string) => mockRespostaEscrita(`delete:animal:${id}`),
   eliminarExploracaoSupabase: async (id: string) => mockRespostaEscrita(`delete:exploracao:${id}`),
   eliminarTerrenoSupabase: async (id: string) => mockRespostaEscrita(`delete:terreno:${id}`),
-  upsertMovimentoSupabase: async (m: Movimento) => mockRespostaEscrita(`upsert:movimento:${m.id}`),
+  upsertMovimentoSupabase: (m: Movimento) => mockGravacao(`upsert:movimento:${m.id}`, m),
   eliminarMovimentoSupabase: async (id: string) => mockRespostaEscrita(`delete:movimento:${id}`),
-  upsertMedicamentoSupabase: async (m: Medicamento) =>
-    mockRespostaEscrita(`upsert:medicamento:${m.id}`),
+  upsertMedicamentoSupabase: (m: Medicamento) => mockGravacao(`upsert:medicamento:${m.id}`, m),
   eliminarMedicamentoSupabase: async (id: string) =>
     mockRespostaEscrita(`delete:medicamento:${id}`),
   // Classificação de erros: o store usa-as para separar conflito de recusa e
@@ -214,6 +261,10 @@ beforeEach(() => {
   mockServidor.erroSeguinte = null;
   mockServidor.recebidas = [];
   mockServidor.falhasCarregar = 0;
+  mockServidor.versoes = new Map();
+  mockServidor.errosPorId = new Map();
+  mockServidor.alcancavel = false;
+  mockServidor.aMeioDaEscrita = null;
 });
 
 /* ---- Testes ---- */
@@ -328,6 +379,57 @@ describe('escritas otimistas', () => {
     expect(erro.message).toMatch(/row-level security/);
 
     expect(lerOutbox()).toEqual([]);
+    // E o animal sai do ecrã: ficar lá com ar de gravado, por trás do erro,
+    // era o que acontecia, até a sincronização seguinte o tirar sem aviso.
+    expect(ctx().animais).toEqual([]);
+  });
+
+  it('uma alteração recusada volta atrás no ecrã', async () => {
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [],
+      animais: [animal('a1', { nome: 'Estrela' })],
+      eventos: [],
+    };
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Não tem permissão para alterar este registo.';
+    await falhaCom(() => ctx().updateAnimal('a1', { nome: 'Outro nome' }));
+
+    expect(ctx().animais[0].nome).toBe('Estrela');
+  });
+
+  it('um terreno, um evento e um movimento recusados também saem do ecrã', async () => {
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [],
+      animais: [animal('a1')],
+      eventos: [],
+    };
+    const { ctx } = await montar();
+    const recusa = 'new row violates row-level security policy';
+
+    mockServidor.erroSeguinte = recusa;
+    await falhaCom(() => ctx().addTerreno({ exploracaoId: 'exp-1', nome: 'Courela', tipo: 'Pastagem' }));
+    mockServidor.erroSeguinte = recusa;
+    await falhaCom(() =>
+      ctx().addEvento({ animalId: 'a1', tipo: 'Pesagem', data: '2026-09-01', descricao: '' }),
+    );
+    mockServidor.erroSeguinte = recusa;
+    await falhaCom(() =>
+      ctx().addMovimento({
+        exploracaoId: 'exp-1',
+        direcao: 'despesa',
+        categoria: 'Alimentação',
+        valor: 10,
+        data: '2026-09-01',
+        descricao: 'Ração',
+      }),
+    );
+
+    expect(ctx().terrenos).toEqual([]);
+    expect(ctx().eventos).toEqual([]);
+    expect(ctx().movimentos).toEqual([]);
   });
 
   it('guarda a cache local a cada alteração, para reabrir offline', async () => {
@@ -350,7 +452,7 @@ describe('sincronização da fila', () => {
     await act(async () => {
       await ctx().addAnimal(animal('a1') as Omit<Animal, 'id'>);
     });
-    mockServidor.erroSeguinte = 'Network request failed';
+    // Com a primeira na fila, a segunda já nem tenta a rede: vai para trás dela.
     await act(async () => {
       await ctx().addAnimal(animal('a2') as Omit<Animal, 'id'>);
     });
@@ -375,7 +477,6 @@ describe('sincronização da fila', () => {
     await act(async () => {
       await ctx().addAnimal(animal('mau') as Omit<Animal, 'id'>);
     });
-    mockServidor.erroSeguinte = 'Network request failed';
     await act(async () => {
       await ctx().addAnimal(animal('bom') as Omit<Animal, 'id'>);
     });
@@ -504,6 +605,195 @@ describe('sincronização da fila', () => {
       ctx().limparFalhadas();
     });
 
+    expect(ctx().falhadas).toEqual([]);
+  });
+});
+
+describe('versões depois de gravar', () => {
+  const V0 = '2026-01-01T00:00:00.000Z';
+
+  function comAnimalDoServidor() {
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [],
+      animais: [animal('a1', { atualizadoEm: V0 })],
+      eventos: [],
+    };
+    mockServidor.versoes.set('a1', V0);
+  }
+
+  it('duas alterações seguidas ao mesmo animal passam as duas', async () => {
+    // O caso de todos os dias: muda-se o peso e a seguir o terreno. A segunda
+    // seguia com a versão de ANTES da primeira, e o servidor dizia "outra
+    // pessoa alterou este registo" por causa do próprio criador.
+    comAnimalDoServidor();
+    const { ctx } = await montar();
+
+    await act(async () => {
+      await ctx().updateAnimal('a1', { nome: 'Estrela' });
+    });
+    await act(async () => {
+      await ctx().updateAnimal('a1', { nome: 'Estrela da Serra' });
+    });
+
+    expect(mockServidor.recebidas).toEqual(['upsert:animal:a1', 'upsert:animal:a1']);
+    expect(ctx().animais[0].atualizadoEm).toBe(mockServidor.versoes.get('a1'));
+  });
+
+  it('sem rede, duas alterações ao mesmo animal chegam as duas ao servidor', async () => {
+    // Na fila, a segunda não pode levar a versão antiga: a primeira passa à
+    // frente dela e a segunda perdia-se como "conflito".
+    comAnimalDoServidor();
+    const { ctx } = await montar();
+
+    mockServidor.erroSeguinte = 'Network request failed';
+    await act(async () => {
+      await ctx().updateAnimal('a1', { nome: 'Estrela' });
+    });
+    await act(async () => {
+      await ctx().updateAnimal('a1', { nome: 'Estrela da Serra' });
+    });
+    expect(lerOutbox()).toHaveLength(2);
+
+    await act(async () => {
+      await ctx().recarregar();
+    });
+
+    expect(ctx().falhadas).toEqual([]);
+    expect(mockServidor.recebidas).toEqual(['upsert:animal:a1', 'upsert:animal:a1']);
+    expect(lerOutbox()).toEqual([]);
+  });
+});
+
+describe('a fila não perde nem repete', () => {
+  it('uma gravação feita enquanto a fila está a sair não se perde', async () => {
+    // A sincronização guardava por cima da fila a cópia que lera no início: o
+    // que entrasse entretanto desaparecia sem deixar rasto.
+    const { ctx } = await montar();
+    mockServidor.erroSeguinte = 'Network request failed';
+    await act(async () => {
+      await ctx().addAnimal(animal('primeiro') as Omit<Animal, 'id'>);
+    });
+
+    let segundo: Animal | null = null;
+    mockServidor.aMeioDaEscrita = async () => {
+      // A rede volta a cair a meio: esta gravação não passa e tem de ficar.
+      mockServidor.erroSeguinte = 'Network request failed';
+      segundo = await ctx().addAnimal(animal('segundo') as Omit<Animal, 'id'>);
+      mockServidor.erroSeguinte = null;
+    };
+    await act(async () => {
+      await ctx().recarregar();
+    });
+
+    const id = (segundo as Animal | null)?.id;
+    expect(id).toBeDefined();
+    const noServidor = mockServidor.recebidas.includes(`upsert:animal:${id}`);
+    const naFila = lerOutbox().some((o) => o.op === 'upsert' && o.dados.id === id);
+    expect(noServidor || naFila).toBe(true);
+  });
+
+  it('duas sincronizações ao mesmo tempo não enviam a mesma alteração duas vezes', async () => {
+    // Arranque, regresso da rede, app a voltar ao primeiro plano: disparam
+    // todos. As duas liam a mesma fila, e a segunda cópia voltava como
+    // conflito com a versão que a primeira acabara de escrever.
+    mockServidor.snapshot = {
+      exploracoes: [exploracao],
+      terrenos: [],
+      animais: [animal('a1', { atualizadoEm: '2026-01-01T00:00:00.000Z' })],
+      eventos: [],
+    };
+    mockServidor.versoes.set('a1', '2026-01-01T00:00:00.000Z');
+    const { ctx } = await montar();
+    mockServidor.erroSeguinte = 'Network request failed';
+    await act(async () => {
+      await ctx().updateAnimal('a1', { nome: 'Estrela' });
+    });
+
+    await act(async () => {
+      await Promise.all([ctx().recarregar(), ctx().recarregar()]);
+    });
+
+    expect(mockServidor.recebidas).toEqual(['upsert:animal:a1']);
+    expect(ctx().falhadas).toEqual([]);
+  });
+
+  it('com a fila por enviar, uma gravação nova vai para trás dela', async () => {
+    // Um evento enviado antes do animal que ainda está na fila era recusado:
+    // no servidor, o animal ainda não existia.
+    const { ctx } = await montar();
+    mockServidor.erroSeguinte = 'Network request failed';
+    let novo!: Animal;
+    await act(async () => {
+      novo = await ctx().addAnimal(animal('bezerro') as Omit<Animal, 'id'>);
+    });
+
+    let evento!: Evento;
+    await act(async () => {
+      evento = await ctx().addEvento({ animalId: novo.id, tipo: 'Pesagem', data: '2026-09-01', descricao: '' });
+    });
+    expect(mockServidor.recebidas).toEqual([]); // não passou à frente
+
+    await act(async () => {
+      await ctx().recarregar();
+    });
+    expect(mockServidor.recebidas).toEqual([`upsert:animal:${novo.id}`, `upsert:evento:${evento.id}`]);
+  });
+});
+
+describe('uma operação presa à cabeça da fila', () => {
+  const ENGANADOR = 'Failed to parse the request body';
+
+  async function filaComMauEBom() {
+    const r = await montar();
+    mockServidor.erroSeguinte = 'Network request failed';
+    let mau!: Animal;
+    let bom!: Animal;
+    await act(async () => {
+      mau = await r.ctx().addAnimal(animal('mau') as Omit<Animal, 'id'>);
+    });
+    await act(async () => {
+      bom = await r.ctx().addAnimal(animal('bom') as Omit<Animal, 'id'>);
+    });
+    mockServidor.errosPorId.set(mau.id, ENGANADOR);
+    return { ...r, mau, bom };
+  }
+
+  it('com o servidor a responder, ao fim de três tentativas passa às recusas e liberta a fila', async () => {
+    // "Failed to…" parece falta de rede. Com o servidor a responder, não é:
+    // ficava à cabeça da fila para sempre e nada do que vinha atrás saía.
+    const { ctx, mau, bom } = await filaComMauEBom();
+    mockServidor.alcancavel = true;
+
+    for (let i = 0; i < 2; i++) {
+      await act(async () => {
+        await ctx().recarregar();
+      });
+      expect(lerOutbox()).toHaveLength(2); // ainda pode ser azar da rede
+    }
+    await act(async () => {
+      await ctx().recarregar();
+    });
+
+    expect(lerOutbox()).toEqual([]);
+    expect(mockServidor.recebidas).toEqual([`upsert:animal:${bom.id}`]);
+    expect(ctx().falhadas).toHaveLength(1);
+    expect(ctx().falhadas[0].op).toEqual(expect.objectContaining({ dados: expect.objectContaining({ id: mau.id }) }));
+    expect(ctx().falhadas[0].motivo).toBe('recusada');
+  });
+
+  it('sem servidor (rede mesmo em baixo) não conta tentativas e não descarta nada', async () => {
+    const { ctx } = await filaComMauEBom();
+    mockServidor.alcancavel = false;
+
+    for (let i = 0; i < 5; i++) {
+      await act(async () => {
+        await ctx().recarregar();
+      });
+    }
+
+    expect(lerOutbox()).toHaveLength(2);
+    expect(lerOutbox()[0].tentativas).toBeUndefined();
     expect(ctx().falhadas).toEqual([]);
   });
 });

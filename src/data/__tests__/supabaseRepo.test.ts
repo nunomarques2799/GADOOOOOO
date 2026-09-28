@@ -115,7 +115,7 @@ describe('gravação sem versão conhecida — registo criado neste aparelho', (
     // exploração exige um papel (`admin`) que só o trigger cria DEPOIS do
     // insert. Criar a primeira exploração dava 403 com o upsert e passa com o
     // insert — este teste trava a regressão de voltar a pôr upsert.
-    const erro = await upsertAnimalSupabase(animal());
+    const { erro } = await upsertAnimalSupabase(animal());
 
     expect(erro).toBeNull();
     expect(mockChamadas).toEqual([
@@ -125,7 +125,7 @@ describe('gravação sem versão conhecida — registo criado neste aparelho', (
 
   it('propaga o erro do servidor tal como veio', async () => {
     mockRespostas.insert = { error: { message: 'permission denied for table animal' } };
-    expect(await upsertAnimalSupabase(animal())).toBe('permission denied for table animal');
+    expect((await upsertAnimalSupabase(animal())).erro).toBe('permission denied for table animal');
   });
 
   it('chave duplicada não é erro: a linha já existe, faz UPDATE em vez de gritar', async () => {
@@ -135,7 +135,7 @@ describe('gravação sem versão conhecida — registo criado neste aparelho', (
     // dizer que falhou, que é precisamente o que isto corrige.
     mockRespostas.insert = { error: { message: 'duplicate key value', code: '23505' } };
 
-    const erro = await upsertAnimalSupabase(animal());
+    const { erro } = await upsertAnimalSupabase(animal());
 
     expect(erro).toBeNull();
     expect(mockChamadas).toEqual([
@@ -151,7 +151,7 @@ describe('gravação com versão conhecida', () => {
   it('grava quando o servidor ainda está na versão que vimos', async () => {
     mockRespostas.update = { data: [{ id: 'a1' }], error: null };
 
-    const erro = await upsertAnimalSupabase(animal({ atualizadoEm: versao }));
+    const { erro } = await upsertAnimalSupabase(animal({ atualizadoEm: versao }));
 
     expect(erro).toBeNull();
     // A condição tem de incluir o filtro de versão, senão não guarda nada.
@@ -170,7 +170,7 @@ describe('gravação com versão conhecida', () => {
       error: null,
     };
 
-    const erro = await upsertAnimalSupabase(animal({ atualizadoEm: versao }));
+    const { erro } = await upsertAnimalSupabase(animal({ atualizadoEm: versao }));
 
     expect(erro).not.toBeNull();
     expect(eConflito(erro as string)).toBe(true);
@@ -184,7 +184,7 @@ describe('gravação com versão conhecida', () => {
     mockRespostas.update = { data: [], error: null };
     mockRespostas.select = { data: { updated_at: versao }, error: null };
 
-    const erro = await upsertAnimalSupabase(animal({ atualizadoEm: versao }));
+    const { erro } = await upsertAnimalSupabase(animal({ atualizadoEm: versao }));
 
     expect(eConflito(erro as string)).toBe(false);
     expect(erro).toContain('permissão');
@@ -195,10 +195,28 @@ describe('gravação com versão conhecida', () => {
     mockRespostas.update = { data: [], error: null };
     mockRespostas.select = { data: null, error: null };
 
-    const erro = await upsertAnimalSupabase(animal({ atualizadoEm: versao }));
+    const { erro } = await upsertAnimalSupabase(animal({ atualizadoEm: versao }));
 
     expect(eConflito(erro as string)).toBe(true);
     expect(erro).toContain('eliminado');
+  });
+
+  it('devolve a versão com que a linha ficou, para a alteração seguinte não dar conflito', async () => {
+    // O trigger avança o `updated_at` a cada UPDATE. Sem a versão nova, a
+    // segunda alteração ao mesmo animal seguia com a antiga e o servidor, já à
+    // frente dela, dizia "outra pessoa alterou" por causa do próprio criador.
+    const nova = '2026-07-18T10:05:00.123456+00:00';
+    mockRespostas.update = { data: [{ id: 'a1', updated_at: nova }], error: null };
+
+    const resultado = await upsertAnimalSupabase(animal({ atualizadoEm: versao }));
+
+    expect(resultado).toEqual({ erro: null, versao: nova });
+  });
+
+  it('um registo criado neste aparelho não inventa versão', async () => {
+    // O INSERT não a lê. Sem versão, a gravação seguinte segue pelo INSERT →
+    // chave duplicada → UPDATE, que não compara versões.
+    expect(await upsertAnimalSupabase(animal())).toEqual({ erro: null });
   });
 
   it('não vai ler a linha quando a gravação passou (poupa uma ida à rede)', async () => {

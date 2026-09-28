@@ -54,6 +54,45 @@ export function mensagemLegivel(msg: string): string {
 /** Todas as tabelas trazem a versão da linha (mantida pelo trigger). */
 type ComUpdatedAt = { updated_at?: string | null };
 
+/**
+ * O que uma gravação devolve: o erro (ou `null`) e, quando a linha já vinha do
+ * servidor, a VERSÃO com que ela lá ficou.
+ *
+ * A versão é o que faltava para a segunda alteração ao mesmo registo passar. O
+ * trigger avança o `updated_at` a cada UPDATE, e sem ficar a saber o valor novo
+ * a app voltava a mandar a versão antiga na gravação seguinte: o servidor já
+ * estava à frente dela, e o criador recebia "outra pessoa alterou este
+ * registo" por causa de uma alteração que tinha sido ele a fazer. Sem rede era
+ * pior: duas alterações ao mesmo animal na fila, e a segunda perdia-se.
+ *
+ * `versao` fica ausente num registo criado neste aparelho (o INSERT não a lê):
+ * esse não tem versão conhecida, e a gravação seguinte segue pelo INSERT →
+ * chave duplicada → UPDATE, que não compara versões.
+ */
+export type ResultadoGravacao = { erro: string | null; versao?: string };
+
+/**
+ * O servidor respondeu? Serve para distinguir falta de rede de um erro que só
+ * PARECE de rede, sem ir pelas palavras da mensagem.
+ *
+ * O postgrest-js entrega a falha do `fetch` com `status: 0`; qualquer resposta
+ * que tenha vindo do servidor (mesmo uma recusa) traz o código HTTP dela. O
+ * `head: true` não traz linhas nenhumas, por isso a pergunta custa um pedido
+ * vazio.
+ */
+export async function servidorResponde(): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { status } = await supabase
+      .from('exploracao')
+      .select('id', { head: true })
+      .limit(1);
+    return status > 0;
+  } catch {
+    return false;
+  }
+}
+
 type ExploracaoRow = ComUpdatedAt & {
   id: string;
   user_id: string;
@@ -531,8 +570,9 @@ async function gravarComVersao(
   id: string,
   versaoConhecida: string | undefined,
   payload: Record<string, unknown>,
-): Promise<string | null> {
-  if (!supabase) return null;
+): Promise<ResultadoGravacao> {
+  if (!supabase) return { erro: null };
+  const falhou = (erro: string): ResultadoGravacao => ({ erro });
 
   // Sem versão conhecida, a linha nunca veio do servidor: foi criada neste
   // aparelho e ainda não sincronizou. Não há outro autor com quem colidir.
@@ -546,14 +586,14 @@ async function gravarComVersao(
     // de a política de INSERT (perfil ativo) estar satisfeita — o mesmo pedido
     // feito com `insert` passa.
     const { error } = await supabase.from(tabela).insert(payload);
-    if (!error) return null;
+    if (!error) return { erro: null };
     // 23505 = chave duplicada. A linha já lá está: ou o pedido anterior chegou
     // e a resposta é que se perdeu, ou a fila offline repetiu a operação. É o
     // caso que o `upsert` tratava sozinho, e que se trata aqui à mão para não
     // ter de o trazer de volta.
-    if (error.code !== '23505') return await explicarRecusa(error.message);
+    if (error.code !== '23505') return falhou(await explicarRecusa(error.message));
     const { error: erroUpdate } = await supabase.from(tabela).update(payload).eq('id', id);
-    return erroUpdate ? await explicarRecusa(erroUpdate.message) : null;
+    return erroUpdate ? falhou(await explicarRecusa(erroUpdate.message)) : { erro: null };
   }
 
   const { data, error } = await supabase
@@ -561,9 +601,14 @@ async function gravarComVersao(
     .update(payload)
     .eq('id', id)
     .lte('updated_at', versaoConhecida)
-    .select('id');
-  if (error) return await explicarRecusa(error.message);
-  if (data && data.length > 0) return null;
+    .select('id, updated_at');
+  if (error) return falhou(await explicarRecusa(error.message));
+  if (data && data.length > 0) {
+    // A versão nova vem na mesma resposta: é o que deixa a alteração seguinte
+    // a este registo passar (ver `ResultadoGravacao`).
+    const versao = (data[0] as ComUpdatedAt).updated_at ?? undefined;
+    return { erro: null, versao };
+  }
 
   // Nada foi gravado — descobrir porquê.
   const { data: atual, error: erroLeitura } = await supabase
@@ -571,12 +616,12 @@ async function gravarComVersao(
     .select('updated_at')
     .eq('id', id)
     .maybeSingle();
-  if (erroLeitura) return traduzErroServidor(erroLeitura.message);
+  if (erroLeitura) return falhou(traduzErroServidor(erroLeitura.message));
 
   if (!atual) {
     // Ou foi eliminada por outra pessoa, ou a RLS nem sequer no-la deixa ver.
     // Recriá-la seria ressuscitar um registo que alguém apagou de propósito.
-    return `${ERRO_CONFLITO}: o registo já não existe no servidor, foi eliminado por outra pessoa.`;
+    return falhou(`${ERRO_CONFLITO}: o registo já não existe no servidor, foi eliminado por outra pessoa.`);
   }
 
   const versaoServidor = (atual as ComUpdatedAt).updated_at;
@@ -584,16 +629,16 @@ async function gravarComVersao(
     !!versaoServidor && Date.parse(versaoServidor) > Date.parse(versaoConhecida);
   if (!mudou) {
     // A versão não avançou, logo o que bloqueou não foi a versão: foi a RLS.
-    return 'Não tem permissão para alterar este registo.';
+    return falhou('Não tem permissão para alterar este registo.');
   }
   // Cuidado com as palavras: `pareceErroDeRede` procura expressões como
   // "sem ligação", e uma mensagem de conflito que as contenha seria tomada
   // por falha de rede e devolvida à fila para sempre. O `eConflito` é
   // verificado antes dessa heurística, mas não convém depender só disso.
-  return `${ERRO_CONFLITO}: outra pessoa alterou este registo antes de esta alteração chegar ao servidor.`;
+  return falhou(`${ERRO_CONFLITO}: outra pessoa alterou este registo antes de esta alteração chegar ao servidor.`);
 }
 
-export async function upsertExploracaoSupabase(e: Exploracao): Promise<string | null> {
+export async function upsertExploracaoSupabase(e: Exploracao): Promise<ResultadoGravacao> {
   return gravarComVersao('exploracao', e.id, e.atualizadoEm, exploracaoPayload(e));
 }
 
@@ -603,7 +648,7 @@ export async function eliminarExploracaoSupabase(id: string): Promise<string | n
   return error ? traduzErroServidor(error.message) : null;
 }
 
-export async function upsertTerrenoSupabase(t: Terreno): Promise<string | null> {
+export async function upsertTerrenoSupabase(t: Terreno): Promise<ResultadoGravacao> {
   return gravarComVersao('terreno', t.id, t.atualizadoEm, terrenoPayload(t));
 }
 
@@ -613,7 +658,7 @@ export async function eliminarTerrenoSupabase(id: string): Promise<string | null
   return error ? traduzErroServidor(error.message) : null;
 }
 
-export async function upsertAnimalSupabase(a: Animal): Promise<string | null> {
+export async function upsertAnimalSupabase(a: Animal): Promise<ResultadoGravacao> {
   return gravarComVersao('animal', a.id, a.atualizadoEm, animalPayload(a));
 }
 
@@ -651,11 +696,11 @@ export async function nomesDaEquipaSupabase(): Promise<Record<string, string>> {
   return out;
 }
 
-export async function upsertEventoSupabase(e: Evento): Promise<string | null> {
+export async function upsertEventoSupabase(e: Evento): Promise<ResultadoGravacao> {
   return gravarComVersao('evento', e.id, e.atualizadoEm, eventoPayload(e));
 }
 
-export async function upsertMovimentoSupabase(m: Movimento): Promise<string | null> {
+export async function upsertMovimentoSupabase(m: Movimento): Promise<ResultadoGravacao> {
   return gravarComVersao('movimento', m.id, m.atualizadoEm, movimentoPayload(m));
 }
 
@@ -665,7 +710,7 @@ export async function eliminarMovimentoSupabase(id: string): Promise<string | nu
   return error ? traduzErroServidor(error.message) : null;
 }
 
-export async function upsertMedicamentoSupabase(m: Medicamento): Promise<string | null> {
+export async function upsertMedicamentoSupabase(m: Medicamento): Promise<ResultadoGravacao> {
   return gravarComVersao('medicamento', m.id, m.atualizadoEm, medicamentoPayload(m));
 }
 
