@@ -240,7 +240,15 @@ select * from (
                   join pg_type t on t.oid = e.enumtypid
                  where t.typname = 'role_membro' and e.enumlabel = 'supervisor')
          and exists (select 1 from col
-                      where tabela = 'perfil' and coluna = 'tipo_conta')))
+                      where tabela = 'perfil' and coluna = 'tipo_conta'))),
+    -- Marca-se pela AUSÊNCIA: o texto antigo das funções já não está na base.
+    (41, 'schema_sem_travessoes.sql', 'funções do apoio e do registo sem travessão',
+        (not exists (
+           select 1 from pg_proc
+            where proname in ('enviar_mensagem_apoio', 'notificar_registo_pendente',
+                              'testar_notificacao_registo')
+              and (prosrc like '%um pouco ' || chr(8212) || ' vamos%'
+                   or prosrc like '%''Terrabovina ' || chr(8212) || '%'))))
 ) as t(ordem, ficheiro, marca, aplicado)
 order by ordem;
 -- Ler a coluna `aplicado`: true = já correu, false = FALTA aplicar.

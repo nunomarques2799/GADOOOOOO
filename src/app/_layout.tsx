@@ -316,6 +316,7 @@ export default function RootLayout() {
                   <Stack.Screen name="conta/existencias" />
                   <Stack.Screen name="conta/aparencia" />
                   <Stack.Screen name="conta/idioma" />
+                  <Stack.Screen name="conta/barra" />
                   <Stack.Screen name="conta/ajuda" />
                   <Stack.Screen name="conta/apagar" />
                   <Stack.Screen name="inspecionar/exploracao/[id]" />

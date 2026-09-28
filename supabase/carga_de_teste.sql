@@ -122,7 +122,7 @@ begin
       email_alvo, n_alheios;
   end if;
 
-  raise notice 'Conta % (id %) — validada.', email_alvo, uid;
+  raise notice 'Conta % (id %): validada.', email_alvo, uid;
 
   -- ----------------------------------------------------------------
   -- 1. Limpar uma carga anterior
@@ -312,7 +312,7 @@ begin
   insert into public.evento (id, user_id, animal_id, tipo, data, descricao, detalhe, valor)
   select 'carga-ev-vac-' || a.id, uid, a.id, 'Vacinação',
          (current_date - (30 + (abs(hashtext(a.id)) % 400)))::text || 'T10:00:00.000Z',
-         'Vacina — ' || (array['Língua azul','Brucelose','Clostridioses','Carbúnculo'])
+         'Vacina: ' || (array['Língua azul','Brucelose','Clostridioses','Carbúnculo'])
                         [1 + abs(hashtext(a.id)) % 4],
          'Lote ' || (1000 + abs(hashtext(a.id)) % 9000),
          (14 + abs(hashtext(a.id)) % 12)::numeric
@@ -340,7 +340,7 @@ begin
   select distinct on (cria.mae_id)
          'carga-ev-parto-' || cria.mae_id, uid, cria.mae_id, 'Parto',
          cria.data_nascimento,
-         'Parto normal — 1 cria', 'nado-vivo', null
+         'Parto normal, 1 cria', 'nado-vivo', null
     from public.animal cria
    where cria.user_id = uid and cria.id like 'carga-%' and cria.mae_id is not null
    order by cria.mae_id, cria.data_nascimento desc;
@@ -350,7 +350,7 @@ begin
   insert into public.evento (id, user_id, animal_id, tipo, data, descricao, detalhe, valor)
   select 'carga-ev-med-' || a.id, uid, a.id, 'Medicamento',
          (current_date - 3)::text || 'T09:30:00.000Z',
-         'Medicamento — Antibiótico',
+         'Medicamento: Antibiótico',
          'Dose 20 ml · Injetável · intervalo de segurança em curso',
          35::numeric
     from public.animal a

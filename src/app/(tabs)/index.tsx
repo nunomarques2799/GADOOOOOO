@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -298,12 +298,21 @@ export default function InicioScreen() {
                 </Text>
               </View>
             </View>
-            <Avatar
-              initials={iniciais}
-              size={54}
-              background="rgba(255,255,255,0.18)"
-              foreground={colors.textOnDark}
-            />
+            {/* A inicial leva ao Perfil: é o gesto que toda a gente já faz
+                noutras apps, e até aqui tocar-lhe não fazia nada. */}
+            <Pressable
+              onPress={() => router.navigate('/perfil')}
+              accessibilityRole="button"
+              accessibilityLabel={t('nav.perfil')}
+              hitSlop={8}
+              style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
+              <Avatar
+                initials={iniciais}
+                size={54}
+                background="rgba(255,255,255,0.18)"
+                foreground={colors.textOnDark}
+              />
+            </Pressable>
           </View>
         </LinearGradient>
 

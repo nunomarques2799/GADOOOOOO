@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useDeferredValue, useMemo, useState, type ReactNode } from 'react';
-import { FlatList, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useDeferredValue, useMemo, useState } from 'react';
+import { FlatList, Modal, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimalRow } from '@/components/AnimalRow';
@@ -32,65 +32,148 @@ import { useVoltarAoTopo } from '@/data/voltarAoTopo';
 import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
-import { colors, layout, radii, spacing } from '@/theme';
+import { colors, layout, radii, shadow, spacing } from '@/theme';
 
 /**
- * Uma fila de chips que NÃO se empilha no telemóvel.
+ * A ordenação no TELEMÓVEL: um botão só, "Ordenar: Nome (A→Z)", que abre uma
+ * folha com as quatro ordens.
  *
- * Em `flexWrap` — que é como estas duas filas estavam — cada chip que não cabe
- * salta para a linha de baixo. Com quatro explorações de nomes compridos
- * ("Herdade do Vale Escuro") dava uma linha por exploração, mais três linhas de
- * ordenação por baixo: seis linhas de botões entre o título e o primeiro
- * animal, num ecrã onde cabem cinco. Era o "encavalitado" — não estava nada
- * sobreposto, estava tudo empilhado.
+ * Era uma fila de chips a rolar na horizontal, e rolar para o lado é um gesto
+ * que ninguém adivinha: a última ordem ficava cortada a meio ("Com alertas p")
+ * e quem não arrastasse nunca sabia que havia mais. Embrulhada em linhas
+ * (`flexWrap`) também não servia: com a letra grande, eram três linhas de
+ * botões entre o título e o primeiro animal. Um botão com o valor escolhido à
+ * vista ocupa uma linha, mostra o que está em vigor e não esconde nada, tal
+ * como o seletor "Todas" das explorações logo acima.
  *
- * A rolar na horizontal, ocupa uma linha e só uma, custe o que custar o nome da
- * quinta. Em desktop mantém-se o `flexWrap`: lá há largura para tudo caber, e
- * uma fila que rola quando não precisa esconde opções sem razão.
+ * No computador ficam os chips, embrulhados: lá há largura para tudo caber
+ * numa linha.
  */
-function LinhaChips({
-  children,
-  desktop,
-  antes,
+function OrdenarTelemovel({
+  ordenacao,
+  onEscolher,
 }: {
-  children: ReactNode;
-  desktop: boolean;
-  /** Fica colado ao início da fila e rola com ela (o rótulo "Ordenar:"). */
-  antes?: ReactNode;
+  ordenacao: Ordenacao;
+  onEscolher: (o: Ordenacao) => void;
 }) {
-  if (desktop) {
-    return (
-      <View
-        style={{
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          gap: spacing.xs,
-          marginBottom: spacing.sm,
-        }}>
-        {antes}
-        {children}
-      </View>
-    );
-  }
+  const insets = useSafeAreaInsets();
+  const [aberta, setAberta] = useState(false);
+  const opcoes = ordenacoes();
+  const atual = opcoes.find((o) => o.valor === ordenacao);
+
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      // Sem isto, tocar num chip a meio de um arrasto escolhia-o.
-      keyboardShouldPersistTaps="handled"
-      style={{ marginBottom: spacing.sm }}
-      contentContainerStyle={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.xs,
-        // Folga no fim para o último chip não ficar colado à margem e para se
-        // perceber que a fila continua.
-        paddingRight: spacing.lg,
-      }}>
-      {antes}
-      {children}
-    </ScrollView>
+    <>
+      <Pressable
+        onPress={() => setAberta(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`${t('animais.ordenar')} ${atual?.label ?? ''}`}
+        style={({ pressed }) => [
+          {
+            alignSelf: 'flex-start',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            minHeight: 44,
+            paddingHorizontal: spacing.md,
+            marginBottom: spacing.sm,
+            borderRadius: radii.pill,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+          },
+          pressed && { opacity: 0.7 },
+        ]}>
+        <Icon name="sort" size="sm" color={colors.textMuted} />
+        <Text variant="caption" color={colors.textMuted}>
+          {t('animais.ordenar')}
+        </Text>
+        <Text variant="bodyStrong" color={colors.primaryDark} numberOfLines={1} style={{ flexShrink: 1 }}>
+          {atual?.label}
+        </Text>
+        <Icon name="chevron-down" size="sm" color={colors.primaryDark} />
+      </Pressable>
+
+      <Modal
+        visible={aberta}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setAberta(false)}>
+        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={() => setAberta(false)}
+            accessibilityLabel={t('comum.fechar')}
+          />
+          <View
+            style={[
+              {
+                backgroundColor: colors.background,
+                borderTopLeftRadius: radii.xl,
+                borderTopRightRadius: radii.xl,
+                paddingTop: spacing.md,
+                paddingBottom: insets.bottom + spacing.md,
+                paddingHorizontal: spacing.lg,
+              },
+              shadow.lg,
+            ]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+              <Text variant="h3" style={{ flex: 1 }}>
+                {t('animais.ordenarTitulo')}
+              </Text>
+              <Pressable
+                onPress={() => setAberta(false)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('comum.fechar')}>
+                <Icon name="close" size="lg" color={colors.textSecondary} />
+              </Pressable>
+            </View>
+            {opcoes.map((o, i) => {
+              const sel = o.valor === ordenacao;
+              return (
+                <Pressable
+                  key={o.valor}
+                  onPress={() => {
+                    onEscolher(o.valor);
+                    setAberta(false);
+                  }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: sel }}
+                  accessibilityLabel={o.label}
+                  style={({ pressed }) => [
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: spacing.sm,
+                      minHeight: 60,
+                      borderBottomWidth: i < opcoes.length - 1 ? 1 : 0,
+                      borderBottomColor: colors.border,
+                    },
+                    pressed && { opacity: 0.6 },
+                  ]}>
+                  <Icon
+                    name={ICONE_ORDEM[o.valor]}
+                    size="lg"
+                    color={sel ? colors.primary : colors.textSecondary}
+                  />
+                  <Text
+                    variant={sel ? 'bodyStrong' : 'body'}
+                    color={sel ? colors.primaryDark : colors.text}
+                    style={{ flex: 1 }}>
+                    {o.label}
+                  </Text>
+                  <Icon
+                    name={sel ? 'radiobox-marked' : 'radiobox-blank'}
+                    size="md"
+                    color={sel ? colors.primary : colors.textMuted}
+                  />
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -382,17 +465,24 @@ export default function AnimaisScreen() {
                 primeiro os que precisam de atenção" é um pedido do dia-a-dia,
                 não uma configuração. Só aparece com animais que cheguem para a
                 ordem fazer diferença. */}
-            {ativos.length > 1 ? (
-              <LinhaChips
-                desktop={desktop}
-                antes={
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 2 }}>
-                    <Icon name="sort" size="sm" color={colors.textMuted} />
-                    <Text variant="caption" color={colors.textMuted}>
-                      {t('animais.ordenar')}
-                    </Text>
-                  </View>
-                }>
+            {ativos.length > 1 && !desktop ? (
+              <OrdenarTelemovel ordenacao={ordenacao} onEscolher={setOrdenacao} />
+            ) : null}
+            {ativos.length > 1 && desktop ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  marginBottom: spacing.sm,
+                }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 2 }}>
+                  <Icon name="sort" size="sm" color={colors.textMuted} />
+                  <Text variant="caption" color={colors.textMuted}>
+                    {t('animais.ordenar')}
+                  </Text>
+                </View>
                 {ordenacoes().map((o) => (
                   <Chip
                     key={o.valor}
@@ -402,7 +492,7 @@ export default function AnimaisScreen() {
                     onPress={() => setOrdenacao(o.valor)}
                   />
                 ))}
-              </LinhaChips>
+              </View>
             ) : null}
 
             {/* O que querem dizer os pontos coloridos nos retratos */}

@@ -1,17 +1,22 @@
-import { Tabs, useRouter, type Href } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Tabs, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FolhaAcoesRapidas } from '@/components/AcoesRapidas';
 import { BarraLateral, type ItemNav } from '@/components/BarraLateral';
+import { DESTINOS, useDestinos } from '@/components/destinosNavegacao';
 import { Icon, type IconName, Text } from '@/components/ui';
+import {
+  ATALHOS_OMISSAO,
+  ATALHOS_OMISSAO_SUPERVISOR,
+  atalhosDaBarra,
+  useAtalhosEscolhidos,
+} from '@/data/barraAtalhos';
 import { useMembros } from '@/data/membros';
-import type { CapacidadeLeitura } from '@/data/permissoes';
 import { useNaoLidas } from '@/data/useChat';
-import { useExistencias } from '@/data/useExistencias';
 import { voltarAoTopo } from '@/data/voltarAoTopo';
-import { t, type ChaveTexto } from '@/i18n';
+import { t } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
 import { colors, radii, shadow, spacing } from '@/theme';
 
@@ -26,178 +31,25 @@ type TabBarProps = {
   };
 };
 
-type Rota = Extract<Href, string>;
-type Destino = {
-  nome: string;
-  rota: Rota;
-  /**
-   * A CHAVE do rótulo, não o rótulo.
-   *
-   * Esta tabela é criada ao importar o módulo, e o `t()` lê o idioma de uma
-   * variável que o arranque preenche — uma string resolvida aqui ficava
-   * congelada na língua de origem, exatamente como acontece com as cores lidas
-   * fora do render (ver a nota do `colors` no AGENTS.md). Com a chave, quem
-   * desenha é que traduz.
-   */
-  chave: ChaveTexto;
-  icon: IconName;
-  /**
-   * Um rótulo mais CURTO, só para a barra de baixo do telemóvel.
-   *
-   * A barra tem sete colunas de ~51px num ecrã de 375px, e "Conversas"
-   * mede 63px: escrito por extenso, encostava-se aos vizinhos. Na barra
-   * lateral do computador e em todo o resto da app continua a chamar-se
-   * pelo nome inteiro, que é onde há espaço para ele.
-   */
-  curto?: ChaveTexto;
-
-  /** Só aparece a quem gere a equipa de alguma exploração. */
-  soComEquipa?: boolean;
-  /**
-   * Só aparece a quem pode CONSULTAR isto nalguma exploração. Serve os
-   * separadores que um convidado não tem que abrir: as contas da exploração e
-   * os ficheiros com o efetivo lá dentro.
-   */
-  exigeLeitura?: CapacidadeLeitura;
-  /**
-   * Só aparece se o criador tiver LIGADO a funcionalidade nas Definições.
-   *
-   * É diferente do `exigeLeitura`: aquele é sobre o que este PAPEL pode ver,
-   * este é sobre o que a CONTA escolheu ter. As finanças precisam dos dois (só
-   * o dono liga, e nem toda a equipa vê as contas depois de ligadas); as
-   * existências só deste — ligada a arrecadação, quem trata dos animais precisa
-   * de escolher o frasco de onde saiu a dose, seja trabalhador ou veterinário.
-   */
-  exigeInterruptor?: 'existencias';
-};
-
 /**
- * Os destinos, pela ordem em que aparecem na barra lateral.
- * `nome` é o ficheiro dentro de `(tabs)/`; `rota` é o URL (o grupo `(tabs)`
- * não aparece no caminho, por isso `(tabs)/alertas.tsx` serve `/alertas`).
+ * A barra de baixo do TELEMÓVEL: Início | atalho | Registar | atalho | Mais.
  *
- * `soComEquipa` marca os que só fazem sentido a quem tem equipa para gerir:
- * um trabalhador convidado não vê a lista de colegas (a RLS também não lha
- * daria), e um destino que abre sempre vazio é um destino a mais na barra.
- */
-const DESTINOS: Destino[] = [
-  { nome: 'index', rota: '/', chave: 'nav.inicio', icon: 'home-variant' },
-  { nome: 'exploracoes', rota: '/exploracoes', chave: 'nav.exploracoes', icon: 'barn' },
-  { nome: 'terrenos', rota: '/terrenos', chave: 'nav.terrenos', icon: 'grass' },
-  { nome: 'animais', rota: '/animais', chave: 'nav.animais', icon: 'cow' },
-  { nome: 'alertas', rota: '/alertas', chave: 'nav.alertas', icon: 'bell-outline' },
-  { nome: 'chat', rota: '/chat', chave: 'nav.chat', curto: 'nav.chatCurto', icon: 'chat-outline' },
-  { nome: 'reproducao', rota: '/reproducao', chave: 'nav.reproducao', icon: 'heart-pulse' },
-  {
-    nome: 'medicamentos',
-    rota: '/medicamentos',
-    chave: 'nav.existencias',
-    icon: 'package-variant-closed',
-    exigeInterruptor: 'existencias',
-  },
-  {
-    nome: 'trabalhadores',
-    rota: '/trabalhadores',
-    chave: 'nav.trabalhadores',
-    icon: 'account-hard-hat',
-    soComEquipa: true,
-  },
-  {
-    nome: 'financas',
-    rota: '/financas',
-    chave: 'nav.financas',
-    icon: 'cash-multiple',
-    exigeLeitura: 'verFinancas',
-  },
-  {
-    nome: 'documentos',
-    rota: '/documentos',
-    chave: 'nav.documentos',
-    icon: 'file-document-outline',
-    exigeLeitura: 'verDocumentos',
-  },
-  { nome: 'definicoes', rota: '/definicoes', chave: 'nav.definicoes', icon: 'cog-outline' },
-  { nome: 'perfil', rota: '/perfil', chave: 'nav.perfil', icon: 'account' },
-];
-
-/**
- * A barra de baixo do TELEMÓVEL, pela ordem em que aparece.
+ * Cinco lugares, e só dois são escolhidos por quem usa a app (Definições →
+ * Atalhos da barra; ver `barraAtalhos.ts`). Eram sete fixos, e sete colunas
+ * num ecrã de 375px ficavam estreitas de mais para a letra grande que esta app
+ * tem de aguentar.
  *
- * São SETE lugares para os treze destinos do `DESTINOS` (seis daqui mais o
- * "Mais"): a barra reparte a largura por todos, e com treze cada um ficaria
- * espremido num ecrã de 375px — bem menos ainda com a letra do sistema no
- * máximo, que é o cenário que esta app tem de aguentar.
- *
- * Eram CINCO até as Conversas existirem (2026-08-23). Com o chat a entrar, os
- * Terrenos entraram com ele: com um só a mais, o "+" deixava de estar ao meio
- * (dois de um lado, três do outro), e o botão mais usado da app é o do meio
- * precisamente por se acertar nele sem olhar. Com seis mais o "Mais" volta a
- * haver três de cada lado. Sete lugares é o limite: a partir daqui, um destino
- * novo obriga a tirar outro.
- *
- * O `'+'` do meio não é um destino: é o botão de REGISTAR, e abre a folha das
- * ações rápidas (`FolhaAcoesRapidas`). Está aqui porque esta app usa-se para
- * apontar o que se acabou de fazer — a vacina, o parto, a despesa — e isso
- * estava a três toques de distância (Início → rolar até às ações rápidas →
- * escolher), com o Início a ter de estar aberto. Ao meio e em destaque, é o
- * alvo mais fácil de acertar com o polegar de qualquer ecrã da app.
- *
- * As Explorações saíram daqui para o "Mais": abrem-se para consultar ou para
- * mexer numa configuração, não a cada bocado. O que se faz todos os dias é ver
- * o Início, procurar um animal, registar, ver o que está a arder, e agora ler
- * o que a equipa escreveu.
+ * O Registar do meio não é um destino: é o botão que abre a folha das ações
+ * rápidas (`FolhaAcoesRapidas`). Está ao meio porque esta app usa-se para
+ * apontar o que se acabou de fazer (a vacina, o parto, a despesa), e o meio é
+ * o alvo mais fácil de acertar com o polegar sem olhar. Com dois atalhos de
+ * cada lado (Início e um atalho à esquerda, um atalho e o Mais à direita) fica
+ * sempre ao centro.
  *
  * No computador não há este problema: a barra lateral é vertical e leva-os
- * todos — e lá não há botão "+" nenhum, porque as ações rápidas estão à vista
- * no Início sem ter de rolar.
+ * todos, e lá não há botão Registar nenhum, porque as ações rápidas estão à
+ * vista no Início sem ter de rolar.
  */
-const BARRA_TELEMOVEL = ['index', 'animais', 'terrenos', '+', 'alertas', 'chat'] as const;
-
-/**
- * A mesma barra, para quem SUPERVISIONA uma sociedade agrícola: as Explorações
- * no lugar dos Animais.
- *
- * O supervisor não regista animais nem lhes escreve tratamentos (ver
- * `permissoes.ts`), portanto a lista do efetivo é, para ele, um sítio onde não
- * há nada a fazer — e ocupava o lugar mais fácil de acertar com o polegar. O
- * que ele abre a toda a hora é a lista de explorações, para ver o que se passa
- * em cada uma. Tudo o resto fica igual, incluindo o "+" ao meio: as ações
- * rápidas dele são os terrenos, e essas continuam a ser suas.
- */
-const BARRA_SUPERVISOR = ['index', 'exploracoes', 'terrenos', '+', 'alertas', 'chat'] as const;
-
-function barraDoTelemovel(supervisiona: boolean): readonly string[] {
-  return supervisiona ? BARRA_SUPERVISOR : BARRA_TELEMOVEL;
-}
-
-/**
- * Os destinos que esta pessoa pode ver. A rota continua declarada (quem chegar
- * lá por um link encontra o ecrã, que se explica a si mesmo) — o que se filtra
- * é a NAVEGAÇÃO, para ninguém tropeçar num ecrã que a RLS lhe fecha.
- */
-function useDestinos(): Destino[] {
-  const { podeEmAlguma, podeVer } = useMembros();
-  const comEquipa = podeEmAlguma('gerirEquipa');
-  // `podeVer(undefined, …)` responde por QUALQUER exploração de que se seja
-  // membro: quem tem duas quintas e as contas ligadas só numa continua a ver o
-  // separador. É a mesma pergunta que os ecrãs de dentro fazem.
-  const comFinancas = podeVer(undefined, 'verFinancas');
-  const comDocumentos = podeVer(undefined, 'verDocumentos');
-  const { ativas: comExistencias } = useExistencias();
-
-  return useMemo(
-    () =>
-      DESTINOS.filter((d) => {
-        if (d.soComEquipa && !comEquipa) return false;
-        if (d.exigeInterruptor === 'existencias' && !comExistencias) return false;
-        if (d.exigeLeitura === 'verFinancas') return comFinancas;
-        if (d.exigeLeitura === 'verDocumentos') return comDocumentos;
-        return true;
-      }),
-    [comEquipa, comFinancas, comDocumentos, comExistencias],
-  );
-}
-
 function TabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -206,11 +58,20 @@ function TabBar({ state, navigation }: TabBarProps) {
   const [registarAberto, setRegistarAberto] = useState(false);
   const naoLidas = useNaoLidas();
   const { isSupervisorEmAlguma } = useMembros();
+  const escolha = useAtalhosEscolhidos();
 
-  // A barra do supervisor troca os Animais pelas Explorações, e o "Mais"
-  // guarda o que ela deixou de fora — por isso as duas leem a MESMA lista.
-  const naBarra = barraDoTelemovel(isSupervisorEmAlguma);
+  const [esquerda, direita] = atalhosDaBarra(
+    escolha,
+    destinos.map((d) => d.nome),
+    isSupervisorEmAlguma ? ATALHOS_OMISSAO_SUPERVISOR : ATALHOS_OMISSAO,
+  );
+  const naBarra = ['index', esquerda, '+', direita].filter((n): n is string => !!n);
+  // O "Mais" guarda o que a barra deixou de fora: as duas leem a MESMA lista.
   const escondidos = destinos.filter((d) => !naBarra.includes(d.nome));
+  // Com o Chat fora da barra, o ponto das mensagens por ler passa para o
+  // "Mais" (e para a linha do Chat lá dentro). Senão uma mensagem nova ficava
+  // sem sinal nenhum em lado nenhum da barra.
+  const porLerNoMais = escondidos.some((d) => d.nome === 'chat') ? naoLidas : 0;
   const rotaAtual = state.routes[state.index]?.name;
   // O "Mais" acende-se quando se está num dos destinos que ele guarda — senão
   // a barra não mostrava nada selecionado e a app parecia ter-se perdido.
@@ -279,6 +140,7 @@ function TabBar({ state, navigation }: TabBarProps) {
           icon="dots-horizontal"
           focused={maisAtivo}
           onPress={() => setMaisAberto(true)}
+          porLer={porLerNoMais}
         />
       </View>
 
@@ -361,6 +223,23 @@ function TabBar({ state, navigation }: TabBarProps) {
                   style={{ flex: 1 }}>
                   {t(d.chave)}
                 </Text>
+                {d.nome === 'chat' && porLerNoMais > 0 ? (
+                  <View
+                    accessibilityLabel={t('chat.naoLidasN', { n: porLerNoMais })}
+                    style={{
+                      minWidth: 24,
+                      height: 24,
+                      paddingHorizontal: 6,
+                      borderRadius: radii.pill,
+                      backgroundColor: colors.danger,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <Text variant="caption" color={colors.onPrimary}>
+                      {porLerNoMais > 99 ? '99+' : porLerNoMais}
+                    </Text>
+                  </View>
+                ) : null}
                 <Icon name="chevron-right" size="md" color={colors.textMuted} />
               </Pressable>
             ))}

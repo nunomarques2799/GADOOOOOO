@@ -32,7 +32,7 @@ function exigirFusoDePortugal(): void {
     throw new Error(
       `Este teste precisa do fuso ${FUSO} e está a correr em ${atual}. ` +
         'O fuso é fixado no `jest.config.js` (process.env.TZ), antes dos workers ' +
-        'nascerem — não dentro do teste, onde não tem efeito nenhum.',
+        'nascerem, e não dentro do teste, onde não tem efeito nenhum.',
     );
   }
 }

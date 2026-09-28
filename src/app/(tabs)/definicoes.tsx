@@ -103,8 +103,18 @@ export default function DefinicoesScreen() {
               label={t('definicoes.idioma')}
               trailing={NOME_DO_IDIOMA[idiomaAtual()]}
               onPress={() => router.push('/conta/idioma')}
-              last
+              last={desktop}
             />
+            {/* Só no telemóvel: é lá que existe a barra de baixo. No computador
+                a barra lateral leva tudo e não há atalhos para escolher. */}
+            {!desktop ? (
+              <Linha
+                icon="gesture-tap-button"
+                label={t('definicoes.barra')}
+                onPress={() => router.push('/conta/barra')}
+                last
+              />
+            ) : null}
           </Grupo>
 
           {/* Dados e cópias */}

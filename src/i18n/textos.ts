@@ -118,6 +118,7 @@ const pt = {
   'animais.filtros': 'Filtros',
   'animais.filtrosAtivos': 'Filtros, {n} ativos',
   'animais.ordenar': 'Ordenar:',
+  'animais.ordenarTitulo': 'Ordenar a lista',
   'animais.historico': 'Histórico do efetivo ({n})',
   'animais.limparTodos': 'Limpar todos os filtros',
   'animais.vazioTitulo': 'Nenhum animal encontrado',
@@ -222,10 +223,22 @@ const pt = {
   'definicoes.notificacoes': 'Notificações e alertas',
   'definicoes.cores': 'Cores da app',
   'definicoes.idioma': 'Idioma',
+  'definicoes.barra': 'Atalhos da barra',
   'definicoes.sincronizacao': 'Sincronização e cópia de segurança',
   'definicoes.ajuda': 'Ajuda e apoio',
   'definicoes.privacidade': 'Privacidade e termos',
   'definicoes.versao': 'Terrabovina · versão {v}',
+
+  /* ---- Atalhos da barra de baixo ---- */
+  'barra.titulo': 'Atalhos da barra',
+  'barra.explicacao':
+    'A barra de baixo tem sempre o Início, o botão Registar e o Mais. Os outros dois lugares são seus: escolha o que abre mais vezes. Tudo o resto continua no Mais.',
+  'barra.esquerda': 'À ESQUERDA DO REGISTAR',
+  'barra.direita': 'À DIREITA DO REGISTAR',
+  'barra.guardado': 'Barra atualizada',
+  'barra.repor': 'Voltar à barra de origem',
+  'barra.reposta': 'A barra voltou à de origem',
+  'barra.aparelho': 'A escolha fica guardada neste aparelho.',
 
   /* ---- Ecrã do idioma ---- */
   'idioma.titulo': 'Idioma',
@@ -2095,6 +2108,7 @@ const en: Record<ChaveTexto, string> = {
   'animais.filtros': 'Filters',
   'animais.filtrosAtivos': 'Filters, {n} active',
   'animais.ordenar': 'Sort:',
+  'animais.ordenarTitulo': 'Sort the list',
   'animais.historico': 'Herd history ({n})',
   'animais.limparTodos': 'Clear all filters',
   'animais.vazioTitulo': 'No animals found',
@@ -2194,10 +2208,22 @@ const en: Record<ChaveTexto, string> = {
   'definicoes.notificacoes': 'Notifications and alerts',
   'definicoes.cores': 'App colours',
   'definicoes.idioma': 'Language',
+  'definicoes.barra': 'Bar shortcuts',
   'definicoes.sincronizacao': 'Sync and backup',
   'definicoes.ajuda': 'Help and support',
   'definicoes.privacidade': 'Privacy and terms',
   'definicoes.versao': 'Terrabovina · version {v}',
+
+  /* ---- Atalhos da barra de baixo ---- */
+  'barra.titulo': 'Bar shortcuts',
+  'barra.explicacao':
+    'The bottom bar always has Home, the Add button and More. The other two places are yours: pick what you open most. Everything else stays under More.',
+  'barra.esquerda': 'LEFT OF ADD',
+  'barra.direita': 'RIGHT OF ADD',
+  'barra.guardado': 'Bar updated',
+  'barra.repor': 'Go back to the original bar',
+  'barra.reposta': 'The bar is back to the original',
+  'barra.aparelho': 'This choice is saved on this device.',
 
   /* ---- Ecrã do idioma ---- */
   'idioma.titulo': 'Language',
