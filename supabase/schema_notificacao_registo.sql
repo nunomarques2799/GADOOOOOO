@@ -287,7 +287,7 @@ begin
 
   perform public.enviar_email_notificacao(
     'registo',
-    'Terrabovina — pedido de acesso pendente' || coalesce(': ' || nome, ''),
+    'Terrabovina · pedido de acesso pendente' || coalesce(': ' || nome, ''),
     '<div style="font-family:Nunito,Segoe UI,Arial,sans-serif;color:#15251c;line-height:1.6;max-width:520px">'
     || '<h2 style="color:#166b3d;margin:0 0 4px">Novo pedido de acesso</h2>'
     || '<p style="margin:0 0 18px;color:#54655b">Alguém criou conta na Terrabovina e está à espera de aprovação.</p>'
@@ -337,7 +337,7 @@ begin
 
   pedido := public.enviar_email_notificacao(
     'teste',
-    'Terrabovina — teste de aviso de registo',
+    'Terrabovina · teste de aviso de registo',
     '<div style="font-family:Nunito,Segoe UI,Arial,sans-serif;color:#15251c">'
     || '<h2 style="color:#166b3d">Teste</h2>'
     || '<p>Se está a ler isto, os avisos de novo registo estão a funcionar.</p>'

@@ -1,0 +1,38 @@
+[
+ {
+  "nome": "1-inicio",
+  "url": "http://localhost:8085/",
+  "esperar": 15000,
+  "js": "const f=document.querySelector(\"[aria-label^=\\\"Atenção: ambiente de testes\\\"]\"); if(f) f.parentElement.style.display=\"none\"; const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let n; while((n=w.nextNode())){ if(n.nodeValue.includes(\"Joaquim Marques\")) n.nodeValue=n.nodeValue.replace(\"Joaquim Marques\",\"Joaquim\"); } const w2=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let m; while((m=w2.nextNode())){ if(m.nodeValue.trim()===\"JM\") m.nodeValue=\"J\"; }"
+ },
+ {
+  "nome": "2-snira",
+  "url": "http://localhost:8085/snira",
+  "esperar": 6000,
+  "js": "const f=document.querySelector(\"[aria-label^=\\\"Atenção: ambiente de testes\\\"]\"); if(f) f.parentElement.style.display=\"none\"; const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let n; while((n=w.nextNode())){ if(n.nodeValue.includes(\"Joaquim Marques\")) n.nodeValue=n.nodeValue.replace(\"Joaquim Marques\",\"Joaquim\"); } const w2=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let m; while((m=w2.nextNode())){ if(m.nodeValue.trim()===\"JM\") m.nodeValue=\"J\"; }"
+ },
+ {
+  "nome": "3-animais",
+  "url": "http://localhost:8085/animais",
+  "esperar": 6000,
+  "js": "const f=document.querySelector(\"[aria-label^=\\\"Atenção: ambiente de testes\\\"]\"); if(f) f.parentElement.style.display=\"none\"; const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let n; while((n=w.nextNode())){ if(n.nodeValue.includes(\"Joaquim Marques\")) n.nodeValue=n.nodeValue.replace(\"Joaquim Marques\",\"Joaquim\"); } const w2=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let m; while((m=w2.nextNode())){ if(m.nodeValue.trim()===\"JM\") m.nodeValue=\"J\"; }"
+ },
+ {
+  "nome": "4-animal",
+  "url": "http://localhost:8085/animal/an-1",
+  "esperar": 6000,
+  "js": "const f=document.querySelector(\"[aria-label^=\\\"Atenção: ambiente de testes\\\"]\"); if(f) f.parentElement.style.display=\"none\"; const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let n; while((n=w.nextNode())){ if(n.nodeValue.includes(\"Joaquim Marques\")) n.nodeValue=n.nodeValue.replace(\"Joaquim Marques\",\"Joaquim\"); } const w2=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let m; while((m=w2.nextNode())){ if(m.nodeValue.trim()===\"JM\") m.nodeValue=\"J\"; }"
+ },
+ {
+  "nome": "5-reproducao",
+  "url": "http://localhost:8085/reproducao",
+  "esperar": 6000,
+  "js": "const f=document.querySelector(\"[aria-label^=\\\"Atenção: ambiente de testes\\\"]\"); if(f) f.parentElement.style.display=\"none\"; const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let n; while((n=w.nextNode())){ if(n.nodeValue.includes(\"Joaquim Marques\")) n.nodeValue=n.nodeValue.replace(\"Joaquim Marques\",\"Joaquim\"); } const w2=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let m; while((m=w2.nextNode())){ if(m.nodeValue.trim()===\"JM\") m.nodeValue=\"J\"; }"
+ },
+ {
+  "nome": "6-terreno",
+  "url": "http://localhost:8085/terreno/ter-1",
+  "esperar": 9000,
+  "js": "const f=document.querySelector(\"[aria-label^=\\\"Atenção: ambiente de testes\\\"]\"); if(f) f.parentElement.style.display=\"none\"; const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let n; while((n=w.nextNode())){ if(n.nodeValue.includes(\"Joaquim Marques\")) n.nodeValue=n.nodeValue.replace(\"Joaquim Marques\",\"Joaquim\"); } const w2=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let m; while((m=w2.nextNode())){ if(m.nodeValue.trim()===\"JM\") m.nodeValue=\"J\"; }"
+ }
+]

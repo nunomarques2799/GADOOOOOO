@@ -257,7 +257,7 @@ begin
     from public.notificacao_envio
    where user_id = quem and motivo in ('apoio', 'bug') and em > now() - interval '1 hour';
   if na_hora >= 5 then
-    raise exception 'Já nos enviou várias mensagens nesta hora. Aguarde um pouco — vamos responder a todas.';
+    raise exception 'Já nos enviou várias mensagens nesta hora. Aguarde um pouco: vamos responder a todas.';
   end if;
 
   select count(*) into no_dia
@@ -273,7 +273,7 @@ begin
 
   e_bug := p_tipo = 'bug';
   titulo := case when e_bug then 'Problema reportado' else 'Mensagem de apoio' end;
-  assunto := case when e_bug then 'Terrabovina — problema: ' else 'Terrabovina — apoio: ' end || p_assunto;
+  assunto := case when e_bug then 'Terrabovina · problema: ' else 'Terrabovina · apoio: ' end || p_assunto;
 
   pedido := interno.enviar_email(
     p_tipo,

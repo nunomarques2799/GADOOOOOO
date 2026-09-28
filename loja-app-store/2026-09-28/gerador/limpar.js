@@ -1,0 +1,1 @@
+const f=document.querySelector("[aria-label^=\"Atenção: ambiente de testes\"]"); if(f) f.parentElement.style.display="none"; const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let n; while((n=w.nextNode())){ if(n.nodeValue.includes("Joaquim Marques")) n.nodeValue=n.nodeValue.replace("Joaquim Marques","Joaquim"); }

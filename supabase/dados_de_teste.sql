@@ -66,7 +66,7 @@ begin
     from public.exploracao where user_id = uid and id not like 'demo-%';
   if n_reais > 0 then
     raise exception
-      'A conta % já tem % exploração(ões) que não são de teste. Misturar animais inventados com dados reais só se desfaz à mão — usa uma conta limpa.',
+      'A conta % já tem % exploração(ões) que não são de teste. Misturar animais inventados com dados reais só se desfaz à mão: usa uma conta limpa.',
       email_cliente, n_reais;
   end if;
 
@@ -293,25 +293,25 @@ begin
   -- atraso). É o que faz o ecrã de Alertas ter as três gravidades.
   insert into public.evento (id, user_id, animal_id, tipo, data, descricao, detalhe, valor) values
     ('demo-ev-vac1', uid, 'demo-a-mimosa',  'Vacinação', (current_date - 100)::text || 'T10:00:00.000Z',
-     'Vacina — Língua azul', 'Lote 4471 · Vet. Dr. Sousa', 18),
+     'Vacina: Língua azul', 'Lote 4471 · Vet. Dr. Sousa', 18),
     ('demo-ev-vac2', uid, 'demo-a-estrela', 'Vacinação', (current_date - 340)::text || 'T10:00:00.000Z',
-     'Vacina — Língua azul', 'Lote 4471', 18),
+     'Vacina: Língua azul', 'Lote 4471', 18),
     ('demo-ev-vac3', uid, 'demo-a-malhada', 'Vacinação', (current_date - 400)::text || 'T10:00:00.000Z',
-     'Vacina — Brucelose', 'Lote 3320 · revacinação em atraso', 22),
+     'Vacina: Brucelose', 'Lote 3320 · revacinação em atraso', 22),
     ('demo-ev-vac4', uid, 'demo-a-boneca',  'Vacinação', (current_date - 60)::text  || 'T10:00:00.000Z',
-     'Vacina — Clostridioses', 'Lote 5510', 20),
+     'Vacina: Clostridioses', 'Lote 5510', 20),
     ('demo-ev-vac5', uid, 'demo-a-geres',   'Vacinação', (current_date - 150)::text || 'T10:00:00.000Z',
-     'Vacina — Língua azul', 'Lote 4471', 18),
+     'Vacina: Língua azul', 'Lote 4471', 18),
 
     ('demo-ev-med1', uid, 'demo-a-condessa', 'Medicamento', (current_date - 8)::text || 'T09:30:00.000Z',
-     'Medicamento — Antibiótico', 'Dose 20 ml · Injetável · Mastite · segurança 14 dias', 35),
+     'Medicamento: Antibiótico', 'Dose 20 ml · Injetável · Mastite · segurança 14 dias', 35),
 
     ('demo-ev-parto1', uid, 'demo-a-mimosa',  'Parto', (current_date - 500)::text || 'T06:00:00.000Z',
-     'Parto normal — 1 cria', 'cria fêmea · nado-vivo', null),
+     'Parto normal, 1 cria', 'cria fêmea · nado-vivo', null),
     ('demo-ev-parto2', uid, 'demo-a-estrela', 'Parto', (current_date - 430)::text || 'T07:00:00.000Z',
-     'Parto normal — 1 cria', 'cria macho · nado-vivo', null),
+     'Parto normal, 1 cria', 'cria macho · nado-vivo', null),
     ('demo-ev-parto3', uid, 'demo-a-malhada', 'Parto', (current_date - 12)::text  || 'T05:30:00.000Z',
-     'Parto normal — 1 cria', 'cria macho · nado-vivo', null),
+     'Parto normal, 1 cria', 'cria macho · nado-vivo', null),
 
     ('demo-ev-pes1', uid, 'demo-a-trovao', 'Pesagem', (current_date - 120)::text || 'T11:00:00.000Z',
      'Pesagem: 412 kg', null, null),
@@ -337,12 +337,12 @@ begin
   -- todos, e com a alimentação a pesar mais — que é o que acontece a sério
   -- numa exploração de gado.
   insert into public.movimento (id, exploracao_id, direcao, categoria, valor, data, descricao, contraparte, animal_id, criado_por) values
-    ('demo-mov-r1', exp1, 'despesa', 'Alimentação', 860,  current_date - 8,   'Ração — 40 sacos',        'Agro-Nisa',     null, uid),
-    ('demo-mov-r2', exp1, 'despesa', 'Alimentação', 910,  current_date - 38,  'Ração — 42 sacos',        'Agro-Nisa',     null, uid),
-    ('demo-mov-r3', exp1, 'despesa', 'Alimentação', 780,  current_date - 68,  'Ração — 36 sacos',        'Agro-Nisa',     null, uid),
+    ('demo-mov-r1', exp1, 'despesa', 'Alimentação', 860,  current_date - 8,   'Ração: 40 sacos',        'Agro-Nisa',     null, uid),
+    ('demo-mov-r2', exp1, 'despesa', 'Alimentação', 910,  current_date - 38,  'Ração: 42 sacos',        'Agro-Nisa',     null, uid),
+    ('demo-mov-r3', exp1, 'despesa', 'Alimentação', 780,  current_date - 68,  'Ração: 36 sacos',        'Agro-Nisa',     null, uid),
     ('demo-mov-r4', exp1, 'despesa', 'Alimentação', 1120, current_date - 98,  'Fardos de feno',          'Sr. Marques',   null, uid),
-    ('demo-mov-r5', exp1, 'despesa', 'Alimentação', 840,  current_date - 128, 'Ração — 38 sacos',        'Agro-Nisa',     null, uid),
-    ('demo-mov-r6', exp1, 'despesa', 'Alimentação', 795,  current_date - 158, 'Ração — 36 sacos',        'Agro-Nisa',     null, uid),
+    ('demo-mov-r5', exp1, 'despesa', 'Alimentação', 840,  current_date - 128, 'Ração: 38 sacos',        'Agro-Nisa',     null, uid),
+    ('demo-mov-r6', exp1, 'despesa', 'Alimentação', 795,  current_date - 158, 'Ração: 36 sacos',        'Agro-Nisa',     null, uid),
 
     ('demo-mov-e1', exp1, 'despesa', 'Energia e combustível', 210, current_date - 15,  'Gasóleo do trator', 'BP',        null, uid),
     ('demo-mov-e2', exp1, 'despesa', 'Energia e combustível', 148, current_date - 45,  'Eletricidade',      'EDP',       null, uid),
@@ -353,7 +353,7 @@ begin
     ('demo-mov-re1',exp1, 'despesa', 'Rendas e terrenos',     600, current_date - 120, 'Renda da Bouça Grande', 'Sr. Nunes', null, uid),
     ('demo-mov-mo1',exp1, 'despesa', 'Mão-de-obra',           720, current_date - 30,  'Jornas da tosquia', null,        null, uid),
 
-    ('demo-mov-v1', exp1, 'receita', 'Venda de animais',     1350, current_date - 30,  'Venda — feira de Idanha', 'Sr. Silva', 'demo-a-vendido', uid),
+    ('demo-mov-v1', exp1, 'receita', 'Venda de animais',     1350, current_date - 30,  'Venda: feira de Idanha', 'Sr. Silva', 'demo-a-vendido', uid),
     ('demo-mov-l1', exp1, 'receita', 'Leite e produtos',      980, current_date - 10,  'Leite de outubro',  'Lactogal',  null, uid),
     ('demo-mov-l2', exp1, 'receita', 'Leite e produtos',      940, current_date - 40,  'Leite do mês',      'Lactogal',  null, uid),
     ('demo-mov-l3', exp1, 'receita', 'Leite e produtos',      910, current_date - 70,  'Leite do mês',      'Lactogal',  null, uid),

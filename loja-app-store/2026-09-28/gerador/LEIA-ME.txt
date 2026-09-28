@@ -1,0 +1,21 @@
+Como refazer as imagens da loja (2026-09-28)
+
+1. Arrancar a app em modo demo (dados do seed, sem login) na porta 8085:
+     node demo-web.js
+2. Fotografar os ecras (Chrome sem janela, iPhone 430x878 pontos a 3x;
+   a barra de estado desenha-se depois):
+     node capturar.js finais.json ecras 430 878 3
+   O limpar.js esconde a faixa roxa "TESTES" e troca "Joaquim Marques"
+   por "Joaquim" (e as iniciais JM por J) so na fotografia.
+3. Compor as imagens (titulo + telemovel), a 1290x2796:
+     node gerar.js
+     node capturar.js slides.json imagens 1290 2796 1
+   Os titulos e subtitulos estao no topo do gerar.js.
+4. A Apple recusa PNG com canal alfa: converter para 24 bits (System.Drawing,
+   Format24bppRgb) e gerar tambem 1284x2778 para o 6,5".
+5. Carregar na versao em preparacao (pt-PT, conjuntos 6,5" e 6,9"; apaga o
+   que la estiver e poe estas pela ordem do nome):
+     node imagens-loja.js ver
+     node imagens-loja.js carregar <pasta 6.5> <pasta 6.9>
+   Precisa da chave AuthKey_*.p8 em ~/.appstoreconnect/private_keys/ (fora
+   do repositorio). A versao a mexer esta na constante VERSAO.
