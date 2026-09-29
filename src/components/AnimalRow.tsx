@@ -1,10 +1,12 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 import { View } from 'react-native';
 
 import { PontosSinal, rotuloDoSinal } from '@/components/SinaisAnimal';
 import { Badge, Card, Icon, IconBadge, Text } from '@/components/ui';
+import { semMovimento } from '@/components/ui/movimento';
+import { iniciarVoo } from '@/components/VooAnimal';
 import { especieMeta } from '@/data/constants';
 import { idadeExtenso } from '@/data/helpers';
 import { sinaisDe } from '@/data/sinaisAlerta';
@@ -36,6 +38,7 @@ export const AnimalRow = memo(function AnimalRow({
   alertas?: ReadonlySet<Alerta['categoria']>;
 }) {
   const router = useRouter();
+  const retrato = useRef<View>(null);
   const meta = especieMeta[animal.especie];
   const semBrinco = animal.especie === 'Bovino' && !animal.numeroIdentificacao;
   const saiu = !!animal.estado && animal.estado !== 'ativo';
@@ -60,7 +63,30 @@ export const AnimalRow = memo(function AnimalRow({
 
   return (
     <Card
-      onPress={() => router.push(`/animal/${animal.id}`)}
+      onPress={() => {
+        // Mede onde está o retrato para ele "voar" até ao topo da ficha (ver
+        // `VooAnimal.tsx`). A ficha abre em fade por causa do `voo`; sem a
+        // medida, abre como sempre.
+        const abrir = (comVoo: boolean) =>
+          router.push({
+            pathname: '/animal/[id]',
+            params: comVoo ? { id: animal.id, voo: '1' } : { id: animal.id },
+          });
+        const r = retrato.current;
+        if (!r || semMovimento()) return abrir(false);
+        r.measureInWindow((x, y, w, h) => {
+          if (!w || !h) return abrir(false);
+          iniciarVoo({
+            id: animal.id,
+            de: { x, y, w, h },
+            foto: animal.fotografia,
+            icone: meta.icon,
+            cor: sexoCor,
+            fundo: femea ? colors.femeaTint : colors.machoTint,
+          });
+          abrir(true);
+        });
+      }}
       accessibilityLabel={`${animal.nome ?? t('ficha.animal')}, ${animal.especie}, ${idadeExtenso(
         animal.dataNascimento,
       )}${
@@ -73,7 +99,7 @@ export const AnimalRow = memo(function AnimalRow({
       style={{ marginBottom: spacing.sm, opacity: saiu ? 0.7 : 1 }}
       padded={false}>
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.sm }}>
-        <View>
+        <View ref={retrato} collapsable={false}>
           {/* Com foto, é o rosto do animal que aparece — é o que se reconhece
               de relance, ainda antes do nome. Sem foto, o fundo dá o sexo e o
               ícone dá a espécie pela forma (vaca, ovelha, cavalo). O anel na cor

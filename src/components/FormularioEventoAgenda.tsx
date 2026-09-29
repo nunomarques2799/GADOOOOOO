@@ -15,6 +15,7 @@ import {
   Icon,
   Text,
   TextField,
+  useVisto,
 } from '@/components/ui';
 import { HORAS_SUGERIDAS } from '@/data/acessoTemporario';
 import { problemaComEvento, type EntradaEvento, type EventoAgenda } from '@/data/agenda';
@@ -58,6 +59,8 @@ export function FormularioEventoAgenda({
   const { exploracoes } = useGado();
   const { pode, podeEmAlguma } = useMembros();
   const toast = useToasts();
+  // O visto no botão de gravar, meio segundo antes de o formulário fechar.
+  const visto = useVisto();
 
   const editar = !!evento;
 
@@ -116,6 +119,7 @@ export function FormularioEventoAgenda({
         hora: comHora ? hora : undefined,
         publico,
       });
+      await visto.mostrar();
       toast.sucesso(editar ? 'Evento guardado' : 'Evento marcado', titulo.trim());
       router.back();
     } catch (e) {
@@ -321,6 +325,7 @@ export function FormularioEventoAgenda({
 
         <Button
           label={aGravar ? 'A guardar…' : editar ? 'Guardar' : 'Marcar evento'}
+          concluido={visto.concluido}
           icon="check"
           onPress={() => void guardar()}
           loading={aGravar}

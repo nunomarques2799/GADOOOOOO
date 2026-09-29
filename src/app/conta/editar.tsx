@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Card, Field, Header, Icon, TextField, Text } from '@/components/ui';
+import { Button, Card, Field, Header, Icon, TextField, Text, useVisto } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { avisar } from '@/data/avisos';
 import { useDesktop } from '@/hooks/useDesktop';
@@ -20,6 +20,8 @@ export default function EditarDadosPessoaisScreen() {
   const desktop = useDesktop();
   const router = useRouter();
   const { utilizador, configurado, atualizarPerfil } = useAuth();
+  // O visto no botão de gravar, meio segundo antes de o formulário fechar.
+  const visto = useVisto();
 
   const nomeInicial = ((utilizador?.user_metadata?.nome as string | undefined) ?? '').trim();
   const emailInicial = utilizador?.email ?? '';
@@ -43,6 +45,7 @@ export default function EditarDadosPessoaisScreen() {
       setErro(r.erro);
       return;
     }
+    await visto.mostrar();
     if (r.confirmarEmail) {
       avisar(
         t('editarConta.confirmeEmail'),
@@ -158,6 +161,7 @@ export default function EditarDadosPessoaisScreen() {
         <View style={{ width: '100%', maxWidth: desktop ? layout.conteudoEstreito : undefined }}>
           <Button
             label={t('formAnimal.guardarAlteracoes')}
+            concluido={visto.concluido}
             icon="check"
             onPress={() => void guardar()}
             disabled={!valido}

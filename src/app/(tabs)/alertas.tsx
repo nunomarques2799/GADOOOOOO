@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 
 import { AlertItem } from '@/components/AlertItem';
 import { CalendarioAlertas } from '@/components/CalendarioAlertas';
+import { Cascata } from '@/components/Cascata';
 import { CartaoIntroducao } from '@/components/CartaoIntroducao';
 import { SeletorExploracao } from '@/components/SeletorExploracao';
 import { Card, EmptyState, Icon, type IconName, Screen, Text } from '@/components/ui';
@@ -204,12 +205,13 @@ export default function AlertasScreen() {
                   <Card padded={false}>
                     <View style={{ paddingHorizontal: spacing.md }}>
                       {aMostrar.map((a, i) => (
-                        <AlertItem
-                          key={a.id}
-                          alerta={a}
-                          divider={i < aMostrar.length - 1}
-                          onDispensar={dispensarAlerta}
-                        />
+                        <Cascata key={a.id} lista={`alertas:${g.chave}`} indice={i}>
+                          <AlertItem
+                            alerta={a}
+                            divider={i < aMostrar.length - 1}
+                            onDispensar={dispensarAlerta}
+                          />
+                        </Cascata>
                       ))}
                     </View>
                   </Card>

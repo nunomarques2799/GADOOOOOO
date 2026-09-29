@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Pressable, SectionList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Cascata } from '@/components/Cascata';
 import { Badge, Card, EmptyState, FAB, Icon, IconBadge, Text } from '@/components/ui';
 import { tipoTerrenoMeta } from '@/data/constants';
 import { useMembros } from '@/data/membros';
@@ -128,21 +129,23 @@ export default function TerrenosScreen() {
         key={desktop ? 'grelha' : 'pilha'}
         sections={secoes}
         keyExtractor={(linha) => linha.map((t) => t.id).join('+')}
-        renderItem={({ item: linha }) => (
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            {linha.map((t) => (
-              <View key={t.id} style={{ flex: 1 }}>
-                <TerrenoRow
-                  terreno={t}
-                  animais={contagem.get(t.id) ?? 0}
-                  onPress={() => router.push(`/terreno/${t.id}`)}
-                />
-              </View>
-            ))}
-            {/* Uma linha ímpar em duas colunas deixa metade por preencher: sem
-                este vazio, o último cartão esticava para o dobro da largura. */}
-            {linha.length < colunas ? <View style={{ flex: linha.length }} /> : null}
-          </View>
+        renderItem={({ item: linha, index }) => (
+          <Cascata lista="terrenos" indice={index}>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              {linha.map((t) => (
+                <View key={t.id} style={{ flex: 1 }}>
+                  <TerrenoRow
+                    terreno={t}
+                    animais={contagem.get(t.id) ?? 0}
+                    onPress={() => router.push(`/terreno/${t.id}`)}
+                  />
+                </View>
+              ))}
+              {/* Uma linha ímpar em duas colunas deixa metade por preencher: sem
+                  este vazio, o último cartão esticava para o dobro da largura. */}
+              {linha.length < colunas ? <View style={{ flex: linha.length }} /> : null}
+            </View>
+          </Cascata>
         )}
         renderSectionHeader={({ section }) =>
           agruparPorExploracao ? (

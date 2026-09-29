@@ -1,16 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  Avatar,
-  Badge,
-  EmptyState,
-  FolhaComTeclado,
-  Icon,
-  Text,
-} from '@/components/ui';
+import { Avatar, Badge, EmptyState, Icon, Text } from '@/components/ui';
 import {
   horaCurta,
   iniciais,
@@ -29,6 +22,7 @@ import { useChat } from '@/data/useChat';
 import { useDesktop } from '@/hooks/useDesktop';
 import { t } from '@/i18n';
 import { colors, layout, radii, spacing } from '@/theme';
+import { Folha } from '@/components/ui';
 
 /**
  * As conversas: o grupo da exploração e as mensagens privadas.
@@ -276,73 +270,71 @@ function FolhaEscolherPessoa({
 }) {
   const insets = useSafeAreaInsets();
   return (
-    <Modal visible={aberto} animationType="slide" transparent onRequestClose={onFechar}>
-      <FolhaComTeclado>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
-        <View
-          style={{
-            backgroundColor: colors.background,
-            borderTopLeftRadius: radii.xl,
-            borderTopRightRadius: radii.xl,
-            paddingTop: spacing.md,
-            paddingBottom: insets.bottom + spacing.md,
-            paddingHorizontal: spacing.lg,
-            maxHeight: '80%',
-          }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-            <Text variant="h3" style={{ flex: 1 }}>
-              {t('chat.aQuemEscrever')}
-            </Text>
-            <Pressable
-              onPress={onFechar}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('comum.fechar')}>
-              <Icon name="close" size="lg" color={colors.textSecondary} />
-            </Pressable>
-          </View>
+    <Folha
+      visivel={aberto}
+      onFechar={onFechar}
+      comTeclado
+      estilo={{
+        backgroundColor: colors.background,
+        borderTopLeftRadius: radii.xl,
+        borderTopRightRadius: radii.xl,
+        paddingTop: spacing.md,
+        paddingBottom: insets.bottom + spacing.md,
+        paddingHorizontal: spacing.lg,
+        maxHeight: '80%',
+      }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+        <Text variant="h3" style={{ flex: 1 }}>
+          {t('chat.aQuemEscrever')}
+        </Text>
+        <Pressable
+          onPress={onFechar}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('comum.fechar')}>
+          <Icon name="close" size="lg" color={colors.textSecondary} />
+        </Pressable>
+      </View>
 
-          {pessoas.length === 0 ? (
-            <EmptyState
-              icon="account-off-outline"
-              title={t('chat.semPessoas')}
-              message={t('chat.semPessoasMensagem')}
-            />
-          ) : (
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {pessoas.map((p, i) => (
-                <Pressable
-                  key={p.id}
-                  onPress={() => onEscolher(p)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('chat.escreverA', { nome: p.nome })}
-                  style={({ pressed }) => [
-                    {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing.sm,
-                      minHeight: 64,
-                      borderBottomWidth: i < pessoas.length - 1 ? 1 : 0,
-                      borderBottomColor: colors.border,
-                    },
-                    pressed && { opacity: 0.7 },
-                  ]}>
-                  <Avatar initials={iniciais(p.nome)} size={44} />
-                  <View style={{ flex: 1 }}>
-                    <Text variant="bodyStrong" numberOfLines={1}>
-                      {p.nome}
-                    </Text>
-                    <Text variant="caption" color={colors.textSecondary}>
-                      {rotuloPapel(p.papel)}
-                    </Text>
-                  </View>
-                  <Icon name="chevron-right" size="md" color={colors.textMuted} />
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-      </FolhaComTeclado>
-    </Modal>
+      {pessoas.length === 0 ? (
+        <EmptyState
+          icon="account-off-outline"
+          title={t('chat.semPessoas')}
+          message={t('chat.semPessoasMensagem')}
+        />
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {pessoas.map((p, i) => (
+            <Pressable
+              key={p.id}
+              onPress={() => onEscolher(p)}
+              accessibilityRole="button"
+              accessibilityLabel={t('chat.escreverA', { nome: p.nome })}
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  minHeight: 64,
+                  borderBottomWidth: i < pessoas.length - 1 ? 1 : 0,
+                  borderBottomColor: colors.border,
+                },
+                pressed && { opacity: 0.7 },
+              ]}>
+              <Avatar initials={iniciais(p.nome)} size={44} />
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyStrong" numberOfLines={1}>
+                  {p.nome}
+                </Text>
+                <Text variant="caption" color={colors.textSecondary}>
+                  {rotuloPapel(p.papel)}
+                </Text>
+              </View>
+              <Icon name="chevron-right" size="md" color={colors.textMuted} />
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+    </Folha>
   );
 }

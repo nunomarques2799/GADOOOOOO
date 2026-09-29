@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, View, type ViewStyle } from 'react-native';
+import { Pressable, ScrollView, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon, Text } from '@/components/ui';
+import { Folha, Icon, Text } from '@/components/ui';
 import { t } from '@/i18n';
 import { colors, radii, shadow, spacing, type } from '@/theme';
 
@@ -79,70 +79,59 @@ export function SeletorExploracao({
         <Icon name="chevron-down" size="sm" color={colors.onPrimary} />
       </Pressable>
 
-      <Modal
-        visible={aberto}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setAberto(false)}>
-        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
+      <Folha
+        visivel={aberto}
+        onFechar={() => setAberto(false)}
+        estilo={[
+          {
+            backgroundColor: colors.background,
+            borderTopLeftRadius: radii.xl,
+            borderTopRightRadius: radii.xl,
+            paddingTop: spacing.md,
+            paddingBottom: insets.bottom + spacing.md,
+            maxHeight: '80%',
+          },
+          shadow.lg,
+        ]}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: spacing.lg,
+            marginBottom: spacing.sm,
+          }}>
+          <Text variant="h3" style={{ flex: 1 }}>
+            {t('exploracao.escolher')}
+          </Text>
           <Pressable
-            style={{ flex: 1 }}
             onPress={() => setAberto(false)}
-            accessibilityLabel={t('comum.fechar')}
-          />
-          <View
-            style={[
-              {
-                backgroundColor: colors.background,
-                borderTopLeftRadius: radii.xl,
-                borderTopRightRadius: radii.xl,
-                paddingTop: spacing.md,
-                paddingBottom: insets.bottom + spacing.md,
-                maxHeight: '80%',
-              },
-              shadow.lg,
-            ]}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingHorizontal: spacing.lg,
-                marginBottom: spacing.sm,
-              }}>
-              <Text variant="h3" style={{ flex: 1 }}>
-                {t('exploracao.escolher')}
-              </Text>
-              <Pressable
-                onPress={() => setAberto(false)}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel={t('comum.fechar')}>
-                <Icon name="close" size="lg" color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
-              <Linha
-                rotulo={t('comum.todas')}
-                icone="barn"
-                escolhido={valor === undefined}
-                onPress={() => escolher(undefined)}
-              />
-              {exploracoes.map((e) => (
-                <Linha
-                  key={e.id}
-                  rotulo={e.nome}
-                  icone="barn"
-                  escolhido={valor === e.id}
-                  onPress={() => escolher(e.id)}
-                />
-              ))}
-            </ScrollView>
-          </View>
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('comum.fechar')}>
+            <Icon name="close" size="lg" color={colors.textSecondary} />
+          </Pressable>
         </View>
-      </Modal>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
+          <Linha
+            rotulo={t('comum.todas')}
+            icone="barn"
+            escolhido={valor === undefined}
+            onPress={() => escolher(undefined)}
+          />
+          {exploracoes.map((e) => (
+            <Linha
+              key={e.id}
+              rotulo={e.nome}
+              icone="barn"
+              escolhido={valor === e.id}
+              onPress={() => escolher(e.id)}
+            />
+          ))}
+        </ScrollView>
+      </Folha>
     </View>
   );
 }

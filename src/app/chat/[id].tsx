@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BalaoMensagem } from '@/components/chat/BalaoMensagem';
 import { FolhaAnexos, type EscolhaAnexo } from '@/components/chat/FolhaAnexos';
-import { EcraComTeclado, Header, Icon, Text } from '@/components/ui';
+import { EcraComTeclado, Folha, Header, Icon, Text } from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
 import {
   agruparPorDia,
@@ -464,31 +464,28 @@ function FolhaOpcoes({
   const podeDenunciar = podeDenunciarMensagem(mensagem, meuId);
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onFechar}>
-      <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
-        <View
-          style={{
-            backgroundColor: colors.background,
-            borderTopLeftRadius: radii.xl,
-            borderTopRightRadius: radii.xl,
-            paddingTop: spacing.md,
-            paddingBottom: insets.bottom + spacing.md,
-            paddingHorizontal: spacing.lg,
-          }}>
-          <Text variant="h3" style={{ marginBottom: spacing.sm }}>
-            {t('chat.opcoes')}
-          </Text>
-          {podeApagar ? (
-            <Opcao icone="trash-can-outline" rotulo={t('chat.apagarMensagem')} onPress={onApagar} />
-          ) : null}
-          {podeDenunciar ? (
-            <Opcao icone="flag-outline" rotulo={t('chat.denunciar')} onPress={onDenunciar} />
-          ) : null}
-          <Opcao icone="close" rotulo={t('comum.cancelar')} onPress={onFechar} />
-        </View>
-      </View>
-    </Modal>
+    <Folha
+      visivel
+      onFechar={onFechar}
+      estilo={{
+        backgroundColor: colors.background,
+        borderTopLeftRadius: radii.xl,
+        borderTopRightRadius: radii.xl,
+        paddingTop: spacing.md,
+        paddingBottom: insets.bottom + spacing.md,
+        paddingHorizontal: spacing.lg,
+      }}>
+      <Text variant="h3" style={{ marginBottom: spacing.sm }}>
+        {t('chat.opcoes')}
+      </Text>
+      {podeApagar ? (
+        <Opcao icone="trash-can-outline" rotulo={t('chat.apagarMensagem')} onPress={onApagar} />
+      ) : null}
+      {podeDenunciar ? (
+        <Opcao icone="flag-outline" rotulo={t('chat.denunciar')} onPress={onDenunciar} />
+      ) : null}
+      <Opcao icone="close" rotulo={t('comum.cancelar')} onPress={onFechar} />
+    </Folha>
   );
 }
 

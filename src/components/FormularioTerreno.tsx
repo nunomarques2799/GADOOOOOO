@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Chip, EcraComTeclado, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
+import { Button, Chip, EcraComTeclado, EmptyState, Header, Icon, type IconName, Text, useVisto } from '@/components/ui';
 import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
 import { SeletorFoto } from '@/components/SeletorFoto';
 import { avisar, confirmar } from '@/data/avisos';
@@ -28,6 +28,8 @@ export function FormularioTerreno({
   const { addTerreno, updateTerreno, deleteTerreno, exploracaoById, animais } = useGado();
   const { pode } = useMembros();
   const toast = useToasts();
+  // O visto no botão de gravar, meio segundo antes de o formulário fechar.
+  const visto = useVisto();
 
   const editar = !!terreno;
   const podeGerir = pode(exploracaoId, 'gerirTerrenos');
@@ -85,6 +87,7 @@ export function FormularioTerreno({
       } else {
         await addTerreno({ ...dados, exploracaoId });
       }
+      await visto.mostrar();
       // O aviso é dado pela raiz da app (ver `toasts.tsx`), por isso sobrevive
       // ao `router.back()` desta linha — este ecrã já não existe quando ele
       // aparece, e é esse o objetivo: confirma-se em cima da lista.
@@ -329,6 +332,7 @@ export function FormularioTerreno({
         ) : null}
         <Button
           label={editar ? t('formAnimal.guardarAlteracoes') : t('formTerreno.criar')}
+          concluido={visto.concluido}
           icon="check"
           onPress={guardar}
           disabled={!valido || aGravar}

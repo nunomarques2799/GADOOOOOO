@@ -15,6 +15,7 @@ import {
   type IconName,
   Screen,
   Text,
+  useVisto,
 } from '@/components/ui';
 import { carregarHistoricoDe, frase, type Atividade } from '@/data/atividade';
 import { avisar, confirmar } from '@/data/avisos';
@@ -100,6 +101,8 @@ export function FormularioMovimento({
   } = useGado();
   const { pode } = useMembros();
   const toast = useToasts();
+  // O visto no botão de gravar, meio segundo antes de o formulário fechar.
+  const visto = useVisto();
 
   const editar = !!movimento;
 
@@ -214,6 +217,7 @@ export function FormularioMovimento({
     try {
       if (movimento) await updateMovimento(movimento.id, dados);
       else await addMovimento({ ...dados, exploracaoId });
+      await visto.mostrar();
 
       toast.sucesso(
         editar
@@ -539,6 +543,7 @@ export function FormularioMovimento({
         ]}>
         <Button
           label={aGravar ? t('comum.aGuardar') : editar ? t('formAnimal.guardarAlteracoes') : t('formMovimento.guardarMovimento')}
+          concluido={visto.concluido}
           icon="check"
           onPress={guardar}
           disabled={!valido || aGravar}

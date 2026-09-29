@@ -1,15 +1,20 @@
+import { useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
+  Animated,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 
+import { t } from '@/i18n';
+
 import { colors, radii, shadow, sizes, spacing, type } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
+import { NATIVO, semMovimento } from './movimento';
 import { Text } from './Text';
+import { PressableAnimado, useEscalaToque } from './useEscalaToque';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -22,6 +27,12 @@ type Props = {
   disabled?: boolean;
   fullWidth?: boolean;
   style?: StyleProp<ViewStyle>;
+  /**
+   * Gravou: o texto dá lugar a um visto, que aparece com um pequeno salto.
+   * Vem de `useVisto()`, que o liga uns instantes antes de o formulário
+   * fechar, para o criador VER que gravou antes de o ecrã mudar.
+   */
+  concluido?: boolean;
 };
 
 /**
@@ -81,18 +92,24 @@ export function Button({
   disabled = false,
   fullWidth = true,
   style,
+  concluido = false,
 }: Props) {
   const p = palette[variant];
-  const isOff = disabled || loading;
+  // Com o visto à vista o botão não se desliga nem esbate: é a confirmação, e
+  // tem de se ver bem, mesmo que o formulário ainda esteja "a gravar".
+  const isOff = !concluido && (disabled || loading);
+  const toque = useEscalaToque(0.97);
 
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={isOff}
+    <PressableAnimado
+      onPress={concluido ? undefined : onPress}
+      onPressIn={toque.onPressIn}
+      onPressOut={toque.onPressOut}
+      disabled={isOff || concluido}
       accessibilityRole="button"
-      accessibilityState={{ disabled: isOff, busy: loading }}
-      accessibilityLabel={label}
-      style={({ pressed }) => [
+      accessibilityState={{ disabled: isOff, busy: loading && !concluido }}
+      accessibilityLabel={concluido ? t('comum.guardado') : label}
+      style={[
         {
           minHeight: sizes.button,
           borderRadius: radii.pill,
@@ -107,11 +124,13 @@ export function Button({
           alignSelf: fullWidth ? 'stretch' : 'flex-start',
         },
         p.shadow && !isOff ? shadow.md : null,
-        pressed && !isOff && { opacity: 0.92, transform: [{ scale: 0.98 }] },
         isOff && { opacity: 0.45 },
         style,
+        toque.estilo,
       ]}>
-      {loading ? (
+      {concluido ? (
+        <Visto cor={p.fg} />
+      ) : loading ? (
         <ActivityIndicator color={p.fg} />
       ) : (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
@@ -119,6 +138,25 @@ export function Button({
           <Text style={[type.button, { color: p.fg }]}>{label}</Text>
         </View>
       )}
-    </Pressable>
+    </PressableAnimado>
+  );
+}
+
+/** O visto do Guardar: cresce até ao tamanho certo com uma pequena mola. */
+function Visto({ cor }: { cor: string }) {
+  const escala = useRef(new Animated.Value(semMovimento() ? 1 : 0.4)).current;
+  useEffect(() => {
+    if (semMovimento()) return;
+    Animated.spring(escala, {
+      toValue: 1,
+      speed: 20,
+      bounciness: 10,
+      useNativeDriver: NATIVO,
+    }).start();
+  }, [escala]);
+  return (
+    <Animated.View style={{ transform: [{ scale: escala }] }}>
+      <Icon name="check-bold" size={26} color={cor} />
+    </Animated.View>
   );
 }

@@ -1,12 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CartaoIntroducao } from '@/components/CartaoIntroducao';
 import { ModalRelatorioPrazos } from '@/components/ModalRelatorioPrazos';
 import { SeccaoDocumentos } from '@/components/SeccaoDocumentos';
-import { Button, Card, EmptyState, FolhaComTeclado, Icon, type IconName, Text } from '@/components/ui';
+import { Button, Card, EmptyState, Folha, Icon, type IconName, Text } from '@/components/ui';
 import { exportarAnimaisExcel } from '@/data/animalExcelFicheiro';
 import { avisar, confirmar } from '@/data/avisos';
 import { descarregarTabelaExcel, excelDisponivel } from '@/data/excelFicheiro';
@@ -362,92 +362,82 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
         style={{ marginTop: spacing.sm }}
       />
 
-      <Modal
-        visible={editor !== null}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setEditor(null)}>
-        <FolhaComTeclado>
+      <Folha
+        visivel={editor !== null}
+        onFechar={() => setEditor(null)}
+        comTeclado
+        estilo={{
+          backgroundColor: colors.background,
+          borderTopLeftRadius: radii.xl,
+          borderTopRightRadius: radii.xl,
+          padding: spacing.lg,
+          gap: spacing.sm,
+        }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text variant="h3" style={{ flex: 1 }}>
+            {editor?.id ? t('notas.editar') : t('notas.nova')}
+          </Text>
           <Pressable
-            style={{ flex: 1 }}
             onPress={() => setEditor(null)}
-            accessibilityLabel={t('comum.fechar')}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('comum.fechar')}>
+            <Icon name="close" size="lg" color={colors.textSecondary} />
+          </Pressable>
+        </View>
+
+        <TextInput
+          value={editor?.titulo ?? ''}
+          onChangeText={(t) => setEditor((e) => (e ? { ...e, titulo: t } : e))}
+          placeholder={t('notas.tituloOpcional')}
+          placeholderTextColor={colors.textMuted}
+          style={{
+            borderWidth: 1.5,
+            borderColor: colors.border,
+            borderRadius: radii.md,
+            backgroundColor: colors.surface,
+            paddingHorizontal: spacing.md,
+            height: sizes.input,
+            fontFamily: 'Nunito_700Bold',
+            fontSize: 17,
+            color: colors.text,
+          }}
+        />
+        <TextInput
+          value={editor?.texto ?? ''}
+          onChangeText={(t) => setEditor((e) => (e ? { ...e, texto: t } : e))}
+          placeholder={t('notas.placeholder')}
+          placeholderTextColor={colors.textMuted}
+          multiline
+          textAlignVertical="top"
+          style={{
+            borderWidth: 1.5,
+            borderColor: colors.border,
+            borderRadius: radii.md,
+            backgroundColor: colors.surface,
+            padding: spacing.md,
+            minHeight: 160,
+            fontFamily: 'Nunito_500Medium',
+            fontSize: 16,
+            color: colors.text,
+          }}
+        />
+
+        <Button
+          label={aGuardar ? t('comum.aGuardar') : t('notas.guardar')}
+          icon="check"
+          loading={aGuardar}
+          onPress={() => void guardar()}
+        />
+        {editor?.id ? (
+          <Button
+            label={t('notas.eliminarTitulo')}
+            icon="trash-can-outline"
+            variant="danger"
+            onPress={eliminar}
           />
-          <View
-            style={{
-              backgroundColor: colors.background,
-              borderTopLeftRadius: radii.xl,
-              borderTopRightRadius: radii.xl,
-              padding: spacing.lg,
-              gap: spacing.sm,
-            }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text variant="h3" style={{ flex: 1 }}>
-                {editor?.id ? t('notas.editar') : t('notas.nova')}
-              </Text>
-              <Pressable
-                onPress={() => setEditor(null)}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel={t('comum.fechar')}>
-                <Icon name="close" size="lg" color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            <TextInput
-              value={editor?.titulo ?? ''}
-              onChangeText={(t) => setEditor((e) => (e ? { ...e, titulo: t } : e))}
-              placeholder={t('notas.tituloOpcional')}
-              placeholderTextColor={colors.textMuted}
-              style={{
-                borderWidth: 1.5,
-                borderColor: colors.border,
-                borderRadius: radii.md,
-                backgroundColor: colors.surface,
-                paddingHorizontal: spacing.md,
-                height: sizes.input,
-                fontFamily: 'Nunito_700Bold',
-                fontSize: 17,
-                color: colors.text,
-              }}
-            />
-            <TextInput
-              value={editor?.texto ?? ''}
-              onChangeText={(t) => setEditor((e) => (e ? { ...e, texto: t } : e))}
-              placeholder={t('notas.placeholder')}
-              placeholderTextColor={colors.textMuted}
-              multiline
-              textAlignVertical="top"
-              style={{
-                borderWidth: 1.5,
-                borderColor: colors.border,
-                borderRadius: radii.md,
-                backgroundColor: colors.surface,
-                padding: spacing.md,
-                minHeight: 160,
-                fontFamily: 'Nunito_500Medium',
-                fontSize: 16,
-                color: colors.text,
-              }}
-            />
-
-            <Button
-              label={aGuardar ? t('comum.aGuardar') : t('notas.guardar')}
-              icon="check"
-              loading={aGuardar}
-              onPress={() => void guardar()}
-            />
-            {editor?.id ? (
-              <Button
-                label={t('notas.eliminarTitulo')}
-                icon="trash-can-outline"
-                variant="danger"
-                onPress={eliminar}
-              />
-            ) : null}
-          </View>
-        </FolhaComTeclado>
-      </Modal>
+        ) : null}
+      </Folha>
     </View>
   );
 }

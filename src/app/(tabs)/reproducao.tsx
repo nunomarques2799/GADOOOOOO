@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, SectionList, View } from 'react-native';
+import { Pressable, ScrollView, SectionList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StatCard } from '@/components/StatCard';
-import { Badge, Card, EmptyState, FAB, Icon, type IconName, Text } from '@/components/ui';
+import { Badge, Card, EmptyState, FAB, Folha, Icon, type IconName, Text } from '@/components/ui';
 import { PrazosReproducao } from '@/data/constants';
 import { formatDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
@@ -244,51 +244,48 @@ function FolhaFase({
   const insets = useSafeAreaInsets();
 
   return (
-    <Modal visible={!!grupo} animationType="slide" transparent onRequestClose={onFechar}>
-      <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
-        <View
-          style={[
-            {
-              backgroundColor: colors.background,
-              borderTopLeftRadius: radii.xl,
-              borderTopRightRadius: radii.xl,
-              paddingTop: spacing.md,
-              paddingBottom: insets.bottom + spacing.md,
-              paddingHorizontal: spacing.lg,
-              maxHeight: '80%',
-            },
-            shadow.lg,
-          ]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-            <Text variant="h3" style={{ flex: 1 }}>
-              {grupo?.titulo} ({linhas.length})
-            </Text>
-            <Pressable
-              onPress={onFechar}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('comum.fechar')}>
-              <Icon name="close" size="lg" color={colors.textSecondary} />
-            </Pressable>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {linhas.map((l) => (
-              // Sem `acao`: aqui está-se a CONSULTAR quem são, não a despachar
-              // trabalho. O que há para fazer está nas listas do ecrã de trás,
-              // cada uma com o seu botão.
-              <LinhaFemea
-                key={l.animal.id}
-                linha={l}
-                podeRegistar={false}
-                onAbrir={() => onAbrirAnimal(l.animal.id)}
-              />
-            ))}
-          </ScrollView>
-        </View>
+    <Folha
+      visivel={!!grupo}
+      onFechar={onFechar}
+      estilo={[
+        {
+          backgroundColor: colors.background,
+          borderTopLeftRadius: radii.xl,
+          borderTopRightRadius: radii.xl,
+          paddingTop: spacing.md,
+          paddingBottom: insets.bottom + spacing.md,
+          paddingHorizontal: spacing.lg,
+          maxHeight: '80%',
+        },
+        shadow.lg,
+      ]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+        <Text variant="h3" style={{ flex: 1 }}>
+          {grupo?.titulo} ({linhas.length})
+        </Text>
+        <Pressable
+          onPress={onFechar}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('comum.fechar')}>
+          <Icon name="close" size="lg" color={colors.textSecondary} />
+        </Pressable>
       </View>
-    </Modal>
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {linhas.map((l) => (
+          // Sem `acao`: aqui está-se a CONSULTAR quem são, não a despachar
+          // trabalho. O que há para fazer está nas listas do ecrã de trás,
+          // cada uma com o seu botão.
+          <LinhaFemea
+            key={l.animal.id}
+            linha={l}
+            podeRegistar={false}
+            onAbrir={() => onAbrirAnimal(l.animal.id)}
+          />
+        ))}
+      </ScrollView>
+    </Folha>
   );
 }
 

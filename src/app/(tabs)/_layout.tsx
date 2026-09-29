@@ -1,12 +1,13 @@
 import { Tabs, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, View } from 'react-native';
+import { Animated, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FolhaAcoesRapidas } from '@/components/AcoesRapidas';
 import { BarraLateral, type ItemNav } from '@/components/BarraLateral';
 import { DESTINOS, useDestinos } from '@/components/destinosNavegacao';
-import { Icon, type IconName, Text } from '@/components/ui';
+import { Folha, Icon, type IconName, Text } from '@/components/ui';
+import { ABRANDAR, DURACAO, semMovimento } from '@/components/ui/movimento';
 import {
   ATALHOS_OMISSAO,
   ATALHOS_OMISSAO_SUPERVISOR,
@@ -57,14 +58,7 @@ function TabBar({ state, navigation }: TabBarProps) {
   const [maisAberto, setMaisAberto] = useState(false);
   const [registarAberto, setRegistarAberto] = useState(false);
   const naoLidas = useNaoLidas();
-  const { isSupervisorEmAlguma } = useMembros();
-  const escolha = useAtalhosEscolhidos();
-
-  const [esquerda, direita] = atalhosDaBarra(
-    escolha,
-    destinos.map((d) => d.nome),
-    isSupervisorEmAlguma ? ATALHOS_OMISSAO_SUPERVISOR : ATALHOS_OMISSAO,
-  );
+  const [esquerda, direita] = useAtalhosDaBarra();
   const naBarra = ['index', esquerda, '+', direita].filter((n): n is string => !!n);
   // O "Mais" guarda o que a barra deixou de fora: as duas leem a MESMA lista.
   const escondidos = destinos.filter((d) => !naBarra.includes(d.nome));
@@ -148,104 +142,93 @@ function TabBar({ state, navigation }: TabBarProps) {
           de qualquer separador. */}
       <FolhaAcoesRapidas aberto={registarAberto} onFechar={() => setRegistarAberto(false)} />
 
-      <Modal
-        visible={maisAberto}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setMaisAberto(false)}>
-        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
+      <Folha
+        visivel={maisAberto}
+        onFechar={() => setMaisAberto(false)}
+        estilo={[
+          {
+            backgroundColor: colors.background,
+            borderTopLeftRadius: radii.xl,
+            borderTopRightRadius: radii.xl,
+            paddingTop: spacing.md,
+            paddingBottom: insets.bottom + spacing.md,
+            paddingHorizontal: spacing.lg,
+          },
+          shadow.lg,
+        ]}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: spacing.sm,
+          }}>
+          <Text variant="h3" style={{ flex: 1 }}>
+            {t('nav.mais')}
+          </Text>
           <Pressable
-            style={{ flex: 1 }}
             onPress={() => setMaisAberto(false)}
-            accessibilityLabel={t('comum.fechar')}
-          />
-          <View
-            style={[
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('comum.fechar')}>
+            <Icon name="close" size="lg" color={colors.textSecondary} />
+          </Pressable>
+        </View>
+
+        {escondidos.map((d, i) => (
+          <Pressable
+            key={d.nome}
+            onPress={() => {
+              setMaisAberto(false);
+              router.navigate(d.rota);
+            }}
+            accessibilityRole="link"
+            accessibilityLabel={t(d.chave)}
+            accessibilityState={{ selected: rotaAtual === d.nome }}
+            style={({ pressed }) => [
               {
-                backgroundColor: colors.background,
-                borderTopLeftRadius: radii.xl,
-                borderTopRightRadius: radii.xl,
-                paddingTop: spacing.md,
-                paddingBottom: insets.bottom + spacing.md,
-                paddingHorizontal: spacing.lg,
-              },
-              shadow.lg,
-            ]}>
-            <View
-              style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                marginBottom: spacing.sm,
-              }}>
-              <Text variant="h3" style={{ flex: 1 }}>
-                {t('nav.mais')}
-              </Text>
-              <Pressable
-                onPress={() => setMaisAberto(false)}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel={t('comum.fechar')}>
-                <Icon name="close" size="lg" color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            {escondidos.map((d, i) => (
-              <Pressable
-                key={d.nome}
-                onPress={() => {
-                  setMaisAberto(false);
-                  router.navigate(d.rota);
-                }}
-                accessibilityRole="link"
-                accessibilityLabel={t(d.chave)}
-                accessibilityState={{ selected: rotaAtual === d.nome }}
-                style={({ pressed }) => [
-                  {
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: spacing.sm,
-                    // Alvo grande: é uma folha usada com o polegar, muitas
-                    // vezes de pé no campo.
-                    minHeight: 60,
-                    borderBottomWidth: i < escondidos.length - 1 ? 1 : 0,
-                    borderBottomColor: colors.border,
-                  },
-                  pressed && { opacity: 0.6 },
-                ]}>
-                <Icon
-                  name={d.icon}
-                  size="lg"
-                  color={rotaAtual === d.nome ? colors.primary : colors.textSecondary}
-                />
-                <Text
-                  variant={rotaAtual === d.nome ? 'bodyStrong' : 'body'}
-                  color={rotaAtual === d.nome ? colors.primaryDark : colors.text}
-                  style={{ flex: 1 }}>
-                  {t(d.chave)}
+                gap: spacing.sm,
+                // Alvo grande: é uma folha usada com o polegar, muitas
+                // vezes de pé no campo.
+                minHeight: 60,
+                borderBottomWidth: i < escondidos.length - 1 ? 1 : 0,
+                borderBottomColor: colors.border,
+              },
+              pressed && { opacity: 0.6 },
+            ]}>
+            <Icon
+              name={d.icon}
+              size="lg"
+              color={rotaAtual === d.nome ? colors.primary : colors.textSecondary}
+            />
+            <Text
+              variant={rotaAtual === d.nome ? 'bodyStrong' : 'body'}
+              color={rotaAtual === d.nome ? colors.primaryDark : colors.text}
+              style={{ flex: 1 }}>
+              {t(d.chave)}
+            </Text>
+            {d.nome === 'chat' && porLerNoMais > 0 ? (
+              <View
+                accessibilityLabel={t('chat.naoLidasN', { n: porLerNoMais })}
+                style={{
+                  minWidth: 24,
+                  height: 24,
+                  paddingHorizontal: 6,
+                  borderRadius: radii.pill,
+                  backgroundColor: colors.danger,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Text variant="caption" color={colors.onPrimary}>
+                  {porLerNoMais > 99 ? '99+' : porLerNoMais}
                 </Text>
-                {d.nome === 'chat' && porLerNoMais > 0 ? (
-                  <View
-                    accessibilityLabel={t('chat.naoLidasN', { n: porLerNoMais })}
-                    style={{
-                      minWidth: 24,
-                      height: 24,
-                      paddingHorizontal: 6,
-                      borderRadius: radii.pill,
-                      backgroundColor: colors.danger,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                    <Text variant="caption" color={colors.onPrimary}>
-                      {porLerNoMais > 99 ? '99+' : porLerNoMais}
-                    </Text>
-                  </View>
-                ) : null}
-                <Icon name="chevron-right" size="md" color={colors.textMuted} />
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      </Modal>
+              </View>
+            ) : null}
+            <Icon name="chevron-right" size="md" color={colors.textMuted} />
+          </Pressable>
+        ))}
+      </Folha>
     </>
   );
 }
@@ -354,9 +337,60 @@ function Botao({
   );
 }
 
+/** Os dois atalhos que a barra mostra agora (ver `barraAtalhos.ts`). */
+function useAtalhosDaBarra(): string[] {
+  const destinos = useDestinos();
+  const { isSupervisorEmAlguma } = useMembros();
+  const escolha = useAtalhosEscolhidos();
+  return atalhosDaBarra(
+    escolha,
+    destinos.map((d) => d.nome),
+    isSupervisorEmAlguma ? ATALHOS_OMISSAO_SUPERVISOR : ATALHOS_OMISSAO,
+  );
+}
+
+/**
+ * O deslize curto ao mudar de separador: o ecrã novo entra do lado do
+ * separador tocado, só 24 px, e o antigo sai para o outro lado a apagar-se.
+ * É a animação "shift" do navegador, com metade da distância: com 50 px (a
+ * de origem) parecia um ecrã a mudar de sítio, e não de conteúdo.
+ */
+function deslizeCurto({ current }: { current: { progress: Animated.Value } }) {
+  return {
+    sceneStyle: {
+      opacity: current.progress.interpolate({ inputRange: [-1, 0, 1], outputRange: [0, 1, 0] }),
+      transform: [
+        {
+          translateX: current.progress.interpolate({
+            inputRange: [-1, 0, 1],
+            outputRange: [-24, 0, 24],
+          }),
+        },
+      ],
+    },
+  };
+}
+
 export default function TabsLayout() {
   const desktop = useDesktop();
   const destinos = useDestinos();
+  const [esquerda, direita] = useAtalhosDaBarra();
+
+  /**
+   * A ORDEM das rotas é o que decide de que lado o separador novo entra: o
+   * navegador faz o de índice maior entrar pela direita. No telemóvel a ordem
+   * tem de ser a da barra (Início, atalho da esquerda, atalho da direita, e o
+   * que está no Mais, que fica à direita de todos); com a ordem da tabela, um
+   * atalho à direita na barra podia entrar pela esquerda. No computador é a
+   * ordem da barra lateral, de cima para baixo.
+   */
+  const naFrente = ['index', esquerda, direita];
+  const ordem = desktop
+    ? DESTINOS
+    : [
+        ...naFrente.map((n) => DESTINOS.find((d) => d.nome === n)).filter((d) => d !== undefined),
+        ...DESTINOS.filter((d) => !naFrente.includes(d.nome)),
+      ];
 
   const navDesktop: ItemNav[] = destinos.map((d) => ({
     rota: d.rota,
@@ -367,11 +401,19 @@ export default function TabsLayout() {
   const ecrans = (
     <Tabs
       tabBar={desktop ? () => null : (props) => <TabBar {...props} />}
-      screenOptions={{ headerShown: false }}>
+      screenOptions={{
+        headerShown: false,
+        animation: semMovimento() ? 'none' : 'shift',
+        sceneStyleInterpolator: deslizeCurto,
+        transitionSpec: {
+          animation: 'timing',
+          config: { duration: DURACAO.separador, easing: ABRANDAR },
+        },
+      }}>
       {/* Todas as rotas declaradas, mesmo as que esta pessoa não vê na
           navegação: retirá-las daqui fazia o expo-router dar 404 a um link
           direto, e o ecrã já sabe explicar-se a quem não tem equipa. */}
-      {DESTINOS.map((d) => (
+      {ordem.map((d) => (
         <Tabs.Screen key={d.nome} name={d.nome} />
       ))}
     </Tabs>

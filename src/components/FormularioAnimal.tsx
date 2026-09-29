@@ -16,6 +16,7 @@ import {
   type IconName,
   SeletorOpcao,
   Text,
+  useVisto,
 } from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
 import {
@@ -95,6 +96,8 @@ export function FormularioAnimal({
   const { animais, eventos, exploracoes, terrenosByExploracao, addAnimal, updateAnimal, deleteAnimal } = useGado();
   const { pode } = useMembros();
   const toast = useToasts();
+  // O visto no botão de gravar, meio segundo antes de o formulário fechar.
+  const visto = useVisto();
 
   const editar = !!animal;
   // Eliminar já não apaga nada (ver `supabase/schema_auditoria.sql`), por isso
@@ -268,10 +271,12 @@ export function FormularioAnimal({
       };
       if (animal) {
         await updateAnimal(animal.id, dados);
+        await visto.mostrar();
         toast.sucesso(t('formAnimal.guardado'), rotuloAnimal({ ...animal, ...dados }));
         router.back();
       } else {
         const novo = await addAnimal(dados);
+        await visto.mostrar();
         toast.sucesso(t('formAnimal.registado'), rotuloAnimal(novo));
         router.replace(`/animal/${novo.id}`);
       }
@@ -747,6 +752,7 @@ export function FormularioAnimal({
         ) : null}
         <Button
           label={editar ? t('formAnimal.guardarAlteracoes') : t('formAnimal.guardarAnimal')}
+          concluido={visto.concluido}
           icon="check"
           onPress={guardar}
           disabled={

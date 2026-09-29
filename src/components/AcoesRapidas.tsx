@@ -1,10 +1,10 @@
 import { useRouter, type Href } from 'expo-router';
 import { useMemo } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { QuickAction } from '@/components/QuickAction';
-import { Icon, type IconName, Text } from '@/components/ui';
+import { Folha, Icon, type IconName, Text } from '@/components/ui';
 import { useMembros } from '@/data/membros';
 import { useFinancas } from '@/data/useFinancas';
 import { t } from '@/i18n';
@@ -194,85 +194,82 @@ export function FolhaAcoesRapidas({
   const acoes = useAcoesRapidas();
 
   return (
-    <Modal visible={aberto} animationType="slide" transparent onRequestClose={onFechar}>
-      <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
-        <View
-          style={[
-            {
-              backgroundColor: colors.background,
-              borderTopLeftRadius: radii.xl,
-              borderTopRightRadius: radii.xl,
-              paddingTop: spacing.md,
-              paddingBottom: insets.bottom + spacing.md,
-              paddingHorizontal: spacing.lg,
-              maxHeight: '80%',
-            },
-            shadow.lg,
-          ]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-            <Text variant="h3" style={{ flex: 1 }}>
-              {t('nav.registar')}
-            </Text>
-            <Pressable
-              onPress={onFechar}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('comum.fechar')}>
-              <Icon name="close" size="lg" color={colors.textSecondary} />
-            </Pressable>
-          </View>
-
-          {acoes.length === 0 ? (
-            <Text variant="body" color={colors.textSecondary} style={{ paddingVertical: spacing.md }}>
-              {t('acao.semPermissao')}
-            </Text>
-          ) : (
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {acoes.map((a, i) => (
-                <Pressable
-                  key={a.chave}
-                  onPress={() => {
-                    onFechar();
-                    router.push(a.rota);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={a.label}
-                  style={({ pressed }) => [
-                    {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing.sm,
-                      minHeight: 64,
-                      borderBottomWidth: i < acoes.length - 1 ? 1 : 0,
-                      borderBottomColor: colors.border,
-                    },
-                    pressed && { opacity: 0.6 },
-                  ]}>
-                  <View
-                    style={{
-                      width: 46,
-                      height: 46,
-                      borderRadius: radii.md,
-                      backgroundColor: a.tinta,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                    <Icon name={a.icon} size="md" color={a.cor} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text variant="bodyStrong">{a.label}</Text>
-                    <Text variant="caption" color={colors.textMuted} numberOfLines={2}>
-                      {a.descricao}
-                    </Text>
-                  </View>
-                  <Icon name="chevron-right" size="md" color={colors.textMuted} />
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
-        </View>
+    <Folha
+      visivel={aberto}
+      onFechar={onFechar}
+      estilo={[
+        {
+          backgroundColor: colors.background,
+          borderTopLeftRadius: radii.xl,
+          borderTopRightRadius: radii.xl,
+          paddingTop: spacing.md,
+          paddingBottom: insets.bottom + spacing.md,
+          paddingHorizontal: spacing.lg,
+          maxHeight: '80%',
+        },
+        shadow.lg,
+      ]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+        <Text variant="h3" style={{ flex: 1 }}>
+          {t('nav.registar')}
+        </Text>
+        <Pressable
+          onPress={onFechar}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('comum.fechar')}>
+          <Icon name="close" size="lg" color={colors.textSecondary} />
+        </Pressable>
       </View>
-    </Modal>
+
+      {acoes.length === 0 ? (
+        <Text variant="body" color={colors.textSecondary} style={{ paddingVertical: spacing.md }}>
+          {t('acao.semPermissao')}
+        </Text>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {acoes.map((a, i) => (
+            <Pressable
+              key={a.chave}
+              onPress={() => {
+                onFechar();
+                router.push(a.rota);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={a.label}
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  minHeight: 64,
+                  borderBottomWidth: i < acoes.length - 1 ? 1 : 0,
+                  borderBottomColor: colors.border,
+                },
+                pressed && { opacity: 0.6 },
+              ]}>
+              <View
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: radii.md,
+                  backgroundColor: a.tinta,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <Icon name={a.icon} size="md" color={a.cor} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyStrong">{a.label}</Text>
+                <Text variant="caption" color={colors.textMuted} numberOfLines={2}>
+                  {a.descricao}
+                </Text>
+              </View>
+              <Icon name="chevron-right" size="md" color={colors.textMuted} />
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+    </Folha>
   );
 }
