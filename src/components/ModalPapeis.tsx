@@ -1,6 +1,6 @@
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
-import { Icon, type IconName, Text } from '@/components/ui';
+import { Folha, Icon, type IconName, Text } from '@/components/ui';
 import { useDesktop } from '@/hooks/useDesktop';
 import { t } from '@/i18n';
 import { colors, radii, shadow, spacing } from '@/theme';
@@ -30,77 +30,93 @@ export function ModalPapeis({ visivel, onFechar }: { visivel: boolean; onFechar:
   const desktop = useDesktop();
 
   return (
-    <Modal
-      visible={visivel}
-      animationType={desktop ? 'fade' : 'slide'}
-      transparent
-      onRequestClose={onFechar}>
+    <Folha
+      visivel={visivel}
+      onFechar={onFechar}
+      centrada={desktop}
+      estilo={{
+        backgroundColor: colors.background,
+        // Os quatro cantos um a um: na web o atalho `borderRadius` e o
+        // canto específico compilam para classes cuja ordem não é garantida.
+        borderTopLeftRadius: radii.xl,
+        borderTopRightRadius: radii.xl,
+        borderBottomLeftRadius: desktop ? radii.xl : 0,
+        borderBottomRightRadius: desktop ? radii.xl : 0,
+        width: '100%',
+        maxWidth: 560,
+        alignSelf: 'center',
+        maxHeight: desktop ? '100%' : '92%',
+        overflow: 'hidden',
+        ...(desktop ? shadow.lg : null),
+      }}>
       <View
         style={{
-          flex: 1,
-          backgroundColor: colors.overlay,
-          justifyContent: desktop ? 'center' : 'flex-end',
-          padding: desktop ? spacing.xl : 0,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+          paddingHorizontal: spacing.lg,
+          paddingTop: desktop ? spacing.lg : spacing.md,
+          paddingBottom: spacing.md,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.border,
         }}>
+        <Icon name="account-group-outline" size="lg" color={colors.primary} />
+        <Text variant="h3" style={{ flex: 1 }}>
+          {t('papeis.titulo')}
+        </Text>
         <Pressable
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           onPress={onFechar}
-          accessibilityLabel={t('comum.fechar')}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('comum.fechar')}>
+          <Icon name="close" size="md" color={colors.textMuted} />
+        </Pressable>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
+        <Text variant="body" color={colors.textSecondary} style={{ marginBottom: spacing.lg }}>
+          {t('papeis.intro')}
+        </Text>
+
+        {/* ---- Porta 1: a exploração é sua ---- */}
+        <Etiqueta texto={t('papeis.aprovadoPorNos')} />
+        <Caixa
+          icone="barn"
+          nome={t('intencao.dono')}
+          descricao={t('papeis.donoFaz')}
         />
-        <View
-          style={{
-            backgroundColor: colors.background,
-            // Os quatro cantos um a um: na web o atalho `borderRadius` e o
-            // canto específico compilam para classes cuja ordem não é garantida.
-            borderTopLeftRadius: radii.xl,
-            borderTopRightRadius: radii.xl,
-            borderBottomLeftRadius: desktop ? radii.xl : 0,
-            borderBottomRightRadius: desktop ? radii.xl : 0,
-            width: '100%',
-            maxWidth: 560,
-            alignSelf: 'center',
-            maxHeight: desktop ? '100%' : '92%',
-            overflow: 'hidden',
-            ...(desktop ? shadow.lg : null),
-          }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing.sm,
-              paddingHorizontal: spacing.lg,
-              paddingTop: desktop ? spacing.lg : spacing.md,
-              paddingBottom: spacing.md,
-              borderBottomWidth: 1,
-              borderBottomColor: colors.border,
-            }}>
-            <Icon name="account-group-outline" size="lg" color={colors.primary} />
-            <Text variant="h3" style={{ flex: 1 }}>
-              {t('papeis.titulo')}
-            </Text>
-            <Pressable
-              onPress={onFechar}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('comum.fechar')}>
-              <Icon name="close" size="md" color={colors.textMuted} />
-            </Pressable>
-          </View>
+        <Convida>
+          <Ramo
+            icone="account-hard-hat"
+            nome={t('intencao.trabalhador')}
+            descricao={t('papeis.trabalhadorFaz')}
+          />
+          <Ramo
+            icone="medical-bag"
+            nome={t('intencao.veterinario')}
+            descricao={t('papeis.veterinarioFaz')}
+            ultimo
+          />
+        </Convida>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
-            <Text variant="body" color={colors.textSecondary} style={{ marginBottom: spacing.lg }}>
-              {t('papeis.intro')}
-            </Text>
-
-            {/* ---- Porta 1: a exploração é sua ---- */}
-            <Etiqueta texto={t('papeis.aprovadoPorNos')} />
-            <Caixa
-              icone="barn"
-              nome={t('intencao.dono')}
-              descricao={t('papeis.donoFaz')}
-            />
+        {/* ---- Porta 2: a exploração é de uma sociedade ---- */}
+        <Etiqueta texto={t('papeis.combinadoConnosco')} style={{ marginTop: spacing.xl }} />
+        <Caixa
+          icone="account-tie"
+          nome={t('papeis.sociedade')}
+          descricao={t('papeis.sociedadeFaz')}
+          nota={t('papeis.naoSeEscolheAqui')}
+        />
+        <Convida>
+          <Ramo
+            icone="shield-crown"
+            nome={t('intencao.lider')}
+            descricao={t('papeis.liderFaz')}
+            ultimo>
+            {/* O líder também convida: é ele que corre a exploração todos
+                os dias, e a equipa dela é a equipa dele. */}
             <Convida>
               <Ramo
                 icone="account-hard-hat"
@@ -114,59 +130,27 @@ export function ModalPapeis({ visivel, onFechar }: { visivel: boolean; onFechar:
                 ultimo
               />
             </Convida>
+          </Ramo>
+        </Convida>
 
-            {/* ---- Porta 2: a exploração é de uma sociedade ---- */}
-            <Etiqueta texto={t('papeis.combinadoConnosco')} style={{ marginTop: spacing.xl }} />
-            <Caixa
-              icone="account-tie"
-              nome={t('papeis.sociedade')}
-              descricao={t('papeis.sociedadeFaz')}
-              nota={t('papeis.naoSeEscolheAqui')}
-            />
-            <Convida>
-              <Ramo
-                icone="shield-crown"
-                nome={t('intencao.lider')}
-                descricao={t('papeis.liderFaz')}
-                ultimo>
-                {/* O líder também convida: é ele que corre a exploração todos
-                    os dias, e a equipa dela é a equipa dele. */}
-                <Convida>
-                  <Ramo
-                    icone="account-hard-hat"
-                    nome={t('intencao.trabalhador')}
-                    descricao={t('papeis.trabalhadorFaz')}
-                  />
-                  <Ramo
-                    icone="medical-bag"
-                    nome={t('intencao.veterinario')}
-                    descricao={t('papeis.veterinarioFaz')}
-                    ultimo
-                  />
-                </Convida>
-              </Ramo>
-            </Convida>
-
-            {/* A frase mais útil do ecrã inteiro para quem está indeciso, e por
-                isso fica no fim, onde a vista para. */}
-            <View
-              style={{
-                flexDirection: 'row',
-                gap: spacing.sm,
-                marginTop: spacing.xl,
-                padding: spacing.md,
-                borderRadius: radii.md,
-                backgroundColor: colors.primaryTint,
-              }}>
-              <Icon name="lightbulb-on-outline" size="md" color={colors.primaryDark} />
-              <Text variant="body" color={colors.primaryDark} style={{ flex: 1 }}>
-                {t('papeis.qualEOMeuCaso')}
-              </Text>
-            </View>
-          </ScrollView>
+        {/* A frase mais útil do ecrã inteiro para quem está indeciso, e por
+            isso fica no fim, onde a vista para. */}
+        <View
+          style={{
+            flexDirection: 'row',
+            gap: spacing.sm,
+            marginTop: spacing.xl,
+            padding: spacing.md,
+            borderRadius: radii.md,
+            backgroundColor: colors.primaryTint,
+          }}>
+          <Icon name="lightbulb-on-outline" size="md" color={colors.primaryDark} />
+          <Text variant="body" color={colors.primaryDark} style={{ flex: 1 }}>
+            {t('papeis.qualEOMeuCaso')}
+          </Text>
         </View>
-      </View>
-    </Modal>
+      </ScrollView>
+    </Folha>
   );
 }
 

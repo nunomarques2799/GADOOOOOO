@@ -1,11 +1,11 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SeletorFoto } from '@/components/SeletorFoto';
-import { Avatar, Badge, Button, Card, Icon, type IconName, Text } from '@/components/ui';
+import { Avatar, Badge, Button, Card, Folha, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { confirmar } from '@/data/avisos';
 import { saiuDoEfetivo } from '@/data/historicoAnimais';
@@ -283,65 +283,54 @@ export default function PerfilScreen() {
 
       {/* Escolher a fotografia. Montada só quando está aberta: fora disso não
           há folha nenhuma a guardar o rascunho de uma escolha abandonada. */}
-      <Modal
-        visible={aEscolherFoto !== null}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setAEscolherFoto(null)}>
-        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
+      <Folha
+        visivel={aEscolherFoto !== null}
+        onFechar={() => setAEscolherFoto(null)}
+        estilo={[
+          {
+            backgroundColor: colors.background,
+            borderTopLeftRadius: radii.xl,
+            borderTopRightRadius: radii.xl,
+            padding: spacing.lg,
+            paddingBottom: insets.bottom + spacing.lg,
+            gap: spacing.md,
+          },
+          shadow.lg,
+        ]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text variant="h3" style={{ flex: 1 }}>
+            {t('perfil.aSuaFotografia')}
+          </Text>
           <Pressable
-            style={{ flex: 1 }}
             onPress={() => setAEscolherFoto(null)}
-            accessibilityLabel={t('comum.fechar')}
-          />
-          <View
-            style={[
-              {
-                backgroundColor: colors.background,
-                borderTopLeftRadius: radii.xl,
-                borderTopRightRadius: radii.xl,
-                padding: spacing.lg,
-                paddingBottom: insets.bottom + spacing.lg,
-                gap: spacing.md,
-              },
-              shadow.lg,
-            ]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text variant="h3" style={{ flex: 1 }}>
-                {t('perfil.aSuaFotografia')}
-              </Text>
-              <Pressable
-                onPress={() => setAEscolherFoto(null)}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel={t('comum.fechar')}>
-                <Icon name="close" size="lg" color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            {/* O mesmo seletor do animal e do terreno — ver `SeletorFoto`. A
-                escolha só mexe no rascunho; quem grava é o botão de baixo. */}
-            <SeletorFoto
-              foto={aEscolherFoto?.atual}
-              onMudar={(dataUri) => setAEscolherFoto({ atual: dataUri })}
-              icone="account"
-              assunto={t('perfil.assuntoFoto')}
-            />
-
-            <Text variant="caption" color={colors.textMuted}>
-              {t('perfil.fotoSoSua')}
-            </Text>
-
-            <Button
-              label={aGravarFoto ? t('comum.aGuardar') : t('comum.guardar')}
-              icon="check"
-              loading={aGravarFoto}
-              disabled={aGravarFoto || aEscolherFoto?.atual === foto}
-              onPress={() => void guardarFoto(aEscolherFoto?.atual)}
-            />
-          </View>
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('comum.fechar')}>
+            <Icon name="close" size="lg" color={colors.textSecondary} />
+          </Pressable>
         </View>
-      </Modal>
+
+        {/* O mesmo seletor do animal e do terreno — ver `SeletorFoto`. A
+            escolha só mexe no rascunho; quem grava é o botão de baixo. */}
+        <SeletorFoto
+          foto={aEscolherFoto?.atual}
+          onMudar={(dataUri) => setAEscolherFoto({ atual: dataUri })}
+          icone="account"
+          assunto={t('perfil.assuntoFoto')}
+        />
+
+        <Text variant="caption" color={colors.textMuted}>
+          {t('perfil.fotoSoSua')}
+        </Text>
+
+        <Button
+          label={aGravarFoto ? t('comum.aGuardar') : t('comum.guardar')}
+          icon="check"
+          loading={aGravarFoto}
+          disabled={aGravarFoto || aEscolherFoto?.atual === foto}
+          onPress={() => void guardarFoto(aEscolherFoto?.atual)}
+        />
+      </Folha>
     </View>
   );
 }

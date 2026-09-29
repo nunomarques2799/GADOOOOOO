@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Badge, Card, EmptyState, Icon, type IconName, Text, TextField } from '@/components/ui';
+import { Badge, Card, EmptyState, Folha, Icon, type IconName, Text, TextField } from '@/components/ui';
 import { confirmar } from '@/data/avisos';
 import { duracaoCurta } from '@/data/chat';
 import {
@@ -724,53 +724,50 @@ function ModalTratar({
   const problema = problemaComNota(nota);
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onFechar}>
-      <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel="Fechar" />
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderTopLeftRadius: radii.xl,
-            borderTopRightRadius: radii.xl,
-            padding: spacing.lg,
-            paddingBottom: (insets.bottom > 0 ? insets.bottom : spacing.md) + spacing.md,
-            gap: spacing.sm,
-          }}>
-          <Text variant="h2">Dar por tratada</Text>
-          <Text variant="secondary" color={colors.textSecondary}>
-            A denúncia sai da lista de trabalho. Fica registado quando foi fechada, e o que se
-            escrever aqui fica com ela.
-          </Text>
+    <Folha
+      visivel
+      onFechar={onFechar}
+      estilo={{
+        backgroundColor: colors.surface,
+        borderTopLeftRadius: radii.xl,
+        borderTopRightRadius: radii.xl,
+        padding: spacing.lg,
+        paddingBottom: (insets.bottom > 0 ? insets.bottom : spacing.md) + spacing.md,
+        gap: spacing.sm,
+      }}>
+      <Text variant="h2">Dar por tratada</Text>
+      <Text variant="secondary" color={colors.textSecondary}>
+        A denúncia sai da lista de trabalho. Fica registado quando foi fechada, e o que se
+        escrever aqui fica com ela.
+      </Text>
 
-          <TextField
-            value={nota}
-            onChangeText={setNota}
-            placeholder="O que se decidiu (opcional)"
-            multiline
-          />
-          {problema ? (
-            <Text variant="caption" color={colors.danger}>
-              {problema}
-            </Text>
-          ) : (
-            <Text variant="caption" color={colors.textMuted}>
-              {nota.length} / {MAX_NOTA}
-            </Text>
-          )}
+      <TextField
+        value={nota}
+        onChangeText={setNota}
+        placeholder="O que se decidiu (opcional)"
+        multiline
+      />
+      {problema ? (
+        <Text variant="caption" color={colors.danger}>
+          {problema}
+        </Text>
+      ) : (
+        <Text variant="caption" color={colors.textMuted}>
+          {nota.length} / {MAX_NOTA}
+        </Text>
+      )}
 
-          <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
-            <BotaoAcao label="Cancelar" icon="close" onPress={onFechar} />
-            <BotaoAcao
-              label="Dar por tratada"
-              icon="check-circle-outline"
-              onPress={() => onConfirmar(nota)}
-              disabled={!!problema}
-              principal
-            />
-          </View>
-        </View>
+      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+        <BotaoAcao label="Cancelar" icon="close" onPress={onFechar} />
+        <BotaoAcao
+          label="Dar por tratada"
+          icon="check-circle-outline"
+          onPress={() => onConfirmar(nota)}
+          disabled={!!problema}
+          principal
+        />
       </View>
-    </Modal>
+    </Folha>
   );
 }
 

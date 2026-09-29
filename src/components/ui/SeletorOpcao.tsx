@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { t } from '@/i18n';
 import { colors, radii, shadow, sizes, spacing } from '@/theme';
 
-import { FolhaComTeclado } from './EcraComTeclado';
+import { Folha } from './Folha';
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
 
@@ -134,111 +134,102 @@ export function SeletorOpcao({
         ) : null}
       </View>
 
-      <Modal
-        visible={aberto}
-        animationType="slide"
-        transparent
-        onRequestClose={fechar}
-        // Sem isto, no Android o botão físico de voltar fecha a app inteira
-        // em vez da folha.
-        accessibilityViewIsModal>
-        <FolhaComTeclado>
-          <Pressable style={{ flex: 1 }} onPress={fechar} accessibilityLabel={t('comum.fechar')} />
+      <Folha
+        visivel={aberto}
+        onFechar={fechar}
+        comTeclado
+        estilo={[
+          {
+            backgroundColor: colors.background,
+            borderTopLeftRadius: radii.xl,
+            borderTopRightRadius: radii.xl,
+            paddingTop: spacing.md,
+            paddingBottom: insets.bottom + spacing.md,
+            maxHeight: '80%',
+          },
+          shadow.lg,
+        ]}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: spacing.lg,
+            marginBottom: spacing.sm,
+          }}>
+          <Text variant="h3" style={{ flex: 1 }}>
+            {titulo}
+          </Text>
+          <Pressable
+            onPress={fechar}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('comum.fechar')}>
+            <Icon name="close" size="lg" color={colors.textSecondary} />
+          </Pressable>
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm }}>
           <View
-            style={[
-              {
-                backgroundColor: colors.background,
-                borderTopLeftRadius: radii.xl,
-                borderTopRightRadius: radii.xl,
-                paddingTop: spacing.md,
-                paddingBottom: insets.bottom + spacing.md,
-                maxHeight: '80%',
-              },
-              shadow.lg,
-            ]}>
-            <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.xs,
+              height: sizes.input,
+              borderRadius: radii.md,
+              borderWidth: 1.5,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              paddingHorizontal: spacing.md,
+            }}>
+            <Icon name="magnify" size="md" color={colors.textMuted} />
+            <TextInput
+              value={procura}
+              onChangeText={setProcura}
+              placeholder={t('seletor.procurarOuEscrever')}
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="words"
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingHorizontal: spacing.lg,
-                marginBottom: spacing.sm,
-              }}>
-              <Text variant="h3" style={{ flex: 1 }}>
-                {titulo}
-              </Text>
-              <Pressable
-                onPress={fechar}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel={t('comum.fechar')}>
-                <Icon name="close" size="lg" color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  height: sizes.input,
-                  borderRadius: radii.md,
-                  borderWidth: 1.5,
-                  borderColor: colors.border,
-                  backgroundColor: colors.surface,
-                  paddingHorizontal: spacing.md,
-                }}>
-                <Icon name="magnify" size="md" color={colors.textMuted} />
-                <TextInput
-                  value={procura}
-                  onChangeText={setProcura}
-                  placeholder={t('seletor.procurarOuEscrever')}
-                  placeholderTextColor={colors.textMuted}
-                  autoCapitalize="words"
-                  style={{
-                    flex: 1,
-                    fontFamily: 'Nunito_600SemiBold',
-                    fontSize: 17,
-                    color: colors.text,
-                  }}
-                />
-              </View>
-            </View>
-
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
-              {podeAdicionar ? (
-                <Linha
-                  rotulo={`${rotuloAdicionar} “${escrito}”`}
-                  icone="plus-circle-outline"
-                  cor={colors.primary}
-                  onPress={() => escolher(escrito)}
-                />
-              ) : null}
-              {filtradas.map((o) => (
-                <Linha
-                  key={o}
-                  rotulo={o}
-                  icone={valor === o ? 'check-circle' : 'circle-outline'}
-                  cor={valor === o ? colors.primary : colors.textMuted}
-                  destacado={valor === o}
-                  onPress={() => escolher(o)}
-                />
-              ))}
-              {filtradas.length === 0 && !podeAdicionar ? (
-                <Text
-                  variant="secondary"
-                  color={colors.textMuted}
-                  style={{ paddingVertical: spacing.lg, textAlign: 'center' }}>
-                  {t('seletor.nadaEncontrado')}
-                </Text>
-              ) : null}
-            </ScrollView>
+                flex: 1,
+                fontFamily: 'Nunito_600SemiBold',
+                fontSize: 17,
+                color: colors.text,
+              }}
+            />
           </View>
-        </FolhaComTeclado>
-      </Modal>
+        </View>
+
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
+          {podeAdicionar ? (
+            <Linha
+              rotulo={`${rotuloAdicionar} “${escrito}”`}
+              icone="plus-circle-outline"
+              cor={colors.primary}
+              onPress={() => escolher(escrito)}
+            />
+          ) : null}
+          {filtradas.map((o) => (
+            <Linha
+              key={o}
+              rotulo={o}
+              icone={valor === o ? 'check-circle' : 'circle-outline'}
+              cor={valor === o ? colors.primary : colors.textMuted}
+              destacado={valor === o}
+              onPress={() => escolher(o)}
+            />
+          ))}
+          {filtradas.length === 0 && !podeAdicionar ? (
+            <Text
+              variant="secondary"
+              color={colors.textMuted}
+              style={{ paddingVertical: spacing.lg, textAlign: 'center' }}>
+              {t('seletor.nadaEncontrado')}
+            </Text>
+          ) : null}
+        </ScrollView>
+      </Folha>
     </>
   );
 }

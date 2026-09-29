@@ -19,6 +19,7 @@ import {
   Icon,
   type IconName,
   Text,
+  useVisto,
 } from '@/components/ui';
 import { SeletorAnimais } from '@/components/SeletorAnimais';
 import { avisar } from '@/data/avisos';
@@ -205,6 +206,8 @@ export default function NovoEventoScreen() {
   } = useGado();
   const { podeEmAlguma } = useMembros();
   const toast = useToasts();
+  // O visto no botão de gravar, meio segundo antes de o formulário fechar.
+  const visto = useVisto();
 
   const params = useLocalSearchParams<{ tipo?: string; animalId?: string }>();
   const tipoInicial: Registavel = (REGISTAVEIS as readonly string[]).includes(params.tipo ?? '')
@@ -632,6 +635,7 @@ export default function NovoEventoScreen() {
       return;
     }
 
+    await visto.mostrar();
     toast.sucesso(
       META[tipo].feito,
       cria
@@ -1135,6 +1139,7 @@ export default function NovoEventoScreen() {
           }
           icon="check"
           onPress={guardar}
+          concluido={visto.concluido}
           disabled={!valido || aGuardar}
         />
       </View>

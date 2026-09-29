@@ -1,13 +1,14 @@
 import { useRouter } from 'expo-router';
 import { useDeferredValue, useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, TextInput, View } from 'react-native';
+import { FlatList, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimalRow } from '@/components/AnimalRow';
+import { Cascata } from '@/components/Cascata';
 import { FolhaFiltros } from '@/components/FolhaFiltros';
 import { SeletorExploracao } from '@/components/SeletorExploracao';
 import { LegendaSinais } from '@/components/SinaisAnimal';
-import { Button, Chip, EmptyState, FAB, Icon, type IconName, Text } from '@/components/ui';
+import { Button, Chip, EmptyState, FAB, Folha, Icon, type IconName, Text } from '@/components/ui';
 import { especieMeta } from '@/data/constants';
 import {
   contarAtivos,
@@ -93,86 +94,75 @@ function OrdenarTelemovel({
         <Icon name="chevron-down" size="sm" color={colors.primaryDark} />
       </Pressable>
 
-      <Modal
-        visible={aberta}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setAberta(false)}>
-        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
+      <Folha
+        visivel={aberta}
+        onFechar={() => setAberta(false)}
+        estilo={[
+          {
+            backgroundColor: colors.background,
+            borderTopLeftRadius: radii.xl,
+            borderTopRightRadius: radii.xl,
+            paddingTop: spacing.md,
+            paddingBottom: insets.bottom + spacing.md,
+            paddingHorizontal: spacing.lg,
+          },
+          shadow.lg,
+        ]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+          <Text variant="h3" style={{ flex: 1 }}>
+            {t('animais.ordenarTitulo')}
+          </Text>
           <Pressable
-            style={{ flex: 1 }}
             onPress={() => setAberta(false)}
-            accessibilityLabel={t('comum.fechar')}
-          />
-          <View
-            style={[
-              {
-                backgroundColor: colors.background,
-                borderTopLeftRadius: radii.xl,
-                borderTopRightRadius: radii.xl,
-                paddingTop: spacing.md,
-                paddingBottom: insets.bottom + spacing.md,
-                paddingHorizontal: spacing.lg,
-              },
-              shadow.lg,
-            ]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-              <Text variant="h3" style={{ flex: 1 }}>
-                {t('animais.ordenarTitulo')}
-              </Text>
-              <Pressable
-                onPress={() => setAberta(false)}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel={t('comum.fechar')}>
-                <Icon name="close" size="lg" color={colors.textSecondary} />
-              </Pressable>
-            </View>
-            {opcoes.map((o, i) => {
-              const sel = o.valor === ordenacao;
-              return (
-                <Pressable
-                  key={o.valor}
-                  onPress={() => {
-                    onEscolher(o.valor);
-                    setAberta(false);
-                  }}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: sel }}
-                  accessibilityLabel={o.label}
-                  style={({ pressed }) => [
-                    {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing.sm,
-                      minHeight: 60,
-                      borderBottomWidth: i < opcoes.length - 1 ? 1 : 0,
-                      borderBottomColor: colors.border,
-                    },
-                    pressed && { opacity: 0.6 },
-                  ]}>
-                  <Icon
-                    name={ICONE_ORDEM[o.valor]}
-                    size="lg"
-                    color={sel ? colors.primary : colors.textSecondary}
-                  />
-                  <Text
-                    variant={sel ? 'bodyStrong' : 'body'}
-                    color={sel ? colors.primaryDark : colors.text}
-                    style={{ flex: 1 }}>
-                    {o.label}
-                  </Text>
-                  <Icon
-                    name={sel ? 'radiobox-marked' : 'radiobox-blank'}
-                    size="md"
-                    color={sel ? colors.primary : colors.textMuted}
-                  />
-                </Pressable>
-              );
-            })}
-          </View>
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('comum.fechar')}>
+            <Icon name="close" size="lg" color={colors.textSecondary} />
+          </Pressable>
         </View>
-      </Modal>
+        {opcoes.map((o, i) => {
+          const sel = o.valor === ordenacao;
+          return (
+            <Pressable
+              key={o.valor}
+              onPress={() => {
+                onEscolher(o.valor);
+                setAberta(false);
+              }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: sel }}
+              accessibilityLabel={o.label}
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  minHeight: 60,
+                  borderBottomWidth: i < opcoes.length - 1 ? 1 : 0,
+                  borderBottomColor: colors.border,
+                },
+                pressed && { opacity: 0.6 },
+              ]}>
+              <Icon
+                name={ICONE_ORDEM[o.valor]}
+                size="lg"
+                color={sel ? colors.primary : colors.textSecondary}
+              />
+              <Text
+                variant={sel ? 'bodyStrong' : 'body'}
+                color={sel ? colors.primaryDark : colors.text}
+                style={{ flex: 1 }}>
+                {o.label}
+              </Text>
+              <Icon
+                name={sel ? 'radiobox-marked' : 'radiobox-blank'}
+                size="md"
+                color={sel ? colors.primary : colors.textMuted}
+              />
+            </Pressable>
+          );
+        })}
+      </Folha>
     </>
   );
 }
@@ -337,21 +327,25 @@ export default function AnimaisScreen() {
         keyExtractor={(a) => a.id}
         numColumns={desktop ? 2 : 1}
         columnWrapperStyle={desktop ? { gap: spacing.sm } : undefined}
-        renderItem={({ item }) =>
+        renderItem={({ item, index }) =>
           desktop ? (
             <View style={{ flex: 1 }}>
+              <Cascata lista="animais" indice={index}>
+                <AnimalRow
+                  animal={item}
+                  nomeTerreno={item.terrenoId ? nomeTerrenoPorId.get(item.terrenoId) : undefined}
+                  alertas={porAnimal.get(item.id)}
+                />
+              </Cascata>
+            </View>
+          ) : (
+            <Cascata lista="animais" indice={index}>
               <AnimalRow
                 animal={item}
                 nomeTerreno={item.terrenoId ? nomeTerrenoPorId.get(item.terrenoId) : undefined}
                 alertas={porAnimal.get(item.id)}
               />
-            </View>
-          ) : (
-            <AnimalRow
-              animal={item}
-              nomeTerreno={item.terrenoId ? nomeTerrenoPorId.get(item.terrenoId) : undefined}
-              alertas={porAnimal.get(item.id)}
-            />
+            </Cascata>
           )
         }
         showsVerticalScrollIndicator={false}

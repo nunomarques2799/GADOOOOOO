@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon, IconBadge, Text } from '@/components/ui';
+import { Folha, Icon, IconBadge, Text } from '@/components/ui';
 import { confirmar } from '@/data/avisos';
 import { tipoTerrenoMeta } from '@/data/constants';
 import { useGado } from '@/data/store';
@@ -97,83 +97,80 @@ export function FolhaMoverAnimais({
   }
 
   return (
-    <Modal visible={aberto} animationType="slide" transparent onRequestClose={onFechar}>
-      <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
-        <View
-          style={[
-            {
-              backgroundColor: colors.background,
-              borderTopLeftRadius: radii.xl,
-              borderTopRightRadius: radii.xl,
-              paddingTop: spacing.md,
-              paddingBottom: insets.bottom + spacing.md,
-              paddingHorizontal: spacing.lg,
-              maxHeight: '80%',
-            },
-            shadow.lg,
-          ]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
-            <Text variant="h3" style={{ flex: 1 }}>
-              {t('mover.paraQueTerreno')}
-            </Text>
-            <Pressable
-              onPress={onFechar}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('comum.fechar')}>
-              <Icon name="close" size="lg" color={colors.textSecondary} />
-            </Pressable>
-          </View>
-
-          <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.sm }}>
-            {aMover
-              ? `A mudar ${total} ${total === 1 ? 'animal' : 'animais'}…`
-              : `${total} ${total === 1 ? 'animal sai' : 'animais saem'} de ${origem.nome}.`}
-          </Text>
-
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {destinos.map((t, i) => {
-              const meta = tipoTerrenoMeta[t.tipo ?? 'Outro'];
-              return (
-                <Pressable
-                  key={t.id}
-                  disabled={aMover}
-                  onPress={() => pedirParaMover(t)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t.nome}
-                  style={({ pressed }) => [
-                    {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing.sm,
-                      minHeight: 64,
-                      borderBottomWidth: i < destinos.length - 1 ? 1 : 0,
-                      borderBottomColor: colors.border,
-                    },
-                    (pressed || aMover) && { opacity: 0.6 },
-                  ]}>
-                  <IconBadge
-                    name={meta.icon}
-                    color={meta.cor}
-                    background={colors.primaryTint}
-                    size={44}
-                    iconSize={22}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text variant="bodyStrong">{t.nome}</Text>
-                    <Text variant="caption" color={colors.textMuted} numberOfLines={1}>
-                      {t.tipo ?? 'Outro'}
-                      {t.area ? ` · ${t.area} ha` : ''}
-                    </Text>
-                  </View>
-                  <Icon name="chevron-right" size="md" color={colors.textMuted} />
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
+    <Folha
+      visivel={aberto}
+      onFechar={onFechar}
+      estilo={[
+        {
+          backgroundColor: colors.background,
+          borderTopLeftRadius: radii.xl,
+          borderTopRightRadius: radii.xl,
+          paddingTop: spacing.md,
+          paddingBottom: insets.bottom + spacing.md,
+          paddingHorizontal: spacing.lg,
+          maxHeight: '80%',
+        },
+        shadow.lg,
+      ]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
+        <Text variant="h3" style={{ flex: 1 }}>
+          {t('mover.paraQueTerreno')}
+        </Text>
+        <Pressable
+          onPress={onFechar}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('comum.fechar')}>
+          <Icon name="close" size="lg" color={colors.textSecondary} />
+        </Pressable>
       </View>
-    </Modal>
+
+      <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.sm }}>
+        {aMover
+          ? `A mudar ${total} ${total === 1 ? 'animal' : 'animais'}…`
+          : `${total} ${total === 1 ? 'animal sai' : 'animais saem'} de ${origem.nome}.`}
+      </Text>
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {destinos.map((t, i) => {
+          const meta = tipoTerrenoMeta[t.tipo ?? 'Outro'];
+          return (
+            <Pressable
+              key={t.id}
+              disabled={aMover}
+              onPress={() => pedirParaMover(t)}
+              accessibilityRole="button"
+              accessibilityLabel={t.nome}
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  minHeight: 64,
+                  borderBottomWidth: i < destinos.length - 1 ? 1 : 0,
+                  borderBottomColor: colors.border,
+                },
+                (pressed || aMover) && { opacity: 0.6 },
+              ]}>
+              <IconBadge
+                name={meta.icon}
+                color={meta.cor}
+                background={colors.primaryTint}
+                size={44}
+                iconSize={22}
+              />
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyStrong">{t.nome}</Text>
+                <Text variant="caption" color={colors.textMuted} numberOfLines={1}>
+                  {t.tipo ?? 'Outro'}
+                  {t.area ? ` · ${t.area} ha` : ''}
+                </Text>
+              </View>
+              <Icon name="chevron-right" size="md" color={colors.textMuted} />
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </Folha>
   );
 }

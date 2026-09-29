@@ -1,12 +1,9 @@
 import type { ReactNode } from 'react';
-import {
-  Pressable,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors, radii, shadow, spacing } from '@/theme';
+
+import { PressableAnimado, useEscalaToque } from './useEscalaToque';
 
 type Props = {
   children: ReactNode;
@@ -43,17 +40,38 @@ export function Card({
   ];
 
   if (!onPress) return <View style={base}>{children}</View>;
-
   return (
-    <Pressable
+    <CardTocavel onPress={onPress} style={base} accessibilityLabel={accessibilityLabel}>
+      {children}
+    </CardTocavel>
+  );
+}
+
+/**
+ * O cartão que se carrega. À parte, para o gancho da escala só existir nos
+ * cartões que respondem ao toque (os de só ler não pagam nada por ele).
+ */
+function CardTocavel({
+  children,
+  onPress,
+  style,
+  accessibilityLabel,
+}: {
+  children: ReactNode;
+  onPress: () => void;
+  style: StyleProp<ViewStyle>;
+  accessibilityLabel?: string;
+}) {
+  const toque = useEscalaToque();
+  return (
+    <PressableAnimado
       onPress={onPress}
+      onPressIn={toque.onPressIn}
+      onPressOut={toque.onPressOut}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={({ pressed }) => [
-        base,
-        pressed && { opacity: 0.9, transform: [{ scale: 0.985 }] },
-      ]}>
+      style={[style, toque.estilo]}>
       {children}
-    </Pressable>
+    </PressableAnimado>
   );
 }

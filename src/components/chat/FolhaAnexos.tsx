@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
-import { Button, FolhaComTeclado, Icon, type IconName, Text } from '@/components/ui';
+import { Button, Folha, Icon, type IconName, Text } from '@/components/ui';
 import { avisar } from '@/data/avisos';
 import { duracaoCurta, MAX_OPCOES, MIN_OPCOES, problemaComSondagem } from '@/data/chat';
 import { escolherDocumento, fotografarDocumento, suportaCamera } from '@/data/ficheiroDocumento';
@@ -69,96 +69,94 @@ export function FolhaAnexos({
   }
 
   return (
-    <Modal visible={aberto} animationType="slide" transparent onRequestClose={fechar}>
-      <FolhaComTeclado>
-        <Pressable style={{ flex: 1 }} onPress={fechar} accessibilityLabel={t('comum.fechar')} />
-        <View
-          style={{
-            backgroundColor: colors.background,
-            borderTopLeftRadius: radii.xl,
-            borderTopRightRadius: radii.xl,
-            paddingTop: spacing.md,
-            paddingBottom: insets.bottom + spacing.md,
-            paddingHorizontal: spacing.lg,
-            maxHeight: '88%',
-          }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-            <Text variant="h3" style={{ flex: 1 }}>
-              {t('chat.anexar')}
-            </Text>
-            <Pressable
-              onPress={fechar}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('comum.fechar')}>
-              <Icon name="close" size="lg" color={colors.textSecondary} />
-            </Pressable>
-          </View>
+    <Folha
+      visivel={aberto}
+      onFechar={fechar}
+      comTeclado
+      estilo={{
+        backgroundColor: colors.background,
+        borderTopLeftRadius: radii.xl,
+        borderTopRightRadius: radii.xl,
+        paddingTop: spacing.md,
+        paddingBottom: insets.bottom + spacing.md,
+        paddingHorizontal: spacing.lg,
+        maxHeight: '88%',
+      }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+        <Text variant="h3" style={{ flex: 1 }}>
+          {t('chat.anexar')}
+        </Text>
+        <Pressable
+          onPress={fechar}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('comum.fechar')}>
+          <Icon name="close" size="lg" color={colors.textSecondary} />
+        </Pressable>
+      </View>
 
-          {passo === 'menu' ? (
-            <View>
-              {suportaCamera ? (
-                <Opcao
-                  icone="camera-outline"
-                  rotulo={t('chat.tirarFoto')}
-                  onPress={() => void comFotografia(true)}
-                />
-              ) : null}
-              <Opcao
-                icone="image-multiple-outline"
-                rotulo={t('chat.escolherFoto')}
-                onPress={() => void comFotografia(false)}
-              />
-              <Opcao
-                icone="microphone-outline"
-                rotulo={t('chat.gravarVoz')}
-                onPress={() => setPasso('voz')}
-              />
-              <Opcao
-                icone="map-marker-outline"
-                rotulo={t('chat.marcarSitio')}
-                onPress={() => setPasso('sitio')}
-              />
-              <Opcao
-                icone="poll"
-                rotulo={t('chat.fazerSondagem')}
-                onPress={() => setPasso('sondagem')}
-                ultima
-              />
-            </View>
-          ) : null}
-
-          {passo === 'voz' ? (
-            <Gravacao
-              onPronto={(ficheiro) => {
-                fechar();
-                onEscolher({ tipo: 'audio', ficheiro });
-              }}
-              onDesistir={() => setPasso('menu')}
+      {passo === 'menu' ? (
+        <View>
+          {suportaCamera ? (
+            <Opcao
+              icone="camera-outline"
+              rotulo={t('chat.tirarFoto')}
+              onPress={() => void comFotografia(true)}
             />
           ) : null}
-
-          {passo === 'sitio' ? (
-            <EscolherSitio
-              centro={centro}
-              onPronto={(latitude, longitude) => {
-                fechar();
-                onEscolher({ tipo: 'local', latitude, longitude });
-              }}
-            />
-          ) : null}
-
-          {passo === 'sondagem' ? (
-            <ComporSondagem
-              onPronto={(pergunta, opcoes) => {
-                fechar();
-                onEscolher({ tipo: 'sondagem', pergunta, opcoes });
-              }}
-            />
-          ) : null}
+          <Opcao
+            icone="image-multiple-outline"
+            rotulo={t('chat.escolherFoto')}
+            onPress={() => void comFotografia(false)}
+          />
+          <Opcao
+            icone="microphone-outline"
+            rotulo={t('chat.gravarVoz')}
+            onPress={() => setPasso('voz')}
+          />
+          <Opcao
+            icone="map-marker-outline"
+            rotulo={t('chat.marcarSitio')}
+            onPress={() => setPasso('sitio')}
+          />
+          <Opcao
+            icone="poll"
+            rotulo={t('chat.fazerSondagem')}
+            onPress={() => setPasso('sondagem')}
+            ultima
+          />
         </View>
-      </FolhaComTeclado>
-    </Modal>
+      ) : null}
+
+      {passo === 'voz' ? (
+        <Gravacao
+          onPronto={(ficheiro) => {
+            fechar();
+            onEscolher({ tipo: 'audio', ficheiro });
+          }}
+          onDesistir={() => setPasso('menu')}
+        />
+      ) : null}
+
+      {passo === 'sitio' ? (
+        <EscolherSitio
+          centro={centro}
+          onPronto={(latitude, longitude) => {
+            fechar();
+            onEscolher({ tipo: 'local', latitude, longitude });
+          }}
+        />
+      ) : null}
+
+      {passo === 'sondagem' ? (
+        <ComporSondagem
+          onPronto={(pergunta, opcoes) => {
+            fechar();
+            onEscolher({ tipo: 'sondagem', pergunta, opcoes });
+          }}
+        />
+      ) : null}
+    </Folha>
   );
 }
 

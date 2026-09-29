@@ -1,9 +1,9 @@
 import { useMemo, useRef } from 'react';
-import { Modal, PanResponder, Pressable, ScrollView, View } from 'react-native';
+import { PanResponder, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlertItem } from '@/components/AlertItem';
-import { Badge, Button, Card, Icon, Text } from '@/components/ui';
+import { Badge, Button, Card, Folha, Icon, Text } from '@/components/ui';
 import { diaVizinho, rotuloDoDia, type EventoAgenda } from '@/data/agenda';
 import { MESES } from '@/data/calendario';
 import type { Alerta } from '@/data/types';
@@ -84,136 +84,133 @@ export function ModalDiaAgenda({
   const nada = eventos.length === 0 && alertas.length === 0;
 
   return (
-    <Modal visible={aberto} animationType="slide" transparent onRequestClose={onFechar}>
-      <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
-        <View
-          style={[
-            {
-              backgroundColor: colors.background,
-              borderTopLeftRadius: radii.xl,
-              borderTopRightRadius: radii.xl,
-              paddingTop: spacing.sm,
-              maxHeight: '85%',
-            },
-            shadow.lg,
-          ]}
-          {...gestos.panHandlers}>
-          {/* Pega — diz que a folha se arrasta, antes de alguém tentar. */}
-          <View
-            style={{
-              alignSelf: 'center',
-              width: 44,
-              height: 5,
-              borderRadius: radii.pill,
-              backgroundColor: colors.borderStrong,
-              marginBottom: spacing.sm,
-            }}
-          />
+    <Folha
+      visivel={aberto}
+      onFechar={onFechar}
+      propsFolha={gestos.panHandlers}
+      estilo={[
+        {
+          backgroundColor: colors.background,
+          borderTopLeftRadius: radii.xl,
+          borderTopRightRadius: radii.xl,
+          paddingTop: spacing.sm,
+          maxHeight: '85%',
+        },
+        shadow.lg,
+      ]}>
+      {/* Pega — diz que a folha se arrasta, antes de alguém tentar. */}
+      <View
+        style={{
+          alignSelf: 'center',
+          width: 44,
+          height: 5,
+          borderRadius: radii.pill,
+          backgroundColor: colors.borderStrong,
+          marginBottom: spacing.sm,
+        }}
+      />
 
-          {/* Cabeçalho: dia anterior · o dia · dia seguinte */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing.xs,
-              paddingHorizontal: spacing.md,
-            }}>
-            <Seta
-              icon="chevron-left"
-              label={t('calendario.diaAnterior')}
-              onPress={() => onMudarDia(diaVizinho(dia, -1))}
-            />
-            <View style={{ flex: 1 }}>
-              <Text variant="h3" center numberOfLines={2}>
-                {titulo}
-              </Text>
-              {!nada ? (
-                <Text variant="caption" color={colors.textMuted} center>
-                  {resumo(eventos.length, alertas.length)}
-                </Text>
-              ) : null}
-            </View>
-            <Seta
-              icon="chevron-right"
-              label={t('calendario.diaSeguinte')}
-              onPress={() => onMudarDia(diaVizinho(dia, 1))}
-            />
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: spacing.lg,
-              paddingTop: spacing.md,
-              paddingBottom: insets.bottom + spacing.lg,
-            }}>
-            {nada ? (
-              <Card>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                  <Icon name="calendar-blank-outline" size="lg" color={colors.textMuted} />
-                  <Text variant="body" color={colors.textSecondary} style={{ flex: 1 }}>
-                    {t('calendario.nadaNesteDia')}
-                  </Text>
-                </View>
-              </Card>
-            ) : null}
-
-            {eventos.length > 0 ? (
-              <Card padded={false} style={{ marginBottom: spacing.md }}>
-                <View style={{ paddingHorizontal: spacing.md }}>
-                  {eventos.map((e, i) => (
-                    <LinhaEvento
-                      key={e.id}
-                      evento={e}
-                      divider={i < eventos.length - 1}
-                      onPress={() => onEditar(e)}
-                    />
-                  ))}
-                </View>
-              </Card>
-            ) : null}
-
-            {alertas.length > 0 ? (
-              <>
-                <Text
-                  variant="label"
-                  color={colors.textSecondary}
-                  style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
-                  {t('calendario.prazosDesteDia')}
-                </Text>
-                <Card padded={false} style={{ marginBottom: spacing.md }}>
-                  <View style={{ paddingHorizontal: spacing.md }}>
-                    {alertas.map((a, i) => (
-                      <AlertItem key={a.id} alerta={a} divider={i < alertas.length - 1} />
-                    ))}
-                  </View>
-                </Card>
-              </>
-            ) : null}
-
-            {podeMarcar ? (
-              <Button
-                label={t('calendario.marcarNesteDia')}
-                icon="calendar-plus"
-                variant="secondary"
-                onPress={() => onNovo(dia)}
-              />
-            ) : null}
-
-            {/* Diz-se aqui e não num tutorial: quem abre isto pela primeira vez
-                não adivinha que a folha anda de lado. */}
-            <Text
-              variant="caption"
-              color={colors.textMuted}
-              center
-              style={{ marginTop: spacing.md }}>
-              {t('calendario.arrasteParaOLado')}
+      {/* Cabeçalho: dia anterior · o dia · dia seguinte */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.xs,
+          paddingHorizontal: spacing.md,
+        }}>
+        <Seta
+          icon="chevron-left"
+          label={t('calendario.diaAnterior')}
+          onPress={() => onMudarDia(diaVizinho(dia, -1))}
+        />
+        <View style={{ flex: 1 }}>
+          <Text variant="h3" center numberOfLines={2}>
+            {titulo}
+          </Text>
+          {!nada ? (
+            <Text variant="caption" color={colors.textMuted} center>
+              {resumo(eventos.length, alertas.length)}
             </Text>
-          </ScrollView>
+          ) : null}
         </View>
+        <Seta
+          icon="chevron-right"
+          label={t('calendario.diaSeguinte')}
+          onPress={() => onMudarDia(diaVizinho(dia, 1))}
+        />
       </View>
-    </Modal>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.md,
+          paddingBottom: insets.bottom + spacing.lg,
+        }}>
+        {nada ? (
+          <Card>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <Icon name="calendar-blank-outline" size="lg" color={colors.textMuted} />
+              <Text variant="body" color={colors.textSecondary} style={{ flex: 1 }}>
+                {t('calendario.nadaNesteDia')}
+              </Text>
+            </View>
+          </Card>
+        ) : null}
+
+        {eventos.length > 0 ? (
+          <Card padded={false} style={{ marginBottom: spacing.md }}>
+            <View style={{ paddingHorizontal: spacing.md }}>
+              {eventos.map((e, i) => (
+                <LinhaEvento
+                  key={e.id}
+                  evento={e}
+                  divider={i < eventos.length - 1}
+                  onPress={() => onEditar(e)}
+                />
+              ))}
+            </View>
+          </Card>
+        ) : null}
+
+        {alertas.length > 0 ? (
+          <>
+            <Text
+              variant="label"
+              color={colors.textSecondary}
+              style={{ marginBottom: spacing.xs, marginLeft: spacing.xs }}>
+              {t('calendario.prazosDesteDia')}
+            </Text>
+            <Card padded={false} style={{ marginBottom: spacing.md }}>
+              <View style={{ paddingHorizontal: spacing.md }}>
+                {alertas.map((a, i) => (
+                  <AlertItem key={a.id} alerta={a} divider={i < alertas.length - 1} />
+                ))}
+              </View>
+            </Card>
+          </>
+        ) : null}
+
+        {podeMarcar ? (
+          <Button
+            label={t('calendario.marcarNesteDia')}
+            icon="calendar-plus"
+            variant="secondary"
+            onPress={() => onNovo(dia)}
+          />
+        ) : null}
+
+        {/* Diz-se aqui e não num tutorial: quem abre isto pela primeira vez
+            não adivinha que a folha anda de lado. */}
+        <Text
+          variant="caption"
+          color={colors.textMuted}
+          center
+          style={{ marginTop: spacing.md }}>
+          {t('calendario.arrasteParaOLado')}
+        </Text>
+      </ScrollView>
+    </Folha>
   );
 }
 

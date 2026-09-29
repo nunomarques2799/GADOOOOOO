@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { AlertItem } from '@/components/AlertItem';
@@ -20,6 +20,7 @@ import {
   Text,
   TextField,
 } from '@/components/ui';
+import { chegadaDoVoo, useVooEmCurso } from '@/components/VooAnimal';
 import { especieMeta, finalidadeMeta } from '@/data/constants';
 import { confirmar } from '@/data/avisos';
 import { filhosDe, progenitorDe, rotuloAnimal } from '@/data/genealogia';
@@ -66,6 +67,9 @@ export default function AnimalDetalheScreen() {
   const { pode } = useMembros();
   const { nomeDe } = useNomesEquipa();
   const toast = useToasts();
+  // O retrato grande: é para aqui que voa o da lista (ver `VooAnimal.tsx`).
+  const retrato = useRef<View>(null);
+  const vooEmCurso = useVooEmCurso(id);
 
   const animal = animalById(id);
   /**
@@ -199,7 +203,14 @@ export default function AnimalDetalheScreen() {
           end={{ x: 1, y: 1 }}
           style={[{ borderRadius: radii.xl, padding: spacing.lg, alignItems: 'center' }, shadow.md]}>
           <View
+            ref={retrato}
+            collapsable={false}
+            onLayout={() =>
+              // Diz ao retrato que vem a voar da lista onde é que ele pousa.
+              retrato.current?.measureInWindow((x, y, w, h) => chegadaDoVoo(animal.id, { x, y, w, h }))
+            }
             style={{
+              opacity: vooEmCurso ? 0 : 1,
               width: 88,
               height: 88,
               borderRadius: radii.pill,

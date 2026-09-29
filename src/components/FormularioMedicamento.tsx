@@ -16,6 +16,7 @@ import {
   Icon,
   Text,
   TextField,
+  useVisto,
 } from '@/components/ui';
 import { confirmar } from '@/data/avisos';
 import { destinoDoCodigo, etiquetaDeLote, type DestinoDoCodigo } from '@/data/codigos';
@@ -78,6 +79,8 @@ export function FormularioMedicamento({
   const { pode } = useMembros();
   const { podeRegistarDespesa } = useFinancas(exploracaoId);
   const toast = useToasts();
+  // O visto no botão de gravar, meio segundo antes de o formulário fechar.
+  const visto = useVisto();
 
   const editar = !!medicamento;
   const podeGerir = pode(exploracaoId, 'editarAnimais');
@@ -253,10 +256,12 @@ export function FormularioMedicamento({
     try {
       if (editar) {
         await updateMedicamento(medicamento.id, dados);
+        await visto.mostrar();
         toast.sucesso(t('formLote.guardado'), dados.nome);
       } else {
         const comDespesa = podeLancarDespesa && lancarDespesa && dados.custo != null;
         await addMedicamento(dados, { lancarDespesa: comDespesa });
+        await visto.mostrar();
         toast.sucesso(
           t('formLote.entradaRegistada'),
           comDespesa
@@ -606,6 +611,7 @@ export function FormularioMedicamento({
         ]}>
         <Button
           label={aGravar ? 'A guardar…' : editar ? 'Guardar alterações' : 'Registar entrada'}
+          concluido={visto.concluido}
           icon="check"
           loading={aGravar}
           onPress={() => void guardar()}

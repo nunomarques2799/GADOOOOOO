@@ -11,12 +11,15 @@ import { AnfitriaoAvisos } from '@/components/AnfitriaoAvisos';
 import { AnfitriaoMensagens } from '@/components/AnfitriaoMensagens';
 import { AnfitriaoToasts } from '@/components/AnfitriaoToasts';
 import { EcraACarregar } from '@/components/EcraACarregar';
+import { EntradaEcra, type ModoEntrada } from '@/components/EntradaEcra';
 import { EcraLogin } from '@/components/EcraLogin';
 import { FaixaAmbiente } from '@/components/FaixaAmbiente';
 import { LimiteDeErro } from '@/components/LimiteDeErro';
 import { EcraNovaPalavra } from '@/components/EcraNovaPalavra';
 import { EcraPendente } from '@/components/EcraPendente';
 import { AgendadorAvisos } from '@/components/AgendadorAvisos';
+import { semMovimento } from '@/components/ui/movimento';
+import { CamadaVoo } from '@/components/VooAnimal';
 import { AuthProvider, useAuth } from '@/data/auth';
 import { MembrosProvider, useMembros } from '@/data/membros';
 import { NotificacoesProvider } from '@/data/notificacoes';
@@ -190,6 +193,50 @@ function AppRouter({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+
+/**
+ * Os ecrãs que se PREENCHEM e fecham: sobem de baixo, como uma folha. Os que
+ * se LEEM (fichas, listas, definições) entram pela direita. O gesto diz o que o
+ * ecrã é antes de se ler o título.
+ */
+const FORMULARIOS = new Set([
+  'animal/novo',
+  'animal/importar',
+  'animal/editar/[id]',
+  'evento/novo',
+  'movimento/novo',
+  'movimento/editar/[id]',
+  'exploracao/nova',
+  'exploracao/editar/[id]',
+  'terreno/novo',
+  'terreno/editar/[id]',
+  'terreno/animais/[id]',
+  'medicamento/novo',
+  'medicamento/editar/[id]',
+  'agenda/novo',
+  'agenda/editar/[id]',
+  'conta/editar',
+]);
+
+/** Como um ecrã entra (ver `EntradaEcra.tsx`). */
+function modoEntrada(route: { name: string; params?: object }): ModoEntrada {
+  if (route.name === '(tabs)' || route.name === '(superadmin)') return 'nenhum';
+  if (FORMULARIOS.has(route.name)) return 'baixo';
+  // A ficha aberta da lista de animais: quem se mexe é o retrato a voar para o
+  // sítio dele (ver `VooAnimal.tsx`), e o ecrã só aparece por baixo.
+  if ((route.params as { voo?: string } | undefined)?.voo) return 'fade';
+  return 'direita';
+}
+
+/** O mesmo, no telemóvel, onde é a pilha nativa que anima. */
+function animacaoNativa(route: { name: string; params?: object }) {
+  if (semMovimento()) return 'none' as const;
+  const modo = modoEntrada(route);
+  if (modo === 'baixo') return 'slide_from_bottom' as const;
+  if (modo === 'fade') return 'fade' as const;
+  return 'slide_from_right' as const;
+}
+
 export default function RootLayout() {
   /*
    * AS FONTES SÃO FICHEIROS NOSSOS, e não os módulos do pacote.
@@ -277,11 +324,14 @@ export default function RootLayout() {
                     da mensagem que chega com a app aberta. */}
                 <AnfitriaoMensagens />
                 <Stack
-                  screenOptions={{
+                  screenOptions={({ route }) => ({
                     headerShown: false,
                     contentStyle: { backgroundColor: colors.background },
-                    animation: 'slide_from_right',
-                  }}>
+                    animation: animacaoNativa(route),
+                  })}
+                  screenLayout={({ route, children }) => (
+                    <EntradaEcra modo={modoEntrada(route)}>{children}</EntradaEcra>
+                  )}>
                   <Stack.Screen name="(tabs)" />
                   <Stack.Screen name="(superadmin)" />
                   {/* `alertas` e `financas` mudaram-se para dentro de `(tabs)`
@@ -289,19 +339,19 @@ export default function RootLayout() {
                       isso os URLs `/alertas` e `/financas` continuam os mesmos —
                       as ligações antigas e a app instalada não partem. */}
                   <Stack.Screen name="animal/[id]" />
-                  <Stack.Screen name="animal/novo" options={{ animation: 'slide_from_bottom' }} />
-                  <Stack.Screen name="animal/importar" options={{ animation: 'slide_from_bottom' }} />
+                  <Stack.Screen name="animal/novo" />
+                  <Stack.Screen name="animal/importar" />
                   <Stack.Screen name="animal/editar/[id]" />
                   <Stack.Screen name="animal/genealogia/[id]" />
-                  <Stack.Screen name="evento/novo" options={{ animation: 'slide_from_bottom' }} />
-                  <Stack.Screen name="movimento/novo" options={{ animation: 'slide_from_bottom' }} />
+                  <Stack.Screen name="evento/novo" />
+                  <Stack.Screen name="movimento/novo" />
                   <Stack.Screen name="exploracao/[id]" />
-                  <Stack.Screen name="exploracao/nova" options={{ animation: 'slide_from_bottom' }} />
+                  <Stack.Screen name="exploracao/nova" />
                   <Stack.Screen name="exploracao/editar/[id]" />
-                  <Stack.Screen name="terreno/novo" options={{ animation: 'slide_from_bottom' }} />
+                  <Stack.Screen name="terreno/novo" />
                   <Stack.Screen name="terreno/[id]" />
                   <Stack.Screen name="terreno/editar/[id]" />
-                  <Stack.Screen name="terreno/animais/[id]" options={{ animation: 'slide_from_bottom' }} />
+                  <Stack.Screen name="terreno/animais/[id]" />
                   <Stack.Screen name="exploracao/equipa/[id]" />
                   <Stack.Screen name="equipa/historico" />
                   <Stack.Screen name="chat/[id]" />
@@ -322,6 +372,9 @@ export default function RootLayout() {
                   <Stack.Screen name="inspecionar/exploracao/[id]" />
                   <Stack.Screen name="inspecionar/animal/[id]" />
                 </Stack>
+                {/* Por cima de toda a navegação: o retrato que voa da lista de
+                    animais para a ficha. Não apanha toques. */}
+                <CamadaVoo />
                 </GadoProvider>
               </NotificacoesProvider>
             </AppRouter>

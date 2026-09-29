@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Linking, Modal, Pressable, ScrollView, View } from 'react-native';
+import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -8,18 +8,7 @@ import {
   FolhaGuardarDocumento,
   type RascunhoDocumento,
 } from '@/components/FolhaGuardarDocumento';
-import {
-  Badge,
-  Button,
-  Card,
-  Chip,
-  EmptyState,
-  FolhaComTeclado,
-  Header,
-  Icon,
-  Text,
-  TextField,
-} from '@/components/ui';
+import { Badge, Button, Card, Chip, EmptyState, Header, Icon, Text, TextField } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { avisar, confirmar } from '@/data/avisos';
 import {
@@ -41,6 +30,7 @@ import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useDocumentos } from '@/data/useDocumentos';
 import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
+import { Folha } from '@/components/ui';
 
 /**
  * Os documentos de uma gaveta.
@@ -399,100 +389,98 @@ function FolhaEditarDocumento({
   }
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onFechar}>
-      <FolhaComTeclado>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
-        <View
-          style={{
-            backgroundColor: colors.background,
-            borderTopLeftRadius: radii.xl,
-            borderTopRightRadius: radii.xl,
-            paddingTop: spacing.lg,
-            maxHeight: '90%',
-          }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: spacing.lg,
-              marginBottom: spacing.sm,
-            }}>
-            <Text variant="h3" style={{ flex: 1 }}>
-              {t('gaveta.alterarDocumento')}
-            </Text>
-            <Pressable
-              onPress={onFechar}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('comum.fechar')}>
-              <Icon name="close" size="lg" color={colors.textSecondary} />
-            </Pressable>
-          </View>
+    <Folha
+      visivel
+      onFechar={onFechar}
+      comTeclado
+      estilo={{
+        backgroundColor: colors.background,
+        borderTopLeftRadius: radii.xl,
+        borderTopRightRadius: radii.xl,
+        paddingTop: spacing.lg,
+        maxHeight: '90%',
+      }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: spacing.lg,
+          marginBottom: spacing.sm,
+        }}>
+        <Text variant="h3" style={{ flex: 1 }}>
+          {t('gaveta.alterarDocumento')}
+        </Text>
+        <Pressable
+          onPress={onFechar}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('comum.fechar')}>
+          <Icon name="close" size="lg" color={colors.textSecondary} />
+        </Pressable>
+      </View>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{
-              paddingHorizontal: spacing.lg,
-              paddingBottom: spacing.xxl,
-              gap: spacing.md,
-            }}>
-            <View>
-              <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                O que é
-              </Text>
-              <TextField
-                value={titulo}
-                onChangeText={setTitulo}
-                placeholder={t('gaveta.exTitulo')}
-                icon="file-document-outline"
-              />
-            </View>
-
-            <EscolhaVisibilidade publico={publico} onMudar={setPublico} />
-
-            <View>
-              <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                {t('gaveta.gaveta')}
-              </Text>
-              <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
-                {CATEGORIAS_DOCUMENTO.map((c) => (
-                  <Chip
-                    key={c}
-                    label={c}
-                    icon={iconeCategoria(c)}
-                    selected={categoria === c}
-                    onPress={() => setCategoria(c)}
-                  />
-                ))}
-              </View>
-            </View>
-
-            {erro ? (
-              <Card style={{ backgroundColor: colors.dangerTint }}>
-                <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-                  <Icon name="alert-circle-outline" size="md" color={colors.danger} />
-                  <Text variant="secondary" color={colors.danger} style={{ flex: 1 }}>
-                    {erro}
-                  </Text>
-                </View>
-              </Card>
-            ) : null}
-
-            <Button
-              label={aGuardar ? t('comum.aGuardar') : mexido ? t('formAnimal.guardarAlteracoes') : t('comum.fechar')}
-              icon={mexido ? 'check' : 'close'}
-              loading={aGuardar}
-              disabled={aGuardar}
-              onPress={mexido ? () => void guardar() : onFechar}
-            />
-
-            <Text variant="caption" color={colors.textMuted} center>
-              A imagem em si não se troca. Para isso, apague este documento e guarde outro.
-            </Text>
-          </ScrollView>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          paddingHorizontal: spacing.lg,
+          paddingBottom: spacing.xxl,
+          gap: spacing.md,
+        }}>
+        <View>
+          <Text variant="label" style={{ marginBottom: spacing.xs }}>
+            O que é
+          </Text>
+          <TextField
+            value={titulo}
+            onChangeText={setTitulo}
+            placeholder={t('gaveta.exTitulo')}
+            icon="file-document-outline"
+          />
         </View>
-      </FolhaComTeclado>
-    </Modal>
+
+        <EscolhaVisibilidade publico={publico} onMudar={setPublico} />
+
+        <View>
+          <Text variant="label" style={{ marginBottom: spacing.xs }}>
+            {t('gaveta.gaveta')}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
+            {CATEGORIAS_DOCUMENTO.map((c) => (
+              <Chip
+                key={c}
+                label={c}
+                icon={iconeCategoria(c)}
+                selected={categoria === c}
+                onPress={() => setCategoria(c)}
+              />
+            ))}
+          </View>
+        </View>
+
+        {erro ? (
+          <Card style={{ backgroundColor: colors.dangerTint }}>
+            <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+              <Icon name="alert-circle-outline" size="md" color={colors.danger} />
+              <Text variant="secondary" color={colors.danger} style={{ flex: 1 }}>
+                {erro}
+              </Text>
+            </View>
+          </Card>
+        ) : null}
+
+        <Button
+          label={aGuardar ? t('comum.aGuardar') : mexido ? t('formAnimal.guardarAlteracoes') : t('comum.fechar')}
+          icon={mexido ? 'check' : 'close'}
+          loading={aGuardar}
+          disabled={aGuardar}
+          onPress={mexido ? () => void guardar() : onFechar}
+        />
+
+        <Text variant="caption" color={colors.textMuted} center>
+          A imagem em si não se troca. Para isso, apague este documento e guarde outro.
+        </Text>
+      </ScrollView>
+    </Folha>
   );
 }

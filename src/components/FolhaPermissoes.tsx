@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, Switch, View } from 'react-native';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, CampoData, CampoHora, Card, Chip, Icon, type IconName, Text } from '@/components/ui';
+import { Button, CampoData, CampoHora, Card, Chip, Folha, Icon, type IconName, Text } from '@/components/ui';
 import {
   acessoTerminou,
   combinarDataHora,
@@ -171,209 +171,206 @@ export function FolhaPermissoes({
   }
 
   return (
-    <Modal visible={aberto} animationType="slide" transparent onRequestClose={onFechar}>
-      <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
-        <View
-          style={[
-            {
-              backgroundColor: colors.background,
-              borderTopLeftRadius: radii.xl,
-              borderTopRightRadius: radii.xl,
-              paddingTop: spacing.md,
-              maxHeight: '90%',
-            },
-            shadow.lg,
-          ]}>
-          {/* Cabeçalho: de quem estamos a falar */}
+    <Folha
+      visivel={aberto}
+      onFechar={onFechar}
+      estilo={[
+        {
+          backgroundColor: colors.background,
+          borderTopLeftRadius: radii.xl,
+          borderTopRightRadius: radii.xl,
+          paddingTop: spacing.md,
+          maxHeight: '90%',
+        },
+        shadow.lg,
+      ]}>
+      {/* Cabeçalho: de quem estamos a falar */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+          paddingHorizontal: spacing.lg,
+          marginBottom: spacing.sm,
+        }}>
+        <View style={{ flex: 1 }}>
+          <Text variant="h3" numberOfLines={1}>
+            {pessoa.nome}
+          </Text>
+          <Text variant="secondary" color={colors.textSecondary}>
+            O que pode alterar {vinculo ? `em ${vinculo.nomeExploracao}` : ''}
+          </Text>
+        </View>
+        <Pressable
+          onPress={onFechar}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('comum.fechar')}>
+          <Icon name="close" size="lg" color={colors.textSecondary} />
+        </Pressable>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
+        {/* Em que exploração — só se a pessoa entrar em mais do que uma */}
+        {pessoa.vinculos.length > 1 ? (
           <View
             style={{
               flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing.sm,
-              paddingHorizontal: spacing.lg,
-              marginBottom: spacing.sm,
+              flexWrap: 'wrap',
+              gap: spacing.xs,
+              marginBottom: spacing.md,
             }}>
-            <View style={{ flex: 1 }}>
-              <Text variant="h3" numberOfLines={1}>
-                {pessoa.nome}
-              </Text>
-              <Text variant="secondary" color={colors.textSecondary}>
-                O que pode alterar {vinculo ? `em ${vinculo.nomeExploracao}` : ''}
-              </Text>
-            </View>
-            <Pressable
-              onPress={onFechar}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('comum.fechar')}>
-              <Icon name="close" size="lg" color={colors.textSecondary} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
-            {/* Em que exploração — só se a pessoa entrar em mais do que uma */}
-            {pessoa.vinculos.length > 1 ? (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  flexWrap: 'wrap',
-                  gap: spacing.xs,
-                  marginBottom: spacing.md,
-                }}>
-                {pessoa.vinculos.map((v, i) => (
-                  <Chip
-                    key={v.membroId}
-                    label={v.nomeExploracao}
-                    icon="barn"
-                    selected={i === indice}
-                    onPress={() => {
-                      setIndice(i);
-                      setErro(null);
-                    }}
-                  />
-                ))}
-              </View>
-            ) : null}
-
-            {!vinculo ? (
-              <Card>
-                <Text variant="body" color={colors.textSecondary}>
-                  Esta pessoa já não está ligada a nenhuma das suas explorações.
-                </Text>
-              </Card>
-            ) : vinculo.role === 'admin' ? (
-              <Card>
-                <Text variant="bodyStrong">Dono da exploração</Text>
-                <Text variant="secondary" color={colors.textSecondary}>
-                  Quem é dono pode tudo, e isso não se ajusta: sem isto, uma exploração podia
-                  ficar sem ninguém que lhe consiga mexer.
-                </Text>
-              </Card>
-            ) : vinculo.role === 'supervisor' ? (
-              <Card>
-                <Text variant="bodyStrong">{t('papel.supervisor')}</Text>
-                <Text variant="secondary" color={colors.textSecondary}>
-                  {t('permissoes.supervisorNaoSeAjusta')}
-                </Text>
-              </Card>
-            ) : (
-              <>
-                <ResumoPapel role={vinculo.role} />
-
-                {/* Quanto tempo esta pessoa ainda cá está. Fica ANTES dos
-                    interruptores de propósito: com o acesso terminado, o que
-                    ela pode alterar é uma pergunta sem consequência nenhuma —
-                    o servidor recusa-lhe tudo na mesma. */}
-                <SeccaoPrazo
-                  vinculo={vinculo}
-                  nome={pessoa.nome}
-                  onMudarPrazo={onMudarPrazo}
-                  onMarcarFim={onMarcarFim}
-                  onErro={setErro}
-                />
-
-                {visiveis.map((l) => (
-                  <LinhaCapacidade
-                    key={l.capacidade}
-                    capacidade={l.capacidade}
-                    valor={l.pode}
-                    ajustada={l.ajustada}
-                    onMudar={(v) => alternar(l.capacidade, v)}
-                  />
-                ))}
-
-                {temAjustes ? (
-                  <Button
-                    label={t('permissoes.reporPapel')}
-                    icon="restore"
-                    variant="secondary"
-                    onPress={reporPapel}
-                    style={{ marginTop: spacing.sm }}
-                  />
-                ) : null}
-
-                {/* O que esta pessoa já alterou. Fica ao pé do que ela PODE
-                    alterar de propósito: são as duas metades da mesma decisão —
-                    ver o que fez é o que diz se as permissões estão certas. */}
-                <Pressable
-                  onPress={() => onVerAtividade(pessoa.userId)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Ver o que ${pessoa.nome} alterou`}
-                  style={({ pressed }) => [
-                    {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing.xs,
-                      marginTop: spacing.md,
-                    },
-                    pressed && { opacity: 0.6 },
-                  ]}>
-                  <Icon name="history" size="sm" color={colors.primary} />
-                  <Text variant="secondary" color={colors.primary} style={{ flex: 1 }}>
-                    Ver o que {pessoa.nome} alterou
-                  </Text>
-                  <Icon name="chevron-right" size="sm" color={colors.primary} />
-                </Pressable>
-
-                <Pressable
-                  onPress={() => onAbrirEquipa(vinculo.exploracaoId)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Abrir a equipa de ${vinculo.nomeExploracao}`}
-                  style={({ pressed }) => [
-                    {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing.xs,
-                      marginTop: spacing.md,
-                    },
-                    pressed && { opacity: 0.6 },
-                  ]}>
-                  <Icon name="account-multiple" size="sm" color={colors.primary} />
-                  <Text variant="secondary" color={colors.primary} style={{ flex: 1 }}>
-                    Remover da equipa de {vinculo.nomeExploracao}
-                  </Text>
-                  <Icon name="chevron-right" size="sm" color={colors.primary} />
-                </Pressable>
-              </>
-            )}
-
-            {erro ? (
-              <Card style={{ backgroundColor: colors.dangerTint, marginTop: spacing.md }}>
-                <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-                  <Icon name="alert-circle-outline" size="md" color={colors.danger} />
-                  <Text variant="secondary" color={colors.danger} style={{ flex: 1 }}>
-                    {erro}
-                  </Text>
-                </View>
-              </Card>
-            ) : null}
-          </ScrollView>
-
-          {vinculo && vinculo.role !== 'admin' && vinculo.role !== 'supervisor' ? (
-            <View
-              style={{
-                paddingHorizontal: spacing.lg,
-                paddingTop: spacing.sm,
-                paddingBottom: insets.bottom + spacing.sm,
-                borderTopWidth: 1,
-                borderTopColor: colors.border,
-                backgroundColor: colors.surface,
-              }}>
-              <Button
-                label={mexido ? 'Guardar permissões' : 'Fechar'}
-                icon={mexido ? 'check' : 'close'}
-                onPress={mexido ? guardar : onFechar}
-                loading={aGuardar}
-                disabled={aGuardar}
+            {pessoa.vinculos.map((v, i) => (
+              <Chip
+                key={v.membroId}
+                label={v.nomeExploracao}
+                icon="barn"
+                selected={i === indice}
+                onPress={() => {
+                  setIndice(i);
+                  setErro(null);
+                }}
               />
+            ))}
+          </View>
+        ) : null}
+
+        {!vinculo ? (
+          <Card>
+            <Text variant="body" color={colors.textSecondary}>
+              Esta pessoa já não está ligada a nenhuma das suas explorações.
+            </Text>
+          </Card>
+        ) : vinculo.role === 'admin' ? (
+          <Card>
+            <Text variant="bodyStrong">Dono da exploração</Text>
+            <Text variant="secondary" color={colors.textSecondary}>
+              Quem é dono pode tudo, e isso não se ajusta: sem isto, uma exploração podia
+              ficar sem ninguém que lhe consiga mexer.
+            </Text>
+          </Card>
+        ) : vinculo.role === 'supervisor' ? (
+          <Card>
+            <Text variant="bodyStrong">{t('papel.supervisor')}</Text>
+            <Text variant="secondary" color={colors.textSecondary}>
+              {t('permissoes.supervisorNaoSeAjusta')}
+            </Text>
+          </Card>
+        ) : (
+          <>
+            <ResumoPapel role={vinculo.role} />
+
+            {/* Quanto tempo esta pessoa ainda cá está. Fica ANTES dos
+                interruptores de propósito: com o acesso terminado, o que
+                ela pode alterar é uma pergunta sem consequência nenhuma —
+                o servidor recusa-lhe tudo na mesma. */}
+            <SeccaoPrazo
+              vinculo={vinculo}
+              nome={pessoa.nome}
+              onMudarPrazo={onMudarPrazo}
+              onMarcarFim={onMarcarFim}
+              onErro={setErro}
+            />
+
+            {visiveis.map((l) => (
+              <LinhaCapacidade
+                key={l.capacidade}
+                capacidade={l.capacidade}
+                valor={l.pode}
+                ajustada={l.ajustada}
+                onMudar={(v) => alternar(l.capacidade, v)}
+              />
+            ))}
+
+            {temAjustes ? (
+              <Button
+                label={t('permissoes.reporPapel')}
+                icon="restore"
+                variant="secondary"
+                onPress={reporPapel}
+                style={{ marginTop: spacing.sm }}
+              />
+            ) : null}
+
+            {/* O que esta pessoa já alterou. Fica ao pé do que ela PODE
+                alterar de propósito: são as duas metades da mesma decisão —
+                ver o que fez é o que diz se as permissões estão certas. */}
+            <Pressable
+              onPress={() => onVerAtividade(pessoa.userId)}
+              accessibilityRole="button"
+              accessibilityLabel={`Ver o que ${pessoa.nome} alterou`}
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  marginTop: spacing.md,
+                },
+                pressed && { opacity: 0.6 },
+              ]}>
+              <Icon name="history" size="sm" color={colors.primary} />
+              <Text variant="secondary" color={colors.primary} style={{ flex: 1 }}>
+                Ver o que {pessoa.nome} alterou
+              </Text>
+              <Icon name="chevron-right" size="sm" color={colors.primary} />
+            </Pressable>
+
+            <Pressable
+              onPress={() => onAbrirEquipa(vinculo.exploracaoId)}
+              accessibilityRole="button"
+              accessibilityLabel={`Abrir a equipa de ${vinculo.nomeExploracao}`}
+              style={({ pressed }) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  marginTop: spacing.md,
+                },
+                pressed && { opacity: 0.6 },
+              ]}>
+              <Icon name="account-multiple" size="sm" color={colors.primary} />
+              <Text variant="secondary" color={colors.primary} style={{ flex: 1 }}>
+                Remover da equipa de {vinculo.nomeExploracao}
+              </Text>
+              <Icon name="chevron-right" size="sm" color={colors.primary} />
+            </Pressable>
+          </>
+        )}
+
+        {erro ? (
+          <Card style={{ backgroundColor: colors.dangerTint, marginTop: spacing.md }}>
+            <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+              <Icon name="alert-circle-outline" size="md" color={colors.danger} />
+              <Text variant="secondary" color={colors.danger} style={{ flex: 1 }}>
+                {erro}
+              </Text>
             </View>
-          ) : null}
+          </Card>
+        ) : null}
+      </ScrollView>
+
+      {vinculo && vinculo.role !== 'admin' && vinculo.role !== 'supervisor' ? (
+        <View
+          style={{
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.sm,
+            paddingBottom: insets.bottom + spacing.sm,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            backgroundColor: colors.surface,
+          }}>
+          <Button
+            label={mexido ? 'Guardar permissões' : 'Fechar'}
+            icon={mexido ? 'check' : 'close'}
+            onPress={mexido ? guardar : onFechar}
+            loading={aGuardar}
+            disabled={aGuardar}
+          />
         </View>
-      </View>
-    </Modal>
+      ) : null}
+    </Folha>
   );
 }
 

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CampoLocalidade } from '@/components/CampoLocalidade';
 import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
 import { SeletorFoto } from '@/components/SeletorFoto';
-import { Button, EcraComTeclado, EmptyState, Header, Icon, type IconName, Text } from '@/components/ui';
+import { Button, EcraComTeclado, EmptyState, Header, Icon, type IconName, Text, useVisto } from '@/components/ui';
 import { avisar, confirmar } from '@/data/avisos';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
@@ -25,6 +25,8 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
   } = useGado();
   const { pode, podeCriarExploracoes } = useMembros();
   const toast = useToasts();
+  // O visto no botão de gravar, meio segundo antes de o formulário fechar.
+  const visto = useVisto();
 
   const editar = !!exploracao;
   const podeEliminar = pode(exploracao?.id, 'eliminarExploracao');
@@ -63,10 +65,12 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
       };
       if (editar && exploracao) {
         await updateExploracao(exploracao.id, dados);
+        await visto.mostrar();
         toast.sucesso(t('formExploracao.guardada'), nome.trim());
         router.back();
       } else {
         const nova = await addExploracao(dados);
+        await visto.mostrar();
         toast.sucesso(t('formExploracao.criada'), nova.nome);
         router.replace(`/exploracao/${nova.id}`);
       }
@@ -343,6 +347,7 @@ export function FormularioExploracao({ exploracao }: { exploracao?: Exploracao }
         ]}>
         <Button
           label={editar ? t('formAnimal.guardarAlteracoes') : t('formExploracao.criar')}
+          concluido={visto.concluido}
           icon="check"
           onPress={guardar}
           disabled={!valido}

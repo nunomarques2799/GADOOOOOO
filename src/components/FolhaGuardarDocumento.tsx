@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 
-import { Button, Card, Chip, FolhaComTeclado, Icon, Text, TextField } from '@/components/ui';
+import { Button, Card, Chip, Folha, Icon, Text, TextField } from '@/components/ui';
 import {
   CATEGORIAS_DOCUMENTO,
   explicacaoCategoria,
@@ -87,170 +87,168 @@ export function FolhaGuardarDocumento({
   }
 
   return (
-    <Modal visible={rascunho !== null} animationType="slide" transparent onRequestClose={onFechar}>
-      <FolhaComTeclado>
-        <Pressable style={{ flex: 1 }} onPress={onFechar} accessibilityLabel={t('comum.fechar')} />
-        <View
-          style={{
-            backgroundColor: colors.background,
-            borderTopLeftRadius: radii.xl,
-            borderTopRightRadius: radii.xl,
-            paddingTop: spacing.lg,
-            maxHeight: '90%',
-          }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: spacing.lg,
-              marginBottom: spacing.sm,
-            }}>
-            <Text variant="h3" style={{ flex: 1 }}>
-              {t('guardarDoc.titulo')}
+    <Folha
+      visivel={rascunho !== null}
+      onFechar={onFechar}
+      comTeclado
+      estilo={{
+        backgroundColor: colors.background,
+        borderTopLeftRadius: radii.xl,
+        borderTopRightRadius: radii.xl,
+        paddingTop: spacing.lg,
+        maxHeight: '90%',
+      }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: spacing.lg,
+          marginBottom: spacing.sm,
+        }}>
+        <Text variant="h3" style={{ flex: 1 }}>
+          {t('guardarDoc.titulo')}
+        </Text>
+        <Pressable
+          onPress={onFechar}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('comum.fechar')}>
+          <Icon name="close" size="lg" color={colors.textSecondary} />
+        </Pressable>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          paddingHorizontal: spacing.lg,
+          paddingBottom: spacing.xxl,
+          gap: spacing.md,
+        }}>
+        <Card style={{ backgroundColor: colors.successTint }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Icon name="image-check-outline" size="lg" color={colors.success} />
+            <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
+              {t('guardarDoc.imagemPronta')}
+              {rascunho ? ` · ${tamanhoLegivel(rascunho.ficheiro.tamanho)}` : ''}
+              {`. ${t('guardarDoc.faltaDizer')}`}
             </Text>
-            <Pressable
-              onPress={onFechar}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('comum.fechar')}>
-              <Icon name="close" size="lg" color={colors.textSecondary} />
-            </Pressable>
           </View>
+        </Card>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{
-              paddingHorizontal: spacing.lg,
-              paddingBottom: spacing.xxl,
-              gap: spacing.md,
-            }}>
-            <Card style={{ backgroundColor: colors.successTint }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <Icon name="image-check-outline" size="lg" color={colors.success} />
-                <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
-                  {t('guardarDoc.imagemPronta')}
-                  {rascunho ? ` · ${tamanhoLegivel(rascunho.ficheiro.tamanho)}` : ''}
-                  {`. ${t('guardarDoc.faltaDizer')}`}
-                </Text>
-              </View>
-            </Card>
+        <View>
+          <Text variant="label" style={{ marginBottom: spacing.xs }}>
+            {t('guardarDoc.oQueE')}
+          </Text>
+          <TextField
+            value={rascunho?.titulo ?? ''}
+            onChangeText={(t) => onMudar(rascunho ? { ...rascunho, titulo: t } : rascunho)}
+            placeholder={t('gaveta.exTitulo')}
+            icon="file-document-outline"
+          />
+        </View>
 
-            <View>
-              <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                {t('guardarDoc.oQueE')}
-              </Text>
-              <TextField
-                value={rascunho?.titulo ?? ''}
-                onChangeText={(t) => onMudar(rascunho ? { ...rascunho, titulo: t } : rascunho)}
-                placeholder={t('gaveta.exTitulo')}
-                icon="file-document-outline"
-              />
-            </View>
+        <EscolhaVisibilidade
+          publico={rascunho?.publico ?? true}
+          onMudar={(v) => onMudar(rascunho ? { ...rascunho, publico: v } : rascunho)}
+        />
 
-            <EscolhaVisibilidade
-              publico={rascunho?.publico ?? true}
-              onMudar={(v) => onMudar(rascunho ? { ...rascunho, publico: v } : rascunho)}
-            />
-
-            <View>
-              <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                {t('gaveta.gaveta')}
-              </Text>
-              <View style={{ gap: spacing.xs }}>
-                {CATEGORIAS_DOCUMENTO.map((c) => (
-                  <Pressable
-                    key={c}
-                    onPress={() => onMudar(rascunho ? { ...rascunho, categoria: c } : rascunho)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: rascunho?.categoria === c }}
-                    accessibilityLabel={`${c}. ${explicacaoCategoria(c)}`}
-                    style={({ pressed }) => [
-                      {
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: spacing.sm,
-                        padding: spacing.md,
-                        borderRadius: radii.md,
-                        borderWidth: rascunho?.categoria === c ? 2 : 1,
-                        borderColor: rascunho?.categoria === c ? colors.primary : colors.border,
-                        backgroundColor:
-                          rascunho?.categoria === c ? colors.primaryTint : colors.surface,
-                      },
-                      pressed && { opacity: 0.7 },
-                    ]}>
-                    <Icon
-                      name={iconeCategoria(c)}
-                      size="md"
-                      color={rascunho?.categoria === c ? colors.primaryDark : colors.textMuted}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        variant="bodyStrong"
-                        color={rascunho?.categoria === c ? colors.primaryDark : colors.text}>
-                        {c}
-                      </Text>
-                      <Text variant="caption" color={colors.textSecondary}>
-                        {explicacaoCategoria(c)}
-                      </Text>
-                    </View>
-                    {rascunho?.categoria === c ? (
-                      <Icon name="check-circle" size="md" color={colors.primary} />
-                    ) : null}
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {exploracoes.length > 1 ? (
-              <View>
-                <Text variant="label" style={{ marginBottom: spacing.xs }}>
-                  {t('formAnimal.exploracao')}
-                </Text>
-                <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
-                  {exploracoes.map((e) => (
-                    <Chip
-                      key={e.id}
-                      label={e.nome}
-                      icon="barn"
-                      selected={rascunho?.exploracaoId === e.id}
-                      onPress={() =>
-                        onMudar(rascunho ? { ...rascunho, exploracaoId: e.id } : rascunho)
-                      }
-                    />
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            {erro ? (
-              <Card style={{ backgroundColor: colors.dangerTint }}>
-                <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-                  <Icon name="alert-circle-outline" size="md" color={colors.danger} />
-                  <Text variant="secondary" color={colors.danger} style={{ flex: 1 }}>
-                    {erro}
+        <View>
+          <Text variant="label" style={{ marginBottom: spacing.xs }}>
+            {t('gaveta.gaveta')}
+          </Text>
+          <View style={{ gap: spacing.xs }}>
+            {CATEGORIAS_DOCUMENTO.map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => onMudar(rascunho ? { ...rascunho, categoria: c } : rascunho)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: rascunho?.categoria === c }}
+                accessibilityLabel={`${c}. ${explicacaoCategoria(c)}`}
+                style={({ pressed }) => [
+                  {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing.sm,
+                    padding: spacing.md,
+                    borderRadius: radii.md,
+                    borderWidth: rascunho?.categoria === c ? 2 : 1,
+                    borderColor: rascunho?.categoria === c ? colors.primary : colors.border,
+                    backgroundColor:
+                      rascunho?.categoria === c ? colors.primaryTint : colors.surface,
+                  },
+                  pressed && { opacity: 0.7 },
+                ]}>
+                <Icon
+                  name={iconeCategoria(c)}
+                  size="md"
+                  color={rascunho?.categoria === c ? colors.primaryDark : colors.textMuted}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    variant="bodyStrong"
+                    color={rascunho?.categoria === c ? colors.primaryDark : colors.text}>
+                    {c}
+                  </Text>
+                  <Text variant="caption" color={colors.textSecondary}>
+                    {explicacaoCategoria(c)}
                   </Text>
                 </View>
-              </Card>
-            ) : null}
-
-            <Button
-              label={aGuardar ? t('comum.aGuardar') : t('guardarDoc.titulo')}
-              icon="check"
-              loading={aGuardar}
-              disabled={aGuardar}
-              onPress={() => void guardar()}
-            />
-
-            {Platform.OS !== 'web' ? (
-              <Text variant="caption" color={colors.textMuted} center>
-                {t('guardarDoc.precisaLigacao')}
-              </Text>
-            ) : null}
-          </ScrollView>
+                {rascunho?.categoria === c ? (
+                  <Icon name="check-circle" size="md" color={colors.primary} />
+                ) : null}
+              </Pressable>
+            ))}
+          </View>
         </View>
-      </FolhaComTeclado>
-    </Modal>
+
+        {exploracoes.length > 1 ? (
+          <View>
+            <Text variant="label" style={{ marginBottom: spacing.xs }}>
+              {t('formAnimal.exploracao')}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
+              {exploracoes.map((e) => (
+                <Chip
+                  key={e.id}
+                  label={e.nome}
+                  icon="barn"
+                  selected={rascunho?.exploracaoId === e.id}
+                  onPress={() =>
+                    onMudar(rascunho ? { ...rascunho, exploracaoId: e.id } : rascunho)
+                  }
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {erro ? (
+          <Card style={{ backgroundColor: colors.dangerTint }}>
+            <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+              <Icon name="alert-circle-outline" size="md" color={colors.danger} />
+              <Text variant="secondary" color={colors.danger} style={{ flex: 1 }}>
+                {erro}
+              </Text>
+            </View>
+          </Card>
+        ) : null}
+
+        <Button
+          label={aGuardar ? t('comum.aGuardar') : t('guardarDoc.titulo')}
+          icon="check"
+          loading={aGuardar}
+          disabled={aGuardar}
+          onPress={() => void guardar()}
+        />
+
+        {Platform.OS !== 'web' ? (
+          <Text variant="caption" color={colors.textMuted} center>
+            {t('guardarDoc.precisaLigacao')}
+          </Text>
+        ) : null}
+      </ScrollView>
+    </Folha>
   );
 }
 
