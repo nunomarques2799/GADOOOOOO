@@ -18,7 +18,7 @@ import { LimiteDeErro } from '@/components/LimiteDeErro';
 import { EcraNovaPalavra } from '@/components/EcraNovaPalavra';
 import { EcraPendente } from '@/components/EcraPendente';
 import { AgendadorAvisos } from '@/components/AgendadorAvisos';
-import { semMovimento } from '@/components/ui/movimento';
+import { DURACAO, semMovimento } from '@/components/ui/movimento';
 import { CamadaVoo } from '@/components/VooAnimal';
 import { AuthProvider, useAuth } from '@/data/auth';
 import { MembrosProvider, useMembros } from '@/data/membros';
@@ -328,6 +328,7 @@ export default function RootLayout() {
                     headerShown: false,
                     contentStyle: { backgroundColor: colors.background },
                     animation: animacaoNativa(route),
+                    animationDuration: DURACAO.ecraNativo,
                   })}
                   screenLayout={({ route, children }) => (
                     <EntradaEcra modo={modoEntrada(route)}>{children}</EntradaEcra>

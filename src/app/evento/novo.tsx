@@ -785,8 +785,8 @@ export default function NovoEventoScreen() {
             {criaViva ? (
               <Field label={t('evento.sexoDaCria')} obrigatorio>
                 <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                  <BigToggle label={t('evento.femea')} icon="gender-female" selected={sexoCria === 'Fêmea'} onPress={() => setSexoCria('Fêmea')} />
-                  <BigToggle label={t('evento.macho')} icon="gender-male" selected={sexoCria === 'Macho'} onPress={() => setSexoCria('Macho')} />
+                  <BigToggle label={t('evento.femea')} icon="gender-female" selected={sexoCria === 'Fêmea'} onPress={() => setSexoCria('Fêmea')} cor={{ forte: colors.femea, tinte: colors.femeaTint }} />
+                  <BigToggle label={t('evento.macho')} icon="gender-male" selected={sexoCria === 'Macho'} onPress={() => setSexoCria('Macho')} cor={{ forte: colors.macho, tinte: colors.machoTint }} />
                 </View>
                 <Text variant="caption" color={colors.textMuted} style={{ marginTop: 4 }}>
                   {t('evento.criaComoAnimalNovo')}
@@ -1284,12 +1284,18 @@ function BigToggle({
   icon,
   selected,
   onPress,
+  cor,
 }: {
   label: string;
   icon?: IconName;
   selected: boolean;
   onPress: () => void;
+  /** A cor de quando está escolhido (o sexo da cria: rosa ou azul). */
+  cor?: { forte: string; tinte: string };
 }) {
+  const forte = cor?.forte ?? colors.primary;
+  const tinte = cor?.tinte ?? colors.primaryTint;
+  const texto = cor?.forte ?? colors.primaryDark;
   return (
     <Pressable
       onPress={onPress}
@@ -1301,8 +1307,8 @@ function BigToggle({
           height: sizes.button,
           borderRadius: radii.md,
           borderWidth: 1.5,
-          borderColor: selected ? colors.primary : colors.border,
-          backgroundColor: selected ? colors.primaryTint : colors.surface,
+          borderColor: selected ? forte : colors.border,
+          backgroundColor: selected ? tinte : colors.surface,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1310,8 +1316,8 @@ function BigToggle({
         },
         pressed && { opacity: 0.85 },
       ]}>
-      {icon ? <Icon name={icon} size="md" color={selected ? colors.primary : colors.textMuted} /> : null}
-      <Text variant="button" color={selected ? colors.primaryDark : colors.textSecondary} style={{ fontSize: 17 }}>
+      {icon ? <Icon name={icon} size="md" color={selected ? forte : colors.textMuted} /> : null}
+      <Text variant="button" color={selected ? texto : colors.textSecondary} style={{ fontSize: 17 }}>
         {label}
       </Text>
     </Pressable>

@@ -149,7 +149,7 @@ function Visto({ cor }: { cor: string }) {
     if (semMovimento()) return;
     Animated.spring(escala, {
       toValue: 1,
-      speed: 20,
+      speed: 12,
       bounciness: 10,
       useNativeDriver: NATIVO,
     }).start();

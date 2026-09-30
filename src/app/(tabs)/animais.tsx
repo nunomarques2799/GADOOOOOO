@@ -256,6 +256,13 @@ export default function AnimaisScreen() {
     [animais, filtrosAdiados, porAnimal, ordenacao, gravidade],
   );
 
+  /**
+   * O filtro de quem toca numa cor da legenda: só os animais com esse sinal.
+   * É à parte dos filtros da folha de propósito: é um atalho de um toque, que
+   * se tira com outro toque ou no Limpar, sem abrir folha nenhuma.
+   */
+  const [sinalFiltro, setSinalFiltro] = useState<Sinal | null>(null);
+
   const nAtivos = contarAtivos(filtros);
   const temPesquisa = !!filtros.texto?.trim();
   /**
@@ -286,6 +293,14 @@ export default function AnimaisScreen() {
     }
     return SINAIS.filter((s) => vistos.has(s));
   }, [lista, porAnimal]);
+
+  // Se o sinal escolhido deixou de aparecer (o alerta resolveu-se), o filtro
+  // cai sozinho em vez de deixar uma lista vazia sem explicação.
+  const sinalAtivo = sinalFiltro && sinaisNaLista.includes(sinalFiltro) ? sinalFiltro : null;
+  const listaVisivel = useMemo(
+    () => (sinalAtivo ? lista.filter((a) => sinaisDe(porAnimal.get(a.id)).includes(sinalAtivo)) : lista),
+    [lista, porAnimal, sinalAtivo],
+  );
 
   /** Etiquetas do que está a filtrar, para se poder tirar uma a uma. */
   const etiquetas = useMemo(() => {
@@ -323,7 +338,7 @@ export default function AnimaisScreen() {
         // numColumns não muda a quente — a key força a lista a remontar
         // quando se passa de telemóvel (pilha) para desktop (grelha).
         key={desktop ? 'grelha' : 'pilha'}
-        data={lista}
+        data={listaVisivel}
         keyExtractor={(a) => a.id}
         numColumns={desktop ? 2 : 1}
         columnWrapperStyle={desktop ? { gap: spacing.sm } : undefined}
@@ -371,8 +386,8 @@ export default function AnimaisScreen() {
               <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 6 }}>
                 {/* Quando há filtros, o que interessa é quantos deles se está a
                     ver — o total do efetivo passa a ser a segunda pergunta. */}
-                {estreitada
-                  ? t('animais.deTotal', { n: lista.length, total: ativos.length })
+                {estreitada || sinalAtivo
+                  ? t('animais.deTotal', { n: listaVisivel.length, total: ativos.length })
                   : t('animais.noEfetivo', { n: ativos.length })}
               </Text>
             </View>
@@ -490,7 +505,7 @@ export default function AnimaisScreen() {
             ) : null}
 
             {/* O que querem dizer os pontos coloridos nos retratos */}
-            <LegendaSinais sinais={sinaisNaLista} />
+            <LegendaSinais sinais={sinaisNaLista} ativo={sinalAtivo} onEscolher={setSinalFiltro} />
 
             {/* O que está a filtrar, para se tirar sem reabrir a folha */}
             {etiquetas.length > 0 ? (

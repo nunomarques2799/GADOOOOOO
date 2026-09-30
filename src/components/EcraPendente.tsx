@@ -13,6 +13,7 @@ import { useMembros } from '@/data/membros';
 import { explicarRecusa } from '@/data/supabaseRepo';
 import { supabase } from '@/data/supabase';
 import { useDesktop } from '@/hooks/useDesktop';
+import { useTerminarSessao } from '@/hooks/useTerminarSessao';
 import { t } from '@/i18n';
 import { colors, radii, sizes, spacing } from '@/theme';
 
@@ -43,7 +44,8 @@ function novoId(prefixo: string): string {
 export function EcraPendente() {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
-  const { utilizador, sair, apagarConta } = useAuth();
+  const { utilizador, apagarConta } = useAuth();
+  const pedirParaSair = useTerminarSessao();
   const { recarregar, aCarregar, estadoPerfil, resgatarConvite, tipoConta } = useMembros();
 
   const nome = utilizador?.user_metadata?.nome as string | undefined;
@@ -381,7 +383,7 @@ export function EcraPendente() {
             label={t('perfil.terminarSessao')}
             icon="logout"
             variant="ghost"
-            onPress={sair}
+            onPress={pedirParaSair}
             fullWidth={!desktop}
           />
         </View>
