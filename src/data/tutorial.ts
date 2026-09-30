@@ -50,6 +50,14 @@ export type Passo = {
   opcional: boolean;
   /** Já está cumprido? Vem dos dados reais, não de uma marca do utilizador. */
   feito: boolean;
+  /**
+   * Pode ser ignorado pelo criador (e conta então como resolvido). Só os
+   * passos que não são dados da exploração: sem exploração, terrenos e animais
+   * a app não serve para nada, mas há quem não queira avisos no telemóvel.
+   */
+  ignoravel?: boolean;
+  /** O criador escolheu ignorá-lo (e por isso aparece como resolvido). */
+  ignorado?: boolean;
 };
 
 /** O que a app sabe para decidir que passos estão cumpridos. */
@@ -59,6 +67,8 @@ export type EstadoTutorial = {
   temAnimais: boolean;
   /** Os avisos no telemóvel estão ligados e autorizados. */
   avisosLigados: boolean;
+  /** Os passos que o criador mandou ignorar (ver `ignorarPasso`). */
+  ignorados?: ReadonlySet<ChavePasso>;
   /** A plataforma agenda avisos locais? (falso na web/computador.) */
   suportaAvisos: boolean;
   /** A gestão económica está ligada nalguma exploração. */
@@ -121,7 +131,9 @@ export function passosTutorial(e: EstadoTutorial): Passo[] {
       detalhe: t('tutorial.avisosDetalhe'),
       acao: t('tutorial.avisosAcao'),
       opcional: false,
-      feito: e.avisosLigados,
+      feito: e.avisosLigados || !!e.ignorados?.has('avisos'),
+      ignoravel: true,
+      ignorado: !e.avisosLigados && !!e.ignorados?.has('avisos'),
     });
   }
 
@@ -195,4 +207,27 @@ export function esconderTutorial(): void {
 /** Volta a mostrar o guia (a partir da Ajuda). */
 export function reporTutorial(): void {
   guardarKv(CHAVE, '0');
+  guardarKv(CHAVE_IGNORADOS, '[]');
+}
+
+/* ---- Passos ignorados ---- */
+
+const CHAVE_IGNORADOS = 'gado.tutorial-ignorados.v1';
+
+/** Os passos que o criador mandou ignorar neste aparelho. */
+export function passosIgnorados(): Set<ChavePasso> {
+  try {
+    const v = JSON.parse(lerKv(CHAVE_IGNORADOS) ?? '[]') as unknown;
+    return new Set(Array.isArray(v) ? (v.filter((x) => typeof x === 'string') as ChavePasso[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+/** Ignora um passo: passa a contar como resolvido. Devolve o conjunto novo. */
+export function ignorarPasso(chave: ChavePasso): Set<ChavePasso> {
+  const novo = passosIgnorados();
+  novo.add(chave);
+  guardarKv(CHAVE_IGNORADOS, JSON.stringify([...novo]));
+  return novo;
 }
