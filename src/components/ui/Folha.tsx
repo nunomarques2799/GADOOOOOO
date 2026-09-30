@@ -82,7 +82,7 @@ export function Folha({
         Animated.timing(fundo, { toValue: 1, duration: DURACAO.fundo, useNativeDriver: NATIVO }),
         centrada
           ? Animated.timing(posicao, { toValue: 0, duration: DURACAO.fundo, useNativeDriver: NATIVO })
-          : Animated.spring(posicao, { toValue: 0, speed: 14, bounciness: 4, useNativeDriver: NATIVO }),
+          : Animated.spring(posicao, { toValue: 0, speed: 7, bounciness: 4, useNativeDriver: NATIVO }),
       ]).start();
       return;
     }

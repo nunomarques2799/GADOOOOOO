@@ -1,6 +1,7 @@
-import { View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, View } from 'react-native';
 
-import { Text } from '@/components/ui';
+import { Icon, Text } from '@/components/ui';
 import { SINAIS, type Sinal } from '@/data/sinaisAlerta';
 import { t, type ChaveTexto } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
@@ -78,38 +79,132 @@ export function PontosSinal({ sinais }: { sinais: Sinal[] }) {
  * para explicar — numa exploração sem nada pendente seria uma linha a explicar
  * o que não está lá.
  */
-export function LegendaSinais({ sinais }: { sinais: Sinal[] }) {
-  if (sinais.length === 0) return null;
+export function LegendaSinais({
+  sinais,
+  ativo = null,
+  onEscolher,
+}: {
+  sinais: Sinal[];
+  /** O sinal por que a lista está filtrada, se estiver. */
+  ativo?: Sinal | null;
+  /**
+   * Tocar num sinal filtra a lista por ele (e tocar outra vez, ou em Limpar,
+   * tira o filtro). Sem isto a legenda só explica as cores, como antes.
+   */
+  onEscolher?: (s: Sinal | null) => void;
+}) {
+  // Numa linha se as três couberem; se não, uma por linha. Duas numa linha e a
+  // terceira sozinha por baixo (o que o `flexWrap` dava) lia-se como se a de
+  // baixo fosse outra coisa. Mede-se o que cada uma ocupa e a largura que há.
+  const [larguras, setLarguras] = useState<Partial<Record<Sinal, number>>>({});
+  const [disponivel, setDisponivel] = useState(0);
+  const visiveis = SINAIS.filter((x) => sinais.includes(x));
+  const precisa =
+    visiveis.reduce((soma, x) => soma + (larguras[x] ?? 0), 0) + spacing.xs * (visiveis.length - 1);
+  const medido = disponivel > 0 && visiveis.every((x) => larguras[x] !== undefined);
+  const numaLinha = !medido || precisa <= disponivel;
+
+  if (visiveis.length === 0) return null;
 
   return (
     <View
       accessibilityRole="summary"
       style={{
         flexDirection: 'row',
-        flexWrap: 'wrap',
         alignItems: 'center',
-        gap: spacing.sm,
-        paddingVertical: spacing.xs,
-        paddingHorizontal: spacing.sm,
+        gap: spacing.xs,
+        padding: spacing.xs,
         marginBottom: spacing.sm,
         borderRadius: radii.md,
         backgroundColor: colors.surfaceSunken,
       }}>
-      {SINAIS.filter((s) => sinais.includes(s)).map((s) => (
-        <View key={s} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <View
-            style={{
-              width: 11,
-              height: 11,
+      <View
+        onLayout={(e) => setDisponivel(e.nativeEvent.layout.width)}
+        style={{
+          flex: 1,
+          flexDirection: numaLinha ? 'row' : 'column',
+          alignItems: numaLinha ? 'center' : 'flex-start',
+          gap: numaLinha ? spacing.xs : 2,
+          // Enquanto não se mede, a linha não pode empurrar o botão Limpar.
+          overflow: 'hidden',
+        }}>
+        {visiveis.map((x) => {
+          const escolhido = ativo === x;
+          const conteudo = (
+            <>
+              <View
+                style={{ width: 11, height: 11, borderRadius: radii.pill, backgroundColor: corDoSinal(x) }}
+              />
+              <Text
+                variant="caption"
+                color={escolhido ? colors.text : colors.textSecondary}
+                style={escolhido ? { fontWeight: '700' } : undefined}
+                numberOfLines={1}>
+                {rotuloDoSinal(x)}
+              </Text>
+            </>
+          );
+          const estilo = {
+            flexDirection: 'row' as const,
+            alignItems: 'center' as const,
+            gap: 5,
+            flexShrink: 0,
+            minHeight: 36,
+            paddingHorizontal: spacing.sm,
+            borderRadius: radii.pill,
+            borderWidth: 1.5,
+            borderColor: escolhido ? corDoSinal(x) : 'transparent',
+            backgroundColor: escolhido ? colors.surface : 'transparent',
+          };
+          const medir = (w: number) =>
+            setLarguras((l) => (Math.abs((l[x] ?? -1) - w) < 1 ? l : { ...l, [x]: w }));
+          if (!onEscolher) {
+            return (
+              <View key={x} style={estilo} onLayout={(e) => medir(e.nativeEvent.layout.width)}>
+                {conteudo}
+              </View>
+            );
+          }
+          return (
+            <Pressable
+              key={x}
+              onPress={() => onEscolher(escolhido ? null : x)}
+              onLayout={(e) => medir(e.nativeEvent.layout.width)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: escolhido }}
+              accessibilityLabel={`${t('sinal.mostrarSo')}: ${rotuloDoSinal(x)}`}
+              style={({ pressed }) => [estilo, pressed && { opacity: 0.6 }]}>
+              {conteudo}
+            </Pressable>
+          );
+        })}
+      </View>
+      {onEscolher && ativo ? (
+        <Pressable
+          onPress={() => onEscolher(null)}
+          accessibilityRole="button"
+          accessibilityLabel={t('sinal.limparFiltro')}
+          hitSlop={6}
+          style={({ pressed }) => [
+            {
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              minHeight: 36,
+              paddingHorizontal: spacing.sm,
               borderRadius: radii.pill,
-              backgroundColor: corDoSinal(s),
-            }}
-          />
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+            },
+            pressed && { opacity: 0.6 },
+          ]}>
+          <Icon name="close" size="sm" color={colors.textSecondary} />
           <Text variant="caption" color={colors.textSecondary}>
-            {rotuloDoSinal(s)}
+            {t('sinal.limpar')}
           </Text>
-        </View>
-      ))}
+        </Pressable>
+      ) : null}
     </View>
   );
 }

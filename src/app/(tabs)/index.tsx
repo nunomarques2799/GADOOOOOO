@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ import { ModalDiaAgenda } from '@/components/ModalDiaAgenda';
 import { PainelPrimeirosPassos } from '@/components/PainelPrimeirosPassos';
 import { ExploracaoRow } from '@/components/ExploracaoRow';
 import { GrelhaAcoesRapidas } from '@/components/AcoesRapidas';
+import { MenuConta, type Ancora } from '@/components/MenuConta';
 import { StatCard } from '@/components/StatCard';
 import { Avatar, Badge, Card, Icon, SectionHeader, Text } from '@/components/ui';
 import { useAgenda } from '@/data/useAgenda';
@@ -37,6 +38,9 @@ export default function InicioScreen() {
   // Tocar outra vez no Início, já estando nele, volta ao topo desta lista.
   const refTopo = useVoltarAoTopo('index');
   const router = useRouter();
+  // O menu da conta, que abre por baixo da inicial (ver `MenuConta.tsx`).
+  const inicial = useRef<View>(null);
+  const [menuConta, setMenuConta] = useState<Ancora | null>(null);
   const desktop = useDesktop();
   const { isSuperadmin, podeVer, podeEmAlguma, estadoPerfil, acessoExpirado } = useMembros();
   const { controlo: controloAtualizar } = useAtualizarPuxando();
@@ -298,23 +302,28 @@ export default function InicioScreen() {
                 </Text>
               </View>
             </View>
-            {/* A inicial leva ao Perfil: é o gesto que toda a gente já faz
-                noutras apps, e até aqui tocar-lhe não fazia nada. */}
-            <Pressable
-              onPress={() => router.navigate('/perfil')}
-              accessibilityRole="button"
-              accessibilityLabel={t('nav.perfil')}
-              hitSlop={8}
-              style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
-              <Avatar
-                initials={iniciais}
-                size={54}
-                background="rgba(255,255,255,0.18)"
-                foreground={colors.textOnDark}
-              />
-            </Pressable>
+            {/* A inicial abre o menu da conta: perfil, definições, ajuda e
+                terminar sessão. É o sítio onde toda a gente procura isto. */}
+            <View ref={inicial} collapsable={false}>
+              <Pressable
+                onPress={() =>
+                  inicial.current?.measureInWindow((x, y, w, h) => setMenuConta({ x, y, w, h }))
+                }
+                accessibilityRole="button"
+                accessibilityLabel={t('menuConta.abrir')}
+                hitSlop={8}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
+                <Avatar
+                  initials={iniciais}
+                  size={54}
+                  background="rgba(255,255,255,0.18)"
+                  foreground={colors.textOnDark}
+                />
+              </Pressable>
+            </View>
           </View>
         </LinearGradient>
+        <MenuConta aberto={menuConta !== null} ancora={menuConta} onFechar={() => setMenuConta(null)} />
 
         {/* Conteúdo */}
         <View

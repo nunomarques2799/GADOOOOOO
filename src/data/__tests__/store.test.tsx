@@ -77,6 +77,8 @@ const mockServidor = {
   erroSeguinte: null as string | null,
   recebidas: [] as string[],
   falhasCarregar: 0,
+  /** Segura a leitura do servidor até ser solta (o segundo depois de entrar). */
+  leituraPresa: null as Promise<void> | null,
   /**
    * A versão de cada linha no servidor, avançada a cada gravação como faz o
    * trigger `toca_updated_at`. Uma gravação com versão só passa se o servidor
@@ -138,6 +140,7 @@ function mockRespostaEscrita(etiqueta: string): string | null {
 
 jest.mock('../supabaseRepo', () => ({
   carregarTudoSupabase: async () => {
+    if (mockServidor.leituraPresa) await mockServidor.leituraPresa;
     if (mockServidor.falhasCarregar > 0) {
       mockServidor.falhasCarregar -= 1;
       throw new Error('Network request failed');
@@ -261,6 +264,7 @@ beforeEach(() => {
   mockServidor.erroSeguinte = null;
   mockServidor.recebidas = [];
   mockServidor.falhasCarregar = 0;
+  mockServidor.leituraPresa = null;
   mockServidor.versoes = new Map();
   mockServidor.errosPorId = new Map();
   mockServidor.alcancavel = false;
@@ -270,6 +274,44 @@ beforeEach(() => {
 /* ---- Testes ---- */
 
 describe('arranque', () => {
+  it('com a cache vazia, os dados só contam como carregados depois da primeira leitura', async () => {
+    // Logo a seguir a entrar na conta a cache está vazia. Durante a primeira
+    // leitura a app não tem explorações nenhumas, e quem decide pelo que
+    // existe (o guia de primeiros passos) tem de esperar: mostrava "Crie a sua
+    // exploração" a quem já tinha três.
+    mockServidor.snapshot = { exploracoes: [exploracao], terrenos: [], animais: [], eventos: [] };
+    let soltar!: () => void;
+    mockServidor.leituraPresa = new Promise<void>((r) => (soltar = r));
+
+    const { ctx } = await montar();
+    expect(ctx().dadosCarregados).toBe(false);
+    expect(ctx().exploracoes).toEqual([]);
+
+    await act(async () => {
+      soltar();
+      await mockServidor.leituraPresa;
+    });
+    expect(ctx().dadosCarregados).toBe(true);
+    expect(ctx().exploracoes.map((e) => e.id)).toEqual(['exp-1']);
+  });
+
+  it('com cache no aparelho, os dados estão carregados desde o arranque', async () => {
+    mockMapa.set(
+      CHAVES.cache,
+      JSON.stringify({ exploracoes: [exploracao], terrenos: [], animais: [], eventos: [] }),
+    );
+    mockServidor.leituraPresa = new Promise<void>(() => undefined); // nunca responde
+    const { ctx } = await montar();
+    expect(ctx().dadosCarregados).toBe(true);
+    expect(ctx().exploracoes.map((e) => e.id)).toEqual(['exp-1']);
+  });
+
+  it('sem rede na primeira leitura, deixa de esperar', async () => {
+    mockServidor.falhasCarregar = 1;
+    const { ctx } = await montar();
+    expect(ctx().dadosCarregados).toBe(true);
+  });
+
   it('puxa o efetivo do servidor quando há rede', async () => {
     mockServidor.snapshot = {
       exploracoes: [exploracao],

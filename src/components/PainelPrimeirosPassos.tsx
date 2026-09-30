@@ -51,7 +51,7 @@ const PASSO_META: Record<ChavePasso, { icon: IconName; rota: Href }> = {
  */
 export function PainelPrimeirosPassos() {
   const router = useRouter();
-  const { exploracoes, terrenos, animais } = useGado();
+  const { exploracoes, terrenos, animais, dadosCarregados } = useGado();
   const { preferencias } = useNotificacoes();
   const { podeEmAlguma } = useMembros();
 
@@ -91,6 +91,11 @@ export function PainelPrimeirosPassos() {
   // Enquanto não se souber da autorização, o painel não aparece. Um guia que
   // pisca é pior do que um guia que chega meio segundo depois.
   if (permitido === null) return null;
+  // Nem enquanto os dados da conta não chegarem: logo a seguir a entrar, a app
+  // ainda não tem as explorações e o guia pedia para criar uma (ver
+  // `dadosCarregados` no store). O `=== false` deixa passar os testes que
+  // simulam o store sem este campo.
+  if (dadosCarregados === false) return null;
 
   const passos = passosTutorial({
     temExploracoes: exploracoes.length > 0,

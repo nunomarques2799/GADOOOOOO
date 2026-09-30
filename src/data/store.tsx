@@ -269,6 +269,17 @@ type GadoContext = {
    * programador. O ecrã de Sincronização mostra isto a quem for lá ver.
    */
   erroSincronizacao: string | null;
+  /**
+   * Se o que está no ecrã já são os dados da conta (da cache do aparelho ou da
+   * primeira leitura do servidor), e não as listas vazias do arranque.
+   *
+   * Logo a seguir a entrar na conta a cache está vazia (terminar sessão
+   * apaga-a) e, durante o segundo da primeira leitura, a app não tem
+   * explorações nenhumas. Quem decide pelo que existe tem de esperar por isto:
+   * o guia de primeiros passos mostrava "Crie a sua exploração" a quem já tinha
+   * três, e desaparecia um segundo depois.
+   */
+  dadosCarregados: boolean;
   /** Nº de alterações locais ainda por enviar ao Supabase. */
   pendentesSinc: number;
   /**
@@ -499,6 +510,11 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     cacheDisponivel ? lerFalhadas() : [],
   );
   const [erroSincronizacao, setErroSincronizacao] = useState<string | null>(null);
+  // Sem servidor, ou com cache no aparelho, os dados já estão no ecrã desde o
+  // arranque. Só com a cache vazia é que se espera pela primeira leitura.
+  const [dadosCarregados, setDadosCarregados] = useState<boolean>(
+    () => !supabaseConfigurado || !cacheDisponivel || lerCache() !== null,
+  );
 
   const limparFalhadas = useCallback(() => {
     esquecerFalhadas();
@@ -529,6 +545,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       setMovimentos(snap.movimentos);
       setMedicamentos(snap.medicamentos);
       setErroSincronizacao(null);
+      setDadosCarregados(true);
       return true;
     } catch (e) {
       // Guarda-se a razão em vez de a deitar fora. Continuar a mostrar a cache
@@ -536,6 +553,9 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       // — mas atirar o motivo ao lixo transformava qualquer falha de leitura
       // numa app calada e vazia, sem ninguém saber de onde partir.
       setErroSincronizacao(e instanceof Error ? e.message : String(e));
+      // Sem rede na primeira leitura não há dados a esperar: o que há é o
+      // que se mostra, e o ecrã não pode ficar à espera para sempre.
+      setDadosCarregados(true);
       return false; // offline — fica com o que está em cache
     }
   }, []);
@@ -1490,6 +1510,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
       reativarAlerta,
       online,
       erroSincronizacao,
+      dadosCarregados,
       pendentesSinc,
       falhadas,
       limparFalhadas,
@@ -1531,7 +1552,7 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     [
       utilizador, exploracoes, terrenos, animais, eventos, movimentos, medicamentos, alertas,
       alertasDispensados, dispensarAlerta, reativarAlerta,
-      online, erroSincronizacao, pendentesSinc, falhadas, limparFalhadas,
+      online, erroSincronizacao, dadosCarregados, pendentesSinc, falhadas, limparFalhadas,
       exploracaoById, animalById, terrenoById, animaisByExploracao,
       animaisByExploracaoIncluindoSaidos,
       terrenosByExploracao, eventosByAnimal, movimentosByAnimal,

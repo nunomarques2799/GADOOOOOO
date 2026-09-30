@@ -203,9 +203,10 @@ export function FolhaAcoesRapidas({
           borderTopLeftRadius: radii.xl,
           borderTopRightRadius: radii.xl,
           paddingTop: spacing.md,
-          paddingBottom: insets.bottom + spacing.md,
           paddingHorizontal: spacing.lg,
-          maxHeight: '80%',
+          // 90% e não 80%: num iPhone mais pequeno (ou com a letra grande) as
+          // oito ações não cabiam em 80% e a última aparecia cortada a meio.
+          maxHeight: '90%',
         },
         shadow.lg,
       ]}>
@@ -223,11 +224,19 @@ export function FolhaAcoesRapidas({
       </View>
 
       {acoes.length === 0 ? (
-        <Text variant="body" color={colors.textSecondary} style={{ paddingVertical: spacing.md }}>
+        <Text
+          variant="body"
+          color={colors.textSecondary}
+          style={{ paddingTop: spacing.md, paddingBottom: insets.bottom + spacing.md }}>
           {t('acao.semPermissao')}
         </Text>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false}>
+        // A margem de baixo (a da barra do iPhone) vive DENTRO da lista, e não
+        // na folha: quando as ações não cabem, a lista rola por cima dela, em
+        // vez de a última linha ficar cortada com um vazio parado por baixo.
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: insets.bottom + spacing.md }}>
           {acoes.map((a, i) => (
             <Pressable
               key={a.chave}

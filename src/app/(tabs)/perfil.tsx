@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SeletorFoto } from '@/components/SeletorFoto';
 import { Avatar, Badge, Button, Card, Folha, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
-import { confirmar } from '@/data/avisos';
 import { saiuDoEfetivo } from '@/data/historicoAnimais';
 import { useMembros } from '@/data/membros';
 import { legendaRole } from '@/data/permissoes';
@@ -16,6 +15,7 @@ import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFotoPerfil } from '@/data/useFotoPerfil';
 import { t } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
+import { useTerminarSessao } from '@/hooks/useTerminarSessao';
 import { colors, layout, radii, shadow, spacing } from '@/theme';
 
 /**
@@ -31,7 +31,7 @@ export default function PerfilScreen() {
   const desktop = useDesktop();
   const router = useRouter();
   const { utilizador, animais, exploracoes, pendentesSinc } = useGado();
-  const { utilizador: conta, sair, configurado } = useAuth();
+  const { utilizador: conta, configurado } = useAuth();
   const { membros, isSuperadmin, estadoPerfil } = useMembros();
   const { foto, definirFoto } = useFotoPerfil();
   const toast = useToasts();
@@ -66,18 +66,7 @@ export default function PerfilScreen() {
    * que ainda não chegaram ao servidor. Se houver alguma, avisa em vez de a
    * deixar desaparecer sem o criador dar por isso.
    */
-  function confirmarSair() {
-    if (pendentesSinc === 0) {
-      void sair();
-      return;
-    }
-    confirmar(
-      t('perfil.porEnviarTitulo'),
-      t('perfil.porEnviarMensagem', { n: pendentesSinc }),
-      () => void sair(),
-      { rotuloConfirmar: t('perfil.sairAMesma'), destrutivo: true },
-    );
-  }
+  const confirmarSair = useTerminarSessao(pendentesSinc);
 
   // Com sessão iniciada, mostra os dados da conta; senão, o utilizador local.
   const nome = (conta?.user_metadata?.nome as string | undefined)?.trim() || utilizador.nome;

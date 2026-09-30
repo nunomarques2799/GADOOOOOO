@@ -125,6 +125,13 @@ export function FormularioAnimal({
   const [terrenoId, setTerrenoId] = useState<string | undefined>(animal?.terrenoId);
   const [maeId, setMaeId] = useState<string | undefined>(animal?.maeId);
   const [paiId, setPaiId] = useState<string | undefined>(animal?.paiId);
+  /**
+   * A genealogia começa FECHADA. Com dezenas de fêmeas e machos na exploração,
+   * as duas listas ocupavam mais de um ecrã, e é a parte do formulário que
+   * menos vezes se preenche (a mãe e o pai são opcionais). Fechada, mostra o
+   * que já está escolhido, para quem edita ver que lá está sem a abrir.
+   */
+  const [genealogiaAberta, setGenealogiaAberta] = useState(false);
   const [sniraManual, setSniraManual] = useState<boolean | null>(animal?.comunicadoSnira ?? null);
   const [prenhe, setPrenhe] = useState(!!animal?.dataPrevistaParto);
   const [dataCobricao, setDataCobricao] = useState('');
@@ -404,6 +411,11 @@ export function FormularioAnimal({
                 icon={s === 'Fêmea' ? 'gender-female' : 'gender-male'}
                 selected={sexo === s}
                 onPress={() => setSexo(s)}
+                cor={
+                  s === 'Fêmea'
+                    ? { forte: colors.femea, tinte: colors.femeaTint }
+                    : { forte: colors.macho, tinte: colors.machoTint }
+                }
               />
             ))}
           </View>
@@ -684,30 +696,70 @@ export function FormularioAnimal({
           </Field>
         ) : null}
 
-        {/* Genealogia */}
-        <Text variant="label" style={{ marginBottom: spacing.xs }}>
-          {t('formAnimal.genealogia')}
-        </Text>
-        <Text variant="caption" color={colors.textMuted} style={{ marginBottom: spacing.sm }}>
-          {t('formAnimal.genealogiaAjuda')}
-        </Text>
+        {/* Genealogia: fechada por omissão, com o resumo do que está escolhido. */}
+        <Pressable
+          onPress={() => setGenealogiaAberta((v) => !v)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: genealogiaAberta }}
+          accessibilityLabel={t('formAnimal.genealogia')}
+          style={({ pressed }) => [
+            {
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.sm,
+              minHeight: 56,
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm,
+              marginBottom: spacing.sm,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+            },
+            pressed && { opacity: 0.7 },
+          ]}>
+          <Icon name="family-tree" size="md" color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text variant="label">{t('formAnimal.genealogia')}</Text>
+            <Text variant="caption" color={colors.textMuted} numberOfLines={1}>
+              {[
+                maeValida ? `${t('formAnimal.mae')}: ${rotuloAnimal(maes.find((a) => a.id === maeValida)!)}` : null,
+                paiValido ? `${t('formAnimal.pai')}: ${rotuloAnimal(pais.find((a) => a.id === paiValido)!)}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || t('formAnimal.genealogiaResumoVazio')}
+            </Text>
+          </View>
+          <Icon
+            name={genealogiaAberta ? 'chevron-up' : 'chevron-down'}
+            size="lg"
+            color={colors.textSecondary}
+          />
+        </Pressable>
 
-        <SeletorProgenitor
-          label={t('formAnimal.mae')}
-          icone="gender-female"
-          candidatos={maes}
-          selecionadoId={maeValida}
-          onSelecionar={setMaeId}
-          vazio={t('formAnimal.semFemeas')}
-        />
-        <SeletorProgenitor
-          label={t('formAnimal.pai')}
-          icone="gender-male"
-          candidatos={pais}
-          selecionadoId={paiValido}
-          onSelecionar={setPaiId}
-          vazio={t('formAnimal.semMachos')}
-        />
+        {genealogiaAberta ? (
+          <>
+            <Text variant="caption" color={colors.textMuted} style={{ marginBottom: spacing.sm }}>
+              {t('formAnimal.genealogiaAjuda')}
+            </Text>
+            <SeletorProgenitor
+              label={t('formAnimal.mae')}
+              icone="gender-female"
+              candidatos={maes}
+              selecionadoId={maeValida}
+              onSelecionar={setMaeId}
+              vazio={t('formAnimal.semFemeas')}
+            />
+            <SeletorProgenitor
+              label={t('formAnimal.pai')}
+              icone="gender-male"
+              candidatos={pais}
+              selecionadoId={paiValido}
+              onSelecionar={setPaiId}
+              vazio={t('formAnimal.semMachos')}
+            />
+          </>
+        ) : null}
 
         {editar && podeEliminar ? (
           <View style={{ marginTop: spacing.xl, gap: spacing.sm }}>
@@ -939,12 +991,22 @@ function BigToggle({
   icon,
   selected,
   onPress,
+  cor,
 }: {
   label: string;
   icon: IconName;
   selected: boolean;
   onPress: () => void;
+  /**
+   * A cor de quando está escolhido, se não for a verde de sempre. Serve o
+   * sexo: rosa para fêmea e azul para macho, as cores com que o animal
+   * aparece na lista, para o botão escolhido dizer o sexo antes de se ler.
+   */
+  cor?: { forte: string; tinte: string };
 }) {
+  const forte = cor?.forte ?? colors.primary;
+  const tinte = cor?.tinte ?? colors.primaryTint;
+  const texto = cor?.forte ?? colors.primaryDark;
   return (
     <Pressable
       onPress={onPress}
@@ -956,8 +1018,8 @@ function BigToggle({
           height: sizes.button,
           borderRadius: radii.md,
           borderWidth: 1.5,
-          borderColor: selected ? colors.primary : colors.border,
-          backgroundColor: selected ? colors.primaryTint : colors.surface,
+          borderColor: selected ? forte : colors.border,
+          backgroundColor: selected ? tinte : colors.surface,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
@@ -965,8 +1027,8 @@ function BigToggle({
         },
         pressed && { opacity: 0.85 },
       ]}>
-      <Icon name={icon} size="md" color={selected ? colors.primary : colors.textMuted} />
-      <Text variant="button" color={selected ? colors.primaryDark : colors.textSecondary} style={{ fontSize: 17 }}>
+      <Icon name={icon} size="md" color={selected ? forte : colors.textMuted} />
+      <Text variant="button" color={selected ? texto : colors.textSecondary} style={{ fontSize: 17 }}>
         {label}
       </Text>
     </Pressable>
