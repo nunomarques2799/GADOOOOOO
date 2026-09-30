@@ -40,6 +40,17 @@ describe('passosTutorial', () => {
     ]);
   });
 
+  it('um passo ignorado conta como resolvido, e diz que foi ignorado', () => {
+    const avisos = (e: EstadoTutorial) => passosTutorial(e).find((p) => p.chave === 'avisos')!;
+    expect(avisos(vazio)).toMatchObject({ feito: false, ignoravel: true, ignorado: false });
+    const ignorados = new Set(['avisos'] as const);
+    expect(avisos({ ...vazio, ignorados })).toMatchObject({ feito: true, ignorado: true });
+    // Ligados de verdade, deixa de dizer "ignorado".
+    expect(avisos({ ...vazio, avisosLigados: true, ignorados })).toMatchObject({ feito: true, ignorado: false });
+    // Os dados da exploração não se ignoram.
+    expect(passosTutorial(vazio).filter((p) => p.ignoravel).map((p) => p.chave)).toEqual(['avisos']);
+  });
+
   it('põe os terrenos antes dos animais', () => {
     // É no formulário do animal que se escolhe o terreno: ao contrário, esse
     // campo aparece vazio e sem nada por onde escolher.

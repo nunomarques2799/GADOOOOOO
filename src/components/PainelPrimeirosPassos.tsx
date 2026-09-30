@@ -1,6 +1,6 @@
-import { useRouter, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { AppState, Pressable, View } from 'react-native';
 
 import { Button, Card, Icon, type IconName, Text } from '@/components/ui';
 import { useMembros } from '@/data/membros';
@@ -11,7 +11,9 @@ import {
   deveMostrar,
   esconderTutorial,
   essenciais,
+  ignorarPasso,
   opcionais,
+  passosIgnorados,
   passosTutorial,
   progresso,
   tutorialEscondido,
@@ -70,9 +72,25 @@ export function PainelPrimeirosPassos() {
     // `passosTutorial` já trata o `suportaAvisos: false`.
     suportaNotificacoes ? null : false,
   );
-  useEffect(() => {
+  /**
+   * Pergunta-se outra vez sempre que o Início volta a ficar à vista, a app
+   * volta ao primeiro plano, ou o interruptor dos avisos muda. Perguntar só uma
+   * vez deixava o passo por fazer a quem acabava de dar a autorização no ecrã
+   * das notificações: o guia ficava com a resposta antiga até se reabrir a app.
+   */
+  const verificar = useCallback(() => {
     if (suportaNotificacoes) void temPermissao().then(setPermitido);
   }, []);
+  useEffect(verificar, [verificar, preferencias.noTelemovel]);
+  useFocusEffect(verificar);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (e) => {
+      if (e === 'active') verificar();
+    });
+    return () => sub.remove();
+  }, [verificar]);
+
+  const [ignorados, setIgnorados] = useState(() => passosIgnorados());
 
   // Esconder é uma decisão do momento — guardá-la em estado faz o painel sumir
   // sem recarregar a app.
@@ -102,6 +120,7 @@ export function PainelPrimeirosPassos() {
     temTerrenos: terrenos.length > 0,
     temAnimais: animais.length > 0,
     avisosLigados: preferencias.noTelemovel && permitido,
+    ignorados,
     suportaAvisos: suportaNotificacoes,
     financasLigadas: exploracoes.some((e) => e.financasAtivas),
     // O mesmo critério do ecrã que liga os interruptores (ver `useFinancas`):
@@ -182,6 +201,7 @@ export function PainelPrimeirosPassos() {
             aberto={!p.feito && p.chave === emFoco}
             onAlternar={() => alternar(p.chave)}
             onIr={() => router.push(PASSO_META[p.chave].rota)}
+            onIgnorar={() => setIgnorados(ignorarPasso(p.chave))}
           />
         ))}
       </View>
@@ -226,12 +246,14 @@ function LinhaPasso({
   aberto,
   onAlternar,
   onIr,
+  onIgnorar,
 }: {
   passo: Passo;
   destaque: boolean;
   aberto: boolean;
   onAlternar: () => void;
   onIr: () => void;
+  onIgnorar?: () => void;
 }) {
   const meta = PASSO_META[passo.chave];
 
@@ -285,6 +307,10 @@ function LinhaPasso({
             <Text variant="secondary" color={colors.textSecondary}>
               {passo.descricao}
             </Text>
+          ) : passo.ignorado ? (
+            <Text variant="caption" color={colors.textMuted}>
+              {t('tutorial.ignorado')}
+            </Text>
           ) : null}
         </View>
         {!passo.feito ? (
@@ -305,6 +331,20 @@ function LinhaPasso({
             variant={passo.opcional ? 'secondary' : 'primary'}
             onPress={onIr}
           />
+          {passo.ignoravel && onIgnorar ? (
+            <Pressable
+              onPress={onIgnorar}
+              accessibilityRole="button"
+              accessibilityLabel={t('tutorial.ignorarPasso')}
+              style={({ pressed }) => [
+                { alignSelf: 'center', minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md },
+                pressed && { opacity: 0.6 },
+              ]}>
+              <Text variant="bodyStrong" color={colors.textSecondary}>
+                {t('tutorial.ignorarPasso')}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </View>

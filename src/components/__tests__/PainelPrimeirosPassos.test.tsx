@@ -29,7 +29,10 @@ const mockRotas: string[] = [];
 
 jest.mock('expo-router', () => {
   const router = { push: (destino: string) => mockRotas.push(destino) };
-  return { useRouter: () => router };
+  // O painel volta a perguntar pela autorização quando o Início regressa à
+  // vista; aqui chega correr uma vez à montagem, como o `useEffect`.
+  const { useEffect } = jest.requireActual<typeof import('react')>('react');
+  return { useRouter: () => router, useFocusEffect: (cb: () => void) => useEffect(cb, [cb]) };
 });
 jest.mock('@/data/armazenamento', () => ({
   armazenamentoDisponivel: true,
@@ -167,6 +170,29 @@ describe('painel de primeiros passos', () => {
   it('no telemóvel acrescenta o passo dos avisos', async () => {
     mockPlataforma.suportaNotificacoes = true;
     expect(textos(await abrir())).toMatch(/0\s+de\s+4\s+feito/);
+  });
+
+  /**
+   * A queixa de 2026-09-30: "aparece para ligar os avisos mas já tenho os
+   * avisos ligados, devia haver a opção de ignorar este passo". Há quem não os
+   * queira, e o guia não pode ficar preso no Início por causa disso.
+   */
+  it('o passo dos avisos pode ser ignorado, e fica ignorado', async () => {
+    mockPlataforma.suportaNotificacoes = true;
+    mockDados.exploracoes = [{ id: 'e1', nome: 'Monte' } as Exploracao];
+    mockDados.terrenos = [{ id: 't1', nome: 'Courela', exploracaoId: 'e1' } as Terreno];
+    mockDados.animais = [{ id: 'a1', exploracaoId: 'e1' } as Animal];
+    const r = await abrir();
+    expect(textos(r)).toMatch(/3\s+de\s+4\s+feito/);
+    tocar(r, 'Ignorar este passo');
+    // Com o essencial todo resolvido, o guia sai do Início.
+    expect(r.toJSON()).toBeNull();
+    expect((await abrir()).toJSON()).toBeNull();
+  });
+
+  it('só os avisos se ignoram: a exploração não', async () => {
+    mockPlataforma.suportaNotificacoes = true;
+    expect(tocaveis(await abrir())).not.toContain('Ignorar este passo');
   });
 
   it('esconder faz o painel sumir e fica guardado', async () => {

@@ -257,6 +257,8 @@ const pt = {
   /* ---- Guia de primeiros passos (Início) ---- */
   'tutorial.titulo': 'Vamos começar',
   'tutorial.progresso': '{n} de {total} feito|{n} de {total} feitos',
+  'tutorial.ignorarPasso': 'Ignorar este passo',
+  'tutorial.ignorado': 'Ignorado',
   'tutorial.esconder': 'Esconder',
   'tutorial.esconderAjuda': 'Esconder o guia de primeiros passos',
   'tutorial.comoFunciona':
@@ -2250,6 +2252,8 @@ const en: Record<ChaveTexto, string> = {
   /* ---- Guia de primeiros passos (Início) ---- */
   'tutorial.titulo': 'Let us get started',
   'tutorial.progresso': '{n} of {total} done|{n} of {total} done',
+  'tutorial.ignorarPasso': 'Skip this step',
+  'tutorial.ignorado': 'Skipped',
   'tutorial.esconder': 'Hide',
   'tutorial.esconderAjuda': 'Hide the getting started guide',
   'tutorial.comoFunciona':
