@@ -62,7 +62,9 @@ export type Destino = {
 };
 
 /**
- * Os destinos, pela ordem em que aparecem na barra lateral.
+ * Os destinos, pela ordem em que aparecem na barra lateral. Os ícones são de
+ * traço, nunca cheios (guia de estilo); os Animais levam o brinco e os Terrenos
+ * o mapa, como na barra de baixo do guia.
  * `nome` é o ficheiro dentro de `(tabs)/`; `rota` é o URL (o grupo `(tabs)`
  * não aparece no caminho, por isso `(tabs)/alertas.tsx` serve `/alertas`).
  *
@@ -71,10 +73,10 @@ export type Destino = {
  * daria), e um destino que abre sempre vazio é um destino a mais na barra.
  */
 export const DESTINOS: Destino[] = [
-  { nome: 'index', rota: '/', chave: 'nav.inicio', icon: 'home-variant' },
+  { nome: 'index', rota: '/', chave: 'nav.inicio', icon: 'home-outline' },
   { nome: 'exploracoes', rota: '/exploracoes', chave: 'nav.exploracoes', icon: 'barn' },
-  { nome: 'terrenos', rota: '/terrenos', chave: 'nav.terrenos', icon: 'grass' },
-  { nome: 'animais', rota: '/animais', chave: 'nav.animais', icon: 'cow' },
+  { nome: 'terrenos', rota: '/terrenos', chave: 'nav.terrenos', icon: 'map-outline' },
+  { nome: 'animais', rota: '/animais', chave: 'nav.animais', icon: 'tag-outline' },
   { nome: 'alertas', rota: '/alertas', chave: 'nav.alertas', icon: 'bell-outline' },
   { nome: 'chat', rota: '/chat', chave: 'nav.chat', curto: 'nav.chatCurto', icon: 'chat-outline' },
   { nome: 'reproducao', rota: '/reproducao', chave: 'nav.reproducao', icon: 'heart-pulse' },
@@ -82,14 +84,14 @@ export const DESTINOS: Destino[] = [
     nome: 'medicamentos',
     rota: '/medicamentos',
     chave: 'nav.existencias',
-    icon: 'package-variant-closed',
+    icon: 'package-variant',
     exigeInterruptor: 'existencias',
   },
   {
     nome: 'trabalhadores',
     rota: '/trabalhadores',
     chave: 'nav.trabalhadores',
-    icon: 'account-hard-hat',
+    icon: 'account-hard-hat-outline',
     soComEquipa: true,
   },
   {
@@ -107,7 +109,7 @@ export const DESTINOS: Destino[] = [
     exigeLeitura: 'verDocumentos',
   },
   { nome: 'definicoes', rota: '/definicoes', chave: 'nav.definicoes', icon: 'cog-outline' },
-  { nome: 'perfil', rota: '/perfil', chave: 'nav.perfil', icon: 'account' },
+  { nome: 'perfil', rota: '/perfil', chave: 'nav.perfil', icon: 'account-outline' },
 ];
 
 /**

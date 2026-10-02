@@ -14,6 +14,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { FAMILIAS, PALETAS, PALETA_OMISSAO, paletaOmissao, paletaPorId, paletasDe } from '../paletas';
+import { coresFixasDe } from '../tokens';
 
 /* ---- Contraste WCAG 2.1 ---- */
 
@@ -55,18 +56,31 @@ describe('paletas', () => {
     expect(PALETAS[0].id).toBe(PALETA_OMISSAO);
   });
 
-  it('a paleta de origem mantém as cores exatas com que a app foi desenhada', () => {
+  it('a paleta de origem mantém as cores exatas do guia de estilo', () => {
     // Esta não é uma paleta como as outras: é a que TODA a gente tem, e quem
     // nunca abrir o ecrã do aspeto continua com ela. Um acerto no gerador ou
     // um "arredondar" bem-intencionado destes valores muda a app a toda a
-    // gente de uma vez, sem ninguém ter pedido nada.
+    // gente de uma vez, sem ninguém ter pedido nada. Os valores são os do
+    // guia "Terrabovina, novo estilo" (oliveira, creme, superfície, tinta).
     const t = paletaOmissao().tokens;
-    expect(t.primary).toBe('#1B7A48');
-    expect(t.primaryDark).toBe('#166B3D');
-    expect(t.primaryDarker).toBe('#124D2E');
-    expect(t.background).toBe('#F3F6F2');
-    expect(t.surface).toBe('#FFFFFF');
-    expect(t.text).toBe('#15251C');
+    expect(paletaOmissao().id).toBe('terrabovina');
+    expect(t.primary).toBe('#3A4A2C');
+    expect(t.primaryDark).toBe('#2B3621');
+    expect(t.background).toBe('#F3EBDD');
+    expect(t.surface).toBe('#FBF7F0');
+    expect(t.surfaceAlt).toBe('#E8DCC8');
+    expect(t.text).toBe('#22281A');
+    expect(t.textSecondary).toBe('#5B604D');
+    expect(t.border).toBe('#E3D8C5');
+  });
+
+  it('o verde de antes continua à escolha, com as cores de sempre', () => {
+    // Quem escolheu o "Campo" nas Definições tem-no gravado na conta, e a
+    // mudança de marca não lho pode tirar.
+    const campo = paletaPorId('campo');
+    expect(campo.id).toBe('campo');
+    expect(campo.tokens.primary).toBe('#1B7A48');
+    expect(campo.tokens.background).toBe('#F3F6F2');
   });
 
   it('está toda arrumada por famílias', () => {
@@ -143,6 +157,51 @@ describe('paletas', () => {
         // sobre um fundo branco não faz os cartões desaparecerem.
         expect(contraste(t.surface, t.background)).toBeGreaterThan(1.02);
       });
+
+      // As cores com significado são fixas, mas o fundo onde caem é da
+      // paleta: um prazo legal a terracota tem de se ler em todas elas.
+      it('as cores com significado leem-se sobre os cartões e o fundo', () => {
+        const f = coresFixasDe(p.escura ?? false);
+        for (const cor of [f.success, f.warning, f.danger, f.info, f.saude, f.femea, f.macho]) {
+          expect(contraste(cor, t.surface)).toBeGreaterThanOrEqual(4.5);
+          expect(contraste(cor, t.background)).toBeGreaterThanOrEqual(4.5);
+        }
+      });
     });
   }
+});
+
+describe('cores com significado', () => {
+  for (const escura of [false, true]) {
+    const f = coresFixasDe(escura);
+    describe(escura ? 'em fundo escuro' : 'em fundo claro', () => {
+      it('cada uma lê-se sobre o seu tinte (as etiquetas)', () => {
+        const pares: [string, string][] = [
+          [f.success, f.successTint],
+          [f.warning, f.warningTint],
+          [f.danger, f.dangerTint],
+          [f.info, f.infoTint],
+          [f.saude, f.saudeTint],
+          [f.femea, f.femeaTint],
+          [f.macho, f.machoTint],
+        ];
+        for (const [cor, tinte] of pares) expect(contraste(cor, tinte)).toBeGreaterThanOrEqual(4.5);
+      });
+
+      it('o botão de perigo lê-se', () => {
+        expect(contraste(f.onDanger, f.danger)).toBeGreaterThanOrEqual(4.5);
+      });
+    });
+  }
+
+  it('os tons vivos (pontos e barras) veem-se como forma sobre a superfície', () => {
+    // Não levam letra, mas um ponto que não se distingue do cartão é um aviso
+    // que ninguém vê: 1,4.11 das WCAG pede 3:1 a gráficos com significado. O
+    // ocre do guia não chega lá sobre o creme, e é por isso que os pontos ocre
+    // levam sempre o rótulo ao lado (a legenda da lista, o "12 dias").
+    const f = coresFixasDe(false);
+    const superficie = paletaOmissao().tokens.surface;
+    expect(contraste(f.dangerVivo, superficie)).toBeGreaterThanOrEqual(3);
+    expect(contraste(f.saudeVivo, superficie)).toBeGreaterThanOrEqual(3);
+  });
 });

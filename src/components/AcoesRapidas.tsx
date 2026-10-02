@@ -1,6 +1,6 @@
 import { useRouter, type Href } from 'expo-router';
 import { useMemo } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { QuickAction } from '@/components/QuickAction';
@@ -53,29 +53,18 @@ export function useAcoesRapidas(): AcaoRapida[] {
   return useMemo(() => {
     const lista: AcaoRapida[] = [];
 
-    // Em primeiro, e não no fim: marcar um evento é o que se faz assim que se
-    // combina alguma coisa ao telefone, e é a única ação rápida que não precisa
-    // de ter um animal à frente.
-    if (podeMarcarEventos) {
-      lista.push({
-        chave: 'evento',
-        icon: 'calendar-plus',
-        label: t('acao.evento'),
-        descricao: t('acao.eventoDesc'),
-        cor: colors.primary,
-        tinta: colors.primaryTint,
-        rota: '/agenda/novo',
-      });
-    }
-
+    // A ordem e as cores são as do guia de estilo: o animal novo à cabeça (é a
+    // ação da casa, e vai cheia da cor da marca na folha do Registar), depois
+    // o que se faz a um animal, depois o que se marca e o que se paga. Cada
+    // cor é a do significado: ocre para a reprodução, verde-azulado para a
+    // saúde, terracota para o dinheiro que sai.
     if (podeRegistarAnimais) {
       lista.push({
         chave: 'animal',
-        // A cara do animal, e não um "+": o "+" é o que TODAS as ações fazem
-        // (todas acrescentam alguma coisa), por isso não distinguia esta de
-        // nenhuma outra — e num painel de seis atalhos o ícone é a única coisa
-        // que se lê de relance.
-        icon: 'cow',
+        // O brinco, e não um "+": o "+" é o que TODAS as ações fazem (todas
+        // acrescentam alguma coisa), por isso não distinguia esta de nenhuma
+        // outra. O brinco é também o ícone dos Animais na barra de baixo.
+        icon: 'tag-outline',
         label: t('acao.animal'),
         descricao: t('acao.animalDesc'),
         cor: colors.primary,
@@ -88,11 +77,11 @@ export function useAcoesRapidas(): AcaoRapida[] {
       lista.push(
         {
           chave: 'parto',
-          icon: 'baby-bottle-outline',
+          icon: 'heart-outline',
           label: t('acao.parto'),
           descricao: t('acao.partoDesc'),
-          cor: colors.info,
-          tinta: colors.infoTint,
+          cor: colors.warning,
+          tinta: colors.warningTint,
           rota: { pathname: '/evento/novo', params: { tipo: 'Parto' } },
         },
         // A vacinação é o registo que mais vezes se faz a um lote inteiro — a
@@ -102,26 +91,28 @@ export function useAcoesRapidas(): AcaoRapida[] {
           icon: 'needle',
           label: t('acao.vacinacao'),
           descricao: t('acao.vacinacaoDesc'),
-          cor: colors.primary,
-          tinta: colors.primaryTint,
+          cor: colors.saude,
+          tinta: colors.saudeTint,
           rota: { pathname: '/evento/novo', params: { tipo: 'Vacinação' } },
         },
         {
           chave: 'medicamento',
-          icon: 'medical-bag',
+          icon: 'pill',
           label: t('acao.medicamento'),
           descricao: t('acao.medicamentoDesc'),
-          cor: colors.danger,
-          tinta: colors.dangerTint,
+          cor: colors.saude,
+          tinta: colors.saudeTint,
           rota: { pathname: '/evento/novo', params: { tipo: 'Medicamento' } },
         },
         {
           chave: 'cobricao',
+          // O guia desenha duas alianças; a biblioteca de ícones só tem um anel
+          // de noivado, que não diz nada sobre gado. O ♀♂ diz.
           icon: 'gender-male-female',
           label: t('acao.cobricao'),
           descricao: t('acao.cobricaoDesc'),
-          cor: colors.primaryDark,
-          tinta: colors.primaryTint,
+          cor: colors.warning,
+          tinta: colors.warningTint,
           rota: { pathname: '/evento/novo', params: { tipo: 'Cobrição' } },
         },
         {
@@ -129,11 +120,26 @@ export function useAcoesRapidas(): AcaoRapida[] {
           icon: 'scale',
           label: t('acao.pesagem'),
           descricao: t('acao.pesagemDesc'),
-          cor: colors.warning,
-          tinta: colors.warningTint,
+          cor: colors.primaryDark,
+          tinta: colors.primaryTint,
           rota: { pathname: '/evento/novo', params: { tipo: 'Pesagem' } },
         },
       );
+    }
+
+    // Marcar um evento é o que se faz assim que se combina alguma coisa ao
+    // telefone, e é a única ação rápida que não precisa de ter um animal à
+    // frente.
+    if (podeMarcarEventos) {
+      lista.push({
+        chave: 'evento',
+        icon: 'calendar-plus',
+        label: t('acao.evento'),
+        descricao: t('acao.eventoDesc'),
+        cor: colors.primaryDark,
+        tinta: colors.primaryTint,
+        rota: '/agenda/novo',
+      });
     }
 
     // A despesa é o registo mais frequente de todos — a ração, o gasóleo, a
@@ -141,11 +147,11 @@ export function useAcoesRapidas(): AcaoRapida[] {
     if (podeRegistarDespesa) {
       lista.push({
         chave: 'despesa',
-        icon: 'cash-minus',
+        icon: 'currency-eur',
         label: t('acao.despesa'),
         descricao: t('acao.despesaDesc'),
-        cor: colors.success,
-        tinta: colors.successTint,
+        cor: colors.danger,
+        tinta: colors.dangerTint,
         rota: '/movimento/novo',
       });
     }
@@ -178,9 +184,14 @@ export function GrelhaAcoesRapidas() {
 /**
  * A folha do botão "+" da barra de baixo.
  *
- * Em lista e não em grelha: aqui há largura para a frase que explica cada ação,
- * e é ela que evita a dúvida entre "Vacinação" e "Medicamento" a quem abre isto
- * pela primeira vez. Alvos de 64px — usa-se com o polegar, de pé no campo.
+ * Em grelha de dois cartões por linha, como no guia de estilo: cada um com o
+ * ícone na cor do significado, o nome e a frase que o explica (é ela que evita
+ * a dúvida entre "Vacinação" e "Medicamento" a quem abre isto pela primeira
+ * vez). O primeiro, o animal novo, vai cheio da cor da marca. Alvos grandes:
+ * usa-se com o polegar, de pé no campo.
+ *
+ * Num ecrã estreito (ou com a letra do sistema no máximo) dois cartões lado a
+ * lado partiam "Medicamento" a meio; aí passa a um por linha.
  */
 export function FolhaAcoesRapidas({
   aberto,
@@ -192,6 +203,9 @@ export function FolhaAcoesRapidas({
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const acoes = useAcoesRapidas();
+  const { width, fontScale } = useWindowDimensions();
+  // A largura útil (sem as margens da folha), a dividir pela letra ampliada.
+  const duasColunas = (Math.min(width, 560) - spacing.lg * 2) / Math.max(1, fontScale) >= 320;
 
   return (
     <Folha
@@ -202,7 +216,7 @@ export function FolhaAcoesRapidas({
           backgroundColor: colors.background,
           borderTopLeftRadius: radii.xl,
           borderTopRightRadius: radii.xl,
-          paddingTop: spacing.md,
+          paddingTop: spacing.sm,
           paddingHorizontal: spacing.lg,
           // 90% e não 80%: num iPhone mais pequeno (ou com a letra grande) as
           // oito ações não cabiam em 80% e a última aparecia cortada a meio.
@@ -210,16 +224,43 @@ export function FolhaAcoesRapidas({
         },
         shadow.lg,
       ]}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
-        <Text variant="h3" style={{ flex: 1 }}>
-          {t('nav.registar')}
-        </Text>
+      {/* A pega: diz que isto é uma folha por cima do ecrã, que desce. */}
+      <View
+        style={{
+          alignSelf: 'center',
+          width: 48,
+          height: 5,
+          borderRadius: radii.pill,
+          backgroundColor: colors.borderStrong,
+          marginBottom: spacing.md,
+        }}
+      />
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.md }}>
+        <View style={{ flex: 1 }}>
+          <Text variant="display">{t('nav.registar')}</Text>
+          <Text variant="bodyLg" color={colors.textSecondary}>
+            {t('registar.pergunta')}
+          </Text>
+        </View>
         <Pressable
           onPress={onFechar}
-          hitSlop={10}
+          hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel={t('comum.fechar')}>
-          <Icon name="close" size="lg" color={colors.textSecondary} />
+          accessibilityLabel={t('comum.fechar')}
+          style={({ pressed }) => [
+            {
+              width: 52,
+              height: 52,
+              borderRadius: radii.pill,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+            },
+            pressed && { opacity: 0.7 },
+          ]}>
+          <Icon name="close" size="lg" color={colors.text} />
         </Pressable>
       </View>
 
@@ -236,47 +277,62 @@ export function FolhaAcoesRapidas({
         // vez de a última linha ficar cortada com um vazio parado por baixo.
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: insets.bottom + spacing.md }}>
-          {acoes.map((a, i) => (
-            <Pressable
-              key={a.chave}
-              onPress={() => {
-                onFechar();
-                router.push(a.rota);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={a.label}
-              style={({ pressed }) => [
-                {
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: spacing.sm,
-                  minHeight: 64,
-                  borderBottomWidth: i < acoes.length - 1 ? 1 : 0,
-                  borderBottomColor: colors.border,
-                },
-                pressed && { opacity: 0.6 },
-              ]}>
-              <View
-                style={{
-                  width: 46,
-                  height: 46,
-                  borderRadius: radii.md,
-                  backgroundColor: a.tinta,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
-                <Icon name={a.icon} size="md" color={a.cor} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text variant="bodyStrong">{a.label}</Text>
-                <Text variant="caption" color={colors.textMuted} numberOfLines={2}>
-                  {a.descricao}
-                </Text>
-              </View>
-              <Icon name="chevron-right" size="md" color={colors.textMuted} />
-            </Pressable>
-          ))}
+          contentContainerStyle={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: spacing.sm,
+            paddingBottom: insets.bottom + spacing.md,
+          }}>
+          {acoes.map((a, i) => {
+            const cheio = i === 0 && a.chave === 'animal';
+            return (
+              <Pressable
+                key={a.chave}
+                onPress={() => {
+                  onFechar();
+                  router.push(a.rota);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${a.label}. ${a.descricao}`}
+                style={({ pressed }) => [
+                  {
+                    // Duas por linha: metade, menos metade do intervalo.
+                    flexBasis: duasColunas ? '48%' : '100%',
+                    flexGrow: 1,
+                    minHeight: duasColunas ? 156 : 0,
+                    padding: spacing.md,
+                    gap: spacing.sm,
+                    borderRadius: radii.lg,
+                    borderWidth: 1,
+                    borderColor: cheio ? colors.primary : colors.border,
+                    backgroundColor: cheio ? colors.primary : colors.surface,
+                    flexDirection: duasColunas ? 'column' : 'row',
+                    alignItems: duasColunas ? 'flex-start' : 'center',
+                  },
+                  pressed && { opacity: 0.8 },
+                ]}>
+                <View
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: radii.md,
+                    backgroundColor: cheio ? 'rgba(255,255,255,0.14)' : a.tinta,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  <Icon name={a.icon} size="md" color={cheio ? colors.onPrimary : a.cor} />
+                </View>
+                <View style={{ flex: duasColunas ? undefined : 1, gap: 2 }}>
+                  <Text variant="h3" color={cheio ? colors.onPrimary : colors.text}>
+                    {a.label}
+                  </Text>
+                  <Text variant="secondary" color={cheio ? colors.textOnDarkMuted : colors.textSecondary}>
+                    {a.descricao}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
         </ScrollView>
       )}
     </Folha>

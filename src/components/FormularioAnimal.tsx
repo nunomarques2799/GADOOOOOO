@@ -45,7 +45,7 @@ import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { Animal, Especie, Finalidade, Sexo } from '@/data/types';
 import { t, type ChaveTexto } from '@/i18n';
-import { colors, radii, shadow, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, shadow, sizes, spacing } from '@/theme';
 
 /**
  * Os atalhos da data de nascimento. Guardam a CHAVE do rótulo, não o rótulo:
@@ -980,7 +980,7 @@ function TextField({
         placeholderTextColor={colors.textMuted}
         autoCapitalize={autoCapitalize}
         keyboardType={keyboardType}
-        style={{ flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 17, color: colors.text }}
+        style={{ flex: 1, fontFamily: fontFamily.medium, fontSize: 17, color: colors.text }}
       />
     </View>
   );

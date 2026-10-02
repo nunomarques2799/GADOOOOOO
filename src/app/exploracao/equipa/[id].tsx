@@ -34,7 +34,7 @@ import { useGado } from '@/data/store';
 import { useToasts } from '@/data/toasts';
 import type { Convite, MembroExploracao, RoleMembro } from '@/data/types';
 import { t } from '@/i18n';
-import { colors, radii, spacing } from '@/theme';
+import { colors, fontFamily, radii, spacing } from '@/theme';
 
 type MembroComNome = MembroExploracao & { nome: string };
 
@@ -731,7 +731,7 @@ export default function EquipaExploracaoScreen() {
                   ? `Código (válido até ${formatDataHora(codigoNovo.acessoAte)})`
                   : 'Código (válido 7 dias)'}
               </Text>
-              <Text style={{ fontFamily: 'Nunito_800ExtraBold', fontSize: 32, letterSpacing: 3, color: colors.primaryDark, marginVertical: 4 }}>
+              <Text style={{ fontFamily: fontFamily.monoForte, fontSize: 32, letterSpacing: 3, color: colors.primaryDark, marginVertical: 4 }}>
                 {codigoNovo.codigo}
               </Text>
               <Text variant="secondary" color={colors.textSecondary} center style={{ marginBottom: spacing.sm }}>

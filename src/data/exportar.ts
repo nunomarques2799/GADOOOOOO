@@ -18,6 +18,7 @@ import { Platform, Share } from 'react-native';
 import type { Tabela } from './excelFicheiro';
 import type { Lancamento } from './financas';
 import { diaIso, formatDataCurta, formatDataPt } from './helpers';
+import { LOGO_SVG } from './logoImpressao';
 import type { Alerta, AlertaGravidade, Animal, Evento } from './types';
 
 /* ---------- Primitivas ---------- */
@@ -197,10 +198,13 @@ export function descricaoFiltroPrazos(filtro: FiltroPrazos): string {
 
 /* ---------- Relatório imprimível de prazos (→ PDF via impressão) ---------- */
 
+// Os tons VIVOS da cor funcional (`dangerVivo`, `warningVivo`, `info` em
+// `theme/tokens.ts`): na folha são pontos, sem letra por cima. Hex e não
+// `colors`, porque o papel não muda com a paleta escolhida no ecrã.
 const CoresGravidade: Record<Alerta['gravidade'], string> = {
-  urgente: '#d45b3b',
-  aviso: '#e39a2e',
-  info: '#3b82c4',
+  urgente: '#C0613A',
+  aviso: '#DDA54A',
+  info: '#3D6583',
 };
 
 function escaparHtml(s: string): string {
@@ -253,11 +257,11 @@ export function htmlRelatorioPrazos(
   return `
     <header>
       <div class="marca">
-        <!-- As iniciais da app, que se chama Terrabovina. Ficou "GG" (de
-             "Gestão de Gado") na folha impressa depois de a app mudar de nome:
-             o rodapé já dizia Terrabovina e o cabeçalho continuava a assinar
-             com o nome antigo, na única coisa que sai da app em papel. -->
-        <span class="logo">TB</span>
+        <!-- O logótipo da app, que se chama Terrabovina. Ficou "GG" (de
+             "Gestão de Gado") na folha impressa depois de a app mudar de nome,
+             e depois "TB" num quadrado verde até à marca nova: é a única
+             coisa que sai da app em papel, e assina como a app. -->
+        <span class="logo">${LOGO_SVG}</span>
         <div>
           <h1>Relatório de prazos</h1>
           <p>${nomeExploracao ? escaparHtml(nomeExploracao) + ' · ' : ''}${dataHoje}</p>
@@ -361,26 +365,28 @@ function documentoRelatorio(
 <title>${escaparHtml(titulo)}</title>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: system-ui, "Segoe UI", sans-serif; color: #15251c; margin: 32px; }
-  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 2px solid #166b3d; padding-bottom: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  body { font-family: system-ui, "Segoe UI", sans-serif; color: #22281a; margin: 32px; }
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 2px solid #3a4a2c; padding-bottom: 16px; margin-bottom: 20px; flex-wrap: wrap; }
   .marca { display: flex; align-items: center; gap: 12px; }
-  .logo { width: 44px; height: 44px; border-radius: 12px; background: #166b3d; color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-  h1 { font-size: 22px; margin: 0; }
-  header p { margin: 2px 0 0; color: #54655b; font-size: 13px; }
-  header p.filtro { color: #869184; font-size: 12px; font-style: italic; }
+  .logo { width: 52px; height: 52px; flex: none; }
+  .logo svg { display: block; width: 100%; height: 100%; }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-size: 23px; margin: 0; }
+  header p { margin: 2px 0 0; color: #5b604d; font-size: 13px; }
+  header p.filtro { color: #5d624e; font-size: 12px; font-style: italic; }
   .resumo { display: flex; gap: 8px; flex-wrap: wrap; }
   .pill { font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 999px; }
-  .pill.urg { background: #fbe7e0; color: #d45b3b; }
-  .pill.avi { background: #fbf0dc; color: #b8760f; }
-  .pill.tot { background: #eef8f1; color: #166b3d; }
+  .pill.urg { background: #f4ddd3; color: #9e4b2a; }
+  .pill.avi { background: #f6e5c5; color: #875d17; }
+  .pill.tot { background: #e2e5d3; color: #2b3621; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; color: #54655b; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 8px; border-bottom: 1.5px solid #e3eae0; }
-  td { padding: 10px 8px; border-bottom: 1px solid #eef2ec; vertical-align: top; }
+  th { text-align: left; color: #5b604d; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 8px; border-bottom: 1.5px solid #e3d8c5; }
+  td { padding: 10px 8px; border-bottom: 1px solid #ece3d3; vertical-align: top; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; margin-right: 7px; }
   .prazo { white-space: nowrap; font-weight: 700; }
-  .vazio { text-align: center; color: #54655b; padding: 24px; }
-  footer { margin-top: 24px; color: #869184; font-size: 11px; border-top: 1px solid #e3eae0; padding-top: 12px; }
-  .btn-print { margin: 0 0 20px; padding: 10px 16px; font-size: 14px; font-weight: 700; color: #fff; background: #1b7a48; border: none; border-radius: 10px; cursor: pointer; }
+  .vazio { text-align: center; color: #5b604d; padding: 24px; }
+  footer { margin-top: 24px; color: #5d624e; font-size: 11px; border-top: 1px solid #e3d8c5; padding-top: 12px; }
+  .btn-print { margin: 0 0 20px; padding: 10px 16px; font-size: 14px; font-weight: 700; color: #fbf7f0; background: #3a4a2c; border: none; border-radius: 16px; cursor: pointer; }
+  .logo, .dot, .pill { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   @media print { .btn-print { display: none; } body { margin: 0; } }
 </style></head>
 <body>

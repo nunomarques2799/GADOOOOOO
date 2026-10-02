@@ -16,9 +16,12 @@ import type { Alerta, AlertaGravidade } from '@/data/types';
 import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
-/** A cor de cada gravidade. Semânticas — não mudam com a paleta escolhida. */
+/**
+ * A cor de cada gravidade, nos tons VIVOS: aqui são pontos, sem letra por cima.
+ * Semânticas — não mudam com a paleta escolhida.
+ */
 function corDe(g: AlertaGravidade): string {
-  return g === 'urgente' ? colors.danger : g === 'aviso' ? colors.warning : colors.info;
+  return g === 'urgente' ? colors.dangerVivo : g === 'aviso' ? colors.warningVivo : colors.info;
 }
 
 /**
@@ -84,7 +87,9 @@ export function CalendarioAgenda({
           accessibilityRole="button"
           accessibilityLabel={noMesDeHoje ? rotuloMes(ano, mes) : t('calendario.voltarAHoje')}
           style={({ pressed }) => [{ flex: 1 }, pressed && !noMesDeHoje && { opacity: 0.6 }]}>
-          <Text variant="h3" center numberOfLines={1}>
+          {/* Duas linhas e não reticências: a 258px "outubro de 2026" não
+              cabe entre as setas, e "outubro…" não diz de que ano é. */}
+          <Text variant="h3" center numberOfLines={2}>
             {rotuloMes(ano, mes)}
           </Text>
           {/* Só aparece fora do mês corrente, e é o próprio título que serve de
@@ -92,18 +97,18 @@ export function CalendarioAgenda({
               fazer nada onze meses em doze. */}
           {!noMesDeHoje ? (
             <Text variant="caption" color={colors.primary} center>
-              voltar a hoje
+              {t('calendario.voltarAHojeCurto')}
             </Text>
           ) : null}
         </Pressable>
         <Seta icon="chevron-right" label={t('calendario.mesSeguinte')} onPress={() => andar(1)} />
       </View>
 
-      {/* Iniciais dos dias, de segunda a domingo */}
+      {/* Iniciais dos dias, de segunda a domingo, em rótulo (guia de estilo) */}
       <View style={{ flexDirection: 'row' }}>
         {diasDaSemana().map((d, i) => (
           <View key={i} style={{ flex: 1, alignItems: 'center', paddingVertical: 2 }}>
-            <Text variant="caption" color={colors.textMuted}>
+            <Text variant="rotulo" color={colors.textSecondary}>
               {d}
             </Text>
           </View>
@@ -179,21 +184,20 @@ function Dia({
       ]}>
       <View
         style={{
-          width: 34,
-          height: 34,
-          borderRadius: radii.pill,
+          width: 38,
+          height: 38,
+          // Hoje é um quadrado de cantos redondos, cheio da cor da marca, como
+          // no guia; os outros dias com marcas levam um círculo claro. As duas
+          // formas são diferentes de propósito: cheio e redondo ao mesmo tempo,
+          // hoje parecia só o dia com mais coisas marcadas.
+          borderRadius: hoje ? radii.md : radii.pill,
           alignItems: 'center',
           justifyContent: 'center',
-          // Hoje leva contorno em vez de preenchimento: preenchido, competia
-          // com os pontos por baixo e o dia de hoje passava a parecer o dia com
-          // mais coisas marcadas.
-          borderWidth: hoje ? 2 : 0,
-          borderColor: colors.primary,
-          backgroundColor: !hoje && !vazio && doMes ? colors.surfaceSunken : 'transparent',
+          backgroundColor: hoje ? colors.primary : !vazio && doMes ? colors.surfaceSunken : 'transparent',
         }}>
         <Text
-          variant={vazio ? 'body' : 'bodyStrong'}
-          color={doMes ? colors.text : colors.textMuted}>
+          variant={vazio && !hoje ? 'body' : 'bodyStrong'}
+          color={hoje ? colors.onPrimary : doMes ? colors.text : colors.textMuted}>
           {numero}
         </Text>
       </View>
@@ -242,11 +246,13 @@ function Seta({
           borderRadius: radii.pill,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: colors.surfaceAlt,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.border,
         },
         pressed && { opacity: 0.7 },
       ]}>
-      <Icon name={icon} size="lg" color={colors.primaryDark} />
+      <Icon name={icon} size="lg" color={colors.text} />
     </Pressable>
   );
 }

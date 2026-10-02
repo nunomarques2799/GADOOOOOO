@@ -35,7 +35,7 @@
     "android": {
       "package": "com.gestaogado.app",
       "adaptiveIcon": {
-        "backgroundColor": "#1B7A48",
+        "backgroundColor": "#3A4A2C",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -55,8 +55,8 @@
       "name": "Terrabovina",
       "shortName": "Terrabovina",
       "description": "Gestão pecuária offline-first para criadores em Portugal.",
-      "themeColor": "#0f7d33",
-      "backgroundColor": "#1b7a48",
+      "themeColor": "#F3EBDD",
+      "backgroundColor": "#F3EBDD",
       "display": "standalone",
       "startUrl": "/",
       "orientation": "any"
@@ -66,7 +66,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1B7A48",
+          "backgroundColor": "#F3EBDD",
           "image": "./assets/images/splash-terrabovina.png",
           "imageWidth": 160
         }
@@ -76,7 +76,7 @@
       [
         "expo-notifications",
         {
-          "color": "#0f7d33",
+          "color": "#3A4A2C",
           "defaultChannel": "alertas"
         }
       ],

@@ -26,7 +26,10 @@
  */
 
 // Mudar esta versão descarta as caches antigas no próximo arranque.
-const CACHE = 'gado-v1';
+// v2 (2026-10-02): a marca nova. Os ícones e o manifesto mudaram de desenho
+// mas não de nome, e com a v1 a app instalada mostrava o ícone verde antigo
+// até à segunda abertura (a cache serve primeiro e só revalida depois).
+const CACHE = 'gado-v2';
 
 // O documento que a app serve em qualquer rota (é uma SPA: o Netlify responde
 // com o index.html a tudo). É esta a cópia que abre a app quando não há rede.
@@ -42,7 +45,14 @@ self.addEventListener('install', (evento) => {
       // falta abortava a instalação inteira e a app ficava sem funcionar
       // offline sem nada o indicar.
       await Promise.all(
-        [CASCA, '/manifest.json', '/icons/icone-192.png', '/icons/icone-512.png'].map((caminho) =>
+        [
+          CASCA,
+          '/manifest.json',
+          '/icons/icone-192.png',
+          '/icons/icone-512.png',
+          '/icons/icone-512-mascara.png',
+          '/icons/apple-touch-icon.png',
+        ].map((caminho) =>
           cache.add(caminho).catch(() => undefined)
         )
       );

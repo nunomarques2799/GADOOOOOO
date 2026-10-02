@@ -16,9 +16,12 @@ import type { Alerta, AlertaGravidade } from '@/data/types';
 import { t } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
-/** A cor de cada gravidade. Semânticas — não mudam com a paleta escolhida. */
+/**
+ * A cor de cada gravidade, nos tons VIVOS: aqui são pontos, sem letra por cima.
+ * Semânticas — não mudam com a paleta escolhida.
+ */
 function corDe(g: AlertaGravidade): string {
-  return g === 'urgente' ? colors.danger : g === 'aviso' ? colors.warning : colors.info;
+  return g === 'urgente' ? colors.dangerVivo : g === 'aviso' ? colors.warningVivo : colors.info;
 }
 
 /**
@@ -285,7 +288,9 @@ function Dia({
         style={{
           width: 38,
           height: 38,
-          borderRadius: radii.pill,
+          // O dia escolhido é o quadrado cheio da marca, como o "hoje" do
+          // calendário do Início (guia de estilo).
+          borderRadius: escolhido ? radii.md : radii.pill,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: escolhido ? colors.primary : 'transparent',

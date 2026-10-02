@@ -9,8 +9,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#1b7a48",
-  "theme_color": "#0f7d33",
+  "background_color": "#F3EBDD",
+  "theme_color": "#F3EBDD",
   "categories": ["business", "productivity"],
   "icons": [
     {
@@ -26,7 +26,7 @@
       "purpose": "any"
     },
     {
-      "src": "/icons/icone-512.png",
+      "src": "/icons/icone-512-mascara.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

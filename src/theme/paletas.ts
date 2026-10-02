@@ -1,9 +1,14 @@
 /**
  * PALETAS — o aspeto da app, à escolha do criador.
  * ------------------------------------------------------------------
- * A app nasceu toda verde. O verde continua a ser o que vem de origem, mas
- * quem passa o dia com ela ao sol, ou tem pouca visão, pode preferir outra
- * coisa — daí o ecrã "Aspeto da app" nas Definições.
+ * A app nasceu toda verde. Desde 2026-10-02 a de origem é a "Terrabovina", a
+ * do guia de estilo da marca (oliveira, creme, areia); o verde de antes ficou
+ * na lista como "Campo". Quem passa o dia com a app ao sol, ou tem pouca visão,
+ * pode preferir outra coisa — daí o ecrã "Aspeto da app" nas Definições.
+ *
+ * A escolha só fica gravada quando alguém escolhe (ver `preferencia.ts`): quem
+ * nunca abriu esse ecrã está na de origem e mudou de cara com a marca, e quem
+ * escolheu uma (incluindo o "Campo") continua com a sua.
  *
  * O QUE MUDA E O QUE NÃO MUDA
  *
@@ -63,6 +68,7 @@ export type TokensPaleta = {
 
 export type PaletaId =
   // Verdes
+  | 'terrabovina'
   | 'campo'
   | 'oliveira'
   | 'hortela'
@@ -125,15 +131,50 @@ export type Paleta = {
 /**
  * As primeiras, desenhadas token a token.
  *
- * Ficam à mão porque são as mais usadas e porque a `campo` é a de origem: se
- * passasse a ser gerada, a app inteira mudava de tom no dia em que alguém
- * afinasse o gerador. As outras vêm de `derivar()`.
+ * Ficam à mão porque são as mais usadas e porque a `terrabovina` é a de
+ * origem: se passasse a ser gerada, a app inteira mudava de tom no dia em que
+ * alguém afinasse o gerador. As outras vêm de `derivar()`.
  */
 const DESENHADAS: Paleta[] = [
   {
+    // A do guia de estilo, com os nomes que lá têm: oliveira nos botões e no
+    // separador ativo, creme no fundo (encandeia menos ao sol do que o
+    // branco), superfície nos cartões, areia no que fica atrás (retratos dos
+    // animais, zonas de fundo), tinta no texto. As cores com significado
+    // (terracota, ocre, saúde) são fixas e vivem em `tokens.ts`.
+    id: 'terrabovina',
+    nome: 'Terrabovina',
+    descricao: 'As cores da marca: oliveira, creme e areia.',
+    familia: 'Verdes',
+    tokens: {
+      primary: '#3A4A2C', // oliveira
+      primaryDark: '#2B3621', // oliveira escura
+      primaryDarker: '#22281A',
+      primaryTint: '#E2E5D3',
+      primaryTintStrong: '#D5D9C2',
+      onPrimary: '#FBF7F0',
+      textOnDark: '#FBF7F0',
+      textOnDarkMuted: 'rgba(251,247,240,0.82)',
+      headerFrom: '#2B3621',
+      headerTo: '#3A4A2C',
+      background: '#F3EBDD', // creme
+      surface: '#FBF7F0', // superfície
+      surfaceAlt: '#E8DCC8', // areia
+      surfaceSunken: '#ECE3D3',
+      text: '#22281A', // tinta
+      textSecondary: '#5B604D',
+      // Quase o secundário: tem de passar os 4,5:1 também sobre a areia, que
+      // é bem mais escura do que os fundos das outras paletas.
+      textMuted: '#5D624E',
+      border: '#E3D8C5', // linha
+      borderStrong: '#CFC2AC',
+      overlay: 'rgba(34, 40, 26, 0.57)',
+    },
+  },
+  {
     id: 'campo',
     nome: 'Campo',
-    descricao: 'O verde de sempre.',
+    descricao: 'O verde com que a app nasceu.',
     familia: 'Verdes',
     tokens: {
       primary: '#1B7A48',
@@ -394,33 +435,36 @@ const DESENHADAS: Paleta[] = [
     descricao: 'Fundo escuro, para a ronda antes do amanhecer.',
     familia: 'Escuros',
     escura: true,
-    // A única paleta de fundo escuro. O modelo de tokens foi feito para fundos
-    // claros, e aqui os papéis invertem-se: o `primary*` é a rampa CLARA (verdes
-    // vivos, para se lerem sobre o escuro e servirem de texto de marca), e o
-    // `onPrimary` é escuro (o texto sobre o botão verde). O cabeçalho também é
-    // claro — daí o `textOnDark` ser escuro, ao contrário de todas as outras.
+    // A única paleta de fundo escuro, nos tons da marca: o guia põe a
+    // oliveira escura no fundo do modo escuro, e o creme passa a ser a letra.
+    // O modelo de tokens foi feito para fundos claros, e aqui os papéis
+    // invertem-se: o `primary*` é a rampa CLARA (oliveiras claras, para se
+    // lerem sobre o escuro e servirem de texto de marca), e o `onPrimary` é
+    // escuro (o texto sobre o botão). O cabeçalho também é claro — daí o
+    // `textOnDark` ser escuro, ao contrário de todas as outras. As cores com
+    // significado também mudam de tom aqui (ver `fixasEscuras` em `tokens.ts`).
     // Cada par foi verificado contra os mínimos WCAG (ver o teste); mexer numa
     // destas cores exige voltar a corrê-lo.
     tokens: {
-      primary: '#2FA163',
-      primaryDark: '#63CE90',
-      primaryDarker: '#8BE0B0',
-      primaryTint: '#17271E',
-      primaryTintStrong: '#1E3328',
-      onPrimary: '#06160E',
-      textOnDark: '#06160E',
-      textOnDarkMuted: 'rgba(6, 22, 14, 0.72)',
-      headerFrom: '#2C9257',
-      headerTo: '#43B074',
-      background: '#0E1411',
-      surface: '#1A231E',
-      surfaceAlt: '#212B25',
-      surfaceSunken: '#131A16',
-      text: '#EAF1EC',
-      textSecondary: '#AEBEB4',
-      textMuted: '#9DADA2',
-      border: '#2A362E',
-      borderStrong: '#3A4A40',
+      primary: '#A3B67F',
+      primaryDark: '#C2D2A2',
+      primaryDarker: '#D7E3C1',
+      primaryTint: '#29321F',
+      primaryTintStrong: '#323D26',
+      onPrimary: '#141810',
+      textOnDark: '#141810',
+      textOnDarkMuted: 'rgba(20, 24, 16, 0.74)',
+      headerFrom: '#9AAE77',
+      headerTo: '#B3C493',
+      background: '#161B11',
+      surface: '#21281A',
+      surfaceAlt: '#2B3621', // oliveira escura
+      surfaceSunken: '#12160E',
+      text: '#F3EBDD', // creme
+      textSecondary: '#CBC4B2',
+      textMuted: '#BAB3A1',
+      border: '#323C27',
+      borderStrong: '#46523A',
       overlay: 'rgba(0, 0, 0, 0.60)',
     },
   },
@@ -535,7 +579,7 @@ export const PALETAS: Paleta[] = FAMILIAS.flatMap((f) =>
   [...DESENHADAS, ...DERIVADAS].filter((p) => p.familia === f),
 );
 
-export const PALETA_OMISSAO: PaletaId = 'campo';
+export const PALETA_OMISSAO: PaletaId = 'terrabovina';
 
 /** A paleta com este id, ou a de origem se o id não existir (dados antigos). */
 export function paletaPorId(id: string | null | undefined): Paleta {

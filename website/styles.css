@@ -2,11 +2,18 @@
    Terrabovina — landing site
    ------------------------------------------------------------------
    Direção: REGISTO. A estética do cadastro e do livro de exploração,
-   não a do site de startup. Papel neutro, verdes fundos e
-   dessaturados, contornos finos em vez de sombras, e todos os
-   identificadores, datas e contagens em algarismos tabulares
+   não a do site de startup. Contornos finos em vez de sombras, e todos
+   os identificadores, datas e contagens em algarismos tabulares
    monoespaçados — que é o mundo real deste produto (brincos, prazos,
    marcas de exploração).
+
+   MARCA (2026-10-02): as cores e as letras são as do guia de estilo da
+   app ("Terrabovina, novo estilo"). Papel creme, oliveira nos blocos
+   escuros e nas ligações, ocre para os prazos, terracota para o que é
+   urgente; Fraunces nos títulos (a serifa suave do logótipo), Atkinson
+   Hyperlegible Next no corpo, IBM Plex Mono nos dados. A paleta está
+   DUPLICADA em `legal.css` e no `<style>` do `recuperar.html`, que não
+   carregam esta folha: mexer aqui é mexer lá.
 
    TRÊS REGRAS que explicam quase todas as decisões abaixo:
 
@@ -14,69 +21,68 @@
       botões, marca, números, perguntas e pílulas; com tudo a berrar, a
       hierarquia passava a ser só tamanho. O máximo agora é 700, e é
       raro.
-   2. Um acento só (`--ambar`), reservado a PRAZO / ATENÇÃO. Se aparecer
-      âmbar, há uma data a contar. O verde-lima decorativo da versão
-      anterior saiu inteiro: era a cor mais saturada da página e servia
-      brilhos.
+   2. Um acento só (`--ambar`, o ocre da marca), reservado a PRAZO /
+      ATENÇÃO. Se aparecer ocre, há uma data a contar. (O terracota,
+      `--alerta`, só vive dentro do mockup, onde é a voz do "urgente".)
    3. Profundidade uma vez só. A sombra é do telemóvel, que é um objeto
       físico. Tudo o resto separa-se por linha de 1px. Nada levanta no
       hover.
 
-   O MOCKUP É A EXCEÇÃO DE PROPÓSITO: por dentro mantém a estética da
-   app (cantos redondos, verde mais vivo, Nunito), porque é a app que
-   ele está a mostrar. O site é a moldura, a app é o conteúdo.
+   O MOCKUP mostra a app tal como ela é por dentro (o creme, os cartões
+   de cantos largos, a inicial em Fraunces): o site é a moldura, a app é
+   o conteúdo. Os tokens dele estão no `.phone`, mais abaixo.
    ================================================================== */
 
 :root {
   /* ---- Papel ---- */
-  --papel: #eeeee8;        /* fundo geral: cinza quente com um sopro de verde */
-  --papel-2: #e5e6de;      /* secções alternadas */
-  --cartao: #fbfbf7;       /* cartões e faixas */
+  --papel: #f3ebdd;        /* fundo geral: o creme da marca */
+  --papel-2: #ece3d3;      /* secções alternadas */
+  --cartao: #fbf7f0;       /* cartões e faixas: a "superfície" da app */
 
   /* ---- Tinta ---- */
-  --tinta: #14201a;        /* texto principal (verde quase preto) */
-  --tinta-2: #4c584f;      /* secundário */
-  --tinta-3: #7c877e;      /* rótulos, legendas, números de passo */
+  --tinta: #22281a;        /* texto principal (oliveira quase preta) */
+  --tinta-2: #5b604d;      /* secundário */
+  --tinta-3: #5d624e;      /* rótulos, legendas, números de passo (5,3:1 no creme) */
 
-  /* ---- Verdes de estrutura ---- */
-  --mata: #1b3226;         /* blocos escuros */
-  --mata-funda: #0d1912;   /* o mais escuro (banda final) */
-  --musgo: #3d5a45;        /* links, ícones, foco */
-  --musgo-claro: #6e8a75;
+  /* ---- Oliveiras de estrutura ---- */
+  --mata: #2b3621;         /* blocos escuros: a oliveira escura */
+  --mata-funda: #22281a;   /* o mais escuro (banda final) */
+  --musgo: #3a4a2c;        /* links, ícones, foco: a oliveira da marca */
+  --musgo-claro: #6e7a5c;
 
-  /* ---- O único acento: prazo / atenção ---- */
-  --ambar: #8a5713;        /* sobre papel */
-  --ambar-claro: #e0b354;  /* sobre mata */
-  --ambar-veu: #f2e7d0;
+  /* ---- O único acento: prazo / atenção (o ocre da marca) ---- */
+  --ambar: #875d17;        /* sobre papel: o ocre de letra (4,9:1) */
+  --ambar-claro: #dda54a;  /* sobre mata: o ocre do guia */
+  --ambar-veu: #f6e5c5;
 
-  /* ---- Alerta (só dentro do mockup) ---- */
-  --alerta: #a33b1c;
-  --alerta-veu: #f4e3db;
+  /* ---- Alerta (só dentro do mockup): o terracota ---- */
+  --alerta: #9e4b2a;
+  --alerta-veu: #f4ddd3;
 
   /* ---- Linhas ---- */
-  --linha: #dcddd3;
-  --linha-forte: #c3c5b8;
-  --linha-clara: rgba(244, 244, 238, 0.16);
+  --linha: #e3d8c5;
+  --linha-forte: #cfc2ac;
+  --linha-clara: rgba(243, 235, 221, 0.16);
 
   /* ---- Sobre fundo escuro ---- */
-  --sobre-mata: #f4f4ee;
-  --sobre-mata-2: rgba(244, 244, 238, 0.7);
+  --sobre-mata: #f3ebdd;
+  --sobre-mata-2: rgba(243, 235, 221, 0.74);
 
   /* ---- Tipos ---- */
-  --display: "Bricolage Grotesque", "Nunito", system-ui, sans-serif;
-  --corpo: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Fraunces", Georgia, "Times New Roman", serif;
+  --corpo: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 
-  /* ---- Raios: precisos, não fofos ----
-     O 5px do `--r-sm` não é ao acaso: é o raio do badge da App Store
-     (5.5/40 da altura da arte), para os botões do site rimarem com ele. */
-  --r-xs: 3px;
-  --r-sm: 5px;
-  --r-md: 8px;
-  --r-lg: 12px;
+  /* ---- Raios ----
+     Mais macios do que eram (3–12px), para rimarem com a app: lá os campos
+     são de 14, os botões de 16 e os cartões de 20. */
+  --r-xs: 4px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
 
   /* Uma sombra só, e é do telemóvel. */
-  --sombra-objeto: 0 28px 64px rgba(13, 25, 18, 0.18), 0 4px 14px rgba(13, 25, 18, 0.07);
+  --sombra-objeto: 0 28px 64px rgba(34, 40, 26, 0.18), 0 4px 14px rgba(34, 40, 26, 0.07);
 
   --maxw: 1180px;
   --nav-h: 68px;
@@ -107,18 +113,21 @@ a { color: inherit; text-decoration: none; }
 .bloco-escuro :focus-visible { outline-color: var(--ambar-claro); }
 
 /* ---------- Tipografia ---------- */
+/* Fraunces a 600, com o eixo SOFT a 100: é a serifa suave do logótipo,
+   como na app. A ótica (`opsz`) segue o tamanho sozinha. */
 h1, h2, h3 {
   font-family: var(--display);
   font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 100;
   font-weight: 600;
-  line-height: 1.08;
-  letter-spacing: -0.02em;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 /* `text-wrap: balance` reparte as linhas de forma igual em vez de
    encher a primeira e deixar uma palavra sozinha na última ("cálculo",
    "minutos"). Onde não pega, o texto quebra como sempre. */
 h1, h2 { text-wrap: balance; }
-h1 { font-weight: 700; letter-spacing: -0.032em; line-height: 1.09; }
+h1 { letter-spacing: -0.015em; line-height: 1.08; }
 h2 { font-size: clamp(1.85rem, 3.6vw, 2.85rem); }
 h3 { font-size: 1.16rem; }
 
@@ -163,32 +172,34 @@ h3 { font-size: 1.16rem; }
 .btn-primario { background: var(--mata); color: var(--sobre-mata); }
 .btn-primario:hover { background: var(--mata-funda); }
 .btn-secundario { background: transparent; color: var(--tinta); border-color: var(--linha-forte); }
-.btn-secundario:hover { border-color: var(--tinta); background: rgba(20, 32, 26, 0.04); }
+.btn-secundario:hover { border-color: var(--tinta); background: rgba(34, 40, 26, 0.04); }
 .btn-lg { padding: 17px 28px; font-size: 1.05rem; }
 
 /* ---------- Nav ---------- */
 .nav {
   position: sticky; top: 0; z-index: 50; height: var(--nav-h);
   display: flex; align-items: center;
-  background: rgba(238, 238, 232, 0.86);
+  background: rgba(243, 235, 221, 0.86);
   backdrop-filter: saturate(140%) blur(12px);
   border-bottom: 1px solid transparent;
   transition: border-color 0.2s ease, background 0.2s ease;
 }
-.nav.scrolled { border-color: var(--linha); background: rgba(238, 238, 232, 0.95); }
+.nav.scrolled { border-color: var(--linha); background: rgba(243, 235, 221, 0.95); }
 .nav .container { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .marca {
   display: flex; align-items: center; gap: 10px;
-  font-family: var(--display); font-weight: 600; font-size: 1.1rem; letter-spacing: -0.02em;
+  font-family: var(--display); font-variation-settings: "SOFT" 100;
+  font-weight: 600; font-size: 1.25rem; letter-spacing: -0.01em;
 }
-.marca img, .marca svg { width: 32px; height: 32px; border-radius: var(--r-md); }
+/* O logótipo é redondo: a vaca e as espigas num círculo de oliveira. */
+.marca img, .marca svg { width: 38px; height: 38px; border-radius: 50%; }
 .nav-links { display: flex; align-items: center; gap: 4px; }
 .nav-links a {
   padding: 8px 13px; border-radius: var(--r-sm); font-weight: 600;
   color: var(--tinta-2); font-size: 0.95rem;
   transition: background 0.15s, color 0.15s;
 }
-.nav-links a:hover { background: rgba(20, 32, 26, 0.05); color: var(--tinta); }
+.nav-links a:hover { background: rgba(34, 40, 26, 0.05); color: var(--tinta); }
 .nav-cta { display: flex; align-items: center; gap: 10px; }
 .nav-cta .btn { padding: 11px 18px; font-size: 0.94rem; }
 .nav-toggle {
@@ -238,56 +249,84 @@ h3 { font-size: 1.16rem; }
 .plataformas li:last-child::after { content: none; }
 
 /* ---------- Mockup do telemóvel ----------
-   Por dentro é a app, e a app tem a estética dela: cantos redondos,
-   verde mais vivo, Nunito. Os tokens ficam todos aqui em cima para que
-   mexer na paleta do SITE não descaracterize a captura da APP. */
+   Por dentro é a app, e a app tem a estética dela: o Início do guia de
+   estilo, com o logótipo e a exploração em cima, a saudação em Fraunces
+   e os avisos em cartões, com o prazo em mono. Os tokens ficam todos aqui
+   em cima para que mexer na paleta do SITE não descaracterize a APP. */
 .mock { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .mock figcaption { color: var(--tinta-3); }
 .phone {
-  --ap-fundo: #f1f4ef;
-  --ap-cartao: #ffffff;
-  --ap-linha: #e2e8df;
-  --ap-verde: #1e4630;
-  --ap-verde-2: #2a5e3c;
-  --ap-texto: #15251c;
-  --ap-texto-2: #54655b;
-  --ap-muted: #869184;
+  --ap-fundo: #f3ebdd;
+  --ap-cartao: #fbf7f0;
+  --ap-linha: #e3d8c5;
+  --ap-oliveira: #3a4a2c;
+  --ap-texto: #22281a;
+  --ap-texto-2: #5b604d;
+  --ap-em-dia: #4e6b37;
 
   position: relative; width: 318px; max-width: 82vw;
-  background: #0f2418; border-radius: 42px; padding: 11px;
+  background: #1d2316; border-radius: 42px; padding: 11px;
   box-shadow: var(--sombra-objeto);
 }
-.phone-screen { background: var(--ap-fundo); border-radius: 32px; overflow: hidden; height: 620px; font-family: var(--corpo); }
-.app-header { background: var(--ap-verde); color: #fff; padding: 22px 18px 24px; border-radius: 0 0 24px 24px; }
-.app-header .hi { font-size: 0.88rem; opacity: 0.8; font-weight: 600; }
-.app-header .name { font-size: 1.42rem; font-weight: 700; margin-top: 1px; letter-spacing: -0.01em; }
-.weather-chip {
-  margin-top: 15px; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 14px; padding: 11px 13px; display: flex; align-items: center; gap: 12px;
+.phone-screen { background: var(--ap-fundo); color: var(--ap-texto); border-radius: 32px; overflow: hidden; height: 620px; font-family: var(--corpo); }
+/* A Fraunces da app: títulos, o nome da exploração e a inicial da conta. */
+.app-top .ex-n, .app-ola, .app-sec b, .app-av, .stat .n {
+  font-family: var(--display); font-variation-settings: "SOFT" 100; font-weight: 600;
 }
-.weather-chip .temp { font-size: 1.5rem; font-weight: 500; }
-.weather-chip .wx-t { font-size: 0.78rem; opacity: 0.85; font-weight: 600; }
-.weather-chip svg { width: 30px; height: 30px; margin-left: auto; }
-.app-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-.app-section-t { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ap-muted); margin: 4px 2px; font-family: var(--mono); }
-.mini-card { background: var(--ap-cartao); border: 1px solid var(--ap-linha); border-radius: 14px; padding: 11px 13px; }
-.alert-row { display: flex; align-items: center; gap: 11px; }
-.alert-ic { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex-shrink: 0; }
-.alert-ic svg { width: 20px; height: 20px; }
+.app-top { display: flex; align-items: center; gap: 9px; padding: 22px 16px 0; }
+.app-top .logo { width: 36px; height: 36px; border-radius: 50%; flex: none; }
+.app-top .ex { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.app-top .ex-r { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ap-texto-2); }
+.app-top .ex-n { font-size: 0.98rem; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-sino { position: relative; width: 34px; height: 34px; border-radius: 50%; background: var(--ap-cartao); border: 1px solid var(--ap-linha); display: grid; place-items: center; flex: none; }
+.app-sino svg { width: 17px; height: 17px; }
+.app-sino i { position: absolute; top: 7px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: #c0613a; border: 1.5px solid var(--ap-cartao); }
+.app-av { width: 34px; height: 34px; border-radius: 50%; background: var(--ap-oliveira); color: #fbf7f0; display: grid; place-items: center; font-size: 1rem; flex: none; }
+.app-ola { font-size: 1.6rem; line-height: 1.1; letter-spacing: -0.01em; padding: 18px 16px 0; }
+.app-data { display: flex; align-items: center; gap: 5px; padding: 6px 16px 0; font-size: 0.76rem; color: var(--ap-texto-2); }
+.app-data svg { width: 13px; height: 13px; color: var(--ap-em-dia); flex: none; }
+.app-body { padding: 16px 14px 14px; display: flex; flex-direction: column; gap: 9px; }
+.app-sec { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 2px; }
+.app-sec b { font-size: 1rem; }
+.app-sec .pilula { background: var(--alerta); color: #fff; font-size: 0.66rem; font-weight: 700; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+.mini-card { background: var(--ap-cartao); border: 1px solid var(--ap-linha); border-radius: 16px; padding: 11px 12px; }
+.alert-row { display: flex; align-items: center; gap: 10px; }
+.alert-ic { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; }
+.alert-ic svg { width: 18px; height: 18px; }
 .alert-ic.danger { background: var(--alerta-veu); color: var(--alerta); }
 .alert-ic.warn { background: var(--ambar-veu); color: var(--ambar); }
-.alert-row .a-t { font-weight: 700; font-size: 0.9rem; color: var(--ap-texto); }
-/* O PRAZO é o que a app faz por si, por isso é a única coisa do mockup
-   escrita na voz de dados: mono, tabular e em âmbar. */
-.alert-row .a-s { font-size: 0.76rem; color: var(--ap-texto-2); font-weight: 500; }
-.alert-row .a-s .prazo { color: var(--ambar); font-weight: 600; }
-.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.stat { background: var(--ap-cartao); border: 1px solid var(--ap-linha); border-radius: 14px; padding: 11px 13px; }
-.stat .n { font-size: 1.5rem; font-weight: 500; color: var(--ap-verde); line-height: 1.2; }
-.stat .l { font-size: 0.76rem; color: var(--ap-texto-2); font-weight: 600; display: flex; align-items: center; gap: 5px; }
-.stat .l svg { width: 14px; height: 14px; color: var(--ap-verde-2); flex: none; }
-.app-acao { display: flex; align-items: center; gap: 10px; background: var(--ap-verde); color: #fff; border-radius: 14px; padding: 12px 13px; font-weight: 700; font-size: 0.9rem; }
-.app-acao svg { width: 19px; height: 19px; flex: none; }
+.alert-row .a-txt { flex: 1; min-width: 0; }
+.alert-row .a-t { font-weight: 700; font-size: 0.86rem; color: var(--ap-texto); line-height: 1.25; }
+.alert-row .a-s { font-size: 0.72rem; color: var(--ap-texto-2); }
+/* O PRAZO é o que a app faz por si, por isso é escrito na voz de dados:
+   mono, tabular, terracota no que é urgente e ocre no resto. */
+.alert-row .prazo { font-size: 0.76rem; font-weight: 500; white-space: nowrap; color: var(--alerta); }
+.alert-row .prazo.semana { color: var(--ambar); }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.stat { background: var(--ap-cartao); border: 1px solid var(--ap-linha); border-radius: 16px; padding: 10px 12px; }
+.stat .n { font-size: 1.5rem; color: var(--ap-texto); line-height: 1.2; }
+.stat .l { font-size: 0.74rem; color: var(--ap-texto-2); display: flex; align-items: center; gap: 5px; }
+.stat .l svg { width: 14px; height: 14px; color: var(--ap-oliveira); flex: none; }
+/* A barra de baixo da app, presa ao fundo do ecrã. */
+.phone-screen { position: relative; }
+.app-barra {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; align-items: flex-end;
+  background: var(--ap-cartao); border-top: 1px solid var(--ap-linha);
+  padding: 7px 2px 16px;
+}
+.app-barra span { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 0.56rem; color: var(--ap-texto-2); }
+.app-barra b { width: 40px; height: 24px; border-radius: 999px; display: grid; place-items: center; }
+.app-barra svg { width: 17px; height: 17px; }
+.app-barra .ativo { color: var(--ap-oliveira); font-weight: 700; }
+.app-barra .ativo b { background: #e2e5d3; }
+.app-barra .registar { color: var(--ap-oliveira); font-weight: 700; }
+.app-barra .registar i {
+  width: 46px; height: 46px; margin-top: -26px; border-radius: 50%;
+  background: var(--ap-oliveira); color: #fbf7f0; border: 4px solid var(--ap-fundo);
+  display: grid; place-items: center; box-shadow: 0 6px 14px rgba(34, 40, 26, 0.2);
+}
+.app-barra .registar svg { width: 19px; height: 19px; }
 
 /* ---------- Faixa de garantias ----------
    Sem ícones. Quatro colunas de texto separadas por linha vertical: a
@@ -311,7 +350,7 @@ h3 { font-size: 1.16rem; }
    palavra que o utilizador vê no separador lá dentro. */
 .grelha-func { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--linha); border: 1px solid var(--linha); border-radius: var(--r-lg); overflow: hidden; }
 .func { background: var(--cartao); padding: 30px 28px 32px; transition: background 0.18s ease; }
-.func:hover { background: #fff; }
+.func:hover { background: #fffdf8; }
 .func .fic { width: 40px; height: 40px; border-radius: var(--r-md); background: var(--papel-2); color: var(--musgo); display: grid; place-items: center; margin-bottom: 20px; }
 .func .fic svg { width: 22px; height: 22px; }
 .func .rotulo { display: block; margin-bottom: 8px; }
@@ -357,7 +396,7 @@ h3 { font-size: 1.16rem; }
    casa, que é uma coisa que se pode assinar. */
 .bloco-escuro { background: var(--mata); color: var(--sobre-mata); border-radius: var(--r-lg); padding: 44px 40px; }
 .bloco-escuro .rotulo { color: var(--ambar-claro); display: block; margin-bottom: 20px; }
-.principio { font-family: var(--display); font-size: 1.42rem; font-weight: 500; line-height: 1.32; letter-spacing: -0.015em; }
+.principio { font-family: var(--display); font-variation-settings: "SOFT" 100; font-size: 1.42rem; font-weight: 600; line-height: 1.32; letter-spacing: -0.01em; }
 .principio + .principio { margin-top: 16px; color: var(--sobre-mata-2); font-size: 1.06rem; line-height: 1.5; }
 .numeros { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 34px; border-top: 1px solid var(--linha-clara); }
 .numeros div { padding: 20px 14px 0 0; }
@@ -371,7 +410,7 @@ h3 { font-size: 1.16rem; }
 .faq-item { border-bottom: 1px solid var(--linha); }
 .faq-q {
   width: 100%; text-align: left; background: none; border: none; cursor: pointer;
-  padding: 24px 2px; font-family: var(--display); font-size: 1.1rem; font-weight: 600;
+  padding: 24px 2px; font-family: var(--display); font-variation-settings: "SOFT" 100; font-size: 1.1rem; font-weight: 600;
   color: var(--tinta); letter-spacing: -0.015em;
   display: flex; align-items: center; justify-content: space-between; gap: 20px;
 }
@@ -423,8 +462,8 @@ h3 { font-size: 1.16rem; }
   background: #fff; color: #000; border: 1px solid #000;
   border-radius: calc(var(--alt) * 0.1375);
   /* Explícito, e não herdado: as frações de texto abaixo foram acertadas
-     PARA A NUNITO. Se um dia o corpo do site trocar de tipo, o badge não
-     pode ir atrás sem se medir tudo outra vez. */
+     PARA A ATKINSON HYPERLEGIBLE NEXT. Se um dia o corpo do site trocar de
+     tipo, o badge não pode ir atrás sem se medir tudo outra vez. */
   font-family: var(--corpo);
 }
 .badge-proprio .badge-icone { width: calc(var(--alt) * 0.5); height: calc(var(--alt) * 0.5); flex: none; }
@@ -433,13 +472,15 @@ h3 { font-size: 1.16rem; }
    para" em duas linhas e o badge cresce em altura, que é a única medida que
    TEM de ser igual à do badge da Apple. */
 /* As frações do texto NÃO são as do ficheiro da Apple, e é de propósito. Lá o
-   corpo é ~8.5/40 e ~17/40, mas em SF Pro; o site escreve em Nunito, que com o
-   mesmo corpo desenha letra maior (a 20.4px dava maiúsculas de 15px onde a
-   Apple tem 14.1). Estes números foram acertados pela TINTA medida no canvas,
-   não pelo `font-size`, que é o que faz as duas fontes parecerem do mesmo
-   tamanho lado a lado. Ao trocar de tipo de letra, medir outra vez. */
-.badge-proprio .badge-l1 { font-size: calc(var(--alt) * 0.1875); line-height: 1.2; letter-spacing: 0.01em; white-space: nowrap; }
-.badge-proprio .badge-l2 { font-size: calc(var(--alt) * 0.385); font-weight: 700; line-height: 1.12; letter-spacing: -0.01em; white-space: nowrap; }
+   corpo é ~8.5/40 e ~17/40, mas em SF Pro. Estes números foram acertados pela
+   TINTA (altura das maiúsculas e das minúsculas), não pelo `font-size`, que é
+   o que faz as duas letras parecerem do mesmo tamanho lado a lado. Eram 0.385
+   e 0.1875 na Nunito; na Atkinson (2026-10-02) corrigiram-se pelas medidas
+   dos próprios ficheiros: maiúsculas 0,705 → 0,668 da linha (×1,055) na de
+   baixo, minúsculas 0,484 → 0,496 (×0,976) na de cima. Ao trocar de tipo de
+   letra, medir outra vez. */
+.badge-proprio .badge-l1 { font-size: calc(var(--alt) * 0.183); line-height: 1.2; letter-spacing: 0.01em; white-space: nowrap; }
+.badge-proprio .badge-l2 { font-size: calc(var(--alt) * 0.406); font-weight: 700; line-height: 1.12; letter-spacing: -0.01em; white-space: nowrap; }
 
 .banda-nota {
   margin: 28px auto 0; max-width: 62ch; font-size: 0.85rem; color: var(--sobre-mata-2);
@@ -578,21 +619,19 @@ h3 { font-size: 1.16rem; }
   .plataformas { justify-content: center; }
 
   /* Mockup só como amostra: o ecrã fica cortado e esbatido em baixo.
-     A LARGURA e a ALTURA aqui não são arredondamentos: a 218px a linha do
-     tempo ("Lameiro Grande · Céu limpo") partia em duas e empurrava o
-     primeiro aviso para fora do corte, e o que sobrava do mockup era um
-     cabeçalho verde sem nada dentro. A amostra tem de chegar para se ver
-     UM aviso de prazo, que é a coisa que a app faz. */
+     A LARGURA e a ALTURA aqui não são arredondamentos: a amostra tem de
+     chegar para se ver UM aviso de prazo inteiro, que é a coisa que a app
+     faz, e não só o cabeçalho. */
   .phone { width: 286px; padding: 9px; border-radius: 32px; }
   .phone-screen {
-    height: 312px; border-radius: 25px;
-    -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
-    mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
+    height: 330px; border-radius: 25px;
+    -webkit-mask-image: linear-gradient(180deg, #000 74%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 74%, transparent 100%);
   }
-  .app-header { padding: 14px 13px 16px; border-radius: 0 0 20px 20px; }
-  .app-header .name { font-size: 1.15rem; }
-  .weather-chip { margin-top: 10px; padding: 9px 11px; }
-  .app-body { padding: 10px; gap: 8px; }
+  .app-top { padding: 15px 13px 0; gap: 8px; }
+  .app-ola { font-size: 1.3rem; padding: 12px 13px 0; }
+  .app-data { padding: 4px 13px 0; }
+  .app-body { padding: 12px 10px 10px; gap: 8px; }
 
   /* ---- Faixa: 2x2 em vez de quatro linhas ---- */
   .faixa .container { grid-template-columns: 1fr 1fr; }

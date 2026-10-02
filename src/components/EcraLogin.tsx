@@ -1,9 +1,9 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BotoesLoginExterno } from '@/components/BotoesLoginExterno';
+import { Logotipo } from '@/components/Logotipo';
 import { ModalPapeis } from '@/components/ModalPapeis';
 import { Button, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
@@ -11,7 +11,7 @@ import { entraPorCodigo, intencoes, type Intencao } from '@/data/intencao';
 import { codigoSmsValido, normalizarTelemovel, type MetodoLogin } from '@/data/loginExterno';
 import { t } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
-import { colors, radii, shadow, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, shadow, sizes, spacing } from '@/theme';
 
 /**
  * `telemovel` é a única que tem DOIS passos no mesmo modo: escreve-se o número,
@@ -157,48 +157,33 @@ export function EcraLogin() {
             justifyContent: desktop ? 'center' : 'flex-start',
             paddingVertical: desktop ? spacing.xl : 0,
           }}>
-          {/* Cabeçalho verde */}
-          <LinearGradient
-            colors={[colors.headerFrom, colors.headerTo]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+          {/* A marca, sozinha no creme: o logótipo, o nome em Fraunces e a
+              frase. Era um cabeçalho verde com a vaca da biblioteca de ícones;
+              o guia de estilo pôs aqui o logótipo de verdade. */}
+          <View
             style={{
-              // No telemóvel encosta ao topo (e passa por baixo da barra de
-              // estado); no computador é um cartão solto, arredondado dos
-              // quatro lados, com margem à volta.
-              paddingTop: desktop ? spacing.xxl : insets.top + spacing.xxl,
-              paddingBottom: spacing.xxl,
-              paddingHorizontal: spacing.lg,
-              marginHorizontal: desktop ? spacing.xl : 0,
-              borderTopLeftRadius: desktop ? radii.xl : 0,
-              borderTopRightRadius: desktop ? radii.xl : 0,
-              borderBottomLeftRadius: radii.xl,
-              borderBottomRightRadius: radii.xl,
               alignItems: 'center',
+              paddingTop: desktop ? spacing.xl : insets.top + spacing.xxxl,
+              paddingHorizontal: spacing.lg,
             }}>
-            <View
-              style={{
-                width: 84,
-                height: 84,
-                borderRadius: radii.pill,
-                backgroundColor: 'rgba(255,255,255,0.16)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: spacing.sm,
-              }}>
-              <Icon name="cow" size={48} color={colors.textOnDark} />
-            </View>
-            <Text variant="display" color={colors.textOnDark}>
+            <Logotipo tamanho={desktop ? 112 : 124} sombra />
+            <Text
+              variant="display"
+              center
+              style={{ fontSize: 44, lineHeight: 50, marginTop: spacing.xl }}
+              maxFontSizeMultiplier={1.1}>
               Terrabovina
             </Text>
-            <Text variant="body" color={colors.textOnDarkMuted} style={{ marginTop: 2 }}>
+            <Text variant="bodyLg" color={colors.textSecondary} center style={{ marginTop: spacing.xs }}>
               {recuperar
                 ? t('login.recuperarAcesso')
                 : registo
                   ? t('login.criarConta')
-                  : t('login.entrarNaConta')}
+                  : porTelemovel
+                    ? t('login.entrarNaConta')
+                    : t('login.lema')}
             </Text>
-          </LinearGradient>
+          </View>
 
           {/* Formulário */}
           <View
@@ -350,17 +335,6 @@ export function EcraLogin() {
               </Text>
             ) : null}
 
-            {modo === 'entrar' ? (
-              <Pressable
-                onPress={() => irPara('recuperar')}
-                accessibilityRole="button"
-                style={{ marginTop: -spacing.sm, marginBottom: spacing.md, alignSelf: 'flex-start', paddingVertical: spacing.xs }}>
-                <Text variant="secondary" color={colors.primary}>
-                  {t('login.esqueciMe')}
-                </Text>
-              </Pressable>
-            ) : null}
-
             {erro ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md }}>
                 <Icon name="alert-circle-outline" size="sm" color={colors.danger} />
@@ -413,12 +387,26 @@ export function EcraLogin() {
                     ? 'email-fast-outline'
                     : registo
                       ? 'account-plus'
-                      : 'login'
+                      : // "Entrar" sozinho, como no guia: é a palavra que se procura.
+                        undefined
               }
               onPress={submeter}
               disabled={!valido}
               loading={aProcessar}
             />
+
+            {/* Por baixo do Entrar e ao meio, como no guia: é a saída para quem
+                carregou e não entrou, e é aí que a pessoa está a olhar. */}
+            {modo === 'entrar' ? (
+              <Pressable
+                onPress={() => irPara('recuperar')}
+                accessibilityRole="button"
+                style={{ marginTop: spacing.md, alignSelf: 'center', paddingVertical: spacing.xs }}>
+                <Text variant="bodyStrong" color={colors.primary}>
+                  {t('login.esqueciMe')}
+                </Text>
+              </Pressable>
+            ) : null}
 
             {/* As outras portas so aparecem em "entrar": no registo o que decide
                 o caminho da conta e a pergunta de cima, e a recuperar so ha uma
@@ -547,6 +535,8 @@ function Campo({
   /** O que está mal NESTE campo. Pinta a moldura e escreve por baixo. */
   aviso?: string;
 }) {
+  // O campo onde se escreve leva a linha da marca, como no guia.
+  const [focado, setFocado] = useState(false);
   return (
     <View style={{ marginBottom: aviso ? spacing.md : spacing.lg }}>
       <Text variant="label" style={{ marginBottom: spacing.xs }}>
@@ -560,11 +550,13 @@ function Campo({
           height: sizes.input,
           borderRadius: radii.md,
           borderWidth: 1.5,
-          borderColor: aviso ? colors.danger : colors.border,
+          borderColor: aviso ? colors.danger : focado ? colors.primary : colors.border,
           backgroundColor: colors.surface,
           paddingHorizontal: spacing.md,
         }}>
-        <Icon name={icon} size="md" color={aviso ? colors.danger : colors.textMuted} />
+        {/* O ícone só aparece para dizer o que está mal: o rótulo por cima já
+            diz o que é o campo, e o guia deixa-os limpos. */}
+        {aviso ? <Icon name={icon} size="md" color={colors.danger} /> : null}
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -574,7 +566,9 @@ function Campo({
           keyboardType={keyboardType}
           secureTextEntry={secureTextEntry}
           autoCorrect={false}
-          style={{ flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 17, color: colors.text }}
+          onFocus={() => setFocado(true)}
+          onBlur={() => setFocado(false)}
+          style={{ flex: 1, fontFamily: fontFamily.regular, fontSize: 18, color: colors.text }}
         />
       </View>
       {aviso ? (

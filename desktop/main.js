@@ -162,7 +162,9 @@ async function createWindow() {
     height: 820,
     minWidth: 380,
     minHeight: 640,
-    backgroundColor: '#F3F6F2',
+    // O creme do fundo da app (`background` da paleta de origem): é a cor da
+    // janela antes de a página carregar, e a verde-clara de antes piscava.
+    backgroundColor: '#F3EBDD',
     title: EH_DEV ? 'Terrabovina — TESTES' : 'Terrabovina',
     show: false,
     autoHideMenuBar: true,

@@ -35,7 +35,7 @@ import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
 import type { CategoriaDespesa, CategoriaReceita, Direcao, Movimento } from '@/data/types';
 import { t, type ChaveTexto } from '@/i18n';
-import { colors, radii, shadow, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, shadow, sizes, spacing } from '@/theme';
 
 /**
  * Ordem pensada para quem regista, não por alfabeto: a alimentação é o que
@@ -750,7 +750,7 @@ function CampoTexto({
         keyboardType={keyboardType}
         style={{
           flex: 1,
-          fontFamily: 'Nunito_600SemiBold',
+          fontFamily: fontFamily.medium,
           fontSize: 17,
           color: colors.text,
         }}

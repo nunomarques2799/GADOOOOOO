@@ -1,20 +1,23 @@
-import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { Icon, Text } from '@/components/ui';
+import { Chip, Text } from '@/components/ui';
 import { SINAIS, type Sinal } from '@/data/sinaisAlerta';
 import { t, type ChaveTexto } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 /**
- * A cor de cada sinal. FUNÇÃO e não tabela de módulo: as cores são reescritas no
- * arranque conforme a paleta escolhida, e um `Record` criado no import ficava
- * com as da paleta de origem (ver a nota do `colors` no AGENTS.md).
+ * A cor de cada sinal, a do guia de estilo: terracota para o que é legal
+ * (brinco, SNIRA), ocre para a reprodução, verde-azulado para a saúde. São os
+ * tons VIVOS, porque aqui são só pontos, sem letra por cima.
+ *
+ * FUNÇÃO e não tabela de módulo: as cores são reescritas no arranque conforme
+ * a paleta escolhida, e um `Record` criado no import ficava com as da paleta
+ * de origem (ver a nota do `colors` no AGENTS.md).
  */
 export function corDoSinal(s: Sinal): string {
-  if (s === 'legal') return colors.danger;
-  if (s === 'reproducao') return colors.info;
-  return colors.warning;
+  if (s === 'legal') return colors.dangerVivo;
+  if (s === 'reproducao') return colors.warningVivo;
+  return colors.saudeVivo;
 }
 
 const CHAVE_DO_SINAL: Record<Sinal, ChaveTexto> = {
@@ -72,12 +75,35 @@ export function PontosSinal({ sinais }: { sinais: Sinal[] }) {
 }
 
 /**
+ * Os mesmos pontos, em linha, ao lado do nome (a lista de animais do guia de
+ * estilo põe-nos a seguir ao número do animal, e não em cima do retrato).
+ */
+export function PontosEmLinha({ sinais }: { sinais: Sinal[] }) {
+  if (sinais.length === 0) return null;
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+      {sinais.map((s) => (
+        <View key={s} style={{ width: 11, height: 11, borderRadius: radii.pill, backgroundColor: corDoSinal(s) }} />
+      ))}
+    </View>
+  );
+}
+
+/**
  * A legenda das cores, por cima da lista.
  *
- * Sem ela os pontos eram enfeite: uma bolinha azul não diz "esta vaca está para
+ * Sem ela os pontos eram enfeite: uma bolinha ocre não diz "esta vaca está para
  * parir" a quem a vê pela primeira vez. Só aparece quando há pontos na lista
  * para explicar — numa exploração sem nada pendente seria uma linha a explicar
  * o que não está lá.
+ *
+ * São as pastilhas do guia de estilo: cada sinal com o seu ponto de cor, a
+ * escolhida cheia da cor da marca, e o "Limpar" sublinhado ao lado. Quando não
+ * cabem numa linha, partem para a seguinte como pastilhas que são (soltas,
+ * cada uma com a sua moldura), e já não se leem como uma frase cortada.
  */
 export function LegendaSinais({
   sinais,
@@ -93,17 +119,7 @@ export function LegendaSinais({
    */
   onEscolher?: (s: Sinal | null) => void;
 }) {
-  // Numa linha se as três couberem; se não, uma por linha. Duas numa linha e a
-  // terceira sozinha por baixo (o que o `flexWrap` dava) lia-se como se a de
-  // baixo fosse outra coisa. Mede-se o que cada uma ocupa e a largura que há.
-  const [larguras, setLarguras] = useState<Partial<Record<Sinal, number>>>({});
-  const [disponivel, setDisponivel] = useState(0);
   const visiveis = SINAIS.filter((x) => sinais.includes(x));
-  const precisa =
-    visiveis.reduce((soma, x) => soma + (larguras[x] ?? 0), 0) + spacing.xs * (visiveis.length - 1);
-  const medido = disponivel > 0 && visiveis.every((x) => larguras[x] !== undefined);
-  const numaLinha = !medido || precisa <= disponivel;
-
   if (visiveis.length === 0) return null;
 
   return (
@@ -111,96 +127,55 @@ export function LegendaSinais({
       accessibilityRole="summary"
       style={{
         flexDirection: 'row',
+        flexWrap: 'wrap',
         alignItems: 'center',
         gap: spacing.xs,
-        padding: spacing.xs,
-        marginBottom: spacing.sm,
-        borderRadius: radii.md,
-        backgroundColor: colors.surfaceSunken,
+        marginBottom: spacing.md,
       }}>
-      <View
-        onLayout={(e) => setDisponivel(e.nativeEvent.layout.width)}
-        style={{
-          flex: 1,
-          flexDirection: numaLinha ? 'row' : 'column',
-          alignItems: numaLinha ? 'center' : 'flex-start',
-          gap: numaLinha ? spacing.xs : 2,
-          // Enquanto não se mede, a linha não pode empurrar o botão Limpar.
-          overflow: 'hidden',
-        }}>
-        {visiveis.map((x) => {
-          const escolhido = ativo === x;
-          const conteudo = (
-            <>
-              <View
-                style={{ width: 11, height: 11, borderRadius: radii.pill, backgroundColor: corDoSinal(x) }}
-              />
-              <Text
-                variant="caption"
-                color={escolhido ? colors.text : colors.textSecondary}
-                style={escolhido ? { fontWeight: '700' } : undefined}
-                numberOfLines={1}>
-                {rotuloDoSinal(x)}
-              </Text>
-            </>
-          );
-          const estilo = {
-            flexDirection: 'row' as const,
-            alignItems: 'center' as const,
-            gap: 5,
-            flexShrink: 0,
-            minHeight: 36,
-            paddingHorizontal: spacing.sm,
-            borderRadius: radii.pill,
-            borderWidth: 1.5,
-            borderColor: escolhido ? corDoSinal(x) : 'transparent',
-            backgroundColor: escolhido ? colors.surface : 'transparent',
-          };
-          const medir = (w: number) =>
-            setLarguras((l) => (Math.abs((l[x] ?? -1) - w) < 1 ? l : { ...l, [x]: w }));
-          if (!onEscolher) {
-            return (
-              <View key={x} style={estilo} onLayout={(e) => medir(e.nativeEvent.layout.width)}>
-                {conteudo}
-              </View>
-            );
-          }
+      {visiveis.map((x) => {
+        const escolhido = ativo === x;
+        if (!onEscolher) {
           return (
-            <Pressable
+            <View
               key={x}
-              onPress={() => onEscolher(escolhido ? null : x)}
-              onLayout={(e) => medir(e.nativeEvent.layout.width)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: escolhido }}
-              accessibilityLabel={`${t('sinal.mostrarSo')}: ${rotuloDoSinal(x)}`}
-              style={({ pressed }) => [estilo, pressed && { opacity: 0.6 }]}>
-              {conteudo}
-            </Pressable>
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                height: 44,
+                paddingHorizontal: spacing.md,
+                borderRadius: radii.pill,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+              }}>
+              <View style={{ width: 10, height: 10, borderRadius: radii.pill, backgroundColor: corDoSinal(x) }} />
+              <Text variant="label">{rotuloDoSinal(x)}</Text>
+            </View>
           );
-        })}
-      </View>
+        }
+        return (
+          <Chip
+            key={x}
+            label={rotuloDoSinal(x)}
+            ponto={corDoSinal(x)}
+            selected={escolhido}
+            onPress={() => onEscolher(escolhido ? null : x)}
+            accessibilityLabel={`${t('sinal.mostrarSo')}: ${rotuloDoSinal(x)}`}
+          />
+        );
+      })}
       {onEscolher && ativo ? (
         <Pressable
           onPress={() => onEscolher(null)}
           accessibilityRole="button"
           accessibilityLabel={t('sinal.limparFiltro')}
-          hitSlop={6}
+          hitSlop={8}
           style={({ pressed }) => [
-            {
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-              minHeight: 36,
-              paddingHorizontal: spacing.sm,
-              borderRadius: radii.pill,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-            },
+            { height: 44, justifyContent: 'center', paddingHorizontal: spacing.xs },
             pressed && { opacity: 0.6 },
           ]}>
-          <Icon name="close" size="sm" color={colors.textSecondary} />
-          <Text variant="caption" color={colors.textSecondary}>
+          <Text variant="label" color={colors.primaryDark} style={{ textDecorationLine: 'underline' }}>
             {t('sinal.limpar')}
           </Text>
         </Pressable>

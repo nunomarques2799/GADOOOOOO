@@ -30,7 +30,7 @@ import {
 import { useNomesEquipa } from '@/data/nomesEquipa';
 import { useGado } from '@/data/store';
 import { t, type ChaveTexto } from '@/i18n';
-import { colors, radii, spacing } from '@/theme';
+import { colors, fontFamily, radii, spacing } from '@/theme';
 
 /**
  * Histórico do efetivo: quem saiu, porquê, quando e por ordem de quem.
@@ -141,7 +141,7 @@ export default function HistoricoEfetivoScreen() {
               placeholderTextColor={colors.textMuted}
               style={{
                 flex: 1,
-                fontFamily: 'Nunito_500Medium',
+                fontFamily: fontFamily.medium,
                 fontSize: 16,
                 color: colors.text,
               }}

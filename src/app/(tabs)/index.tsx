@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -15,6 +14,7 @@ import { ModalDiaAgenda } from '@/components/ModalDiaAgenda';
 import { PainelPrimeirosPassos } from '@/components/PainelPrimeirosPassos';
 import { ExploracaoRow } from '@/components/ExploracaoRow';
 import { GrelhaAcoesRapidas } from '@/components/AcoesRapidas';
+import { Logotipo } from '@/components/Logotipo';
 import { MenuConta, type Ancora } from '@/components/MenuConta';
 import { StatCard } from '@/components/StatCard';
 import { Avatar, Badge, Card, Icon, SectionHeader, Text } from '@/components/ui';
@@ -25,11 +25,13 @@ import { dataExtensa, formatEuro, saudacao } from '@/data/helpers';
 import { saiuDoEfetivo } from '@/data/historicoAnimais';
 import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
+import { supabaseConfigurado } from '@/data/supabase';
 import { useFinancas } from '@/data/useFinancas';
 import { useVoltarAoTopo } from '@/data/voltarAoTopo';
 import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
+import { useEstreito } from '@/hooks/useEstreito';
 import { colors, layout, radii, spacing } from '@/theme';
 import { temaEscuro } from '@/theme/preferencia';
 
@@ -42,6 +44,7 @@ export default function InicioScreen() {
   const inicial = useRef<View>(null);
   const [menuConta, setMenuConta] = useState<Ancora | null>(null);
   const desktop = useDesktop();
+  const estreito = useEstreito();
   const { isSuperadmin, podeVer, podeEmAlguma, estadoPerfil, acessoExpirado } = useMembros();
   const { controlo: controloAtualizar } = useAtualizarPuxando();
   const {
@@ -102,12 +105,45 @@ export default function InicioScreen() {
   const saldoPositivo = fin.saldo >= 0;
 
   const primeiroNome = utilizador.nome.split(' ')[0];
-  const iniciais = utilizador.nome
-    .split(' ')
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join('');
+  // Uma letra só, em Fraunces, como no guia: duas iniciais num círculo de 52
+  // ficavam em letra pequena, e é a primeira que se reconhece.
+  const inicial1 = (utilizador.nome.trim()[0] ?? '?').toUpperCase();
   const urgentes = alertas.filter((a) => a.gravidade === 'urgente').length;
+  // O nome no cabeçalho: a exploração, quando é uma; quantas, quando são mais.
+  const nomeExploracao =
+    exploracoes.length === 1
+      ? exploracoes[0].nome
+      : exploracoes.length > 1
+        ? t('inicio.nExploracoes', { n: exploracoes.length })
+        : 'Terrabovina';
+  // "Tudo guardado" só quando é verdade no SERVIDOR: com ligação, sem nada na
+  // fila. Sem Supabase (modo de demonstração) não há servidor a quem o dizer.
+  const tudoGuardado = supabaseConfigurado && online && pendentesSinc === 0;
+
+  // "EXPLORAÇÃO ⌄ / Monte da Azinheira", ao lado do logótipo ou, num ecrã
+  // estreito, na linha de baixo (ver `estreito`).
+  const seletorExploracao = (
+    <Pressable
+      onPress={() =>
+        exploracoes.length === 1
+          ? router.push(`/exploracao/${exploracoes[0].id}`)
+          : router.push('/exploracoes')
+      }
+      accessibilityRole="button"
+      accessibilityLabel={`${exploracoes.length > 1 ? t('inicio.exploracoes') : t('inicio.exploracao')}: ${nomeExploracao}`}
+      hitSlop={6}
+      style={({ pressed }) => [{ flex: 1, minWidth: 0 }, pressed && { opacity: 0.6 }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+        <Text variant="rotulo" color={colors.textSecondary} numberOfLines={1}>
+          {exploracoes.length > 1 ? t('inicio.exploracoes') : t('inicio.exploracao')}
+        </Text>
+        <Icon name="chevron-down" size={18} color={colors.textSecondary} />
+      </View>
+      <Text variant="h2" numberOfLines={estreito ? 2 : 1} style={{ fontSize: 22, lineHeight: 28 }}>
+        {nomeExploracao}
+      </Text>
+    </Pressable>
+  );
 
   /**
    * O calendário, em primeiro no Início.
@@ -123,6 +159,7 @@ export default function InicioScreen() {
       <SectionHeader
         title={t('inicio.calendario')}
         actionLabel={podeMarcarEventos ? t('inicio.marcar') : undefined}
+        actionIcon="plus"
         onAction={podeMarcarEventos ? () => router.push('/agenda/novo') : undefined}
       />
       <CalendarioAgenda
@@ -133,38 +170,46 @@ export default function InicioScreen() {
     </>
   ) : null;
 
+  // Um cartão por aviso, como no guia, e a contagem dos urgentes à direita do
+  // título, a terracota cheio: é o número que tem de se ver antes de ler.
   const secaoAlertas = (
     <>
       <SectionHeader
         title={t('inicio.atencao')}
-        actionLabel={t('comum.verTodos')}
-        onAction={() => router.push('/alertas')}
+        direita={
+          urgentes > 0 ? <Badge tone="danger" cheia label={t('inicio.urgentes', { n: urgentes })} /> : undefined
+        }
       />
       {alertas.length === 0 ? (
         <Card>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <Icon name="check-circle" size="lg" color={colors.success} />
+            <Icon name="check-circle-outline" size="lg" color={colors.success} />
             <Text variant="body" style={{ flex: 1 }}>
               {t('inicio.tudoEmDia')}
             </Text>
           </View>
         </Card>
       ) : (
-        <Card padded={false}>
-          <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.xs }}>
-            {urgentes > 0 ? (
-              <Badge
-                tone="danger"
-                icon="alert"
-                label={t('inicio.urgentes', { n: urgentes })}
-                style={{ marginVertical: spacing.xs }}
-              />
-            ) : null}
-            {alertas.slice(0, 3).map((a, i) => (
-              <AlertItem key={a.id} alerta={a} divider={i < Math.min(alertas.length, 3) - 1} />
-            ))}
-          </View>
-        </Card>
+        <>
+          {alertas.slice(0, 3).map((a) => (
+            <Card key={a.id} padded={false} style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.xs, marginBottom: spacing.sm }}>
+              <AlertItem alerta={a} />
+            </Card>
+          ))}
+          <Pressable
+            onPress={() => router.push('/alertas')}
+            accessibilityRole="button"
+            hitSlop={8}
+            style={({ pressed }) => [
+              { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: 2, paddingVertical: spacing.xxs },
+              pressed && { opacity: 0.6 },
+            ]}>
+            <Text variant="label" color={colors.primary}>
+              {alertas.length > 3 ? `${t('comum.verTodos')} (${alertas.length})` : t('comum.verTodos')}
+            </Text>
+            <Icon name="chevron-right" size="sm" color={colors.primary} />
+          </Pressable>
+        </>
       )}
     </>
   );
@@ -249,59 +294,71 @@ export default function InicioScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* O cabeçalho verde é escuro (ícones claros); na Noite é verde claro
-          (ícones escuros). */}
-      <StatusBar style={temaEscuro() ? 'dark' : 'light'} />
+      {/* O cabeçalho é do fundo do ecrã: claro (ícones escuros), ou escuro na
+          Noite (ícones claros). */}
+      <StatusBar style={temaEscuro() ? 'light' : 'dark'} />
       <ScrollView
         ref={refTopo}
         showsVerticalScrollIndicator={false}
         refreshControl={controloAtualizar}
         contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxxl }}>
-        {/* Cabeçalho verde */}
-        <LinearGradient
-          colors={[colors.headerFrom, colors.headerTo]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        {/* Cabeçalho, no creme e sem a aba verde de antes (guia de estilo):
+            o logótipo e a exploração à esquerda, o sino e a conta à direita,
+            e por baixo a saudação em Fraunces. */}
+        <View
           style={{
+            width: '100%',
+            maxWidth: desktop ? layout.conteudoDesktop : undefined,
+            alignSelf: 'center',
             paddingTop: insets.top + (desktop ? spacing.xl : spacing.md),
-            // No telemóvel o conteúdo sobe um pouco por cima do cabeçalho, para
-            // o primeiro cartão ficar encostado à aba verde. SÓ UM POUCO: com a
-            // folga antiga (40px de subida contra 60px de folga em baixo), o
-            // primeiro elemento do conteúdo entrava 16px dentro do verde. Quando
-            // esse elemento era um cartão não se dava por nada — ele traz o seu
-            // próprio fundo. Mas quando é um TÍTULO de secção, que é texto solto
-            // e escuro, ficava metade da linha em cima do verde e metade fora: é
-            // o que se via no "O que aí vem" e no "Marcar" do calendário.
-            paddingBottom: desktop ? spacing.xl : spacing.xl,
             paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
-            // Em desktop encosta à barra lateral — cantos redondos aqui
-            // abririam uma fresta de fundo entre as duas.
-            borderBottomLeftRadius: desktop ? 0 : radii.xl,
-            borderBottomRightRadius: desktop ? 0 : radii.xl,
           }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              width: '100%',
-              maxWidth: desktop ? layout.conteudoDesktop - spacing.xxl * 2 : undefined,
-              alignSelf: 'center',
-            }}>
-            <View style={{ flex: 1 }}>
-              <Text variant="bodyLg" color={colors.textOnDarkMuted}>
-                {saudacao()},
-              </Text>
-              <Text variant="display" color={colors.textOnDark} numberOfLines={1}>
-                {primeiroNome}
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                <Icon name="calendar-blank" size={14} color={colors.textOnDarkMuted} />
-                <Text variant="secondary" color={colors.textOnDarkMuted}>
-                  {dataExtensa()}
-                </Text>
-              </View>
-            </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            {/* No computador o logótipo já está na barra lateral. */}
+            {desktop ? null : <Logotipo tamanho={52} />}
+            {/* Num ecrã estreito (ou com a letra no máximo) a exploração passa
+                para a linha de baixo: entre o logótipo, o sino e a conta só
+                sobravam duas letras do nome. */}
+            {estreito ? <View style={{ flex: 1 }} /> : seletorExploracao}
+            {/* O sino leva aos avisos, com um ponto quando há urgentes: é o
+                que se procura primeiro ao pegar no telemóvel de manhã. */}
+            <Pressable
+              onPress={() => router.push('/alertas')}
+              accessibilityRole="button"
+              accessibilityLabel={
+                urgentes > 0 ? `${t('nav.alertas')}, ${t('inicio.urgentes', { n: urgentes })}` : t('nav.alertas')
+              }
+              hitSlop={6}
+              style={({ pressed }) => [
+                {
+                  width: 52,
+                  height: 52,
+                  borderRadius: radii.pill,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                },
+                pressed && { opacity: 0.7 },
+              ]}>
+              <Icon name="bell-outline" size={26} color={colors.text} />
+              {urgentes > 0 ? (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 11,
+                    right: 12,
+                    width: 12,
+                    height: 12,
+                    borderRadius: radii.pill,
+                    backgroundColor: colors.dangerVivo,
+                    borderWidth: 2,
+                    borderColor: colors.surface,
+                  }}
+                />
+              ) : null}
+            </Pressable>
             {/* A inicial abre o menu da conta: perfil, definições, ajuda e
                 terminar sessão. É o sítio onde toda a gente procura isto. */}
             <View ref={inicial} collapsable={false}>
@@ -314,15 +371,34 @@ export default function InicioScreen() {
                 hitSlop={8}
                 style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
                 <Avatar
-                  initials={iniciais}
-                  size={54}
-                  background="rgba(255,255,255,0.18)"
-                  foreground={colors.textOnDark}
+                  initials={inicial1}
+                  size={52}
+                  background={colors.primary}
+                  foreground={colors.onPrimary}
                 />
               </Pressable>
             </View>
           </View>
-        </LinearGradient>
+
+          {estreito ? (
+            <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>{seletorExploracao}</View>
+          ) : null}
+
+          <Text variant="display" style={{ marginTop: estreito ? spacing.md : spacing.xl }}>
+            {saudacao()}, {primeiroNome}
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+            {tudoGuardado ? (
+              <Icon name="check" size={18} color={colors.success} />
+            ) : (
+              <Icon name="calendar-blank-outline" size={16} color={colors.textSecondary} />
+            )}
+            <Text variant="body" color={colors.textSecondary} style={{ flexShrink: 1 }}>
+              {dataExtensa()}
+              {tudoGuardado ? ` · ${t('inicio.tudoGuardado')}` : ''}
+            </Text>
+          </View>
+        </View>
         <MenuConta aberto={menuConta !== null} ancora={menuConta} onFechar={() => setMenuConta(null)} />
 
         {/* Conteúdo */}
@@ -332,10 +408,7 @@ export default function InicioScreen() {
             maxWidth: desktop ? layout.conteudoDesktop : undefined,
             alignSelf: 'center',
             paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
-            // 12px de subida contra 24px de folga em baixo: um cartão encosta à
-            // aba verde sem lhe entrar dentro, e um título de secção (que traz
-            // ainda `marginTop: xl` por cima) nasce sempre abaixo do verde.
-            marginTop: desktop ? spacing.lg : -spacing.sm,
+            marginTop: spacing.sm,
           }}>
           {/* Conta suspensa — fica em primeiro, é o que explica tudo o resto */}
           <BannerSuspensao />

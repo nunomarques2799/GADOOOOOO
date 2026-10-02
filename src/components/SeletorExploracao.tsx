@@ -66,17 +66,19 @@ export function SeletorExploracao({
             paddingRight: spacing.sm,
             paddingVertical: 4,
             borderRadius: radii.pill,
-            backgroundColor: colors.primary,
-            borderWidth: 1.5,
-            borderColor: colors.primary,
+            // Pastilha de superfície, como as outras escolhas da lista: cheia
+            // da cor da marca fica só o que está ESCOLHIDO de entre várias.
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.border,
           },
           pressed && { opacity: 0.85 },
         ]}>
-        <Icon name="barn" size="sm" color={colors.onPrimary} />
-        <Text numberOfLines={1} style={[type.label, { color: colors.onPrimary, flexShrink: 1 }]}>
+        <Icon name="barn" size="sm" color={colors.primaryDark} />
+        <Text numberOfLines={1} style={[type.label, { color: colors.text, flexShrink: 1 }]}>
           {rotulo}
         </Text>
-        <Icon name="chevron-down" size="sm" color={colors.onPrimary} />
+        <Icon name="chevron-down" size="sm" color={colors.textSecondary} />
       </Pressable>
 
       <Folha

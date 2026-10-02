@@ -81,6 +81,10 @@ function BotaoMetodo({
   desativado: boolean;
   onPress: () => void;
 }) {
+  // O da Apple é preto com letra branca: é um dos três desenhos que a Apple
+  // aceita para este botão (o guia de estilo usa este), e o único que se
+  // distingue de relance dos outros dois.
+  const apple = metodo === 'apple';
   return (
     <Pressable
       onPress={onPress}
@@ -93,19 +97,21 @@ function BotaoMetodo({
           alignItems: 'center',
           justifyContent: 'center',
           gap: spacing.sm,
-          // A mesma altura dos campos de cima: postos em fila, botões mais
-          // baixos do que os campos leem-se como menos importantes, e não são.
-          height: sizes.input,
-          borderRadius: radii.md,
-          borderWidth: 1.5,
+          // A mesma altura do Entrar: postos em fila, botões mais baixos leem-se
+          // como menos importantes, e não são.
+          height: sizes.button,
+          borderRadius: radii.botao,
+          borderWidth: apple ? 0 : 1,
           borderColor: colors.border,
-          backgroundColor: colors.surface,
+          backgroundColor: apple ? '#000000' : colors.surface,
           opacity: desativado ? 0.6 : 1,
         },
         pressed && { opacity: 0.85 },
       ]}>
-      <Icon name={ICONE[metodo]} size="md" color={colors.text} />
-      <Text variant="bodyStrong">{rotulo(metodo)}</Text>
+      <Icon name={ICONE[metodo]} size="md" color={apple ? '#FFFFFF' : colors.text} />
+      <Text variant="bodyStrong" color={apple ? '#FFFFFF' : colors.text}>
+        {rotulo(metodo)}
+      </Text>
     </Pressable>
   );
 }

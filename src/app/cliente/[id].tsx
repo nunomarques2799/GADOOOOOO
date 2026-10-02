@@ -17,7 +17,7 @@ import {
   type EventoHistorico,
   type ExploracaoResumo,
 } from '@/data/superadminApi';
-import { colors, radii, sizes, shadow, spacing } from '@/theme';
+import { colors, fontFamily, radii, shadow, sizes, spacing } from '@/theme';
 
 const planos = ['Basico', 'Standard', 'Pro'];
 const estadosSub: { valor: EstadoSubscricao; label: string; icon: IconName }[] = [
@@ -287,7 +287,7 @@ export default function ClienteDetalheScreen() {
               placeholder="0"
               placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
-              style={{ flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 17, color: colors.text }}
+              style={{ flex: 1, fontFamily: fontFamily.medium, fontSize: 17, color: colors.text }}
             />
             <Text variant="body" color={colors.textMuted}>€/mês</Text>
           </View>
@@ -323,7 +323,7 @@ export default function ClienteDetalheScreen() {
               placeholderTextColor={colors.textMuted}
               multiline
               style={{
-                fontFamily: 'Nunito_500Medium',
+                fontFamily: fontFamily.medium,
                 fontSize: 16,
                 color: colors.text,
                 minHeight: 60,

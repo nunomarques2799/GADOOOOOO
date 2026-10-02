@@ -1,47 +1,88 @@
 # Design System — Terrabovina
 
-Fonte de verdade do design da app. Derivado da **imagem de inspiração** (app
-agrícola verde, cartões muito arredondados, sombras suaves) e dos **princípios
-do README**: simplicidade absoluta para o utilizador de 82 anos, fontes e botões
-grandes, alto contraste, estética rural/de confiança.
+Fonte de verdade do design da app. Desde **2026-10-02** segue o guia de estilo
+**"Terrabovina, novo estilo"** (o PDF na pasta `Gado/`): oliveira, creme e
+areia, títulos em Fraunces, cartões de cantos largos e quase sem sombra. Os
+**princípios do README** continuam acima do guia: simplicidade absoluta para o
+utilizador de 82 anos, fontes e botões grandes, alto contraste, estética
+rural/de confiança. Onde os dois chocaram (o ocre do guia não se lê como
+letra), ganhou o contraste, e está explicado abaixo.
 
 Implementação: [`src/theme/tokens.ts`](src/theme/tokens.ts). Importa sempre via
 `@/theme` — nunca uses hex soltos nos componentes.
 
 ---
 
+## Marca
+
+O logótipo (cabeça de vaca e duas espigas douradas num círculo de oliveira) só
+existia em imagem, no guia. Foi redesenhado em vetor e os mestres estão em
+[`assets/marca/`](assets/marca):
+
+| Ficheiro | O que é | De onde saem |
+|---|---|---|
+| `terrabovina-logo.svg` | O logótipo inteiro, com o círculo | `assets/images/logo-terrabovina.png` (600px, o `<Logotipo>`), `desktop/build/icon.*`, `public/icons/*`, `website/assets/logo.svg` |
+| `terrabovina-simbolo.svg` | Sem o círculo de fundo | Ícone do iPhone (`assets/expo.icon/`, o fundo de oliveira vem do `icon.json`) e primeiro plano do ícone adaptativo do Android |
+| `terrabovina-favicon.svg` | Só a cabeça, ampliada | Favicon (a 16px as espigas eram ruído) |
+| `terrabovina-monocromo.svg` | Silhueta vazada | Ícone temático do Android 13+, que o sistema pinta |
+
+Na app o logótipo é o componente `<Logotipo tamanho={…} />`
+(`src/components/Logotipo.tsx`), em PNG através do `expo-image`: a app não
+tem `react-native-svg`, e um módulo nativo novo só por um desenho obrigava a
+um build. O PNG de 600px chega até 300 pontos num ecrã 2×.
+
+Mudar o logo é mudar o SVG mestre e voltar a gerar os PNG de todos os
+tamanhos; um ícone novo no iPhone ou no Android **só chega com um build
+nativo** (`eas build`), não com um `eas update`.
+
+---
+
 ## Cor
 
-Ancorada num **verde folha profundo** (agricultura, vida, confiança).
+Ancorada na **oliveira** sobre **creme** (o campo e o papel de um caderno de
+exploração), com terracota, ocre e verde-azulado para o que quer dizer alguma
+coisa.
 
 | Token | Hex | Uso |
 |---|---|---|
-| `primary` | `#1B7A48` | CTA, marca, ícones ativos |
-| `primaryDark` | `#166B3D` | Gradientes de cabeçalho, títulos de ação |
-| `primaryTint` / `primaryTintStrong` | `#EEF8F1` / `#DCF2E4` | Fundos de realce, chips ativos |
-| `background` | `#F3F6F2` | Canvas dos ecrãs (bege-verde muito claro) |
-| `surface` | `#FFFFFF` | Cartões |
-| `text` / `textSecondary` / `textMuted` | `#15251C` / `#54655B` / `#8A968E` | Texto (near-black esverdeado → alto contraste) |
-| `border` | `#E3EAE0` | Linhas e contornos de cartões |
+| `primary` | `#3A4A2C` | Botões, marca, separador ativo, o "hoje" do calendário |
+| `primaryDark` / `primaryDarker` | `#2B3621` / `#22281A` | Letra sobre tinte, iniciais dos retratos |
+| `primaryTint` / `primaryTintStrong` | `#E2E5D3` / `#D5D9C2` | Pastilha do separador ativo, botão secundário |
+| `onPrimary` | `#FBF7F0` | Letra sobre oliveira |
+| `background` | `#F3EBDD` | Creme: o fundo dos ecrãs |
+| `surface` / `surfaceAlt` / `surfaceSunken` | `#FBF7F0` / `#E8DCC8` / `#ECE3D3` | Cartões / areia (retratos, pastilhas) / premido |
+| `text` / `textSecondary` / `textMuted` | `#22281A` / `#5B604D` / `#5D624E` | Tinta, apoio e metadados (todos acima de 4,5:1 no creme) |
+| `border` / `borderStrong` | `#E3D8C5` / `#CFC2AC` | Riscas e contornos de cartão / de campos |
 
-**Cor funcional** (nunca só cor — sempre com ícone + texto):
+**Cor funcional** (fixa, nunca só cor — sempre com ícone + texto). Três delas
+têm **dois tons**: o de LETRA, que é o seguro, e o `*Vivo` do guia, só para
+pontos, barras e preenchimentos sem nada escrito por cima. O ocre do guia dá
+2:1 sobre o creme; como letra não se lê.
 
-| Token | Hex | Significado |
-|---|---|---|
-| `danger` | `#D45B3B` | Prazos vencidos / urgentes |
-| `warning` | `#E39A2E` | Prazos "esta semana" |
-| `info` | `#3B82C4` | Meteorologia / a acompanhar |
-| `success` | `#2E9E5B` | Tudo em dia / confirmações |
+| Token | Letra | `*Vivo` | `*Tint` | Significado |
+|---|---|---|---|---|
+| `danger` | `#9E4B2A` | `#C0613A` | `#F4DDD3` | Urgente: prazos legais, brinco, SNIRA |
+| `warning` | `#875D17` | `#DDA54A` | `#F6E5C5` | Reprodução, "esta semana" |
+| `saude` | `#3F6B5C` | `#4F7A6B` | `#DCE8E2` | Vacinas e tratamentos |
+| `info` | `#3D6583` | | `#DCE6EE` | Meteorologia, informação |
+| `success` | `#4E6B37` | | `#E3E9D9` | Em dia, confirmações |
+| `femea` / `macho` | `#983F55` / `#3D6583` | | `#F4DDE3` / `#DCE6EE` | Etiqueta do sexo (com a palavra lá dentro) |
 
-Cada uma tem um par `*Tint` para fundos suaves. Cores por espécie
-(`bovino`, `ovino`, `caprino`, `suino`, `equideo`) para chips e avatares.
+`onDanger` (`#FFFFFF`) é a letra sobre um botão ou contador de perigo. Numa
+paleta **escura** (a Noite) a letra destas cores passa a clara e os tintes a
+escuros (`fixasEscuras` em `tokens.ts`), senão um prazo legal ficava a 2,7:1;
+os `*Vivo` não mudam. Cores por espécie (`bovino`, `ovino`, `caprino`,
+`suino`, `equideo`) para ícones e chips.
 
 ### Paletas à escolha do criador
 
-O verde é a paleta **de origem**, não a única. Em *Definições → Cores da app* o
-criador escolhe entre `campo` (verde), `terra`, `ceu`, `ardosia` e `contraste`
-(alto contraste, para visão reduzida). Definição em
-[`src/theme/paletas.ts`](src/theme/paletas.ts).
+A oliveira é a paleta **de origem** (`terrabovina`), não a única. O verde com
+que a app nasceu continua lá, como **`campo`**. Em *Definições → Cores da app*
+o criador escolhe entre umas vinte (`terra`, `ceu`, `ardosia`, `contraste` para
+visão reduzida, `noite` de fundo escuro…). Definição em
+[`src/theme/paletas.ts`](src/theme/paletas.ts). A escolha fica na CONTA: quem
+nunca escolheu passou a ver a oliveira a 2026-10-02, quem escolheu uma fica
+com a sua.
 
 **O que muda:** marca (`primary*`, `headerFrom/To`, `onPrimary`), superfícies
 (`background`, `surface*`), texto (`text*`, exceto `textOnDark*`), linhas
@@ -69,34 +110,60 @@ antigas nos seus estilos e o React Compiler memoiza-os.
 
 ---
 
-## Tipografia — Nunito
+## Tipografia — Fraunces, Atkinson Hyperlegible Next e IBM Plex Mono
 
-Família **Nunito** (arredondada, muito legível — combina com a estética de
-cartões arredondados e com a acessibilidade). Corpo **grande** (17–18px) para
-o utilizador-alvo. Carregada via `@expo-google-fonts/nunito`.
+Três famílias, cada uma com o seu trabalho:
 
-| Variante | Peso / Tamanho | Uso |
+- **Fraunces** nos títulos (`display`, `h1`, `h2`): uma serifa de cantos
+  suaves (eixo SOFT a 100), que dá à app o ar de caderno de exploração do
+  guia. Vem em duas instâncias fixas, ótica 34 para os títulos grandes e 20
+  para os de secção, tiradas do Google Fonts: o React Native não mexe nos
+  eixos de uma letra variável.
+- **Atkinson Hyperlegible Next** em todo o resto: foi desenhada para baixa
+  visão, e distingue `I`, `l` e `1`, ou `0` e `O`, que é o que um brinco
+  precisa. Não tem ExtraBold: `fontFamily.extrabold` aponta para o Bold.
+- **IBM Plex Mono** no que se lê dígito a dígito: brincos, lotes, prazos
+  ("6 dias", "Em atraso").
+
+Corpo **grande** (17–18px) para o utilizador-alvo. As fontes são ficheiros em
+`assets/fontes/` (cada família com a sua licença OFL ao lado), carregados no
+`src/app/_layout.tsx`, e **não** os módulos de pacotes npm: o Cloudflare não
+publica nada de dentro de `node_modules` (ver `AGENTS.md`).
+
+| Variante | Família / Tamanho | Uso |
 |---|---|---|
-| `display` | ExtraBold 32 | Saudação, títulos de ecrã |
-| `h1` / `h2` / `h3` | Extra/Bold 26 / 21 / 18 | Hierarquia de secções |
-| `bodyLg` / `body` | Regular 18 / 17 | Corpo |
-| `bodyStrong` | Bold 17 | Valores, destaques |
-| `secondary` | Medium 15 | Texto de apoio |
-| `label` / `caption` | Bold 15 / Semibold 13 | Etiquetas, metadados |
-| `button` | ExtraBold 18 | Botões |
+| `display` | Fraunces 34/40 | Saudação, título do ecrã |
+| `h1` | Fraunces 28/34 | Nome do animal, títulos grandes |
+| `h2` | Fraunces (ótica 20) 21/27 | Títulos de secção |
+| `h3` | Atkinson Bold 18/24 | Nomes nas listas, títulos de cartão |
+| `bodyLg` / `body` | Atkinson Regular 18 / 17 | Corpo |
+| `bodyStrong` | Atkinson Bold 17 | Valores, destaques |
+| `secondary` | Atkinson Regular 15/21 | Texto de apoio |
+| `label` | Atkinson Bold 15 | Ações em texto, chips |
+| `caption` | Atkinson Medium 13/18 | Metadados, rótulos da barra |
+| `rotulo` | Atkinson Bold 13, maiúsculas | "REPRODUÇÃO", dias da semana |
+| `mono` | Plex Mono Medium 15/21 | Brincos, lotes, prazos |
+| `button` | Atkinson Bold 18 | Botões |
 
 Acesso via componente `<Text variant="…">` que respeita o dimensionamento do
-sistema (Dynamic Type).
+sistema (Dynamic Type), até ao teto de cada variante em `maxFontScale`.
 
 ---
 
 ## Espaçamento, raios e tamanhos
 
 - **Espaçamento** — escala base-4: `xxs 4 · xs 8 · sm 12 · md 16 · lg 20 · xl 24 · xxl 32 · xxxl 40 · huge 56`.
-- **Raios** — cartões muito arredondados: `sm 10 · md 16 · lg 22 · xl 28 · pill 999`.
+- **Raios** — `sm 10 · md 14 (campos) · botao 16 · lg 20 (cartões) · xl 28 (folhas) · pill 999`.
 - **Alvos de toque** — `touchMin 48`, `button 56`, `input 58` (README: botões grandes).
-- **Sombras** — suaves e verde-tingidas (`sm/md/lg/raised`), elevação consistente.
-- **Animação** — micro-interações 150–300ms (`motion.fast/base/slow`).
+- **Sombras** — leves e da cor da tinta (`sm/md/lg/raised`). A sombra é para
+  o que FLUTUA (o Registar da barra, folhas, avisos); botões, cartões e a barra
+  de baixo são planos, com uma risca.
+- **Animação** — ver `components/ui/movimento.ts` e o `AGENTS.md`.
+- **Ecrã estreito** — `useEstreito()` (`src/hooks/useEstreito.ts`) é `true`
+  quando a largura a dividir pela escala da letra fica abaixo de 340: um
+  telemóvel pequeno ou a letra do sistema no máximo. É ele que parte o
+  cabeçalho do Início em duas linhas, põe a ficha em coluna e encolhe as
+  linhas da lista de animais. Testar a 258px.
 
 ---
 
@@ -137,9 +204,15 @@ Um só set garante consistência de traço e estilo.
 `src/components/ui/` (primitivas): `Text · Icon · Screen · Card · Button ·
 Badge · Chip · IconBadge · SectionHeader · FAB · Avatar · EmptyState · Header`.
 
-`src/components/` (domínio): `WeatherCard · AlertItem · AnimalRow ·
+`src/components/` (domínio): `Logotipo · WeatherCard · AlertItem · AnimalRow ·
 ExploracaoRow · StatCard · QuickAction · AnfitriaoToasts · AnfitriaoAvisos ·
 FolhaPermissoes`.
+
+O retrato de um animal é o `RetratoAnimal` (em `AnimalRow.tsx`): a fotografia,
+ou a inicial do nome em Fraunces sobre areia, ou, sem nome, o desenho da
+espécie. É o mesmo na lista e na ficha, e é por isso que pode voar de uma
+para a outra. A `Badge` tem os tons da cor funcional (`saude`, `femea`,
+`macho`…) e o `cheia` para os contadores ("3 urgentes").
 
 ### Dizer que correu bem (ou mal)
 

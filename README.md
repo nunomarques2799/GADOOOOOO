@@ -83,5 +83,5 @@ Os tipos em [`src/data/types.ts`](src/data/types.ts) espelham o schema da BD.
 
 ## Stack
 
-React Native · Expo SDK 57 · expo-router · expo-sqlite · TypeScript · Nunito · MaterialCommunityIcons.
+React Native · Expo SDK 57 · expo-router · expo-sqlite · TypeScript · Fraunces, Atkinson Hyperlegible Next e IBM Plex Mono · MaterialCommunityIcons.
 Preview visual dos ecrãs: publicado como Artifact (ver conversa).

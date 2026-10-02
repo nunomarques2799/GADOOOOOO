@@ -26,7 +26,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { t } from '@/i18n';
-import { colors, radii, spacing } from '@/theme';
+import { colors, fontFamily, radii, spacing } from '@/theme';
 
 /**
  * Marcar (ou alterar) um evento da agenda.
@@ -305,7 +305,7 @@ export function FormularioEventoAgenda({
               backgroundColor: colors.surface,
               padding: spacing.md,
               minHeight: 100,
-              fontFamily: 'Nunito_500Medium',
+              fontFamily: fontFamily.medium,
               fontSize: 16,
               color: colors.text,
             }}

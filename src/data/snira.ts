@@ -37,6 +37,7 @@
 
 import { PrazosLegais } from './constants';
 import { diaIso, diasAte, isoMaisDias } from './helpers';
+import { LOGO_SVG } from './logoImpressao';
 import type { Animal, Evento, Exploracao } from './types';
 
 /** O que se está a comunicar. */
@@ -242,7 +243,8 @@ export function htmlRelatorioSnira(pendentes: Pendencia[], exploracoes: Explorac
 
   const linhas = pendentes
     .map((p) => {
-      const cor = p.diasRestantes < 0 ? '#d45b3b' : p.diasRestantes <= 3 ? '#e39a2e' : '#3b82c4';
+      // Os tons vivos da cor funcional, como no relatório de prazos (`exportar.ts`).
+      const cor = p.diasRestantes < 0 ? '#C0613A' : p.diasRestantes <= 3 ? '#DDA54A' : '#3D6583';
       const prazo =
         p.diasRestantes < 0
           ? `Em atraso (${Math.abs(p.diasRestantes)}d)`
@@ -267,7 +269,7 @@ export function htmlRelatorioSnira(pendentes: Pendencia[], exploracoes: Explorac
   return `
     <header>
       <div class="marca">
-        <span class="logo">TB</span>
+        <span class="logo">${LOGO_SVG}</span>
         <div>
           <h1>Comunicações ao SNIRA</h1>
           <p>${dataHoje} · lista do que falta comunicar no iDigital</p>
@@ -288,7 +290,7 @@ export function htmlRelatorioSnira(pendentes: Pendencia[], exploracoes: Explorac
     </table>
     <style>
       .check { width: 22px; }
-      .check::before { content: ''; display: block; width: 14px; height: 14px; border: 1.5px solid #869184; border-radius: 3px; }
+      .check::before { content: ''; display: block; width: 14px; height: 14px; border: 1.5px solid #5d624e; border-radius: 3px; }
       .brinco { font-family: ui-monospace, "Courier New", monospace; font-weight: 700; white-space: nowrap; }
     </style>
     <footer>Gerado pela app Terrabovina · ${dataHoje}. A app não comunica ao SNIRA: esta folha serve para preencher o iDigital. Confirme sempre os prazos oficiais (DGAV/IFAP).</footer>

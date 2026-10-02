@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { TextInput, View, type KeyboardTypeOptions } from 'react-native';
 
-import { colors, radii, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, sizes, spacing } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
@@ -83,6 +83,9 @@ export function TextField({
    */
   multiline?: boolean;
 }) {
+  // O campo onde se está a escrever leva a linha da cor da marca, como no guia:
+  // num formulário comprido, é o que diz onde vai cair a próxima letra.
+  const [focado, setFocado] = useState(false);
   return (
     <View
       style={{
@@ -92,7 +95,7 @@ export function TextField({
         ...(multiline ? { minHeight: sizes.input } : { height: sizes.input }),
         borderRadius: radii.md,
         borderWidth: 1.5,
-        borderColor: colors.border,
+        borderColor: focado ? colors.primary : colors.border,
         backgroundColor: editable ? colors.surface : colors.surfaceAlt,
         paddingHorizontal: spacing.md,
         paddingVertical: multiline ? spacing.sm : 0,
@@ -108,10 +111,12 @@ export function TextField({
         autoComplete={autoComplete}
         editable={editable}
         multiline={multiline}
+        onFocus={() => setFocado(true)}
+        onBlur={() => setFocado(false)}
         textAlignVertical={multiline ? 'top' : undefined}
         style={{
           flex: 1,
-          fontFamily: 'Nunito_600SemiBold',
+          fontFamily: fontFamily.medium,
           fontSize: 17,
           color: editable ? colors.text : colors.textSecondary,
           paddingTop: multiline ? 2 : 0,

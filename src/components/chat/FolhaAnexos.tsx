@@ -9,7 +9,7 @@ import { duracaoCurta, MAX_OPCOES, MIN_OPCOES, problemaComSondagem } from '@/dat
 import { escolherDocumento, fotografarDocumento, suportaCamera } from '@/data/ficheiroDocumento';
 import { useGravador } from '@/data/gravarAudio';
 import { t } from '@/i18n';
-import { colors, radii, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, sizes, spacing } from '@/theme';
 
 import type { AnexoParaEnviar } from '@/data/useChat';
 
@@ -440,7 +440,7 @@ function Campo({
           borderColor: colors.border,
           backgroundColor: colors.surface,
           paddingHorizontal: spacing.md,
-          fontFamily: 'Nunito_400Regular',
+          fontFamily: fontFamily.regular,
           fontSize: 17,
           color: colors.text,
         }}

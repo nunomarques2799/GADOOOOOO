@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Platform, Pressable, TextInput, View } from 'react-native';
 
 import { mascaraHora, minutosDaHora } from '@/data/acessoTemporario';
-import { colors, radii, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, sizes, spacing } from '@/theme';
 
 import { estiloBotaoCalendario } from './campoDataEstilo';
 import type { CampoHoraProps } from './CampoHora';
@@ -62,7 +62,7 @@ export function CampoHora({
         placeholder={placeholder}
         placeholderTextColor={colors.textMuted}
         keyboardType="number-pad"
-        style={{ flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 17, color: colors.text }}
+        style={{ flex: 1, fontFamily: fontFamily.medium, fontSize: 17, color: colors.text }}
       />
       {naWeb ? (
         <Pressable
