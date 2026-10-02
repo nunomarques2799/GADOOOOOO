@@ -19,7 +19,7 @@ import { useNaoLidas } from '@/data/useChat';
 import { voltarAoTopo } from '@/data/voltarAoTopo';
 import { t } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
-import { colors, radii, shadow, spacing } from '@/theme';
+import { colors, fontFamily, radii, shadow, spacing } from '@/theme';
 
 /** Forma mínima das props do tabBar que usamos (evita dependência direta). */
 type TabBarProps = {
@@ -74,24 +74,21 @@ function TabBar({ state, navigation }: TabBarProps) {
   return (
     <>
       <View
-        style={[
-          {
-            flexDirection: 'row',
-            // Centrado, e não encostado ao topo: a coluna do "+" é mais alta
-            // do que as outras (o círculo é maior do que a pastilha), e a
-            // encostar ao topo os quatro rótulos ficavam a alturas diferentes.
-            alignItems: 'center',
-            backgroundColor: colors.surface,
-            paddingTop: spacing.sm,
-            paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.sm,
-            paddingHorizontal: 0,
-            borderTopWidth: 1,
-            borderTopColor: colors.border,
-            borderTopLeftRadius: radii.xl,
-            borderTopRightRadius: radii.xl,
-          },
-          shadow.lg,
-        ]}>
+        style={{
+          flexDirection: 'row',
+          // Em baixo, e não ao centro: o círculo do Registar sobe para fora da
+          // barra (guia de estilo), e assim os quatro rótulos e o dele ficam
+          // todos na mesma linha.
+          alignItems: 'flex-end',
+          // A barra é plana, com uma risca em cima: a sombra fica para o que
+          // flutua, que aqui é só o Registar.
+          backgroundColor: colors.surface,
+          paddingTop: spacing.sm,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.sm,
+          paddingHorizontal: 0,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+        }}>
         {naBarra.map((nome) => {
           if (nome === '+') return <BotaoRegistar key="+" onPress={() => setRegistarAberto(true)} />;
 
@@ -131,7 +128,7 @@ function TabBar({ state, navigation }: TabBarProps) {
         })}
         <Botao
           label={t('nav.mais')}
-          icon="dots-horizontal"
+          icon="menu"
           focused={maisAtivo}
           onPress={() => setMaisAberto(true)}
           porLer={porLerNoMais}
@@ -241,6 +238,9 @@ function TabBar({ state, navigation }: TabBarProps) {
  * antes de se ler o rótulo. É também o maior alvo da barra, de propósito — é o
  * botão mais usado da app e quem lhe acerta muitas vezes tem 82 anos e o
  * telemóvel numa mão só.
+ *
+ * Como no guia de estilo, sobe para fora da barra, com um aro da cor do fundo
+ * a separá-lo dela, e é a única coisa da barra com sombra: é o que flutua.
  */
 function BotaoRegistar({ onPress }: { onPress: () => void }) {
   return (
@@ -253,18 +253,29 @@ function BotaoRegistar({ onPress }: { onPress: () => void }) {
       <View
         style={[
           {
-            width: 52,
-            height: 52,
+            width: 72,
+            height: 72,
+            marginTop: -34,
             borderRadius: radii.pill,
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: colors.primary,
+            borderWidth: 5,
+            borderColor: colors.background,
           },
-          shadow.md,
+          shadow.raised,
         ]}>
-        <Icon name="plus" size={30} color={colors.onPrimary} />
+        <Icon name="plus" size={34} color={colors.onPrimary} />
       </View>
-      <Text variant="caption" color={colors.primaryDark} numberOfLines={1}>
+      {/* Em negrito, por isso o mais largo da barra: com a letra no máximo
+          encolhe até caber (no telemóvel; a web corta, como os outros). */}
+      <Text
+        variant="caption"
+        color={colors.primaryDark}
+        style={{ fontFamily: fontFamily.bold }}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}>
         {t('nav.registar')}
       </Text>
     </Pressable>
@@ -296,14 +307,16 @@ function Botao({
       style={{ flex: 1, alignItems: 'center', gap: 4, paddingVertical: 2 }}>
       <View
         style={{
-          width: 56,
-          height: 34,
+          width: 64,
+          // A 258px a coluna tem 51: a pastilha não sai dela para a vizinha.
+          maxWidth: '100%',
+          height: 36,
           borderRadius: radii.pill,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: focused ? colors.primaryTint : 'transparent',
         }}>
-        <Icon name={icon} size={26} color={focused ? colors.primary : colors.textMuted} />
+        <Icon name={icon} size={26} color={focused ? colors.primaryDark : colors.textSecondary} />
         {/* O ponto das mensagens por ler. Sem número lá dentro de propósito:
             num ícone de 26px, um "12" fica ilegível, e o que interessa saber
             é que há alguma coisa para ler. A conta certa está na lista. */}
@@ -329,8 +342,11 @@ function Botao({
           reticências fica feio e legível, que é a ordem certa. */}
       <Text
         variant="caption"
-        color={focused ? colors.primaryDark : colors.textMuted}
-        numberOfLines={1}>
+        color={focused ? colors.primaryDark : colors.textSecondary}
+        style={focused ? { fontFamily: fontFamily.bold } : undefined}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}>
         {label}
       </Text>
     </Pressable>

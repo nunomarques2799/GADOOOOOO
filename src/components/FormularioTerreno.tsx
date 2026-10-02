@@ -13,7 +13,7 @@ import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import type { Terreno, TipoTerreno } from '@/data/types';
 import { t } from '@/i18n';
-import { colors, radii, shadow, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, shadow, sizes, spacing } from '@/theme';
 
 /** Formulário reutilizável para criar/editar terreno de uma exploração. */
 export function FormularioTerreno({
@@ -410,7 +410,7 @@ function TextField({
         multiline={multiline}
         style={{
           flex: 1,
-          fontFamily: 'Nunito_600SemiBold',
+          fontFamily: fontFamily.medium,
           fontSize: 17,
           color: colors.text,
           minHeight: multiline ? 56 : undefined,

@@ -1,8 +1,8 @@
 /* ==================================================================
    Terrabovina — estilo das páginas legais (privacidade, termos)
    ------------------------------------------------------------------
-   Mesma direção do `styles.css`: papel neutro, verdes fundos e
-   dessaturados, um acento âmbar só, e a numeração das secções em mono
+   Mesma direção do `styles.css`: papel creme, oliveira na barra e nas
+   ligações, um acento ocre só, e a numeração das secções em mono
    tabular. Aqui isso não é enfeite nenhum: um documento legal É uma
    lista numerada, e os números alinhados em coluna são o que o faz
    parecer um documento em vez de uma página de marketing com secções.
@@ -13,19 +13,19 @@
    App Review lê. Ao mexer na paleta lá, mexer aqui também.
    ================================================================== */
 :root {
-  --papel: #eeeee8;
-  --tinta: #14201a;
-  --tinta-2: #4c584f;
-  --tinta-3: #7c877e;
-  --mata: #1b3226;
-  --musgo: #3d5a45;
-  --ambar: #8a5713;
-  --ambar-veu: #f2e7d0;
-  --linha: #dcddd3;
-  --sobre-mata: #f4f4ee;
+  --papel: #f3ebdd;
+  --tinta: #22281a;
+  --tinta-2: #5b604d;
+  --tinta-3: #5d624e;
+  --mata: #2b3621;
+  --musgo: #3a4a2c;
+  --ambar: #875d17;
+  --ambar-veu: #f6e5c5;
+  --linha: #e3d8c5;
+  --sobre-mata: #f3ebdd;
 
-  --display: "Bricolage Grotesque", "Nunito", system-ui, sans-serif;
-  --corpo: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Fraunces", Georgia, "Times New Roman", serif;
+  --corpo: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 
   --maxw: 760px;
@@ -44,19 +44,23 @@ body {
 
 :focus-visible { outline: 2px solid var(--musgo); outline-offset: 3px; border-radius: 3px; }
 
+/* Os títulos em Fraunces com o eixo SOFT a 100: a serifa suave do logótipo. */
+h1, h2, h3, .topbar a { font-variation-settings: "SOFT" 100; }
+
 /* A barra é uma faixa sólida, não um degradê. Um documento legal não
    precisa de brilho nenhum em cima. */
 .topbar { background: var(--mata); color: var(--sobre-mata); }
 .topbar .inner { max-width: var(--maxw); margin: 0 auto; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
-.topbar a { color: var(--sobre-mata); text-decoration: none; display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.02em; }
-.topbar img { width: 30px; height: 30px; border-radius: 7px; }
-.topbar .back { margin-left: auto; font-family: var(--mono); font-weight: 400; font-size: 0.78rem; letter-spacing: 0.06em; opacity: 0.8; }
+.topbar a { color: var(--sobre-mata); text-decoration: none; display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 600; font-size: 1.12rem; letter-spacing: -0.01em; }
+/* O logótipo é redondo (a vaca e as espigas num círculo de oliveira). */
+.topbar img { width: 34px; height: 34px; border-radius: 50%; }
+.topbar .back { margin-left: auto; font-family: var(--mono); font-weight: 400; font-size: 0.78rem; letter-spacing: 0.06em; opacity: 0.85; font-variation-settings: normal; }
 .topbar .back:hover { opacity: 1; }
 .topbar :focus-visible { outline-color: var(--ambar-veu); }
 
 main { max-width: var(--maxw); margin: 0 auto; padding: 48px 24px 72px; }
 
-h1 { font-family: var(--display); font-size: clamp(1.9rem, 4vw, 2.5rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.06; margin-bottom: 10px; }
+h1 { font-family: var(--display); font-size: clamp(1.9rem, 4vw, 2.5rem); font-weight: 600; letter-spacing: -0.015em; line-height: 1.08; margin-bottom: 10px; }
 
 .updated {
   font-family: var(--mono); font-variant-numeric: tabular-nums;
@@ -66,7 +70,7 @@ h1 { font-family: var(--display); font-size: clamp(1.9rem, 4vw, 2.5rem); font-we
 
 h2 {
   font-family: var(--display); font-size: 1.22rem; font-weight: 600;
-  letter-spacing: -0.02em; line-height: 1.25;
+  letter-spacing: -0.01em; line-height: 1.25;
   margin: 40px 0 12px; padding-top: 18px; border-top: 1px solid var(--linha);
   display: flex; gap: 14px; align-items: baseline;
 }
@@ -81,7 +85,7 @@ h2 .num {
 /* Subtítulo dentro de uma secção numerada (o "Denunciar e bloquear" das
    conversas). Não leva número: a numeração é a das secções, e um 4.1 aqui
    obrigava a renumerar tudo à mão à próxima alteração. */
-h3 { font-family: var(--display); font-size: 1.03rem; font-weight: 600; letter-spacing: -0.01em; margin: 26px 0 8px; color: var(--musgo); }
+h3 { font-family: var(--display); font-size: 1.03rem; font-weight: 600; letter-spacing: 0; margin: 26px 0 8px; color: var(--musgo); }
 
 p, li { color: var(--tinta-2); font-size: 1rem; }
 p { margin-bottom: 13px; }
@@ -89,7 +93,7 @@ ul, ol { margin: 0 0 16px 22px; }
 li { margin-bottom: 7px; }
 strong { color: var(--tinta); font-weight: 700; }
 
-a.link { color: var(--musgo); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+a.link { color: var(--musgo); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 a.link:hover { color: var(--tinta); }
 
 
@@ -98,7 +102,7 @@ footer.legal {
   max-width: var(--maxw); margin: 0 auto; padding: 22px 24px 40px;
   color: var(--tinta-3); font-size: 0.84rem; border-top: 1px solid var(--linha);
 }
-footer.legal a { color: var(--musgo); font-weight: 600; text-decoration: none; }
+footer.legal a { color: var(--musgo); font-weight: 700; text-decoration: none; }
 footer.legal a:hover { text-decoration: underline; text-underline-offset: 2px; }
 
 @media (max-width: 640px) {

@@ -9,7 +9,7 @@ import {
 
 import { t } from '@/i18n';
 
-import { colors, radii, shadow, sizes, spacing, type } from '@/theme';
+import { colors, radii, sizes, spacing, type } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
 import { NATIVO, semMovimento } from './movimento';
@@ -36,20 +36,17 @@ type Props = {
 };
 
 /**
- * As cores de marca são GETTERS, não valores.
+ * As cores são GETTERS, não valores.
  *
  * Esta tabela nasce no arranque do módulo, antes de a paleta escolhida estar
  * aplicada (ver `theme/paletas.ts`). Com valores diretos, o botão primário
- * ficava verde numa app que o criador tinha posto azul — e era o único: tudo
- * o resto, que lê as cores durante o render, mudava. O `danger` não muda com a
- * paleta e pode ficar como está.
+ * ficava da cor de origem numa app que o criador tinha posto azul — e era o
+ * único: tudo o resto, que lê as cores durante o render, mudava. O `danger`
+ * também é getter: não muda com a paleta, mas muda de tom na Noite.
  *
  * `node scripts/cores-no-arranque.js` procura este erro no projeto todo.
  */
-const palette: Record<
-  Variant,
-  { bg: string; fg: string; border?: string; shadow?: boolean }
-> = {
+const palette: Record<Variant, { bg: string; fg: string; border?: string }> = {
   primary: {
     get bg() {
       return colors.primary;
@@ -57,7 +54,6 @@ const palette: Record<
     get fg() {
       return colors.onPrimary;
     },
-    shadow: true,
   },
   secondary: {
     get bg() {
@@ -67,21 +63,33 @@ const palette: Record<
       return colors.primaryDark;
     },
   },
+  // O "Cancelar" do guia: sem fundo, com uma linha à volta e letra de tinta.
   ghost: {
-    bg: 'transparent',
+    get bg() {
+      return colors.surface;
+    },
     get fg() {
-      return colors.primaryDark;
+      return colors.text;
     },
     get border() {
-      return colors.borderStrong;
+      return colors.primary;
     },
   },
-  danger: { bg: colors.danger, fg: '#FFFFFF', shadow: true },
+  danger: {
+    get bg() {
+      return colors.danger;
+    },
+    get fg() {
+      return colors.onDanger;
+    },
+  },
 };
 
 /**
- * Botão primário grande (56px, README) com feedback de pressão, estado
- * de carregamento (desabilita + spinner) e estados desabilitados claros.
+ * Botão grande (56px, README) com feedback de pressão, estado de
+ * carregamento (desabilita + spinner) e estados desabilitados claros.
+ *
+ * Plano e de cantos de 16, como no guia: a sombra fica para o que flutua.
  */
 export function Button({
   label,
@@ -112,18 +120,17 @@ export function Button({
       style={[
         {
           minHeight: sizes.button,
-          borderRadius: radii.pill,
+          borderRadius: radii.botao,
           paddingHorizontal: spacing.xl,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
           gap: spacing.xs,
           backgroundColor: p.bg,
-          borderWidth: p.border ? 1.5 : 0,
+          borderWidth: p.border ? 1 : 0,
           borderColor: p.border,
           alignSelf: fullWidth ? 'stretch' : 'flex-start',
         },
-        p.shadow && !isOff ? shadow.md : null,
         isOff && { opacity: 0.45 },
         style,
         toque.estilo,
@@ -133,9 +140,12 @@ export function Button({
       ) : loading ? (
         <ActivityIndicator color={p.fg} />
       ) : (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+        // O rótulo pode ir a duas linhas: "Registar para a Castanha" com a
+        // letra no máximo não cabe numa, e sem o `flexShrink` saía pelas
+        // bordas do botão em vez de partir.
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 }}>
           {icon ? <Icon name={icon} size="sm" color={p.fg} /> : null}
-          <Text style={[type.button, { color: p.fg }]}>{label}</Text>
+          <Text style={[type.button, { color: p.fg, flexShrink: 1, textAlign: 'center' }]}>{label}</Text>
         </View>
       )}
     </PressableAnimado>

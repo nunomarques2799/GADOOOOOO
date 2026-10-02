@@ -6,7 +6,7 @@ import { Icon, type IconName, Text } from '@/components/ui';
 import type { MeteoEstado } from '@/data/store';
 import type { DiaMeteo, Meteorologia } from '@/data/types';
 import { t, type ChaveTexto } from '@/i18n';
-import { colors, radii, shadow, spacing } from '@/theme';
+import { colors, fontFamily, radii, shadow, spacing } from '@/theme';
 
 /** Linha branca ténue que separa os blocos dentro do cartão verde. */
 const RISCA = 'rgba(255,255,255,0.18)';
@@ -43,10 +43,10 @@ export function WeatherCard({
             <EstadoMeteo estado={estado} onRecarregar={onRecarregar} />
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-            <Text style={{ fontFamily: 'Nunito_800ExtraBold', fontSize: 52, lineHeight: 58, color: colors.textOnDark }}>
+            <Text style={{ fontFamily: fontFamily.titulo, fontSize: 52, lineHeight: 58, color: colors.textOnDark }}>
               {meteo.temperatura}
             </Text>
-            <Text style={{ fontFamily: 'Nunito_700Bold', fontSize: 24, color: colors.textOnDark, marginTop: 6 }}>
+            <Text style={{ fontFamily: fontFamily.bold, fontSize: 24, color: colors.textOnDark, marginTop: 6 }}>
               {t('meteo.grausC')}
             </Text>
           </View>

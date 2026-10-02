@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 
-import { colors, radii } from '@/theme';
+import { colors, fontFamily, radii } from '@/theme';
 
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
@@ -35,7 +35,7 @@ export function Avatar({
       {initials ? (
         <Text
           style={{
-            fontFamily: 'Nunito_800ExtraBold',
+            fontFamily: fontFamily.titulo,
             fontSize: size * 0.36,
             color: foreground,
           }}>

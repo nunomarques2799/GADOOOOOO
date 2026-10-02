@@ -15,7 +15,7 @@ import { supabase } from '@/data/supabase';
 import { useDesktop } from '@/hooks/useDesktop';
 import { useTerminarSessao } from '@/hooks/useTerminarSessao';
 import { t } from '@/i18n';
-import { colors, radii, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, sizes, spacing } from '@/theme';
 
 /** O que a pessoa escolheu fazer neste ecrã. `null` = ainda não escolheu. */
 type Opcao = 'criar' | 'convite';
@@ -628,7 +628,7 @@ function CampoTexto({
         autoCapitalize={autoCapitalize}
         keyboardType={keyboardType}
         autoCorrect={false}
-        style={{ flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 17, color: colors.text }}
+        style={{ flex: 1, fontFamily: fontFamily.medium, fontSize: 17, color: colors.text }}
       />
     </View>
   );

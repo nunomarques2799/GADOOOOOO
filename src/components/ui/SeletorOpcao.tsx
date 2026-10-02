@@ -3,7 +3,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { t } from '@/i18n';
-import { colors, radii, shadow, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, shadow, sizes, spacing } from '@/theme';
 
 import { Folha } from './Folha';
 import { Icon, type IconName } from './Icon';
@@ -114,7 +114,7 @@ export function SeletorOpcao({
           <Text
             variant="body"
             color={valor ? colors.text : colors.textMuted}
-            style={{ flex: 1, fontFamily: 'Nunito_600SemiBold' }}>
+            style={{ flex: 1, fontFamily: fontFamily.medium }}>
             {valor ?? placeholder}
           </Text>
           {valor ? null : <Icon name="chevron-down" size="md" color={colors.textMuted} />}
@@ -190,7 +190,7 @@ export function SeletorOpcao({
               autoCapitalize="words"
               style={{
                 flex: 1,
-                fontFamily: 'Nunito_600SemiBold',
+                fontFamily: fontFamily.medium,
                 fontSize: 17,
                 color: colors.text,
               }}

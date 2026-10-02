@@ -20,7 +20,7 @@ import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useDocumentos } from '@/data/useDocumentos';
 import { t } from '@/i18n';
 import { useDesktop } from '@/hooks/useDesktop';
-import { colors, layout, radii, sizes, spacing } from '@/theme';
+import { colors, fontFamily, layout, radii, sizes, spacing } from '@/theme';
 
 /**
  * Documentos: tudo o que ENTRA e SAI da app em ficheiro (importar animais de
@@ -398,7 +398,7 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
             backgroundColor: colors.surface,
             paddingHorizontal: spacing.md,
             height: sizes.input,
-            fontFamily: 'Nunito_700Bold',
+            fontFamily: fontFamily.bold,
             fontSize: 17,
             color: colors.text,
           }}
@@ -417,7 +417,7 @@ function SeccaoNotas({ notas }: { notas: ReturnType<typeof useNotas> }) {
             backgroundColor: colors.surface,
             padding: spacing.md,
             minHeight: 160,
-            fontFamily: 'Nunito_500Medium',
+            fontFamily: fontFamily.medium,
             fontSize: 16,
             color: colors.text,
           }}

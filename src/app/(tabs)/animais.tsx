@@ -33,11 +33,20 @@ import { useVoltarAoTopo } from '@/data/voltarAoTopo';
 import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
 import { useDesktop } from '@/hooks/useDesktop';
-import { colors, layout, radii, shadow, spacing } from '@/theme';
+import { useEstreito } from '@/hooks/useEstreito';
+import { colors, fontFamily, layout, radii, shadow, spacing } from '@/theme';
+
+/** A palavra curta da ordem em uso, para a pastilha. Lida no render (idioma). */
+function rotuloCurtoOrdem(o: Ordenacao): string {
+  if (o === 'alertas') return t('animais.ordemCurtaAlertas');
+  if (o === 'novos') return t('animais.ordemCurtaNovos');
+  if (o === 'velhos') return t('animais.ordemCurtaVelhos');
+  return t('animais.ordemCurtaNome');
+}
 
 /**
- * A ordenação no TELEMÓVEL: um botão só, "Ordenar: Nome (A→Z)", que abre uma
- * folha com as quatro ordens.
+ * A ordenação no TELEMÓVEL: um botão só, "↕ Nome", na linha do título, que
+ * abre uma folha com as quatro ordens.
  *
  * Era uma fila de chips a rolar na horizontal, e rolar para o lado é um gesto
  * que ninguém adivinha: a última ordem ficava cortada a meio ("Com alertas p")
@@ -70,28 +79,25 @@ function OrdenarTelemovel({
         accessibilityLabel={`${t('animais.ordenar')} ${atual?.label ?? ''}`}
         style={({ pressed }) => [
           {
-            alignSelf: 'flex-start',
             flexDirection: 'row',
             alignItems: 'center',
-            gap: spacing.xs,
-            minHeight: 44,
+            gap: 6,
+            minHeight: 48,
             paddingHorizontal: spacing.md,
-            marginBottom: spacing.sm,
             borderRadius: radii.pill,
             borderWidth: 1,
             borderColor: colors.border,
             backgroundColor: colors.surface,
+            flexShrink: 0,
           },
           pressed && { opacity: 0.7 },
         ]}>
-        <Icon name="sort" size="sm" color={colors.textMuted} />
-        <Text variant="caption" color={colors.textMuted}>
-          {t('animais.ordenar')}
+        {/* "↕ Nome": a palavra curta da ordem em uso. A frase inteira ("Com
+            alertas primeiro") está na folha que se abre e no leitor de ecrã. */}
+        <Icon name="swap-vertical" size="md" color={colors.text} />
+        <Text variant="bodyStrong" numberOfLines={1}>
+          {rotuloCurtoOrdem(ordenacao)}
         </Text>
-        <Text variant="bodyStrong" color={colors.primaryDark} numberOfLines={1} style={{ flexShrink: 1 }}>
-          {atual?.label}
-        </Text>
-        <Icon name="chevron-down" size="sm" color={colors.primaryDark} />
       </Pressable>
 
       <Folha
@@ -180,6 +186,7 @@ export default function AnimaisScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
+  const estreito = useEstreito();
   const { animais, alertas, terrenos, terrenoById, exploracoes } = useGado();
   // Com a conta suspensa nada se grava — o formulário só levaria a um erro no
   // fim. O PAPEL pergunta-se por `podeEmAlguma` e não por uma exploração
@@ -337,7 +344,7 @@ export default function AnimaisScreen() {
         ref={refTopo}
         // numColumns não muda a quente — a key força a lista a remontar
         // quando se passa de telemóvel (pilha) para desktop (grelha).
-        key={desktop ? 'grelha' : 'pilha'}
+        key={desktop ? 'grelha' : estreito ? 'pilha-estreita' : 'pilha'}
         data={listaVisivel}
         keyExtractor={(a) => a.id}
         numColumns={desktop ? 2 : 1}
@@ -355,10 +362,22 @@ export default function AnimaisScreen() {
             </View>
           ) : (
             <Cascata lista="animais" indice={index}>
+              {/* No telemóvel a lista é um cartão só, com riscas entre os
+                  animais (guia de estilo): cada linha diz onde fica nele. */}
               <AnimalRow
                 animal={item}
                 nomeTerreno={item.terrenoId ? nomeTerrenoPorId.get(item.terrenoId) : undefined}
                 alertas={porAnimal.get(item.id)}
+                compacto={estreito}
+                posicao={
+                  listaVisivel.length === 1
+                    ? 'unico'
+                    : index === 0
+                      ? 'primeiro'
+                      : index === listaVisivel.length - 1
+                        ? 'ultimo'
+                        : 'meio'
+                }
               />
             </Cascata>
           )
@@ -381,16 +400,47 @@ export default function AnimaisScreen() {
         }}
         ListHeaderComponent={
           <View style={{ paddingTop: insets.top + spacing.md }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: spacing.md }}>
-              <Text variant="display">{t('nav.animais')}</Text>
-              <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: 6 }}>
+            {/* "Animais 84", como no guia: o número em Fraunces, mais apagado,
+                logo a seguir ao título; e o ordenar numa pastilha à direita. */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: spacing.sm,
+                marginBottom: spacing.md,
+              }}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10, flexShrink: 1 }}>
+                <Text variant="display" numberOfLines={1} style={{ flexShrink: 1 }}>
+                  {t('nav.animais')}
+                </Text>
                 {/* Quando há filtros, o que interessa é quantos deles se está a
                     ver — o total do efetivo passa a ser a segunda pergunta. */}
-                {estreitada || sinalAtivo
-                  ? t('animais.deTotal', { n: listaVisivel.length, total: ativos.length })
-                  : t('animais.noEfetivo', { n: ativos.length })}
-              </Text>
+                <Text
+                  variant="h2"
+                  color={colors.textSecondary}
+                  numberOfLines={1}
+                  accessibilityLabel={
+                    estreitada || sinalAtivo
+                      ? t('animais.deTotal', { n: listaVisivel.length, total: ativos.length })
+                      : t('animais.noEfetivo', { n: ativos.length })
+                  }>
+                  {estreitada || sinalAtivo
+                    ? t('animais.deTotal', { n: listaVisivel.length, total: ativos.length })
+                    : ativos.length}
+                </Text>
+              </View>
+              {ativos.length > 1 && !desktop && !estreito ? (
+                <OrdenarTelemovel ordenacao={ordenacao} onEscolher={setOrdenacao} />
+              ) : null}
             </View>
+            {/* Num ecrã estreito o ordenar tem a sua linha: ao lado do título
+                deixava "Animais" reduzido a "A…". */}
+            {ativos.length > 1 && !desktop && estreito ? (
+              <View style={{ flexDirection: 'row', marginTop: -spacing.xs, marginBottom: spacing.sm }}>
+                <OrdenarTelemovel ordenacao={ordenacao} onEscolher={setOrdenacao} />
+              </View>
+            ) : null}
 
             {/* Exploração à VISTA, sem abrir a folha de filtros: com duas ou
                 mais explorações, "de que quinta são estes animais?" é a
@@ -415,22 +465,26 @@ export default function AnimaisScreen() {
                   alignItems: 'center',
                   gap: spacing.xs,
                   backgroundColor: colors.surface,
-                  borderRadius: radii.pill,
+                  borderRadius: radii.lg,
                   borderWidth: 1,
                   borderColor: colors.border,
                   paddingHorizontal: spacing.md,
-                  height: 52,
+                  height: 56,
                 }}>
-                <Icon name="magnify" size="md" color={colors.textMuted} />
+                <Icon name="magnify" size="md" color={colors.textSecondary} />
                 <TextInput
                   value={filtros.texto ?? ''}
                   onChangeText={(t) => setFiltros((f) => ({ ...f, texto: t }))}
                   placeholder={t('animais.procurar')}
                   placeholderTextColor={colors.textMuted}
+                  // O `minWidth: 0` deixa a caixa encolher abaixo da largura
+                  // "natural" do campo: na web, a 258px, o texto de ajuda
+                  // passava por baixo do botão dos filtros.
                   style={{
                     flex: 1,
-                    fontFamily: 'Nunito_500Medium',
-                    fontSize: 16,
+                    minWidth: 0,
+                    fontFamily: fontFamily.regular,
+                    fontSize: 17,
                     color: colors.text,
                   }}
                   returnKeyType="search"
@@ -447,10 +501,12 @@ export default function AnimaisScreen() {
                   {
                     flexDirection: 'row',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: 4,
+                    minWidth: 56,
                     paddingHorizontal: spacing.md,
-                    height: 52,
-                    borderRadius: radii.pill,
+                    height: 56,
+                    borderRadius: radii.lg,
                     borderWidth: 1,
                     borderColor: nAtivos > 0 ? colors.primary : colors.border,
                     backgroundColor: nAtivos > 0 ? colors.primaryTint : colors.surface,
@@ -473,10 +529,7 @@ export default function AnimaisScreen() {
             {/* Ordenar — à vista, e não escondido na folha de filtros: "mostra-me
                 primeiro os que precisam de atenção" é um pedido do dia-a-dia,
                 não uma configuração. Só aparece com animais que cheguem para a
-                ordem fazer diferença. */}
-            {ativos.length > 1 && !desktop ? (
-              <OrdenarTelemovel ordenacao={ordenacao} onEscolher={setOrdenacao} />
-            ) : null}
+                ordem fazer diferença. No telemóvel vive na linha do título. */}
             {ativos.length > 1 && desktop ? (
               <View
                 style={{
@@ -528,7 +581,7 @@ export default function AnimaisScreen() {
                       { justifyContent: 'center', paddingHorizontal: spacing.xs },
                       pressed && { opacity: 0.6 },
                     ]}>
-                    <Text variant="bodyStrong" color={colors.danger}>
+                    <Text variant="label" color={colors.primaryDark} style={{ textDecorationLine: 'underline' }}>
                       {t('comum.limpar')}
                     </Text>
                   </Pressable>
@@ -593,7 +646,10 @@ export default function AnimaisScreen() {
         onLimpar={() => setFiltros({ texto: filtros.texto, exploracaoId: filtros.exploracaoId })}
       />
 
-      {podeRegistar ? (
+      {/* Só no computador. No telemóvel o Registar da barra já abre com o
+          "Novo animal" à cabeça (guia de estilo), e dois "+" verdes a um palmo
+          um do outro, cada um a fazer uma coisa, eram uma pergunta a mais. */}
+      {podeRegistar && desktop ? (
         <FAB label={t('animais.fab')} onPress={() => router.push('/animal/novo')} />
       ) : null}
     </View>

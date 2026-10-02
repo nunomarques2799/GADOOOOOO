@@ -253,8 +253,13 @@ export default function RootLayout() {
    *
    * Com os ficheiros em `assets/fontes/` o caminho exportado passa a ser
    * `/assets/assets/fontes/...`, sem `node_modules` pelo meio, e o Pages
-   * publica-os. O pacote fica instalado na mesma: é de lá que estas cópias
-   * saíram (`assets/fontes/Nunito-LICENSE.txt` é a licença que as acompanha).
+   * publica-os. Cada família leva a sua licença ao lado (`*-LICENSE.txt`).
+   *
+   * Desde 2026-10-02 (a marca nova) são três: Atkinson Hyperlegible Next no
+   * texto, Fraunces nos títulos e IBM Plex Mono nos números. O Fraunces vem em
+   * duas instâncias fixas (ótica 34 e 20, eixo SOFT a 100), tiradas do Google
+   * Fonts: o React Native não mexe nos eixos de uma letra variável. Ver
+   * `fontFamily` em `src/theme/tokens.ts`.
    *
    * A fonte dos ÍCONES está aqui pela mesma razão, e resolve-se por ordem de
    * chegada: o `@expo/vector-icons` só carrega o ttf dele quando o primeiro
@@ -269,11 +274,14 @@ export default function RootLayout() {
    * ninguém a usava, e os ícones continuavam a vir do `node_modules`.
    */
   const [fontesProntas, erroFontes] = useFonts({
-    Nunito_400Regular: require('../../assets/fontes/Nunito_400Regular.ttf'),
-    Nunito_500Medium: require('../../assets/fontes/Nunito_500Medium.ttf'),
-    Nunito_600SemiBold: require('../../assets/fontes/Nunito_600SemiBold.ttf'),
-    Nunito_700Bold: require('../../assets/fontes/Nunito_700Bold.ttf'),
-    Nunito_800ExtraBold: require('../../assets/fontes/Nunito_800ExtraBold.ttf'),
+    AtkinsonHyperlegibleNext_400Regular: require('../../assets/fontes/AtkinsonHyperlegibleNext_400Regular.ttf'),
+    AtkinsonHyperlegibleNext_500Medium: require('../../assets/fontes/AtkinsonHyperlegibleNext_500Medium.ttf'),
+    AtkinsonHyperlegibleNext_600SemiBold: require('../../assets/fontes/AtkinsonHyperlegibleNext_600SemiBold.ttf'),
+    AtkinsonHyperlegibleNext_700Bold: require('../../assets/fontes/AtkinsonHyperlegibleNext_700Bold.ttf'),
+    Fraunces_600SemiBold_opsz34: require('../../assets/fontes/Fraunces_600SemiBold_opsz34.ttf'),
+    Fraunces_600SemiBold_opsz20: require('../../assets/fontes/Fraunces_600SemiBold_opsz20.ttf'),
+    IBMPlexMono_500Medium: require('../../assets/fontes/IBMPlexMono_500Medium.ttf'),
+    IBMPlexMono_600SemiBold: require('../../assets/fontes/IBMPlexMono_600SemiBold.ttf'),
     'material-community': require('../../assets/fontes/MaterialCommunityIcons.ttf'),
   });
 

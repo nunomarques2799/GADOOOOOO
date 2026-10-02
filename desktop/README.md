@@ -46,8 +46,10 @@ instalador local não tem Release com que se comparar).
 ## Gotchas importantes
 
 - **Fontes / ícones via `extraResources`, não `asar`.** As fontes da app
-  (Nunito e o *glyph font* dos `MaterialCommunityIcons`) são exportadas para
-  `web/assets/node_modules/…`. O `electron-builder` filtra pastas `node_modules`
+  eram exportadas para `web/assets/node_modules/…` (hoje vêm de
+  `assets/fontes/` e já não passam por lá, mas o *glyph font* dos
+  `MaterialCommunityIcons` e os desenhos do `expo-router` continuam a ir
+  para `node_modules`). O `electron-builder` filtra pastas `node_modules`
   ao construir o `app.asar`, o que **descartava os `.ttf`** e partia os ícones.
   Por isso o `web/` é copiado inteiro via `extraResources` (`package.json`) e o
   `main.js` lê de `process.resourcesPath/web` quando empacotado. Não voltar a

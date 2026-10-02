@@ -4,7 +4,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Icon, Text } from '@/components/ui';
 import { MINIMO_LETRAS, procurarLocalidades, type Localidade } from '@/data/localidades';
 import { t } from '@/i18n';
-import { colors, radii, shadow, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, shadow, sizes, spacing } from '@/theme';
 
 /** Tempo de espera depois da última letra, para não perguntar a cada tecla. */
 const ESPERA_MS = 350;
@@ -112,7 +112,7 @@ export function CampoLocalidade({
           autoCapitalize="words"
           autoCorrect={false}
           autoFocus={autoFocus}
-          style={{ flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 17, color: colors.text }}
+          style={{ flex: 1, fontFamily: fontFamily.medium, fontSize: 17, color: colors.text }}
         />
         {aProcurar ? <Icon name="dots-horizontal" size="md" color={colors.textMuted} /> : null}
         {value.length > 0 && !aProcurar ? (

@@ -200,12 +200,18 @@ export const tiposMedicamento: TipoMedicamento[] = ['Medicamento', 'Vacina'];
 export const unidadesMedicamento = ['ml', 'l', 'g', 'kg', 'doses', 'comprimidos'] as const;
 
 /**
- * `Misto` e `Outro` seguem a paleta escolhida, por isso são GETTERS: esta
- * tabela nasce no arranque do módulo, antes de a paleta guardada estar
- * aplicada, e um valor direto ficava com a cor de origem para sempre.
+ * `Pastagem`, `Misto` e `Outro` seguem a paleta escolhida, por isso são
+ * GETTERS: esta tabela nasce no arranque do módulo, antes de a paleta guardada
+ * estar aplicada, e um valor direto ficava com a cor de origem para sempre. O
+ * verde da `Pastagem` é fixo, mas muda de tom na Noite (ver `fixasEscuras`).
  */
 export const tipoTerrenoMeta: Record<TipoTerreno, { icon: IconName; cor: string }> = {
-  Pastagem: { icon: 'grass', cor: colors.success },
+  Pastagem: {
+    icon: 'grass',
+    get cor() {
+      return colors.success;
+    },
+  },
   Cultivo: { icon: 'sprout', cor: colors.caprino },
   Misto: {
     icon: 'leaf',

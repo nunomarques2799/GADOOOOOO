@@ -13,7 +13,7 @@ import {
 import { useToasts } from '@/data/toasts';
 import { useDesktop } from '@/hooks/useDesktop';
 import { t } from '@/i18n';
-import { colors, radii, shadow, spacing } from '@/theme';
+import { colors, fontFamily, radii, shadow, spacing } from '@/theme';
 
 /**
  * Escrever ao apoio, ou reportar um problema.
@@ -181,7 +181,7 @@ export function ModalMensagemApoio({
               style={{
                 minHeight: 140,
                 textAlignVertical: 'top',
-                fontFamily: 'Nunito_600SemiBold',
+                fontFamily: fontFamily.medium,
                 fontSize: 17,
                 color: colors.text,
               }}

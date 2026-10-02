@@ -9,6 +9,7 @@ import {
   tabelaFinancas,
   type FiltroPrazos,
 } from '../exportar';
+import { LOGO_SVG } from '../logoImpressao';
 import type { Alerta, Animal, Evento } from '../types';
 
 /* ------------------------------------------------------------------ *
@@ -114,14 +115,16 @@ describe('htmlRelatorioPrazos', () => {
     expect(html).toContain('&lt;script&gt;');
   });
 
-  it('assina com o nome atual da app, no cabeçalho e no rodapé', () => {
+  it('assina com o nome e o logótipo atuais da app, no cabeçalho e no rodapé', () => {
     // A folha impressa ficou a assinar "GG" (de "Gestão de Gado") depois de a app
     // passar a chamar-se Terrabovina: o rodapé mudou, o logótipo do cabeçalho
     // não. É o único sítio onde a app sai em papel, muitas vezes para entregar
-    // a um veterinário ou a um técnico — o nome tem de ser um só.
+    // a um veterinário ou a um técnico — o nome tem de ser um só. Desde a marca
+    // nova (2026-10-02) o cabeçalho leva o logótipo e não as iniciais.
     const html = htmlRelatorioPrazos([]);
     expect(html).not.toContain('>GG<');
-    expect(html).toContain('>TB<');
+    expect(html).not.toContain('>TB<');
+    expect(html).toContain(LOGO_SVG);
     expect(html).toContain('Terrabovina');
   });
 });

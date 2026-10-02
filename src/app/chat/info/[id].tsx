@@ -11,7 +11,7 @@ import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useChat } from '@/data/useChat';
 import { t } from '@/i18n';
-import { colors, radii, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, sizes, spacing } from '@/theme';
 
 /**
  * A informação de uma conversa, e o que se pode mudar nela.
@@ -200,7 +200,7 @@ export default function InfoConversaScreen() {
                     borderColor: colors.border,
                     backgroundColor: colors.background,
                     paddingHorizontal: spacing.md,
-                    fontFamily: 'Nunito_400Regular',
+                    fontFamily: fontFamily.regular,
                     fontSize: 17,
                     color: colors.text,
                   }}

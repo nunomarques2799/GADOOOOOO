@@ -1,10 +1,10 @@
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, Text as RNText, StyleSheet, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui';
 import { ABRANDAR, DURACAO, NATIVO, semMovimento } from '@/components/ui/movimento';
-import { colors, radii } from '@/theme';
+import { fontFamily } from '@/theme';
 
 /**
  * O retrato do animal a "voar" da lista para o topo da ficha.
@@ -30,9 +30,11 @@ type Voo = {
   para: Caixa | null;
   foto?: string;
   icone: IconName;
-  /** A cor do ícone na lista (a do sexo). */
+  /** A inicial do nome, que o retrato mostra quando não há fotografia. */
+  inicial?: string;
+  /** A cor da letra (ou do ícone) no retrato. */
   cor: string;
-  /** O fundo do retrato na lista. */
+  /** O fundo do retrato. */
   fundo: string;
 };
 
@@ -130,44 +132,37 @@ export function CamadaVoo() {
             { scale: p.interpolate({ inputRange: [0, 1], outputRange: [1, escala] }) },
           ],
         }}>
-        {/* Como está na lista: fundo na cor do sexo, ícone da espécie. */}
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              borderRadius: v.foto ? de.w / 2 : radii.md,
-              backgroundColor: v.fundo,
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-              opacity: p.interpolate({ inputRange: [0, 0.6, 1], outputRange: [1, 0.3, 0] }),
-            },
-          ]}>
-          {v.foto ? (
-            <Image source={{ uri: v.foto }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-          ) : (
-            <Icon name={v.icone} size={de.w * 0.58} color={v.cor} />
-          )}
-        </Animated.View>
-        {/* Como fica na ficha: círculo claro sobre o verde, ícone branco. */}
-        <Animated.View
+        {/* O retrato é o mesmo na lista e na ficha (a fotografia, ou a
+            inicial em Fraunces sobre areia, ou o desenho da espécie): só muda
+            de tamanho e de sítio. */}
+        <View
           style={[
             StyleSheet.absoluteFill,
             {
               borderRadius: de.w / 2,
-              backgroundColor: 'rgba(255,255,255,0.16)',
+              backgroundColor: v.fundo,
               alignItems: 'center',
               justifyContent: 'center',
               overflow: 'hidden',
-              opacity: p.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0.6, 1] }),
             },
           ]}>
           {v.foto ? (
             <Image source={{ uri: v.foto }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+          ) : v.inicial ? (
+            <RNText
+              allowFontScaling={false}
+              style={{
+                fontFamily: fontFamily.titulo,
+                fontSize: Math.round(de.w * 0.46),
+                lineHeight: Math.round(de.w * 0.58),
+                color: v.cor,
+              }}>
+              {v.inicial}
+            </RNText>
           ) : (
-            <Icon name={v.icone} size={(52 / 88) * de.w} color={colors.textOnDark} />
+            <Icon name={v.icone} size={Math.round(de.w * 0.52)} color={v.cor} />
           )}
-        </Animated.View>
+        </View>
       </Animated.View>
     </View>
   );

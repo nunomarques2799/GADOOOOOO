@@ -21,10 +21,12 @@ import * as XLSXStyle from 'xlsx-js-style';
 /** true num ambiente com DOM (web/Electron) — onde descarregar/ler funciona. */
 export const excelDisponivel = typeof document !== 'undefined' && typeof window !== 'undefined';
 
+// As cores da marca (`theme/tokens.ts`), em hex e não `colors`: o ficheiro
+// não muda com a paleta escolhida no ecrã.
 export const COR = {
-  verde: '1B7A48', // marca — cabeçalhos obrigatórios
-  cinza: 'E3EAE0', // cabeçalhos opcionais
-  texto: '15251C',
+  marca: '3A4A2C', // oliveira — cabeçalhos obrigatórios
+  areia: 'E8DCC8', // cabeçalhos opcionais
+  texto: '22281A',
   branco: 'FFFFFF',
 } as const;
 
@@ -41,11 +43,11 @@ export type EstiloCelula = {
 /** Célula de uma worksheet, com a propriedade de estilo do xlsx-js-style. */
 type CelulaComEstilo = { s?: EstiloCelula };
 
-/** Cabeçalho: verde com texto branco se obrigatório; cinza claro se opcional. */
+/** Cabeçalho: oliveira com texto branco se obrigatório; areia se opcional. */
 export function estiloCabecalho(obrigatorio: boolean): EstiloCelula {
   return {
     font: { bold: true, sz: 11, color: { rgb: obrigatorio ? COR.branco : COR.texto } },
-    fill: { patternType: 'solid', fgColor: { rgb: obrigatorio ? COR.verde : COR.cinza } },
+    fill: { patternType: 'solid', fgColor: { rgb: obrigatorio ? COR.marca : COR.areia } },
     alignment: { horizontal: 'left', vertical: 'center' },
   };
 }

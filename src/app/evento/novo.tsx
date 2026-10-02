@@ -40,7 +40,7 @@ import { useExistencias } from '@/data/useExistencias';
 import { useFinancas } from '@/data/useFinancas';
 import type { Animal, EventoTipo, ResultadoDiagnostico, Sexo } from '@/data/types';
 import { t, type ChaveTexto } from '@/i18n';
-import { colors, radii, shadow, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, shadow, sizes, spacing } from '@/theme';
 
 /* ------------------------------------------------------------------ *
  *  Tipos de evento cobertos por este formulário
@@ -1224,7 +1224,7 @@ function TextField({
         multiline={multiline}
         style={{
           flex: 1,
-          fontFamily: 'Nunito_600SemiBold',
+          fontFamily: fontFamily.medium,
           fontSize: 17,
           color: colors.text,
           paddingTop: multiline ? 4 : 0,

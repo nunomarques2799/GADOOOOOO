@@ -48,6 +48,7 @@ const pt = {
   'nav.mais': 'Mais',
   'nav.registar': 'Registar',
   'nav.registarAjuda': 'Abre as ações rápidas: animal, vacina, parto, despesa',
+  'registar.pergunta': 'O que aconteceu na exploração?',
 
   /* ---- Comuns ---- */
   'comum.fechar': 'Fechar',
@@ -63,6 +64,7 @@ const pt = {
   'comum.guardar': 'Guardar',
   'comum.guardado': 'Guardado',
   'comum.cancelar': 'Cancelar',
+  'comum.editar': 'Editar',
   'comum.aGuardar': 'A guardar…',
   'comum.aCarregar': 'a carregar…',
   'comum.semVoltaAtras': 'Tem a certeza? Esta ação não pode ser anulada.',
@@ -78,6 +80,10 @@ const pt = {
   /* ---- Início ---- */
   'inicio.calendario': 'O que aí vem',
   'inicio.marcar': 'Marcar',
+  'inicio.exploracao': 'Exploração',
+  'inicio.exploracoes': 'Explorações',
+  'inicio.nExploracoes': '{n} exploração|{n} explorações',
+  'inicio.tudoGuardado': 'tudo guardado',
   'inicio.atencao': 'Precisa da sua atenção',
   'inicio.tudoEmDia': 'Tudo em dia. Não há prazos a cumprir.',
   'inicio.urgentes': '{n} urgente|{n} urgentes',
@@ -135,6 +141,11 @@ const pt = {
   'animais.ordemAlertas': 'Com alertas primeiro',
   'animais.ordemNovos': 'Mais novos',
   'animais.ordemVelhos': 'Mais velhos',
+  'animais.ordemCurtaNome': 'Nome',
+  'animais.ordemCurtaAlertas': 'Alertas',
+  'animais.ordemCurtaNovos': 'Novos',
+  'animais.ordemCurtaVelhos': 'Velhos',
+  'animais.numero': 'Nº {n}',
   'animais.semNome': 'Sem nome',
   'animais.semBrinco': 'Sem brinco',
   'animais.porCompletar': 'Por completar',
@@ -169,6 +180,7 @@ const pt = {
 
   /* ---- Calendário, linha da exploração e selo do alerta ---- */
   'calendario.voltarAHoje': 'Voltar ao mês de hoje',
+  'calendario.voltarAHojeCurto': 'voltar a hoje',
   'calendario.mesAnterior': 'Mês anterior',
   'calendario.mesSeguinte': 'Mês seguinte',
   'calendario.diaAnterior': 'Dia anterior',
@@ -563,6 +575,7 @@ const pt = {
 
   /* ---- Ecrã de entrada ---- */
   'login.entrarNaConta': 'Entrar na sua conta',
+  'login.lema': 'O gado em dia, sem papelada.',
   'login.criarConta': 'Criar a sua conta',
   'login.recuperarAcesso': 'Recuperar o acesso',
   'login.oQueVeioFazer': 'O que veio cá fazer?',
@@ -978,6 +991,11 @@ const pt = {
   'ficha.semEventos': 'Ainda não há eventos registados para este animal.',
   'ficha.editarDados': 'Editar dados do animal',
   'ficha.registarEvento': 'Registar evento',
+  'ficha.registarParaA': 'Registar para a {nome}',
+  'ficha.registarParaO': 'Registar para o {nome}',
+  'ficha.partoPrevistoA': 'Parto previsto a {data}',
+  'ficha.cobricaoA': 'Cobrição a {data}',
+  'ficha.cobricaoAComDetalhe': 'Cobrição a {data} · {detalhe}',
   'ficha.marcarSaida': 'Marcar como falecido / vendido',
   'ficha.voltarAAtivar': 'Voltar a ativar o animal',
   'ficha.eliminadoNaoSeAltera':
@@ -2050,6 +2068,7 @@ const en: Record<ChaveTexto, string> = {
   'nav.mais': 'More',
   'nav.registar': 'Add',
   'nav.registarAjuda': 'Opens quick actions: animal, vaccination, birth, expense',
+  'registar.pergunta': 'What happened on the farm?',
 
   /* ---- Comuns ---- */
   'comum.fechar': 'Close',
@@ -2065,6 +2084,7 @@ const en: Record<ChaveTexto, string> = {
   'comum.guardar': 'Save',
   'comum.guardado': 'Saved',
   'comum.cancelar': 'Cancel',
+  'comum.editar': 'Edit',
   'comum.aGuardar': 'Saving…',
   'comum.aCarregar': 'loading…',
   'comum.semVoltaAtras': 'Are you sure? This cannot be undone.',
@@ -2080,6 +2100,10 @@ const en: Record<ChaveTexto, string> = {
   /* ---- Início ---- */
   'inicio.calendario': "What's coming up",
   'inicio.marcar': 'Schedule',
+  'inicio.exploracao': 'Farm',
+  'inicio.exploracoes': 'Farms',
+  'inicio.nExploracoes': '{n} farm|{n} farms',
+  'inicio.tudoGuardado': 'everything saved',
   'inicio.atencao': 'Needs your attention',
   'inicio.tudoEmDia': 'All up to date. Nothing due.',
   'inicio.urgentes': '{n} urgent|{n} urgent',
@@ -2136,6 +2160,11 @@ const en: Record<ChaveTexto, string> = {
   'animais.ordemAlertas': 'With alerts first',
   'animais.ordemNovos': 'Youngest first',
   'animais.ordemVelhos': 'Oldest first',
+  'animais.ordemCurtaNome': 'Name',
+  'animais.ordemCurtaAlertas': 'Alerts',
+  'animais.ordemCurtaNovos': 'Youngest',
+  'animais.ordemCurtaVelhos': 'Oldest',
+  'animais.numero': 'No. {n}',
   'animais.semNome': 'No name',
   'animais.semBrinco': 'No tag',
   'animais.porCompletar': 'Incomplete',
@@ -2166,6 +2195,7 @@ const en: Record<ChaveTexto, string> = {
 
   /* ---- Calendário, linha da exploração e selo do alerta ---- */
   'calendario.voltarAHoje': 'Back to this month',
+  'calendario.voltarAHojeCurto': 'back to today',
   'calendario.mesAnterior': 'Previous month',
   'calendario.mesSeguinte': 'Next month',
   'calendario.diaAnterior': 'Previous day',
@@ -2556,6 +2586,7 @@ const en: Record<ChaveTexto, string> = {
 
   /* ---- Ecrã de entrada ---- */
   'login.entrarNaConta': 'Sign in to your account',
+  'login.lema': 'Your herd up to date, without the paperwork.',
   'login.criarConta': 'Create your account',
   'login.recuperarAcesso': 'Recover your access',
   'login.oQueVeioFazer': 'What brings you here?',
@@ -2966,6 +2997,11 @@ const en: Record<ChaveTexto, string> = {
   'ficha.semEventos': 'Nothing recorded for this animal yet.',
   'ficha.editarDados': 'Edit the animal details',
   'ficha.registarEvento': 'Record something',
+  'ficha.registarParaA': 'Add a record for {nome}',
+  'ficha.registarParaO': 'Add a record for {nome}',
+  'ficha.partoPrevistoA': 'Calving due on {data}',
+  'ficha.cobricaoA': 'Served on {data}',
+  'ficha.cobricaoAComDetalhe': 'Served on {data} · {detalhe}',
   'ficha.marcarSaida': 'Mark as died / sold',
   'ficha.voltarAAtivar': 'Bring the animal back',
   'ficha.eliminadoNaoSeAltera':

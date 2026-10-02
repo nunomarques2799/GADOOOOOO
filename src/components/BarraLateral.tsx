@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
+import { Logotipo } from '@/components/Logotipo';
 import { Icon, type IconName, Text } from '@/components/ui';
 import { colors, layout, radii, spacing } from '@/theme';
 
@@ -39,8 +40,8 @@ export function BarraLateral({ itens }: { itens: ItemNav[] }) {
           paddingHorizontal: spacing.sm,
           marginBottom: spacing.xl,
         }}>
-        <Icon name="cow" size="xl" color={colors.textOnDark} />
-        <Text variant="h3" color={colors.textOnDark}>
+        <Logotipo tamanho={44} />
+        <Text variant="h2" color={colors.textOnDark}>
           Terrabovina
         </Text>
       </View>

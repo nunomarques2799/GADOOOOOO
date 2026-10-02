@@ -15,9 +15,10 @@ type Props = {
 };
 
 /**
- * Cartão branco arredondado com sombra suave — a superfície base da app,
- * como na inspiração. Se receber `onPress`, dá feedback de pressão
- * (opacidade + leve escala) sem deslocar o layout (regra press-feedback).
+ * Cartão — a superfície base da app. Como no guia: cantos de 20, uma linha de
+ * 1 px e quase sem sombra (quem separa o cartão do fundo creme é a linha). Se
+ * receber `onPress`, dá feedback de pressão (opacidade + leve escala) sem
+ * deslocar o layout (regra press-feedback).
  */
 export function Card({
   children,
@@ -30,7 +31,7 @@ export function Card({
   const base: StyleProp<ViewStyle> = [
     {
       backgroundColor: colors.surface,
-      borderRadius: radii.xl,
+      borderRadius: radii.lg,
       padding: padded ? spacing.lg : 0,
       borderWidth: 1,
       borderColor: colors.border,

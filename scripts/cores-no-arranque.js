@@ -18,7 +18,12 @@ const fs = require('fs');
 const path = require('path');
 const ts = require('typescript');
 
-/** Os tokens que a paleta reescreve. Espelha `TokensPaleta` em paletas.ts. */
+/**
+ * Os tokens que o arranque reescreve. Espelha `TokensPaleta` em paletas.ts e,
+ * desde a marca nova (2026-10-02), também as cores com significado que mudam
+ * de tom numa paleta escura (`fixasEscuras` em tokens.ts): um `colors.danger`
+ * lido no topo de um módulo ficava com a letra escura na Noite, ilegível.
+ */
 const DE_PALETA = new Set([
   'primary',
   'primaryDark',
@@ -26,6 +31,8 @@ const DE_PALETA = new Set([
   'primaryTint',
   'primaryTintStrong',
   'onPrimary',
+  'textOnDark',
+  'textOnDarkMuted',
   'headerFrom',
   'headerTo',
   'background',
@@ -38,6 +45,23 @@ const DE_PALETA = new Set([
   'border',
   'borderStrong',
   'overlay',
+  // as fixas que mudam de tom numa paleta escura
+  'success',
+  'successTint',
+  'warning',
+  'warningTint',
+  'danger',
+  'dangerTint',
+  'onDanger',
+  'info',
+  'infoTint',
+  'saude',
+  'saudeTint',
+  'femea',
+  'femeaTint',
+  'macho',
+  'machoTint',
+  'black',
 ]);
 
 /** Nós que criam um novo momento de execução — lá dentro já é seguro. */

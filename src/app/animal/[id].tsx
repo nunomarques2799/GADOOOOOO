@@ -1,10 +1,10 @@
-import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlertItem } from '@/components/AlertItem';
+import { RetratoAnimal } from '@/components/AnimalRow';
 import {
   Badge,
   Button,
@@ -21,20 +21,21 @@ import {
   TextField,
 } from '@/components/ui';
 import { chegadaDoVoo, useVooEmCurso } from '@/components/VooAnimal';
-import { especieMeta, finalidadeMeta } from '@/data/constants';
+import { especieMeta, finalidadeMeta, GestacaoDias } from '@/data/constants';
 import { confirmar } from '@/data/avisos';
 import { filhosDe, progenitorDe, rotuloAnimal } from '@/data/genealogia';
 import { balancoAnimal } from '@/data/financas';
 import { diasAte, formatDataCurta, formatDataHora, formatDataPt, formatEuro, idadeExtenso, paraEuro, parseDataPt } from '@/data/helpers';
 import { useMembros } from '@/data/membros';
 import { useNomesEquipa } from '@/data/nomesEquipa';
+import { useEstreito } from '@/hooks/useEstreito';
 import { estadoReprodutivo, faseMeta } from '@/data/reproducao';
 import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { useFinancas } from '@/data/useFinancas';
 import type { EstadoAnimal, EventoTipo } from '@/data/types';
 import { t } from '@/i18n';
-import { colors, radii, shadow, spacing } from '@/theme';
+import { colors, radii, spacing, type } from '@/theme';
 
 const eventoIcone: Record<EventoTipo, IconName> = {
   Parto: 'baby-bottle-outline',
@@ -70,6 +71,9 @@ export default function AnimalDetalheScreen() {
   // O retrato grande: é para aqui que voa o da lista (ver `VooAnimal.tsx`).
   const retrato = useRef<View>(null);
   const vooEmCurso = useVooEmCurso(id);
+  // Num ecrã estreito o nome vai para debaixo do retrato: ao lado dele, em
+  // Fraunces grande, "Castanha" partia-se em "Cast / anha".
+  const estreito = useEstreito();
 
   const animal = animalById(id);
   /**
@@ -188,73 +192,98 @@ export default function AnimalDetalheScreen() {
     );
   }
 
+  // O botão de baixo, "Registar para a Estrela" (guia de estilo): o que mais se
+  // faz numa ficha é apontar o que acabou de acontecer àquele animal.
+  const comBotaoRegistar = podeRegistarEvento && !saiu;
+  const femea = animal.sexo === 'Fêmea';
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Sem título em cima: o nome está logo abaixo, grande. À direita, o
+          "Editar" com a palavra escrita (guia de estilo). */}
       <Header
-        title={animal.nome ?? t('ficha.animal')}
+        title=""
         actionIcon={podeEditar ? 'pencil-outline' : undefined}
+        actionLabel={t('comum.editar')}
         onAction={podeEditar ? () => router.push(`/animal/editar/${animal.id}`) : undefined}
       />
-      <Screen>
-        {/* Hero */}
-        <LinearGradient
-          colors={[colors.headerFrom, colors.headerTo]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[{ borderRadius: radii.xl, padding: spacing.lg, alignItems: 'center' }, shadow.md]}>
+      <Screen contentStyle={comBotaoRegistar ? { paddingBottom: 140 } : undefined}>
+        {/* O retrato grande, com um aro, e o nome em Fraunces. Era um cartão
+            verde com a vaca da biblioteca de ícones; o guia pôs aqui a mesma
+            inicial da lista, que é para onde o retrato "voa". */}
+        <View
+          style={{
+            flexDirection: estreito ? 'column' : 'row',
+            alignItems: estreito ? 'flex-start' : 'center',
+            gap: spacing.md,
+          }}>
           <View
-            ref={retrato}
-            collapsable={false}
-            onLayout={() =>
-              // Diz ao retrato que vem a voar da lista onde é que ele pousa.
-              retrato.current?.measureInWindow((x, y, w, h) => chegadaDoVoo(animal.id, { x, y, w, h }))
-            }
             style={{
-              opacity: vooEmCurso ? 0 : 1,
-              width: 88,
-              height: 88,
+              padding: 5,
               borderRadius: radii.pill,
-              backgroundColor: 'rgba(255,255,255,0.16)',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: spacing.sm,
-              overflow: 'hidden',
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
             }}>
-            {animal.fotografia ? (
-              <Image
-                source={{ uri: animal.fotografia }}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="cover"
-                accessibilityIgnoresInvertColors
-              />
-            ) : (
-              <Icon name={meta.icon} size={52} color={colors.textOnDark} />
-            )}
+            <View
+              ref={retrato}
+              collapsable={false}
+              onLayout={() =>
+                // Diz ao retrato que vem a voar da lista onde é que ele pousa.
+                retrato.current?.measureInWindow((x, y, w, h) => chegadaDoVoo(animal.id, { x, y, w, h }))
+              }
+              style={{ opacity: vooEmCurso ? 0 : 1 }}>
+              <RetratoAnimal animal={animal} tamanho={estreito ? 88 : 104} />
+            </View>
           </View>
-          <Text variant="h1" color={colors.textOnDark}>
-            {animal.nome ?? t('animais.semNome')}
-          </Text>
-          <Text variant="body" color={colors.textOnDarkMuted}>
-            {animal.numeroIdentificacao ?? t('animais.semBrinco')}
-          </Text>
-          <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <HeroChip icon={meta.icon} label={animal.especie} />
-            <HeroChip icon={animal.sexo === 'Fêmea' ? 'gender-female' : 'gender-male'} label={animal.sexo} />
-            <HeroChip icon="cake-variant" label={idadeExtenso(animal.dataNascimento)} />
-            {animal.estado === 'falecido' ? (
-              <HeroChip icon="grave-stone" label={t('ficha.falecido')} />
-            ) : null}
-            {animal.estado === 'vendido' ? (
-              <HeroChip icon="cash" label={t('ficha.vendido')} />
-            ) : null}
-            {eliminado ? <HeroChip icon="trash-can-outline" label={t('ficha.eliminado')} /> : null}
+          <View style={estreito ? { alignSelf: 'stretch' } : { flex: 1, minWidth: 0 }}>
+            <Text variant="display" numberOfLines={2}>
+              {animal.nome ?? t('animais.semNome')}
+            </Text>
+            {/* O número e o brinco em mono: é assim que se conferem contra o
+                que está escrito no animal. */}
+            <Text style={[type.mono, { color: colors.textSecondary, marginTop: 2 }]}>
+              {[
+                animal.numeroCasa ? t('animais.numero', { n: animal.numeroCasa }) : null,
+                animal.numeroIdentificacao ?? t('animais.semBrinco'),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
           </View>
-        </LinearGradient>
+        </View>
+        <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.md, flexWrap: 'wrap' }}>
+          <PastilhaFicha
+            label={femea ? t('evento.femea') : t('evento.macho')}
+            fundo={femea ? colors.femeaTint : colors.machoTint}
+            cor={femea ? colors.femea : colors.macho}
+          />
+          <PastilhaFicha icon={meta.icon} label={animal.raca ?? animal.especie} />
+          <PastilhaFicha icon="cake-variant-outline" label={idadeExtenso(animal.dataNascimento)} />
+          {terreno ? <PastilhaFicha icon="map-marker-outline" label={terreno.nome} /> : null}
+          {animal.estado === 'falecido' ? <PastilhaFicha icon="grave-stone" label={t('ficha.falecido')} /> : null}
+          {animal.estado === 'vendido' ? <PastilhaFicha icon="cash" label={t('ficha.vendido')} /> : null}
+          {eliminado ? <PastilhaFicha icon="trash-can-outline" label={t('ficha.eliminado')} /> : null}
+        </View>
+
+        {/* O estado da reprodução em destaque, como no guia: o que interessa
+            de uma fêmea prenhe é quando pare, e quanto falta. */}
+        {reproducao && reproducao.fase !== 'nao-aplicavel' ? (
+          <CartaoReproducao
+            fase={reproducao.fase}
+            dataPrevistaParto={reproducao.dataPrevistaParto}
+            diasParaParto={reproducao.diasParaParto}
+            gestacao={GestacaoDias[animal.especie]}
+            desde={reproducao.desde}
+            detalheCobricao={reproducao.detalheCobricao}
+            diasNaFase={reproducao.diasNaFase}
+          />
+        ) : null}
 
         {/* Aviso: animal já não está no efetivo */}
         {saiu ? (
           <>
-            <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+            <Text variant="h2" style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>
               {t('ficha.saidaDoEfetivo')}
             </Text>
             <Card>
@@ -310,7 +339,7 @@ export default function AnimalDetalheScreen() {
         {/* Alertas do animal */}
         {meusAlertas.length > 0 ? (
           <>
-            <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+            <Text variant="h2" style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>
               {t('inicio.atencao')}
             </Text>
             <Card padded={false}>
@@ -324,7 +353,7 @@ export default function AnimalDetalheScreen() {
         ) : null}
 
         {/* Identificação */}
-        <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+        <Text variant="h2" style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>
           {t('ficha.identificacao')}
         </Text>
         <Card>
@@ -352,7 +381,7 @@ export default function AnimalDetalheScreen() {
         </Card>
 
         {/* Nascimento e genealogia */}
-        <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+        <Text variant="h2" style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>
           {t('ficha.nascimentoEGenealogia')}
         </Text>
         <Card>
@@ -394,15 +423,11 @@ export default function AnimalDetalheScreen() {
             não há aqui nenhum campo que alguém tenha de manter atualizado. */}
         {reproducao && reproducao.fase !== 'nao-aplicavel' ? (
           <>
-            <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+            <Text variant="h2" style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>
               {t('nav.reproducao')}
             </Text>
             <Card>
-              <InfoField
-                icon="heart-pulse"
-                label={t('perfil.estado')}
-                value={`${faseMeta(reproducao.fase).label} · ${faseMeta(reproducao.fase).explicacao}`}
-              />
+              {/* O estado em si está no cartão de cima, em destaque. */}
               {reproducao.fase === 'coberta' || reproducao.fase === 'duvidosa' ? (
                 <InfoField
                   icon="calendar-clock"
@@ -439,7 +464,7 @@ export default function AnimalDetalheScreen() {
         ) : null}
 
         {/* Localização */}
-        <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+        <Text variant="h2" style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>
           {t('ficha.localizacao')}
         </Text>
         <Card>
@@ -452,7 +477,7 @@ export default function AnimalDetalheScreen() {
             isto: quanto o animal rendeu é conta da exploração. */}
         {balanco.temDados && podeVerBalanco ? (
           <>
-            <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+            <Text variant="h2" style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>
               {t('ficha.balanco')}
             </Text>
             <Card>
@@ -474,7 +499,7 @@ export default function AnimalDetalheScreen() {
         ) : null}
 
         {/* Histórico */}
-        <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
+        <Text variant="h2" style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>
           {t('ficha.historico')} ({eventos.length})
         </Text>
         {eventos.length === 0 ? (
@@ -520,18 +545,11 @@ export default function AnimalDetalheScreen() {
 
         {/* Ações */}
         <View style={{ gap: spacing.sm, marginTop: spacing.xl }}>
-          {/* Corrigir a ficha continua a poder fazer-se depois de o animal
-              sair do efetivo — a data de nascimento de uma vaca vendida está
-              errada da mesma maneira. O que já não se corrige é um registo
-              ELIMINADO, e aí este botão nem aparece (ver `podeEditar`). */}
-          {podeEditar ? (
-            <Button
-              label={t('ficha.editarDados')}
-              icon="pencil-outline"
-              variant={saiu ? 'secondary' : 'ghost'}
-              onPress={() => router.push(`/animal/editar/${animal.id}`)}
-            />
-          ) : null}
+          {/* Corrigir a ficha (o "Editar" lá em cima) continua a poder
+              fazer-se depois de o animal sair do efetivo — a data de
+              nascimento de uma vaca vendida está errada da mesma maneira. O
+              que já não se corrige é um registo ELIMINADO, e aí o botão nem
+              aparece (ver `podeEditar`). Registar fica no botão de baixo. */}
           {eliminado ? (
             <Text variant="secondary" color={colors.textMuted}>
               {t('ficha.eliminadoNaoSeAltera')}
@@ -539,14 +557,6 @@ export default function AnimalDetalheScreen() {
           ) : null}
           {!saiu ? (
             <>
-              {podeRegistarEvento ? (
-                <Button
-                  label={t('ficha.registarEvento')}
-                  icon="plus"
-                  variant="secondary"
-                  onPress={() => router.push({ pathname: '/evento/novo', params: { animalId: animal.id } })}
-                />
-              ) : null}
               {!podeRegistarSaida ? null : !saidaOpen ? (
                 <Button
                   label={t('ficha.marcarSaida')}
@@ -586,7 +596,137 @@ export default function AnimalDetalheScreen() {
           ) : null}
         </View>
       </Screen>
+
+      {/* Preso ao fundo, como no guia: "Registar para a Estrela". O artigo
+          segue o sexo do animal, que é como se diz. */}
+      {comBotaoRegistar ? (
+        <BarraRegistar
+          rotulo={
+            femea
+              ? t('ficha.registarParaA', { nome: animal.nome ?? t('ficha.animal').toLowerCase() })
+              : t('ficha.registarParaO', { nome: animal.nome ?? t('ficha.animal').toLowerCase() })
+          }
+          onPress={() => router.push({ pathname: '/evento/novo', params: { animalId: animal.id } })}
+        />
+      ) : null}
     </View>
+  );
+}
+
+/** O botão de baixo da ficha, por cima do conteúdo, com a margem do iPhone. */
+function BarraRegistar({ rotulo, onPress }: { rotulo: string; onPress: () => void }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        paddingHorizontal: spacing.lg,
+        paddingTop: spacing.sm,
+        paddingBottom: insets.bottom + spacing.sm,
+        backgroundColor: colors.background,
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+      }}>
+      <View style={{ width: '100%', maxWidth: 760, alignSelf: 'center' }}>
+        <Button label={rotulo} icon="plus" onPress={onPress} />
+      </View>
+    </View>
+  );
+}
+
+/**
+ * O estado da reprodução em destaque (guia de estilo).
+ *
+ * Prenha: a data prevista do parto em Fraunces, uma barra com o tempo de
+ * gestação que já passou (pela média da espécie, a mesma conta que dá a data)
+ * e os dias que faltam em mono. Nas outras fases: o estado e o que ele quer
+ * dizer. Tudo calculado do histórico (`reproducao.ts`), nada guardado.
+ */
+function CartaoReproducao({
+  fase,
+  dataPrevistaParto,
+  diasParaParto,
+  gestacao,
+  desde,
+  detalheCobricao,
+  diasNaFase,
+}: {
+  fase: Exclude<ReturnType<typeof estadoReprodutivo>['fase'], 'nao-aplicavel'>;
+  dataPrevistaParto?: string;
+  diasParaParto?: number;
+  gestacao: number;
+  desde?: string;
+  detalheCobricao?: string;
+  diasNaFase: number;
+}) {
+  const meta = faseMeta(fase);
+  const prenha = fase === 'gestante' && !!dataPrevistaParto && diasParaParto != null;
+  const passou = prenha ? Math.min(1, Math.max(0, 1 - (diasParaParto ?? 0) / gestacao)) : 0;
+  const tom = fase === 'gestante' ? 'warning' : fase === 'vazia' ? 'neutral' : 'info';
+  return (
+    <Card style={{ marginTop: spacing.lg }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }}>
+        <Text variant="rotulo" color={colors.textSecondary}>
+          {t('nav.reproducao')}
+        </Text>
+        <Badge tone={tom} label={meta.label} />
+      </View>
+      {prenha ? (
+        <>
+          <Text variant="h1" style={{ marginTop: spacing.sm }}>
+            {t('ficha.partoPrevistoA', { data: formatDataPt(dataPrevistaParto!) })}
+          </Text>
+          {/* A barra: quanto da gestação já passou. */}
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={{
+              height: 12,
+              borderRadius: radii.pill,
+              backgroundColor: colors.surfaceAlt,
+              marginTop: spacing.md,
+              overflow: 'hidden',
+            }}>
+            <View
+              style={{
+                width: `${Math.round(passou * 100)}%`,
+                height: '100%',
+                borderRadius: radii.pill,
+                backgroundColor: colors.warningVivo,
+              }}
+            />
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm }}>
+            <Text variant="secondary" color={colors.textSecondary} style={{ flex: 1 }}>
+              {desde
+                ? detalheCobricao
+                  ? t('ficha.cobricaoAComDetalhe', { data: formatDataPt(desde), detalhe: detalheCobricao })
+                  : t('ficha.cobricaoA', { data: formatDataPt(desde) })
+                : meta.explicacao}
+            </Text>
+            <Text style={[type.mono, { color: colors.warning }]} numberOfLines={1}>
+              {(diasParaParto ?? 0) >= 0
+                ? t('alerta.dias', { n: diasParaParto ?? 0 })
+                : t('alerta.emAtraso')}
+            </Text>
+          </View>
+        </>
+      ) : (
+        <>
+          <Text variant="h2" style={{ marginTop: spacing.sm }}>
+            {meta.explicacao}
+          </Text>
+          {(fase === 'coberta' || fase === 'duvidosa') && diasNaFase > 0 ? (
+            <Text style={[type.mono, { color: colors.textSecondary, marginTop: spacing.xs }]}>
+              {t('alerta.dias', { n: diasNaFase })}
+            </Text>
+          ) : null}
+        </>
+      )}
+    </Card>
   );
 }
 
@@ -729,20 +869,38 @@ function FormularioSaida({
   );
 }
 
-function HeroChip({ icon, label }: { icon: IconName; label: string }) {
+/**
+ * As pastilhas por baixo do nome (guia de estilo): o sexo na sua cor, e a
+ * raça, a idade e o terreno em superfície com uma linha à volta.
+ */
+function PastilhaFicha({
+  icon,
+  label,
+  fundo,
+  cor,
+}: {
+  icon?: IconName;
+  label: string;
+  /** Sem fundo, é uma pastilha de superfície com linha. */
+  fundo?: string;
+  cor?: string;
+}) {
   return (
     <View
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
-        backgroundColor: 'rgba(255,255,255,0.16)',
+        gap: 6,
+        minHeight: 40,
+        backgroundColor: fundo ?? colors.surface,
+        borderWidth: fundo ? 0 : 1,
+        borderColor: colors.border,
         borderRadius: radii.pill,
-        paddingHorizontal: spacing.sm,
+        paddingHorizontal: spacing.md,
         paddingVertical: 6,
       }}>
-      <Icon name={icon} size={15} color={colors.textOnDark} />
-      <Text variant="caption" color={colors.textOnDark}>
+      {icon ? <Icon name={icon} size={16} color={cor ?? colors.textSecondary} /> : null}
+      <Text variant="label" color={cor ?? colors.text}>
         {label}
       </Text>
     </View>

@@ -26,7 +26,7 @@ import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { ligacaoParaAnexo, useChat, useConversa } from '@/data/useChat';
 import { useDesktop } from '@/hooks/useDesktop';
 import { t } from '@/i18n';
-import { colors, layout, radii, spacing } from '@/theme';
+import { colors, fontFamily, layout, radii, spacing } from '@/theme';
 
 /**
  * Uma conversa aberta.
@@ -316,7 +316,7 @@ export default function ConversaScreen() {
                 paddingHorizontal: spacing.md,
                 paddingTop: spacing.sm,
                 paddingBottom: spacing.sm,
-                fontFamily: 'Nunito_400Regular',
+                fontFamily: fontFamily.regular,
                 fontSize: 17,
                 color: colors.text,
               }}

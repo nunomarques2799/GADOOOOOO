@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { t } from '@/i18n';
-import { colors, radii, sizes, spacing } from '@/theme';
+import { colors, fontFamily, radii, sizes, spacing } from '@/theme';
 
 /**
  * Ecrã de definição de nova palavra-passe. Mostrado quando o utilizador abre a
@@ -176,7 +176,7 @@ function Campo({
           autoCapitalize="none"
           autoCorrect={false}
           secureTextEntry
-          style={{ flex: 1, fontFamily: 'Nunito_600SemiBold', fontSize: 17, color: colors.text }}
+          style={{ flex: 1, fontFamily: fontFamily.medium, fontSize: 17, color: colors.text }}
         />
       </View>
     </View>
