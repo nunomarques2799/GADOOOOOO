@@ -458,6 +458,69 @@ function tabelaInexistente(erro: { code?: string; message?: string }): boolean {
 
 /* ---- Reads ---- */
 
+/**
+ * Quantas linhas se pedem de cada vez.
+ *
+ * O Supabase corta CADA resposta no `max rows` da API (1000 por omissão), sem
+ * erro nem aviso: a resposta vem com 1000 linhas e ar de completa. Até
+ * 2026-10-03 a leitura pedia cada tabela de uma vez só, e a conta com a carga
+ * de teste (4728 animais no efetivo, 9835 eventos) abria a mostrar 952
+ * animais. Os alertas, a reprodução, a lista do SNIRA, as finanças e o Excel
+ * exportado saíam todos de metade dos dados.
+ */
+export const LINHAS_POR_PAGINA = 1000;
+
+/** Quantas páginas da mesma tabela vão ao servidor ao mesmo tempo. */
+const PAGINAS_EM_PARALELO = 4;
+
+type ErroLeitura = { message: string; code?: string };
+type RespostaPagina<T> = { data: T[] | null; error: ErroLeitura | null; count?: number | null };
+
+/**
+ * Lê uma tabela INTEIRA, página a página.
+ *
+ * `pagina(de, ate, contar)` monta o pedido de uma página: tem de acabar em
+ * `.range(de, ate)` e de ter uma ORDEM TOTAL (o último critério é o `id`),
+ * senão duas linhas empatadas na ordenação podem trocar de página entre dois
+ * pedidos e uma delas sai duas vezes e a outra nenhuma.
+ *
+ * A primeira página pede também a contagem (`count: 'exact'`): é ela que diz
+ * quando parar. Não se pára "quando a página vem incompleta", porque se o
+ * `max rows` do projeto for mais baixo do que `LINHAS_POR_PAGINA`, todas as
+ * páginas vêm "incompletas" e a leitura parava na primeira, que é o corte que
+ * isto existe para evitar. O passo das páginas seguintes é o tamanho que a
+ * primeira trouxe de facto.
+ */
+export async function lerTodasAsLinhas<T extends { id: string }>(
+  pagina: (de: number, ate: number, contar: boolean) => PromiseLike<RespostaPagina<T>>,
+): Promise<{ data: T[]; error: ErroLeitura | null }> {
+  const primeira = await pagina(0, LINHAS_POR_PAGINA - 1, true);
+  if (primeira.error) return { data: [], error: primeira.error };
+  const linhas = [...(primeira.data ?? [])];
+  const total = primeira.count ?? linhas.length;
+  const passo = linhas.length;
+  if (passo === 0 || linhas.length >= total) return { data: linhas, error: null };
+
+  const inicios: number[] = [];
+  for (let de = passo; de < total; de += passo) inicios.push(de);
+  for (let i = 0; i < inicios.length; i += PAGINAS_EM_PARALELO) {
+    const lote = await Promise.all(
+      inicios.slice(i, i + PAGINAS_EM_PARALELO).map((de) => pagina(de, de + passo - 1, false)),
+    );
+    for (const r of lote) {
+      if (r.error) return { data: [], error: r.error };
+      linhas.push(...(r.data ?? []));
+    }
+  }
+  // Uma linha criada entre dois pedidos empurra as outras uma posição para a
+  // frente, e a última de uma página volta a sair no início da seguinte.
+  const vistos = new Set<string>();
+  return {
+    data: linhas.filter((l) => (vistos.has(l.id) ? false : (vistos.add(l.id), true))),
+    error: null,
+  };
+}
+
 export type Snapshot = {
   exploracoes: Exploracao[];
   terrenos: Terreno[];
@@ -478,15 +541,27 @@ export async function carregarTudoSupabase(): Promise<Snapshot> {
       medicamentos: [],
     };
   }
+  const cliente = supabase;
+  /**
+   * Uma tabela inteira, pela ordem pedida e com o `id` como último critério
+   * (ver `lerTodasAsLinhas`).
+   */
+  const tabela = <T extends { id: string }>(nome: string, ordem: [coluna: string, crescente: boolean][]) =>
+    lerTodasAsLinhas<T>((de, ate, contar) => {
+      let q = cliente.from(nome).select('*', contar ? { count: 'exact' } : undefined);
+      for (const [coluna, crescente] of ordem) q = q.order(coluna, { ascending: crescente });
+      return q.order('id', { ascending: true }).range(de, ate);
+    });
+
   const [expRes, terRes, aniRes, evtRes, movRes, medRes] = await Promise.all([
-    supabase.from('exploracao').select('*').order('nome'),
-    supabase.from('terreno').select('*').order('nome'),
-    supabase.from('animal').select('*'),
-    supabase.from('evento').select('*').order('data', { ascending: false }),
+    tabela<ExploracaoRow>('exploracao', [['nome', true]]),
+    tabela<TerrenoRow>('terreno', [['nome', true]]),
+    tabela<AnimalRow>('animal', []),
+    tabela<EventoRow>('evento', [['data', false]]),
     // A RLS decide o que vem: o dono recebe a exploração toda, o trabalhador só
     // o que ele próprio lançou, o veterinário nada. Não é preciso filtrar aqui.
-    supabase.from('movimento').select('*').order('data', { ascending: false }),
-    supabase.from('medicamento').select('*').order('data_compra', { ascending: false }),
+    tabela<MovimentoRow>('movimento', [['data', false]]),
+    tabela<MedicamentoRow>('medicamento', [['data_compra', false]]),
   ]);
   // Falhar em vez de devolver listas vazias: sem esta guarda, um erro de rede
   // (estar offline) devolveria tudo vazio e apagaria a cache local. Quem chama
@@ -503,9 +578,7 @@ export async function carregarTudoSupabase(): Promise<Snapshot> {
   if (movRes.error && !tabelaInexistente(movRes.error)) {
     throw new Error(movRes.error.message);
   }
-  const movimentos = movRes.error
-    ? []
-    : ((movRes.data ?? []) as MovimentoRow[]).map(toMovimento);
+  const movimentos = movRes.error ? [] : movRes.data.map(toMovimento);
 
   // Mesma exceção, mesma razão: a `medicamento` nasce no
   // `supabase/schema_medicamentos.sql`, aplicado à mão. Entre a app nova chegar
@@ -515,15 +588,13 @@ export async function carregarTudoSupabase(): Promise<Snapshot> {
   if (medRes.error && !tabelaInexistente(medRes.error)) {
     throw new Error(medRes.error.message);
   }
-  const medicamentos = medRes.error
-    ? []
-    : ((medRes.data ?? []) as MedicamentoRow[]).map(toMedicamento);
+  const medicamentos = medRes.error ? [] : medRes.data.map(toMedicamento);
 
   return {
-    exploracoes: ((expRes.data ?? []) as ExploracaoRow[]).map(toExploracao),
-    terrenos: ((terRes.data ?? []) as TerrenoRow[]).map(toTerreno),
-    animais: ((aniRes.data ?? []) as AnimalRow[]).map(toAnimal),
-    eventos: ((evtRes.data ?? []) as EventoRow[]).map(toEvento),
+    exploracoes: expRes.data.map(toExploracao),
+    terrenos: terRes.data.map(toTerreno),
+    animais: aniRes.data.map(toAnimal),
+    eventos: evtRes.data.map(toEvento),
     movimentos,
     medicamentos,
   };

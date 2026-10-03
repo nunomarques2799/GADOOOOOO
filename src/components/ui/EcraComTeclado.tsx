@@ -58,45 +58,40 @@ export function EcraComTeclado({
    * papel pousado na mesa, e a barra de gravar fica DENTRO dela (é
    * `position: 'absolute'` em cada formulário, e o painel é o seu contentor),
    * debaixo dos campos a que pertence.
+   *
+   * A ÁRVORE É A MESMA nos dois desenhos e só os estilos mudam: eram duas
+   * árvores diferentes, e cruzar os 900px a meio de um registo (encaixar a
+   * janela do Windows a meio do ecrã) recriava os campos todos.
    */
-  if (desktop) {
-    return (
-      <View
-        style={[
-          {
-            flex: 1,
-            backgroundColor: colors.background,
-            paddingHorizontal: spacing.xxl,
-            paddingVertical: spacing.xl,
-          },
-          style,
-        ]}>
-        <View
-          style={{
-            flex: 1,
-            width: '100%',
-            maxWidth: larguraDesktop,
-            alignSelf: 'center',
-            backgroundColor: colors.background,
-            borderRadius: radii.xl,
-            borderWidth: 1,
-            borderColor: colors.border,
-            overflow: 'hidden',
-          }}>
-          <PainelFormulario.Provider value>{children}</PainelFormulario.Provider>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <KeyboardAvoidingView
-      style={[{ flex: 1, backgroundColor: colors.background }, style]}
+      style={[
+        { flex: 1, backgroundColor: colors.background },
+        desktop && { paddingHorizontal: spacing.xxl, paddingVertical: spacing.xl },
+        style,
+      ]}
       // Só no iOS. No Android o `adjustResize` (omissão do Expo) já faz o
       // trabalho, e somar-lhe o `padding` daria o dobro do espaço — a barra
       // ficava a pairar a meio do ecrã.
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {children}
+      <View
+        style={
+          desktop
+            ? {
+                flex: 1,
+                width: '100%',
+                maxWidth: larguraDesktop,
+                alignSelf: 'center',
+                backgroundColor: colors.background,
+                borderRadius: radii.xl,
+                borderWidth: 1,
+                borderColor: colors.border,
+                overflow: 'hidden',
+              }
+            : { flex: 1 }
+        }>
+        <PainelFormulario.Provider value={desktop}>{children}</PainelFormulario.Provider>
+      </View>
     </KeyboardAvoidingView>
   );
 }

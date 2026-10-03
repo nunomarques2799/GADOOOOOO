@@ -104,6 +104,7 @@ export default function PerfilScreen() {
           {/* No computador, duas colunas (ver `Colunas`): quem é a pessoa à
               esquerda, o que pode fazer à conta à direita. */}
           <Colunas
+            espaco={spacing.md}
             esquerda={
           <View style={{ gap: spacing.md }}>
           {/* Cartão do utilizador */}

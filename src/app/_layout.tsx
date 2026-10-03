@@ -54,20 +54,22 @@ arrancarIdioma();
 function ColunaApp({ children }: { children: ReactNode }) {
   const desktop = useDesktop();
   if (Platform.OS !== 'web') return <ComToasts>{children}</ComToasts>;
-  if (desktop) {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ComToasts>{children}</ComToasts>
-      </View>
-    );
-  }
+  // A MESMA árvore nos dois desenhos; só os estilos mudam com a largura. Eram
+  // duas árvores diferentes (uma com uma caixa a mais), e o React deitava fora
+  // a app INTEIRA ao cruzar os 900px: quem encaixava a janela do Windows a meio
+  // do ecrã perdia o formulário que estava a preencher e o caminho de voltar.
   return (
-    <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceSunken }}>
+    <View
+      style={{
+        flex: 1,
+        alignItems: desktop ? 'stretch' : 'center',
+        backgroundColor: desktop ? colors.background : colors.surfaceSunken,
+      }}>
       <View
         style={{
           flex: 1,
           width: '100%',
-          maxWidth: layout.colunaMobile,
+          maxWidth: desktop ? undefined : layout.colunaMobile,
           backgroundColor: colors.background,
         }}>
         <ComToasts>{children}</ComToasts>
@@ -113,17 +115,18 @@ function ColunaEstreita({
   largura?: number;
 }) {
   const desktop = useDesktop();
-  if (!desktop) return <>{children}</>;
   // O fundo de fora é o MESMO creme de dentro: com o tom de areia dos lados,
   // a coluna lia-se como a app de telemóvel aberta numa tira ao meio do
-  // monitor. Assim é uma página com o conteúdo ao centro.
+  // monitor. Assim é uma página com o conteúdo ao centro. E a árvore é a mesma
+  // em qualquer largura (ver `ColunaApp`): o código de convite escrito no ecrã
+  // de espera não se perde por a janela mudar de tamanho.
   return (
-    <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.background }}>
+    <View style={{ flex: 1, alignItems: desktop ? 'center' : 'stretch', backgroundColor: colors.background }}>
       <View
         style={{
           flex: 1,
           width: '100%',
-          maxWidth: largura,
+          maxWidth: desktop ? largura : undefined,
           backgroundColor: colors.background,
         }}>
         {children}

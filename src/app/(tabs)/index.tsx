@@ -17,7 +17,7 @@ import { GrelhaAcoesRapidas } from '@/components/AcoesRapidas';
 import { Logotipo } from '@/components/Logotipo';
 import { MenuConta, type Ancora } from '@/components/MenuConta';
 import { StatCard } from '@/components/StatCard';
-import { Avatar, Badge, Card, Icon, SectionHeader, Text } from '@/components/ui';
+import { Avatar, Badge, Card, Colunas, Icon, SectionHeader, Text } from '@/components/ui';
 import { useAgenda } from '@/data/useAgenda';
 import { agruparPorDia } from '@/data/calendario';
 import { resumoFinanceiro } from '@/data/financas';
@@ -457,28 +457,25 @@ export default function InicioScreen() {
           {/* Em desktop há largura para duas colunas: à ESQUERDA o tempo — o
               calendário, os prazos a vencer e as explorações onde tudo isso
               acontece; à direita os números e os atalhos. No telemóvel segue
-              tudo em pilha, pela mesma ordem. */}
-          {desktop ? (
-            <View style={{ flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' }}>
-              <View style={{ flex: 3 }}>
+              tudo em pilha, pela mesma ordem. Com `Colunas`, a árvore é a
+              mesma nos dois desenhos: o mês que se escolheu no calendário não
+              volta ao de hoje por a janela mudar de largura. */}
+          <Colunas
+            proporcao={[3, 2]}
+            esquerda={
+              <>
                 {secaoCalendario}
                 {secaoAlertas}
                 {secaoExploracoes}
-              </View>
-              <View style={{ flex: 2 }}>
+              </>
+            }
+            direita={
+              <>
                 {secaoResumo}
                 {secaoAcoes}
-              </View>
-            </View>
-          ) : (
-            <>
-              {secaoCalendario}
-              {secaoAlertas}
-              {secaoExploracoes}
-              {secaoResumo}
-              {secaoAcoes}
-            </>
-          )}
+              </>
+            }
+          />
         </View>
       </ScrollView>
 

@@ -61,6 +61,7 @@ export default function DefinicoesScreen() {
               empilhados numa linha de 1100px, cada opção era uma palavra à
               esquerda e uma seta lá ao fundo. */}
           <Colunas
+            espaco={spacing.md}
             esquerda={
           <View style={{ gap: spacing.md }}>
           {/* O que a app regista */}

@@ -1539,6 +1539,8 @@ const pt = {
   'notif.maisDias': 'Mais dias',
 
   /* ---- Sincronização e cópia ---- */
+  'sinc.semEspacoFila': 'Este aparelho ficou sem espaço para guardar a alteração até haver rede. Não ficou gravada: volte a fazê-la quando tiver ligação.',
+  'sinc.semEspacoCache': 'Este aparelho não tem espaço para guardar os seus dados para usar sem rede. Com ligação, a app funciona normalmente.',
   'sinc.offline': 'Offline',
   'sinc.aSincronizar': 'A sincronizar',
   'sinc.aSincronizarPontos': 'A sincronizar…',
@@ -3544,6 +3546,8 @@ const en: Record<ChaveTexto, string> = {
   'notif.maisDias': 'More days',
 
   /* ---- Sincronização e cópia ---- */
+  'sinc.semEspacoFila': 'This device ran out of space to keep the change until you are back online. It was not saved: please make it again when you have a connection.',
+  'sinc.semEspacoCache': 'This device has no room to keep your data for offline use. With a connection, the app works normally.',
   'sinc.offline': 'Offline',
   'sinc.aSincronizar': 'Syncing',
   'sinc.aSincronizarPontos': 'Syncing…',

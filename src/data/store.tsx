@@ -12,6 +12,8 @@ import { AppState, Platform } from 'react-native';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { DadosAnimalImportado } from './animalExcel';
+import { t } from '@/i18n';
+
 import { useAuth } from './auth';
 import { abrirBd, inicializarBd } from './db/database';
 import {
@@ -65,6 +67,7 @@ import {
   utilizadorSeed,
 } from './seed';
 import { supabaseConfigurado } from './supabase';
+import { useToasts } from './toasts';
 import {
   carregarTudoSupabase,
   definirFinancasAtivas as definirFinancasAtivasSupabase,
@@ -528,9 +531,22 @@ export function GadoProvider({ children }: { children: ReactNode }) {
 
   // Mantém a cache local sempre a espelhar o que está no ecrã, para reabrir
   // offline com os dados atuais. Só com Supabase + armazenamento disponível.
+  //
+  // Se deixar de caber (o navegador tem um teto por site, e as fotografias vão
+  // dentro dos dados), diz-se UMA vez por sessão: a app continua a funcionar
+  // com ligação, mas quem conta abrir sem rede no campo precisa de saber que
+  // não vai ter os dados à mão.
+  const toast = useToasts();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+  const avisouSemEspaco = useRef(false);
   useEffect(() => {
     if (usaSupabase && cacheDisponivel) {
-      guardarCache({ exploracoes, terrenos, animais, eventos, movimentos, medicamentos });
+      const coube = guardarCache({ exploracoes, terrenos, animais, eventos, movimentos, medicamentos });
+      if (!coube && !avisouSemEspaco.current) {
+        avisouSemEspaco.current = true;
+        toastRef.current.info(t('sinc.semEspacoCache'));
+      }
     }
   }, [usaSupabase, exploracoes, terrenos, animais, eventos, movimentos, medicamentos]);
 
@@ -639,8 +655,11 @@ export function GadoProvider({ children }: { children: ReactNode }) {
     // por muito que a mensagem fale de ligação. Pô-lo na fila só o faria
     // repetir-se sem fim.
     if (!eConflito(erro) && pareceErroDeRede(erro)) {
-      setPendentesSinc(adicionarOutbox(op));
       setOnline(false);
+      // Se nem na fila couber, `adicionarOutbox` lança um `ErroSemEspaco`:
+      // sobe até ao `empurrarOuDesfazer`, que desfaz a escrita no ecrã, e o
+      // formulário mostra a razão. Fingir que ficou na fila era perdê-la.
+      setPendentesSinc(adicionarOutbox(op));
       return false;
     }
     // Erro real de validação/RLS/conflito → mostra na UI. Sem o marcador

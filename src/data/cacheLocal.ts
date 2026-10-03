@@ -13,8 +13,30 @@
  * exigia rede, apesar de a app prometer "funciona sem internet".
  */
 
+import { t } from '@/i18n';
+
 import { armazenamentoDisponivel, guardar, ler, remover } from './armazenamento';
 import type { Animal, Evento, Exploracao, Medicamento, Movimento, Terreno } from './types';
+
+/**
+ * Gravou? O armazenamento devolve `false` quando não coube (quota cheia na
+ * web, disco cheio no telemóvel). Qualquer outra resposta conta como gravado:
+ * os testes trocam o armazenamento por um `Map`, cujo `set` não devolve nada.
+ */
+const gravou = (chave: string, valor: string) => guardar(chave, valor) !== false;
+
+/**
+ * A alteração não coube neste aparelho, nem depois de abdicar da cópia dos
+ * dados. Quem a recebe desfaz a escrita no ecrã e mostra a mensagem: a
+ * alteração NÃO ficou guardada em lado nenhum, e dizer o contrário era perdê-la
+ * em silêncio na sincronização seguinte.
+ */
+export class ErroSemEspaco extends Error {
+  constructor() {
+    super(t('sinc.semEspacoFila'));
+    this.name = 'ErroSemEspaco';
+  }
+}
 
 /** Instantâneo dos dados guardados localmente (mesma forma que o Snapshot). */
 export type DadosGado = {
@@ -214,9 +236,19 @@ export function lerCache(): DadosGado | null {
   }
 }
 
-/** Grava o instantâneo completo (chamado sempre que os dados mudam). */
-export function guardarCache(dados: DadosGado): void {
-  guardar(CHAVE_CACHE, JSON.stringify(dados));
+/**
+ * Grava o instantâneo completo (chamado sempre que os dados mudam) e diz se
+ * coube.
+ *
+ * Quando NÃO cabe, a cópia antiga é apagada: fica desatualizada para sempre a
+ * partir daqui, e ocupa o espaço de que a fila do que está por enviar precisa.
+ * A cópia é só um espelho do servidor; perdê-la custa abrir sem rede com o ecrã
+ * vazio, e a fila custa trabalho feito.
+ */
+export function guardarCache(dados: DadosGado): boolean {
+  if (gravou(CHAVE_CACHE, JSON.stringify(dados))) return true;
+  remover(CHAVE_CACHE);
+  return false;
 }
 
 /** Fila de operações à espera de envio ao Supabase (por ordem). */
@@ -233,8 +265,15 @@ export function lerOutbox(): OpPendente[] {
   }
 }
 
-export function guardarOutbox(ops: OpPendente[]): void {
-  guardar(CHAVE_OUTBOX, JSON.stringify(ops));
+/**
+ * Grava a fila e diz se coube. Se não couber à primeira, abdica da cópia dos
+ * dados (que é a parte grande do que está guardado) e tenta outra vez.
+ */
+export function guardarOutbox(ops: OpPendente[]): boolean {
+  const valor = JSON.stringify(ops);
+  if (gravou(CHAVE_OUTBOX, valor)) return true;
+  remover(CHAVE_CACHE);
+  return gravou(CHAVE_OUTBOX, valor);
 }
 
 /**
@@ -262,7 +301,11 @@ export function comVersaoNova(
 /** Acrescenta uma operação ao fim da fila e devolve o novo total pendente. */
 export function adicionarOutbox(op: OpPendente): number {
   const ops = [...lerOutbox(), op];
-  guardarOutbox(ops);
+  // Até 2026-10-03 isto devolvia `ops.length` tivesse ou não gravado: com o
+  // armazenamento cheio, o ecrã dizia "1 por enviar", a fila no disco ficava
+  // vazia e a sincronização seguinte dava-a por despachada. A alteração feita
+  // sem rede desaparecia sem uma palavra.
+  if (!guardarOutbox(ops)) throw new ErroSemEspaco();
   return ops.length;
 }
 
@@ -330,7 +373,13 @@ export function registarFalhada(
     0,
     MAX_FALHADAS,
   );
-  guardar(CHAVE_FALHADAS, JSON.stringify(lista));
+  // É o registo do que se perdeu: se não couber, abdica da cópia dos dados
+  // como a fila, para não perder também a explicação.
+  const valor = JSON.stringify(lista);
+  if (!gravou(CHAVE_FALHADAS, valor)) {
+    remover(CHAVE_CACHE);
+    gravou(CHAVE_FALHADAS, valor);
+  }
   return lista.length;
 }
 

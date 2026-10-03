@@ -137,11 +137,12 @@ export default function SuperadminTabsLayout() {
     </Tabs>
   );
 
-  if (!desktop) return ecrans;
-
+  // A barra lateral entra e sai com a largura, mas os separadores ficam
+  // sempre no mesmo sítio da árvore: senão cruzar os 900px remontava o painel
+  // inteiro (ver `ColunaApp` no `_layout.tsx` da raiz).
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
-      <BarraLateral itens={NAV_DESKTOP} />
+      {desktop ? <BarraLateral itens={NAV_DESKTOP} /> : null}
       <View style={{ flex: 1 }}>{ecrans}</View>
     </View>
   );
