@@ -30,6 +30,8 @@
 
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 
+import { t } from '@/i18n';
+
 import {
   mesclarMensagens,
   ordenarConversas,
@@ -41,7 +43,7 @@ import {
   type PessoaChat,
   type TipoMensagem,
 } from './chat';
-import { armazenamentoDisponivel, guardar, ler } from './armazenamento';
+import { armazenamentoDisponivel, guardar, ler, remover } from './armazenamento';
 import { useAuth } from './auth';
 import { CHAVES, pareceErroDeRede } from './cacheLocal';
 import { esquecerPush, registarPush } from './push';
@@ -199,8 +201,17 @@ function lerFila(): PorEnviar[] {
   }
 }
 
-function guardarFila(fila: PorEnviar[]): void {
-  if (armazenamentoDisponivel) guardar(CHAVES.chatFila, JSON.stringify(fila));
+/**
+ * Grava a fila e diz se coube. Como a fila das alterações (`cacheLocal.ts`),
+ * tem prioridade sobre a cópia das conversas: se não couber à primeira, essa
+ * cópia sai (volta a vir do servidor) e tenta-se outra vez.
+ */
+function guardarFila(fila: PorEnviar[]): boolean {
+  if (!armazenamentoDisponivel) return true;
+  const valor = JSON.stringify(fila);
+  if (guardar(CHAVES.chatFila, valor) !== false) return true;
+  remover(CHAVES.chat);
+  return guardar(CHAVES.chatFila, valor) !== false;
 }
 
 /* ---- Avisar de mensagens novas (preferência da conta, neste aparelho) ---- */
@@ -906,8 +917,20 @@ export function useConversa(conversaId: string): UseConversa {
       // Aparece já no ecrã (ver a decisão 2, no cabeçalho).
       guardarMensagens(conversaId, [m]);
 
+      /**
+       * Sem rede, a mensagem fica na fila. Se nem lá couber (aparelho sem
+       * espaço), sai do ecrã com a razão, em vez de ficar com ar de que vai
+       * sair quando a rede voltar: não ia, porque não ficou guardada.
+       */
+      const porNaFila = () => {
+        if (guardarFila([...lerFila(), { id: m.id, conversaId, texto: limpo, criadoEm: m.criadoEm }])) return;
+        const lista = (instantaneo.mensagens[conversaId] ?? []).filter((x) => x.id !== m.id);
+        definir({ mensagens: { ...instantaneo.mensagens, [conversaId]: lista } });
+        throw new Error(t('sinc.semEspacoFila'));
+      };
+
       if (!ligado() || !supabase) {
-        guardarFila([...lerFila(), { id: m.id, conversaId, texto: limpo, criadoEm: m.criadoEm }]);
+        porNaFila();
         return;
       }
 
@@ -925,7 +948,7 @@ export function useConversa(conversaId: string): UseConversa {
         return;
       }
       if (pareceErroDeRede(error.message)) {
-        guardarFila([...lerFila(), { id: m.id, conversaId, texto: limpo, criadoEm: m.criadoEm }]);
+        porNaFila();
         return;
       }
       // Recusada pelo servidor (saiu do grupo, prazo terminado, conta

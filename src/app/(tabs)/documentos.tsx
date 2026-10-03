@@ -148,6 +148,7 @@ export default function DocumentosScreen() {
               importa e exporta à esquerda; os papéis guardados e as notas à
               direita. */}
           <Colunas
+            espaco={spacing.md}
             esquerda={
           <View style={{ gap: spacing.md }}>
           {/* O SNIRA vem PRIMEIRO, e fora do grupo das exportações: não é um

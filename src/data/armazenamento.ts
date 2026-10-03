@@ -47,7 +47,8 @@ export function ler(chave: string): string | null {
   }
 }
 
-export function guardar(chave: string, valor: string): void {
+/** Grava e diz se conseguiu (`false`: disco cheio ou BD indisponível). Ver a versão web. */
+export function guardar(chave: string, valor: string): boolean {
   try {
     bd().runSync(
       'INSERT INTO kv (chave, valor) VALUES (?, ?) ' +
@@ -55,8 +56,9 @@ export function guardar(chave: string, valor: string): void {
       chave,
       valor,
     );
+    return true;
   } catch {
-    /* disco cheio / BD indisponível — a app continua a funcionar em memória */
+    return false;
   }
 }
 

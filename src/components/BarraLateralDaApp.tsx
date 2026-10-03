@@ -35,10 +35,13 @@ export function BarraLateralDaApp() {
 export function ComBarraLateral({ children }: { children: ReactNode }) {
   const desktop = useDesktop();
   const { isSuperadmin } = useMembros();
-  if (!desktop || isSuperadmin) return <>{children}</>;
+  // A barra entra e sai, a pilha fica no MESMO sítio da árvore. Com um
+  // `return <>{children}</>` no desenho estreito, cruzar os 900px (encaixar a
+  // janela do Windows a meio do ecrã) remontava a pilha toda e apagava o
+  // formulário que se estava a preencher.
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
-      <BarraLateralDaApp />
+      {desktop && !isSuperadmin ? <BarraLateralDaApp /> : null}
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );

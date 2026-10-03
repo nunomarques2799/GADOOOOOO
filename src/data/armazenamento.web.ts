@@ -22,12 +22,19 @@ export function ler(chave: string): string | null {
   }
 }
 
-export function guardar(chave: string, valor: string): void {
-  if (!ls) return;
+/**
+ * Grava e diz se conseguiu. `false` quer dizer quota cheia ou armazenamento
+ * indisponível: quem grava dados que não podem perder-se (a fila do que está
+ * por enviar) TEM de olhar para isto, porque a app continua a funcionar em
+ * memória e nada mais avisa. Ver `adicionarOutbox` em `cacheLocal.ts`.
+ */
+export function guardar(chave: string, valor: string): boolean {
+  if (!ls) return false;
   try {
     ls.setItem(chave, valor);
+    return true;
   } catch {
-    /* quota cheia / indisponível — a app continua a funcionar em memória */
+    return false;
   }
 }
 
