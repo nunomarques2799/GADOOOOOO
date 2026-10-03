@@ -83,7 +83,11 @@ export function CartaoTitulo({
               borderLeftWidth: i === 0 ? 0 : 1,
               borderLeftColor: colors.border,
             }
-          : { flex: 1 }
+          : // Pelo tamanho do que lá está escrito, e não em terços iguais:
+            // "Pastagem" em Fraunces não cabe num terço de telemóvel e
+            // escrevia-se colado ao "4.2 ha" do lado (já acontecia no bloco
+            // verde de antes).
+            { flexGrow: 1, flexShrink: 1, flexBasis: 'auto', minWidth: 0 }
       }>
       <Text variant="h2" numberOfLines={1}>
         {n.valor}
@@ -118,6 +122,7 @@ export function CartaoTitulo({
           <View
             style={{
               flexDirection: 'row',
+              gap: spacing.md,
               marginTop: spacing.md,
               paddingTop: spacing.md,
               borderTopWidth: 1,
