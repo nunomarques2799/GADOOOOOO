@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Card, Icon, type IconName, Text } from '@/components/ui';
+import { Card, Colunas, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { useExistencias } from '@/data/useExistencias';
 import { useFinancas } from '@/data/useFinancas';
@@ -36,9 +36,9 @@ export default function DefinicoesScreen() {
 
   const coluna = {
     width: '100%',
-    maxWidth: desktop ? layout.conteudoEstreito : undefined,
+    maxWidth: desktop ? layout.conteudoDesktop : undefined,
     alignSelf: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
   } as const;
 
   return (
@@ -57,6 +57,12 @@ export default function DefinicoesScreen() {
         </View>
 
         <View style={{ ...coluna, gap: spacing.md }}>
+          {/* No computador, os grupos em duas colunas (ver `Colunas`):
+              empilhados numa linha de 1100px, cada opção era uma palavra à
+              esquerda e uma seta lá ao fundo. */}
+          <Colunas
+            esquerda={
+          <View style={{ gap: spacing.md }}>
           {/* O que a app regista */}
           <Grupo titulo={t('definicoes.grupoRegista')}>
             {podeLigarFinancas ? (
@@ -117,6 +123,10 @@ export default function DefinicoesScreen() {
             ) : null}
           </Grupo>
 
+          </View>
+            }
+            direita={
+          <View style={{ gap: spacing.md }}>
           {/* Dados e cópias */}
           {configurado ? (
             <Grupo titulo={t('definicoes.grupoDados')}>
@@ -143,6 +153,9 @@ export default function DefinicoesScreen() {
               last
             />
           </Grupo>
+          </View>
+            }
+          />
 
           <Text variant="caption" color={colors.textMuted} center style={{ marginTop: spacing.xs }}>
             {t('definicoes.versao', { v: VERSAO_APP })}

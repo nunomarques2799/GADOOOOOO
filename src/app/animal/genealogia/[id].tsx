@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { View } from 'react-native';
@@ -9,7 +8,7 @@ import { ascendentesDe, descendentesDe, rotuloAnimal, type NoGenealogico } from 
 import { formatDataPt, idadeExtenso } from '@/data/helpers';
 import { useGado } from '@/data/store';
 import { t } from '@/i18n';
-import { colors, radii, shadow, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 
 /** Gerações mostradas para cada lado (pais/avós/bisavós e crias/netos/bisnetos). */
 const GERACOES = 3;
@@ -75,42 +74,41 @@ export default function GenealogiaScreen() {
           </View>
         )}
 
-        {/* O próprio animal, entre as duas metades da árvore */}
-        <LinearGradient
-          colors={[colors.headerFrom, colors.headerTo]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[
-            {
-              borderRadius: radii.xl,
-              padding: spacing.md,
-              marginTop: spacing.lg,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing.sm,
-            },
-            shadow.md,
-          ]}>
+        {/* O próprio animal, entre as duas metades da árvore. Destaca-se pelo
+            tinte da marca e pela moldura, como o separador ativo: era um bloco
+            verde-escuro em degradê, do desenho de antes da marca nova. */}
+        <View
+          style={{
+            borderRadius: radii.xl,
+            padding: spacing.md,
+            marginTop: spacing.lg,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            backgroundColor: colors.primaryTint,
+            borderWidth: 2,
+            borderColor: colors.primary,
+          }}>
           <View
             style={{
               width: 48,
               height: 48,
               borderRadius: radii.pill,
-              backgroundColor: 'rgba(255,255,255,0.16)',
+              backgroundColor: colors.surface,
               alignItems: 'center',
               justifyContent: 'center',
             }}>
-            <Icon name={meta.icon} size={28} color={colors.textOnDark} />
+            <Icon name={meta.icon} size={28} color={colors.primaryDark} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text variant="h3" color={colors.textOnDark}>
+            <Text variant="h3" color={colors.primaryDark}>
               {rotuloAnimal(animal)}
             </Text>
-            <Text variant="secondary" color={colors.textOnDarkMuted}>
+            <Text variant="secondary" color={colors.textSecondary}>
               {animal.especie} · {idadeExtenso(animal.dataNascimento)}
             </Text>
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Descendentes */}
         <Text variant="h3" style={{ marginTop: spacing.lg, marginBottom: spacing.xs }}>

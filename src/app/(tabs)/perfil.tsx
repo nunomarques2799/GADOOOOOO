@@ -5,7 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SeletorFoto } from '@/components/SeletorFoto';
-import { Avatar, Badge, Button, Card, Folha, Icon, type IconName, Text } from '@/components/ui';
+import { Avatar, Badge, Button, Card, Colunas, Folha, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
 import { saiuDoEfetivo } from '@/data/historicoAnimais';
 import { useMembros } from '@/data/membros';
@@ -83,9 +83,9 @@ export default function PerfilScreen() {
 
   const coluna = {
     width: '100%',
-    maxWidth: desktop ? layout.conteudoEstreito : undefined,
+    maxWidth: desktop ? layout.conteudoDesktop : undefined,
     alignSelf: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
   } as const;
 
   return (
@@ -101,6 +101,11 @@ export default function PerfilScreen() {
         </View>
 
         <View style={{ ...coluna, gap: spacing.md }}>
+          {/* No computador, duas colunas (ver `Colunas`): quem é a pessoa à
+              esquerda, o que pode fazer à conta à direita. */}
+          <Colunas
+            esquerda={
+          <View style={{ gap: spacing.md }}>
           {/* Cartão do utilizador */}
           <Card>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
@@ -205,6 +210,10 @@ export default function PerfilScreen() {
             </View>
           </Card>
 
+          </View>
+            }
+            direita={
+          <View style={{ gap: spacing.md }}>
           {/* Dados pessoais e sessão */}
           <Card padded={false}>
             <Linha
@@ -257,6 +266,9 @@ export default function PerfilScreen() {
               />
             </Card>
           ) : null}
+          </View>
+            }
+          />
 
           <Pressable
             onPress={() => router.push('/definicoes')}

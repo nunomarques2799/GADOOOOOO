@@ -576,6 +576,10 @@ const pt = {
   /* ---- Ecrã de entrada ---- */
   'login.entrarNaConta': 'Entrar na sua conta',
   'login.lema': 'O gado em dia, sem papelada.',
+  'login.painelPrazos': 'Os prazos da DGAV e do SNIRA contados por si.',
+  'login.painelSemRede': 'Funciona sem rede, no curral, e acerta tudo quando a ligação volta.',
+  'login.painelEquipa': 'A família, os trabalhadores e o veterinário na mesma exploração.',
+  'login.painelRodape': 'Feito em Portugal, para quem cria gado.',
   'login.criarConta': 'Criar a sua conta',
   'login.recuperarAcesso': 'Recuperar o acesso',
   'login.oQueVeioFazer': 'O que veio cá fazer?',
@@ -2587,6 +2591,10 @@ const en: Record<ChaveTexto, string> = {
   /* ---- Ecrã de entrada ---- */
   'login.entrarNaConta': 'Sign in to your account',
   'login.lema': 'Your herd up to date, without the paperwork.',
+  'login.painelPrazos': 'DGAV and SNIRA deadlines counted for you.',
+  'login.painelSemRede': 'Works offline in the barn, and syncs everything when you are back online.',
+  'login.painelEquipa': 'Family, workers and the vet on the same farm.',
+  'login.painelRodape': 'Made in Portugal, for livestock farmers.',
   'login.criarConta': 'Create your account',
   'login.recuperarAcesso': 'Recover your access',
   'login.oQueVeioFazer': 'What brings you here?',

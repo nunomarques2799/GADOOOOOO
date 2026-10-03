@@ -4,7 +4,6 @@ import { Animated, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FolhaAcoesRapidas } from '@/components/AcoesRapidas';
-import { BarraLateral, type ItemNav } from '@/components/BarraLateral';
 import { DESTINOS, useDestinos } from '@/components/destinosNavegacao';
 import { Folha, Icon, type IconName, Text } from '@/components/ui';
 import { ABRANDAR, DURACAO, semMovimento } from '@/components/ui/movimento';
@@ -389,7 +388,6 @@ function deslizeCurto({ current }: { current: { progress: Animated.Value } }) {
 
 export default function TabsLayout() {
   const desktop = useDesktop();
-  const destinos = useDestinos();
   const [esquerda, direita] = useAtalhosDaBarra();
 
   /**
@@ -408,13 +406,10 @@ export default function TabsLayout() {
         ...DESTINOS.filter((d) => !naFrente.includes(d.nome)),
       ];
 
-  const navDesktop: ItemNav[] = destinos.map((d) => ({
-    rota: d.rota,
-    label: t(d.chave),
-    icon: d.icon,
-  }));
-
-  const ecrans = (
+  // No computador a barra lateral não é desenhada aqui: vive na raiz, à volta
+  // da pilha inteira, para não desaparecer ao abrir uma ficha (ver
+  // `ComBarraLateral` em `components/BarraLateralDaApp.tsx`).
+  return (
     <Tabs
       tabBar={desktop ? () => null : (props) => <TabBar {...props} />}
       screenOptions={{
@@ -433,14 +428,5 @@ export default function TabsLayout() {
         <Tabs.Screen key={d.nome} name={d.nome} />
       ))}
     </Tabs>
-  );
-
-  if (!desktop) return ecrans;
-
-  return (
-    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
-      <BarraLateral itens={navDesktop} />
-      <View style={{ flex: 1 }}>{ecrans}</View>
-    </View>
   );
 }

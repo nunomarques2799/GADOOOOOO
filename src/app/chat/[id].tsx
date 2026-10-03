@@ -186,7 +186,8 @@ export default function ConversaScreen() {
 
   const coluna = {
     width: '100%',
-    maxWidth: desktop ? layout.conteudoEstreito : undefined,
+    // No computador a conversa já vem no painel do `EcraComTeclado`.
+    maxWidth: undefined,
     alignSelf: 'center',
     paddingHorizontal: spacing.lg,
   } as const;

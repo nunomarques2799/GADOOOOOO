@@ -77,7 +77,7 @@ jest.mock('@/components/BarraLateral', () => {
   };
 });
 
-import TabsLayout from '../_layout';
+import { BarraLateralDaApp } from '@/components/BarraLateralDaApp';
 
 function rotulos(r: ReactTestRenderer): string[] {
   return r.root.findAllByType(TextoRN).map((n) => String(n.props.children));
@@ -88,7 +88,7 @@ function montar() {
   act(() => {
     r = create(
       <View>
-        <TabsLayout />
+        <BarraLateralDaApp />
       </View>,
     );
   });

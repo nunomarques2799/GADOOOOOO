@@ -1,15 +1,16 @@
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { AnimalRow } from '@/components/AnimalRow';
+import { CartaoTitulo } from '@/components/CartaoTitulo';
 import { WeatherCard } from '@/components/WeatherCard';
 import {
   Badge,
   Button,
   Card,
+  Colunas,
   EmptyState,
   Header,
   Icon,
@@ -25,12 +26,14 @@ import { legendaRole } from '@/data/permissoes';
 import { useGado } from '@/data/store';
 import type { EstadoMeteo } from '@/data/useMeteorologia';
 import { useMeteorologia } from '@/data/useMeteorologia';
+import { useDesktop } from '@/hooks/useDesktop';
 import { t } from '@/i18n';
-import { colors, radii, shadow, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 
 export default function ExploracaoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const desktop = useDesktop();
   const { exploracaoById, terrenosByExploracao, animaisByExploracao, alertas } = useGado();
   const porAnimal = useMemo(() => mapaAlertas(alertas), [alertas]);
   const { roleEm, pode, supervisionada } = useMembros();
@@ -67,66 +70,27 @@ export default function ExploracaoDetalheScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Header
-        title={exploracao.nome}
+        // No computador o nome já está no cartão de baixo, em grande.
+        title={desktop ? '' : exploracao.nome}
         actionIcon={podeEditar ? 'pencil-outline' : undefined}
         onAction={
           podeEditar ? () => router.push(`/exploracao/editar/${exploracao.id}`) : undefined
         }
       />
       <Screen>
-        {/* Hero */}
-        <LinearGradient
-          colors={[colors.headerFrom, colors.headerTo]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[{ borderRadius: radii.xl, padding: spacing.lg }, shadow.md]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: radii.lg,
-                backgroundColor: 'rgba(255,255,255,0.16)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-              }}>
-              {exploracao.fotografia ? (
-                <Image
-                  source={{ uri: exploracao.fotografia }}
-                  style={{ width: '100%', height: '100%' }}
-                  contentFit="cover"
-                />
-              ) : (
-                <Icon name="barn" size={38} color={colors.textOnDark} />
-              )}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="h1" color={colors.textOnDark} numberOfLines={1}>
-                {exploracao.nome}
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Icon name="map-marker" size={14} color={colors.textOnDarkMuted} />
-                <Text variant="secondary" color={colors.textOnDarkMuted} numberOfLines={1}>
-                  {exploracao.localizacao ?? t('detExploracao.semLocalizacao')}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View
-            style={{
-              flexDirection: 'row',
-              marginTop: spacing.md,
-              paddingTop: spacing.md,
-              borderTopWidth: 1,
-              borderTopColor: 'rgba(255,255,255,0.18)',
-            }}>
-            <HeroStat value={animais.length} label={t('nav.animais')} />
-            <HeroStat value={terrenos.length} label={t('nav.terrenos')} />
-            <HeroStat value={`${areaTotal.toFixed(1)} ha`} label={t('detExploracao.areaTotal')} />
-          </View>
-        </LinearGradient>
+        {/* O cartão do topo, no estilo do guia (ver `CartaoTitulo`). */}
+        <CartaoTitulo
+          fotografia={exploracao.fotografia}
+          icone="barn"
+          titulo={exploracao.nome}
+          iconeLinha="map-marker"
+          linha={exploracao.localizacao ?? t('detExploracao.semLocalizacao')}
+          numeros={[
+            { valor: animais.length, rotulo: t('nav.animais') },
+            { valor: terrenos.length, rotulo: t('nav.terrenos') },
+            { valor: `${areaTotal.toFixed(1)} ha`, rotulo: t('detExploracao.areaTotal') },
+          ]}
+        />
 
         {/* Quem não é dono desta exploração vê menos botões. Dizer o papel evita
             a pergunta "porque não consigo editar?" — e o líder de uma
@@ -152,6 +116,12 @@ export default function ExploracaoDetalheScreen() {
           </View>
         ) : null}
 
+        {/* No computador, duas colunas: o tempo e os dados oficiais à
+            esquerda, os terrenos e o gado à direita (ver `Colunas`). */}
+        <Colunas
+          proporcao={[2, 3]}
+          esquerda={
+        <>
         {/* Meteorologia local */}
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
           {t('detExploracao.meteorologia')}
@@ -193,6 +163,10 @@ export default function ExploracaoDetalheScreen() {
           <InfoField icon="card-account-details-outline" label={t('formExploracao.nif')} value={exploracao.nifDetentor} last />
         </Card>
 
+        </>
+          }
+          direita={
+        <>
         {/* Terrenos */}
         <TituloSeccao
           titulo={`${t('nav.terrenos')} (${terrenos.length})`}
@@ -345,6 +319,9 @@ export default function ExploracaoDetalheScreen() {
             ) : null}
           </View>
         ) : null}
+        </>
+          }
+        />
       </Screen>
     </View>
   );
@@ -406,18 +383,6 @@ function TituloSeccao({
   );
 }
 
-function HeroStat({ value, label }: { value: string | number; label: string }) {
-  return (
-    <View style={{ flex: 1 }}>
-      <Text variant="h2" color={colors.textOnDark}>
-        {value}
-      </Text>
-      <Text variant="caption" color={colors.textOnDarkMuted}>
-        {label}
-      </Text>
-    </View>
-  );
-}
 
 function InfoField({
   icon,

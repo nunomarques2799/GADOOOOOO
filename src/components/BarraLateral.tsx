@@ -55,10 +55,42 @@ export function BarraLateral({ itens }: { itens: ItemNav[] }) {
   );
 }
 
+/**
+ * Os ecrãs que não são separadores, e a que separador pertencem.
+ *
+ * Desde que a barra ficou à vista também nas fichas e nos formulários, uma
+ * barra sem nada aceso na ficha da Mimosa parecia uma app perdida. Os URLs das
+ * fichas estão no singular (`/animal/…`) e os separadores no plural
+ * (`/animais`), por isso a correspondência por prefixo não chegava. A ORDEM
+ * conta: o primeiro prefixo que bate é que manda (a conta do Perfil antes das
+ * definições, que partilham o `/conta/`).
+ */
+const SECCAO_DE: [prefixo: string, rota: string][] = [
+  ['/animal/', '/animais'],
+  ['/evento/', '/animais'],
+  ['/exploracao/', '/exploracoes'],
+  ['/terreno/', '/terrenos'],
+  ['/medicamento/', '/medicamentos'],
+  ['/movimento/', '/financas'],
+  ['/chat/', '/chat'],
+  ['/agenda/', '/'],
+  ['/equipa/', '/trabalhadores'],
+  ['/atividade', '/trabalhadores'],
+  ['/snira', '/documentos'],
+  ['/conta/editar', '/perfil'],
+  ['/conta/entrar', '/perfil'],
+  ['/conta/apagar', '/perfil'],
+  ['/conta/sincronizacao', '/perfil'],
+  ['/conta/', '/definicoes'],
+];
+
 /** A raiz só é ativa em correspondência exata; as outras cobrem sub-rotas. */
-function estaAtivo(pathname: string, rota: Rota) {
-  if (rota === '/') return pathname === '/';
-  return pathname === rota || pathname.startsWith(`${rota}/`);
+export function estaAtivo(pathname: string, rota: Rota) {
+  if (pathname === rota) return true;
+  const seccao = SECCAO_DE.find(([prefixo]) => pathname.startsWith(prefixo));
+  if (seccao) return seccao[1] === rota;
+  if (rota === '/') return false;
+  return pathname.startsWith(`${rota}/`);
 }
 
 function ItemBarra({

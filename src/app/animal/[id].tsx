@@ -10,6 +10,7 @@ import {
   Button,
   CampoData,
   Card,
+  Colunas,
   Chip,
   EmptyState,
   Header,
@@ -352,6 +353,12 @@ export default function AnimalDetalheScreen() {
           </>
         ) : null}
 
+        {/* No computador, a ficha em duas colunas: os dados do animal à
+            esquerda, o histórico e as ações à direita (ver `Colunas`). No
+            telemóvel segue tudo em pilha, pela mesma ordem. */}
+        <Colunas
+          esquerda={
+        <>
         {/* Identificação */}
         <Text variant="h2" style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>
           {t('ficha.identificacao')}
@@ -498,6 +505,10 @@ export default function AnimalDetalheScreen() {
           </>
         ) : null}
 
+        </>
+          }
+          direita={
+        <>
         {/* Histórico */}
         <Text variant="h2" style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>
           {t('ficha.historico')} ({eventos.length})
@@ -595,6 +606,9 @@ export default function AnimalDetalheScreen() {
             />
           ) : null}
         </View>
+        </>
+          }
+        />
       </Screen>
 
       {/* Preso ao fundo, como no guia: "Registar para a Estrela". O artigo

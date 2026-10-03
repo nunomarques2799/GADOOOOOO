@@ -1,16 +1,16 @@
-import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { AnimalRow } from '@/components/AnimalRow';
+import { CartaoTitulo } from '@/components/CartaoTitulo';
 import { FolhaMoverAnimais } from '@/components/FolhaMoverAnimais';
 import { BotoesDirecoes } from '@/components/mapa/BotoesDirecoes';
 import { MapaLocalizacao } from '@/components/mapa/MapaLocalizacao';
 import {
   Button,
   Card,
+  Colunas,
   EmptyState,
   Header,
   Icon,
@@ -23,7 +23,7 @@ import { useMembros } from '@/data/membros';
 import { useGado } from '@/data/store';
 import { useDesktop } from '@/hooks/useDesktop';
 import { t } from '@/i18n';
-import { colors, radii, shadow, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 export default function TerrenoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -64,66 +64,36 @@ export default function TerrenoDetalheScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Header
-        title={terreno.nome}
+        // No computador o nome já está no cartão de baixo, em grande.
+        title={desktop ? '' : terreno.nome}
         actionIcon={podeEditar ? 'pencil-outline' : undefined}
         onAction={podeEditar ? () => router.push(`/terreno/editar/${terreno.id}`) : undefined}
       />
       <Screen>
-        {/* Hero */}
-        <LinearGradient
-          colors={[colors.headerFrom, colors.headerTo]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[{ borderRadius: radii.xl, padding: spacing.lg }, shadow.md]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: radii.lg,
-                backgroundColor: 'rgba(255,255,255,0.16)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-              }}>
-              {terreno.fotografia ? (
-                <Image
-                  source={{ uri: terreno.fotografia }}
-                  style={{ width: '100%', height: '100%' }}
-                  contentFit="cover"
-                />
-              ) : (
-                <Icon name={meta.icon} size={38} color={colors.textOnDark} />
-              )}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="h1" color={colors.textOnDark} numberOfLines={1}>
-                {terreno.nome}
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Icon name="barn" size={14} color={colors.textOnDarkMuted} />
-                <Text variant="secondary" color={colors.textOnDarkMuted} numberOfLines={1}>
-                  {exploracao?.nome ?? t('ficha.semExploracao')}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View
-            style={{
-              flexDirection: 'row',
-              marginTop: spacing.md,
-              paddingTop: spacing.md,
-              borderTopWidth: 1,
-              borderTopColor: 'rgba(255,255,255,0.18)',
-            }}>
-            <HeroStat value={terreno.tipo ?? 'Outro'} label={t('formTerreno.tipo')} />
-            <HeroStat value={terreno.area != null ? `${terreno.area} ha` : t('detTerreno.semArea')} label={t('detTerreno.area')} />
-            <HeroStat value={animaisNoTerreno.length} label={t('nav.animais')} />
-          </View>
-        </LinearGradient>
+        {/* O cartão do topo, no estilo do guia (ver `CartaoTitulo`). */}
+        <CartaoTitulo
+          fotografia={terreno.fotografia}
+          icone={meta.icon}
+          titulo={terreno.nome}
+          iconeLinha="barn"
+          linha={exploracao?.nome ?? t('ficha.semExploracao')}
+          numeros={[
+            { valor: terreno.tipo ?? 'Outro', rotulo: t('formTerreno.tipo') },
+            {
+              valor: terreno.area != null ? `${terreno.area} ha` : t('detTerreno.semArea'),
+              rotulo: t('detTerreno.area'),
+            },
+            { valor: animaisNoTerreno.length, rotulo: t('nav.animais') },
+          ]}
+        />
 
         {/* Mapa + direções */}
+        {/* No computador, o mapa e a descrição à esquerda e o gado do
+            terreno à direita (ver `Colunas`). */}
+        <Colunas
+          proporcao={[3, 2]}
+          esquerda={
+        <>
         <Text variant="h3" style={{ marginTop: spacing.xl, marginBottom: spacing.xs }}>
           {t('ficha.localizacao')}
         </Text>
@@ -168,6 +138,10 @@ export default function TerrenoDetalheScreen() {
           </>
         ) : null}
 
+        </>
+          }
+          direita={
+        <>
         {/* Animais no terreno */}
         <View
           style={{
@@ -216,6 +190,9 @@ export default function TerrenoDetalheScreen() {
             style={{ marginTop: spacing.sm }}
           />
         ) : null}
+        </>
+          }
+        />
       </Screen>
 
       <FolhaMoverAnimais
@@ -229,15 +206,3 @@ export default function TerrenoDetalheScreen() {
   );
 }
 
-function HeroStat({ value, label }: { value: string | number; label: string }) {
-  return (
-    <View style={{ flex: 1 }}>
-      <Text variant="h2" color={colors.textOnDark} numberOfLines={1}>
-        {value}
-      </Text>
-      <Text variant="caption" color={colors.textOnDarkMuted}>
-        {label}
-      </Text>
-    </View>
-  );
-}

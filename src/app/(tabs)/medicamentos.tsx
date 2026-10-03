@@ -22,7 +22,7 @@ import { useGado } from '@/data/store';
 import { mensagemDeErro, useToasts } from '@/data/toasts';
 import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
-import { useDesktop } from '@/hooks/useDesktop';
+import { useColunas, useDesktop } from '@/hooks/useDesktop';
 import { colors, layout, spacing } from '@/theme';
 
 /**
@@ -41,6 +41,8 @@ export default function MedicamentosScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
+  // As três ações lado a lado só com largura para isso (ver `useColunas`).
+  const largo = useColunas();
   const { medicamentos, eventos, exploracoes } = useGado();
   const { podeEmAlguma } = useMembros();
   const { controlo: controloAtualizar } = useAtualizarPuxando();
@@ -189,11 +191,18 @@ export default function MedicamentosScreen() {
                 t('existencias.intro4'),
               ]}
             />
+            {/* No computador, as três ações lado a lado, como botões de uma
+                barra de ferramentas: empilhadas, eram três faixas de 1100px
+                com uma frase cada. */}
+            <View style={{ flexDirection: largo ? 'row' : 'column', gap: spacing.md }}>
             {/* Ler fica ACIMA de exportar, e do lado de dentro do cabeçalho:
                 é a ação de quem está de pé na arrecadação com o frasco na mão,
                 e exportar é a de quem está sentado a preparar uma inspeção. */}
             {podeGerir ? (
-              <Card onPress={() => setLeitorAberto(true)} accessibilityLabel={t('existencias.lerCodigo')}>
+              <Card
+                onPress={() => setLeitorAberto(true)}
+                accessibilityLabel={t('existencias.lerCodigo')}
+                style={largo ? { flex: 1 } : undefined}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <Icon name="barcode-scan" size="md" color={colors.primary} />
                   <Text variant="body" style={{ flex: 1 }}>
@@ -204,7 +213,10 @@ export default function MedicamentosScreen() {
               </Card>
             ) : null}
             {comFicheiros && lotes.length > 0 ? (
-              <Card onPress={exportar} accessibilityLabel={t('existencias.exportar')}>
+              <Card
+                onPress={exportar}
+                accessibilityLabel={t('existencias.exportar')}
+                style={largo ? { flex: 1 } : undefined}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <Icon name="microsoft-excel" size="md" color={colors.primary} />
                   <Text variant="body" style={{ flex: 1 }}>
@@ -217,7 +229,10 @@ export default function MedicamentosScreen() {
             {/* Imprimir só existe onde há impressora, tal como exportar: no
                 telemóvel que anda no bolso pela vacada não há para onde. */}
             {etiquetasImprimiveis && podeGerir && paraEtiquetar.length > 0 ? (
-              <Card onPress={imprimir} accessibilityLabel={t('etiqueta.imprimirTodas')}>
+              <Card
+                onPress={imprimir}
+                accessibilityLabel={t('etiqueta.imprimirTodas')}
+                style={largo ? { flex: 1 } : undefined}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <Icon name="printer" size="md" color={colors.primary} />
                   <View style={{ flex: 1 }}>
@@ -232,6 +247,7 @@ export default function MedicamentosScreen() {
                 </View>
               </Card>
             ) : null}
+            </View>
           </View>
         }
         ListEmptyComponent={

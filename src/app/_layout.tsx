@@ -10,6 +10,7 @@ import { AberturaPorAviso } from '@/components/AberturaPorAviso';
 import { AnfitriaoAvisos } from '@/components/AnfitriaoAvisos';
 import { AnfitriaoMensagens } from '@/components/AnfitriaoMensagens';
 import { AnfitriaoToasts } from '@/components/AnfitriaoToasts';
+import { ComBarraLateral } from '@/components/BarraLateralDaApp';
 import { EcraACarregar } from '@/components/EcraACarregar';
 import { EntradaEcra, type ModoEntrada } from '@/components/EntradaEcra';
 import { EcraLogin } from '@/components/EcraLogin';
@@ -111,8 +112,11 @@ function ColunaEstreita({
 }) {
   const desktop = useDesktop();
   if (!desktop) return <>{children}</>;
+  // O fundo de fora é o MESMO creme de dentro: com o tom de areia dos lados,
+  // a coluna lia-se como a app de telemóvel aberta numa tira ao meio do
+  // monitor. Assim é uma página com o conteúdo ao centro.
   return (
-    <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceSunken }}>
+    <View style={{ flex: 1, alignItems: 'center', backgroundColor: colors.background }}>
       <View
         style={{
           flex: 1,
@@ -147,21 +151,12 @@ function PortaoAuth({ children }: { children: ReactNode }) {
     );
   // O link de recuperação abre uma sessão especial — pede a nova palavra-passe
   // antes de deixar entrar na app.
-  if (supabaseConfigurado && emRecuperacao)
-    return (
-      <ColunaEstreita>
-        <EcraNovaPalavra />
-      </ColunaEstreita>
-    );
-  // O login pede mais largura do que os 560 de um telemóvel: num monitor, uma
-  // tira estreita encostada ao topo com dois campos lá dentro parece a app
-  // aberta com a janela mal esticada. `EcraLogin` centra-se dentro dela.
-  if (supabaseConfigurado && !sessao)
-    return (
-      <ColunaEstreita largura={layout.conteudoEstreito}>
-        <EcraLogin />
-      </ColunaEstreita>
-    );
+  // Na moldura da entrada, como o login (ver `EcraLoginDesktop`).
+  if (supabaseConfigurado && emRecuperacao) return <EcraNovaPalavra />;
+  // O login ocupa a janela toda: no computador tem um desenho próprio, com a
+  // marca de um lado e o formulário do outro (ver `EcraLoginDesktop`). Numa
+  // coluna estreita ao meio do monitor parecia a app com a janela mal esticada.
+  if (supabaseConfigurado && !sessao) return <EcraLogin />;
   return <>{children}</>;
 }
 
@@ -331,6 +326,9 @@ export default function RootLayout() {
                     acende o número na barra de baixo) e mostra o aviso curto
                     da mensagem que chega com a app aberta. */}
                 <AnfitriaoMensagens />
+                {/* No computador, a barra lateral à volta da pilha toda: fica
+                    à vista também nas fichas e nos formulários. */}
+                <ComBarraLateral>
                 <Stack
                   screenOptions={({ route }) => ({
                     headerShown: false,
@@ -381,6 +379,7 @@ export default function RootLayout() {
                   <Stack.Screen name="inspecionar/exploracao/[id]" />
                   <Stack.Screen name="inspecionar/animal/[id]" />
                 </Stack>
+                </ComBarraLateral>
                 {/* Por cima de toda a navegação: o retrato que voa da lista de
                     animais para a ficha. Não apanha toques. */}
                 <CamadaVoo />
