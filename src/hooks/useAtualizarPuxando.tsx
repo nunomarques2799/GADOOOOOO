@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
-import { Platform, RefreshControl } from 'react-native';
+import { RefreshControl } from 'react-native';
 
+import { acabarAtualizar, comecarAtualizar } from '@/components/IndicadorAtualizar';
 import { useGado } from '@/data/store';
 import { useToasts } from '@/data/toasts';
-import { colors } from '@/theme';
 
 /**
  * Puxar a lista para baixo para ir buscar o que há de novo.
@@ -25,6 +25,8 @@ export function useAtualizarPuxando() {
 
   const atualizar = useCallback(async () => {
     setAAtualizar(true);
+    // O logótipo com o arco dourado, no topo do ecrã (ver `IndicadorAtualizar`).
+    comecarAtualizar();
     try {
       const leu = await recarregar();
       if (!leu) {
@@ -37,28 +39,27 @@ export function useAtualizarPuxando() {
       // No `finally`: uma falha inesperada não pode deixar a roda a girar para
       // sempre no topo da lista.
       setAAtualizar(false);
+      acabarAtualizar();
     }
   }, [recarregar, toast]);
 
   /**
-   * O controlo já feito, para os ecrãs não repetirem as cores da marca.
+   * O controlo já feito, para os oito ecrãs com o gesto.
    *
-   * `colors` é lido aqui dentro, a cada render — e não numa constante de módulo
-   * — porque a paleta que o criador escolheu só está aplicada depois do arranque
-   * (ver DESIGN_SYSTEM.md).
+   * A roda do sistema fica INVISÍVEL: quem mostra que se está a atualizar é o
+   * logótipo com o arco dourado (`IndicadorAtualizar`, na raiz). O controlo
+   * continua cá porque é ele que faz o gesto de puxar e abre o espaço no topo.
    */
   const controlo = (
     <RefreshControl
       refreshing={aAtualizar}
       onRefresh={() => void atualizar()}
       // Android usa `colors`/`progressBackgroundColor`; iOS usa `tintColor`.
-      colors={[colors.primary]}
-      progressBackgroundColor={colors.surface}
-      tintColor={colors.primary}
+      colors={['transparent']}
+      progressBackgroundColor="transparent"
+      tintColor="transparent"
       // Na web o gesto de puxar não existe (e o rato não o faz); o
       // react-native-web ignora este controlo, por isso não se perde nada.
-      title={Platform.OS === 'ios' ? 'A atualizar…' : undefined}
-      titleColor={colors.textSecondary}
     />
   );
 

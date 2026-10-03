@@ -6,6 +6,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { Abertura, aberturaVaiCorrer } from '@/components/Abertura';
 import { AberturaPorAviso } from '@/components/AberturaPorAviso';
 import { AnfitriaoAvisos } from '@/components/AnfitriaoAvisos';
 import { AnfitriaoMensagens } from '@/components/AnfitriaoMensagens';
@@ -15,6 +16,7 @@ import { EcraACarregar } from '@/components/EcraACarregar';
 import { EntradaEcra, type ModoEntrada } from '@/components/EntradaEcra';
 import { EcraLogin } from '@/components/EcraLogin';
 import { FaixaAmbiente } from '@/components/FaixaAmbiente';
+import { IndicadorAtualizar } from '@/components/IndicadorAtualizar';
 import { LimiteDeErro } from '@/components/LimiteDeErro';
 import { EcraNovaPalavra } from '@/components/EcraNovaPalavra';
 import { EcraPendente } from '@/components/EcraPendente';
@@ -288,7 +290,18 @@ export default function RootLayout() {
   const podeDesenhar = fontesProntas || erroFontes != null;
 
   useEffect(() => {
-    if (podeDesenhar) SplashScreen.hideAsync();
+    // Com a abertura a correr, é ela que esconde o ecrã do sistema, quando as
+    // camadas do logótipo estiverem carregadas (ver `Abertura.tsx`).
+    if (!podeDesenhar) return;
+    if (!aberturaVaiCorrer()) {
+      SplashScreen.hideAsync();
+      return;
+    }
+    // A rede de segurança: se a abertura não chegar a esconder o ecrã (falhou
+    // ao desenhar, por exemplo), esconde-se aqui à mesma. Uma app presa no
+    // logótipo fixo é pior do que uma abertura que não correu.
+    const t = setTimeout(() => void SplashScreen.hideAsync().catch(() => undefined), 1500);
+    return () => clearTimeout(t);
   }, [podeDesenhar]);
 
   if (!podeDesenhar) return null;
@@ -392,6 +405,11 @@ export default function RootLayout() {
       </AuthProvider>
       </ToastsProvider>
       </FaixaAmbiente>
+      {/* Por cima de tudo, à frente da faixa e dos avisos: o logótipo com o
+          arco dourado quando se puxa para atualizar, e a abertura com as
+          espigas a crescer, que só corre uma vez, ao abrir a app. */}
+      <IndicadorAtualizar />
+      <Abertura />
     </SafeAreaProvider>
     </LimiteDeErro>
   );
