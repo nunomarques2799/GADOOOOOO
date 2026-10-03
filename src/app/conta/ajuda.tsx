@@ -33,9 +33,9 @@ export default function AjudaScreen() {
 
   const conteudo = {
     width: '100%',
-    maxWidth: desktop ? layout.conteudoEstreito : undefined,
+    maxWidth: desktop ? layout.conteudoDesktop : undefined,
     alignSelf: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
     gap: spacing.md,
   } as const;
 

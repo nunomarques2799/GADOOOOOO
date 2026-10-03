@@ -19,9 +19,9 @@ export default function SuperadminPerfilScreen() {
   // Ver nota em (tabs)/perfil.tsx: coluna única centrada em desktop.
   const colunaPerfil = {
     width: '100%',
-    maxWidth: desktop ? layout.conteudoEstreito : undefined,
+    maxWidth: desktop ? layout.conteudoDesktop : undefined,
     alignSelf: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
   } as const;
 
   return (

@@ -18,3 +18,4 @@ export { Header } from './Header';
 export { EcraComTeclado, FolhaComTeclado } from './EcraComTeclado';
 export { Folha } from './Folha';
 export { useVisto } from './useVisto';
+export { Colunas } from './Colunas';

@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   Chip,
+  Colunas,
   EmptyState,
   Icon,
   type IconName,
@@ -69,6 +70,7 @@ function iconeDe(c: CategoriaMovimento): IconName {
 const PAGINA_MOVIMENTOS = 30;
 
 export default function FinancasScreen() {
+  const desktop = useDesktop();
   const router = useRouter();
   const { eventos, movimentos, animais, animalById, exploracoes } = useGado();
   const { controlo: controloAtualizar } = useAtualizarPuxando();
@@ -326,11 +328,21 @@ export default function FinancasScreen() {
               </Pressable>
             ) : null}
 
+            {/* No computador, o saldo e os dois totais numa linha só: são os
+                três números que se leem juntos. */}
+            <View
+              style={
+                desktop
+                  ? { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }
+                  : undefined
+              }>
             {/* Saldo */}
             <Card
               style={{
                 backgroundColor: positivo ? colors.successTint : colors.dangerTint,
-                marginBottom: spacing.md,
+                marginBottom: desktop ? 0 : spacing.md,
+                flex: desktop ? 1 : undefined,
+                justifyContent: 'center',
               }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                 <Icon
@@ -353,7 +365,12 @@ export default function FinancasScreen() {
 
             {/* Receitas / Despesas, com a variação face ao período anterior */}
             <View
-              style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+              style={{
+                flexDirection: 'row',
+                gap: desktop ? spacing.md : spacing.sm,
+                marginBottom: desktop ? 0 : spacing.md,
+                flex: desktop ? 1.4 : undefined,
+              }}>
               <TotalCard
                 icon="arrow-down-bold-circle"
                 label={t('financas.receitas')}
@@ -371,7 +388,13 @@ export default function FinancasScreen() {
                 subirEBom={false}
               />
             </View>
+            </View>
 
+            {/* No computador, duas colunas (ver `Colunas`): os gráficos à
+                esquerda, os movimentos e as ações à direita. */}
+            <Colunas
+              esquerda={
+            <>
             {/* Evolução mensal */}
             <Text variant="h3" style={{ marginBottom: spacing.sm }}>
               {t('financas.ultimos6Meses')}
@@ -478,6 +501,10 @@ export default function FinancasScreen() {
               </>
             ) : null}
 
+            </>
+              }
+              direita={
+            <>
             {/* Movimentos */}
             <Text variant="h3" style={{ marginBottom: spacing.sm }}>
               {t('financas.movimentos')} ({r.movimentos.length})
@@ -564,6 +591,9 @@ export default function FinancasScreen() {
                 {t('financas.excelSoNoComputador')}
               </Text>
             )}
+            </>
+              }
+            />
           </>
         )}
       </Screen>

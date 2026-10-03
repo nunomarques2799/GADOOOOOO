@@ -175,18 +175,35 @@ de telemóvel esticado. O interruptor é `useDesktop()` (`src/hooks/useDesktop.t
 
 |                | Telemóvel (e web estreita)              | Desktop (≥ 900px)                                    |
 | -------------- | --------------------------------------- | ---------------------------------------------------- |
-| Navegação      | Barra de separadores em baixo (polegar) | Barra lateral fixa à esquerda, 248px, com etiquetas  |
+| Navegação      | Barra de separadores em baixo (polegar) | Barra lateral fixa à esquerda, 248px, com etiquetas, em TODOS os ecrãs (também fichas e formulários) |
 | Largura        | Ecrã todo; na web, coluna de 560px      | Janela toda, conteúdo até `layout.conteudoDesktop`   |
+| Cabeçalho      | Círculo de voltar e título pequeno ao centro | "‹ Voltar" escrito, título em Fraunces grande à esquerda, ação sempre com a palavra |
 | Início         | Secções empilhadas                      | Duas colunas: ação à esquerda, números/atalhos à dir. |
-| Listas         | Um cartão por linha                     | Grelha de 2 colunas (`numColumns`)                    |
-| Perfil / login | Ecrã todo                               | Coluna única centrada (`conteudoEstreito` / 560px)    |
+| Fichas e separadores | Secções empilhadas                | `<Colunas>` (≥ 1100px): duas colunas pela ordem do telemóvel |
+| Listas         | Um cartão por linha                     | Grelha de 2 colunas (`numColumns`); a Reprodução, três (≥ 1280px) |
+| Formulários    | Ecrã todo, barra de gravar em baixo     | Painel de 880px ao meio, com a barra de gravar lá dentro (`EcraComTeclado`) |
+| Entrada        | Logótipo no creme e o formulário por baixo | Marca à esquerda (na cor da paleta), formulário à direita (`EcraLoginDesktop`); também a nova palavra-passe |
 
 Larguras em `layout` (`src/theme/tokens.ts`): `colunaMobile 560 ·
-conteudoEstreito 760 · conteudoDesktop 1180 · barraLateral 248`.
+conteudoEstreito 760 · formularioDesktop 880 · conteudoDesktop 1180 ·
+barraLateral 248`. O `conteudoEstreito` já não serve páginas: uma coluna de
+760px ao meio de um monitor era o desenho do telemóvel com bandas dos lados, e
+foi a primeira queixa sobre a versão de computador ("parece mobile coded").
 
 Ao criar um ecrã novo: se usa `<Screen>`, a coluna de desktop já vem tratada.
 Se monta o seu próprio `ScrollView`/`FlatList`, aplica ao `contentContainerStyle`
-`width: '100%'`, `maxWidth` (do `layout`) e `alignSelf: 'center'`.
+`width: '100%'`, `maxWidth: layout.conteudoDesktop`, `alignSelf: 'center'` e
+`paddingHorizontal: desktop ? spacing.xxl : spacing.lg`. Com mais de um grupo
+de cartões, reparte-os com `<Colunas esquerda direita>`
+(`src/components/ui/Colunas.tsx`): no telemóvel não acrescenta nada, por isso
+a ordem em que se reparte é a ordem do telemóvel. Um formulário novo usa o
+`EcraComTeclado`, e o painel vem com ele.
+
+**Testar o desktop no painel do browser:** o service worker da app
+(`public/sw.js`) também se instala no `localhost` e serve o código ANTERIOR
+depois de cada alteração. Antes de medir, `navigator.serviceWorker
+.getRegistrations()` → `unregister()` e `caches.delete()`, e só depois
+recarregar.
 
 ---
 
@@ -202,9 +219,10 @@ Um só set garante consistência de traço e estilo.
 ## Inventário de componentes
 
 `src/components/ui/` (primitivas): `Text · Icon · Screen · Card · Button ·
-Badge · Chip · IconBadge · SectionHeader · FAB · Avatar · EmptyState · Header`.
+Badge · Chip · IconBadge · SectionHeader · FAB · Avatar · EmptyState · Header ·
+Colunas`.
 
-`src/components/` (domínio): `Logotipo · WeatherCard · AlertItem · AnimalRow ·
+`src/components/` (domínio): `Logotipo · CartaoTitulo · WeatherCard · AlertItem · AnimalRow ·
 ExploracaoRow · StatCard · QuickAction · AnfitriaoToasts · AnfitriaoAvisos ·
 FolhaPermissoes`.
 

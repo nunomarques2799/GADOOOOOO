@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
@@ -6,12 +5,13 @@ import { Icon, type IconName, Text } from '@/components/ui';
 import type { MeteoEstado } from '@/data/store';
 import type { DiaMeteo, Meteorologia } from '@/data/types';
 import { t, type ChaveTexto } from '@/i18n';
-import { colors, fontFamily, radii, shadow, spacing } from '@/theme';
+import { colors, fontFamily, radii, spacing } from '@/theme';
 
-/** Linha branca ténue que separa os blocos dentro do cartão verde. */
-const RISCA = 'rgba(255,255,255,0.18)';
-
-/** Cartão de meteorologia — bloco verde como na inspiração. */
+/**
+ * Cartão de meteorologia, no papel do guia de estilo: cartão claro com risca
+ * fina, números em Fraunces e o azul de informação nos ícones. Era um bloco
+ * verde-escuro em degradê, do desenho de antes da marca nova.
+ */
 export function WeatherCard({
   meteo,
   estado = 'atual',
@@ -28,36 +28,39 @@ export function WeatherCard({
   const [aberto, setAberto] = useState(false);
 
   return (
-    <LinearGradient
-      colors={[colors.headerTo, colors.headerFrom]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[{ borderRadius: radii.xl, padding: spacing.lg }, shadow.md]}>
+    <View
+      style={{
+        borderRadius: radii.xl,
+        padding: spacing.lg,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+      }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.xs }}>
-            <Icon name="map-marker" size="sm" color={colors.textOnDarkMuted} />
-            <Text variant="label" color={colors.textOnDarkMuted}>
+            <Icon name="map-marker" size="sm" color={colors.textSecondary} />
+            <Text variant="label" color={colors.textSecondary}>
               {meteo.local}
             </Text>
             <EstadoMeteo estado={estado} onRecarregar={onRecarregar} />
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-            <Text style={{ fontFamily: fontFamily.titulo, fontSize: 52, lineHeight: 58, color: colors.textOnDark }}>
+            <Text style={{ fontFamily: fontFamily.titulo, fontSize: 52, lineHeight: 58, color: colors.text }}>
               {meteo.temperatura}
             </Text>
-            <Text style={{ fontFamily: fontFamily.bold, fontSize: 24, color: colors.textOnDark, marginTop: 6 }}>
+            <Text style={{ fontFamily: fontFamily.bold, fontSize: 24, color: colors.text, marginTop: 6 }}>
               {t('meteo.grausC')}
             </Text>
           </View>
-          <Text variant="bodyStrong" color={colors.textOnDark}>
+          <Text variant="bodyStrong" color={colors.text}>
             {meteo.condicao}
           </Text>
         </View>
 
         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name={meteo.icone as IconName} size={72} color={colors.textOnDark} />
-          <Text variant="caption" color={colors.textOnDarkMuted}>
+          <Icon name={meteo.icone as IconName} size={72} color={colors.info} />
+          <Text variant="caption" color={colors.textSecondary}>
             {meteo.maxima}° / {meteo.minima}°
           </Text>
         </View>
@@ -69,7 +72,7 @@ export function WeatherCard({
           marginTop: spacing.md,
           paddingTop: spacing.md,
           borderTopWidth: 1,
-          borderTopColor: RISCA,
+          borderTopColor: colors.border,
         }}>
         <Metric icon="water-percent" label={t('meteo.humidade')} value={`${meteo.humidade}%`} />
         <Metric icon="weather-windy" label={t('meteo.vento')} value={`${meteo.vento} km/h`} />
@@ -80,7 +83,7 @@ export function WeatherCard({
           dá para largar o gado, é preciso recolher? — e não devia obrigar a
           abrir nada. Os outros seis ficam por baixo, a um toque. */}
       {amanha ? (
-        <View style={{ marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: RISCA }}>
+        <View style={{ marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
           <LinhaDia dia={amanha} rotulo={t('meteo.amanha')} destaque />
 
           {proximos.length > 1 ? (
@@ -113,8 +116,8 @@ export function WeatherCard({
                   },
                   pressed && { opacity: 0.7 },
                 ]}>
-                <Icon name={aberto ? 'chevron-up' : 'chevron-down'} size="md" color={colors.textOnDark} />
-                <Text variant="bodyStrong" color={colors.textOnDark}>
+                <Icon name={aberto ? 'chevron-up' : 'chevron-down'} size="md" color={colors.text} />
+                <Text variant="bodyStrong" color={colors.text}>
                   {aberto ? t('meteo.mostrarMenos') : t('meteo.proximosDias', { n: proximos.length })}
                 </Text>
               </Pressable>
@@ -129,16 +132,16 @@ export function WeatherCard({
           alignItems: 'center',
           gap: 6,
           marginTop: spacing.md,
-          backgroundColor: 'rgba(255,255,255,0.14)',
+          backgroundColor: colors.infoTint,
           borderRadius: radii.md,
           padding: spacing.sm,
         }}>
-        <Icon name="information" size="sm" color={colors.textOnDark} />
-        <Text variant="secondary" color={colors.textOnDark} style={{ flex: 1 }}>
+        <Icon name="information" size="sm" color={colors.info} />
+        <Text variant="secondary" color={colors.text} style={{ flex: 1 }}>
           {meteo.conselho}
         </Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -180,26 +183,26 @@ function LinhaDia({
       }`}>
       <Text
         variant={destaque ? 'bodyStrong' : 'secondary'}
-        color={destaque ? colors.textOnDark : colors.textOnDarkMuted}
+        color={destaque ? colors.text : colors.textSecondary}
         style={{ width: 74 }}
         numberOfLines={1}>
         {rotulo}
       </Text>
-      <Icon name={dia.icone as IconName} size={destaque ? 'lg' : 'md'} color={colors.textOnDark} />
+      <Icon name={dia.icone as IconName} size={destaque ? 'lg' : 'md'} color={colors.info} />
       <View style={{ flex: 1 }}>
         <Text
           variant={destaque ? 'bodyStrong' : 'secondary'}
-          color={destaque ? colors.textOnDark : colors.textOnDarkMuted}
+          color={destaque ? colors.text : colors.textSecondary}
           numberOfLines={1}>
           {dia.condicao}
         </Text>
         {chuva ? (
-          <Text variant="caption" color={colors.textOnDarkMuted}>
+          <Text variant="caption" color={colors.textSecondary}>
             {t('meteo.chuva', { chuva })}
           </Text>
         ) : null}
       </View>
-      <Text variant={destaque ? 'bodyStrong' : 'secondary'} color={colors.textOnDark}>
+      <Text variant={destaque ? 'bodyStrong' : 'secondary'} color={colors.text}>
         {dia.maxima}° / {dia.minima}°
       </Text>
     </View>
@@ -240,15 +243,15 @@ function EstadoMeteo({
   onRecarregar?: () => void;
 }) {
   if (estado === 'a-carregar') {
-    return <ActivityIndicator size="small" color={colors.textOnDarkMuted} style={{ marginLeft: 2 }} />;
+    return <ActivityIndicator size="small" color={colors.textSecondary} style={{ marginLeft: 2 }} />;
   }
 
   const offline = estado === 'offline';
   const conteudo = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-      <Icon name={offline ? 'cloud-off-outline' : 'refresh'} size={14} color={colors.textOnDarkMuted} />
+      <Icon name={offline ? 'cloud-off-outline' : 'refresh'} size={14} color={colors.textSecondary} />
       {offline ? (
-        <Text variant="caption" color={colors.textOnDarkMuted}>
+        <Text variant="caption" color={colors.textSecondary}>
           {t('meteo.semLigacao')}
         </Text>
       ) : null}
@@ -271,11 +274,11 @@ function EstadoMeteo({
 function Metric({ icon, label, value }: { icon: IconName; label: string; value: string }) {
   return (
     <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-      <Icon name={icon} size="sm" color={colors.textOnDarkMuted} />
-      <Text variant="bodyStrong" color={colors.textOnDark}>
+      <Icon name={icon} size="sm" color={colors.info} />
+      <Text variant="bodyStrong" color={colors.text}>
         {value}
       </Text>
-      <Text variant="caption" color={colors.textOnDarkMuted}>
+      <Text variant="caption" color={colors.textSecondary}>
         {label}
       </Text>
     </View>

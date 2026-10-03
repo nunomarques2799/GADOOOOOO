@@ -213,6 +213,8 @@ export const layout = {
   conteudoDesktop: 1180,
   /** Coluna única para ecrãs de lista de opções (perfil, definições). */
   conteudoEstreito: 760,
+  /** O painel dos formulários no computador (ver `EcraComTeclado`). */
+  formularioDesktop: 880,
   /** Barra lateral de navegação do desktop. */
   barraLateral: 248,
 } as const;

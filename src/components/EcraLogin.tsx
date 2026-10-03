@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Children, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,7 +10,7 @@ import { useAuth } from '@/data/auth';
 import { entraPorCodigo, intencoes, type Intencao } from '@/data/intencao';
 import { codigoSmsValido, normalizarTelemovel, type MetodoLogin } from '@/data/loginExterno';
 import { t } from '@/i18n';
-import { useDesktop } from '@/hooks/useDesktop';
+import { useColunas, useDesktop } from '@/hooks/useDesktop';
 import { colors, fontFamily, radii, shadow, sizes, spacing } from '@/theme';
 
 /**
@@ -25,6 +25,7 @@ type Modo = 'entrar' | 'registar' | 'recuperar' | 'telemovel';
 export function EcraLogin() {
   const insets = useSafeAreaInsets();
   const desktop = useDesktop();
+  const colunas = useColunas();
   const { entrar, registar, recuperarPalavra, entrarCom, pedirCodigoSms, entrarComCodigoSms } =
     useAuth();
 
@@ -142,53 +143,24 @@ export function EcraLogin() {
     setAProcessar(false);
   }
 
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{
-            flexGrow: 1,
-            // No computador o formulário fica ao meio da janela em vez de
-            // encostado ao topo, com o resto do ecrã vazio por baixo.
-            justifyContent: desktop ? 'center' : 'flex-start',
-            paddingVertical: desktop ? spacing.xl : 0,
-          }}>
-          {/* A marca, sozinha no creme: o logótipo, o nome em Fraunces e a
-              frase. Era um cabeçalho verde com a vaca da biblioteca de ícones;
-              o guia de estilo pôs aqui o logótipo de verdade. */}
-          <View
-            style={{
-              alignItems: 'center',
-              paddingTop: desktop ? spacing.xl : insets.top + spacing.xxxl,
-              paddingHorizontal: spacing.lg,
-            }}>
-            <Logotipo tamanho={desktop ? 112 : 124} sombra />
-            <Text
-              variant="display"
-              center
-              style={{ fontSize: 44, lineHeight: 50, marginTop: spacing.xl }}
-              maxFontSizeMultiplier={1.1}>
-              Terrabovina
-            </Text>
-            <Text variant="bodyLg" color={colors.textSecondary} center style={{ marginTop: spacing.xs }}>
-              {recuperar
-                ? t('login.recuperarAcesso')
-                : registo
-                  ? t('login.criarConta')
-                  : porTelemovel
-                    ? t('login.entrarNaConta')
-                    : t('login.lema')}
-            </Text>
-          </View>
+  /** O que se está a fazer neste ecrã, dito por baixo da marca. */
+  const subtitulo = recuperar
+    ? t('login.recuperarAcesso')
+    : registo
+      ? t('login.criarConta')
+      : porTelemovel
+        ? t('login.entrarNaConta')
+        : t('login.lema');
 
-          {/* Formulário */}
+  /** No registo do computador, os campos vão aos pares (ver `LadoALado`). */
+  const lado = colunas && registo;
+
+  const formulario = (
           <View
             style={{
-              paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
+              // No computador o formulário já vem dentro da sua coluna (ver
+              // `EcraLoginDesktop`), e as margens são dela.
+              paddingHorizontal: desktop ? 0 : spacing.lg,
               paddingTop: spacing.xl,
             }}>
             {/*
@@ -250,16 +222,19 @@ export function EcraLogin() {
                 <Text variant="label" style={{ marginBottom: spacing.xs }}>
                   {t('login.oQueVeioFazer')}
                 </Text>
-                <View style={{ gap: spacing.xs }}>
+                {/* No computador, em grelha de duas: quatro cartões empilhados
+                    empurravam o botão de criar conta para fora da janela. */}
+                <View style={{ gap: spacing.xs, flexDirection: lado ? 'row' : 'column', flexWrap: 'wrap' }}>
                   {intencoes().map((op) => (
-                    <OpcaoIntencao
-                      key={op.id}
-                      rotulo={op.rotulo}
-                      descricao={op.descricao}
-                      icone={op.icone}
-                      escolhida={intencao === op.id}
-                      onPress={() => setIntencao(op.id)}
-                    />
+                    <View key={op.id} style={lado ? { flexBasis: '40%', flexGrow: 1 } : undefined}>
+                      <OpcaoIntencao
+                        rotulo={op.rotulo}
+                        descricao={op.descricao}
+                        icone={op.icone}
+                        escolhida={intencao === op.id}
+                        onPress={() => setIntencao(op.id)}
+                      />
+                    </View>
                   ))}
                 </View>
                 {/* Quatro descrições de uma linha não explicam quem convida
@@ -284,6 +259,7 @@ export function EcraLogin() {
                 </Pressable>
               </View>
             ) : null}
+            <LadoALado ativo={lado}>
             {registo ? (
               <Campo
                 label={t('login.nome')}
@@ -305,6 +281,8 @@ export function EcraLogin() {
                 keyboardType="email-address"
               />
             ) : null}
+            </LadoALado>
+            <LadoALado ativo={lado}>
             {!recuperar && !porTelemovel ? (
               <Campo
                 label={t('login.palavraPasse')}
@@ -329,6 +307,7 @@ export function EcraLogin() {
                 aviso={naoBatem ? t('login.palavrasNaoBatem') : undefined}
               />
             ) : null}
+            </LadoALado>
             {recuperar ? (
               <Text variant="secondary" color={colors.textSecondary} style={{ marginBottom: spacing.lg }}>
                 {t('login.explicacaoRecuperar')}
@@ -438,10 +417,184 @@ export function EcraLogin() {
               </Pressable>
             )}
           </View>
+  );
+
+  if (desktop) {
+    return (
+      <>
+        <EcraLoginDesktop
+          titulo={registo ? t('login.criarConta') : recuperar ? t('login.recuperarAcesso') : t('login.entrarNaConta')}
+          largo={registo}>
+          {formulario}
+        </EcraLoginDesktop>
+        <ModalPapeis visivel={papeisAbertos} onFechar={() => setPapeisAbertos(false)} />
+      </>
+    );
+  }
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1 }}>
+          {/* A marca, sozinha no creme: o logótipo, o nome em Fraunces e a
+              frase. Era um cabeçalho verde com a vaca da biblioteca de ícones;
+              o guia de estilo pôs aqui o logótipo de verdade. */}
+          <View
+            style={{
+              alignItems: 'center',
+              paddingTop: insets.top + spacing.xxxl,
+              paddingHorizontal: spacing.lg,
+            }}>
+            <Logotipo tamanho={124} sombra />
+            <Text
+              variant="display"
+              center
+              style={{ fontSize: 44, lineHeight: 50, marginTop: spacing.xl }}
+              maxFontSizeMultiplier={1.1}>
+              Terrabovina
+            </Text>
+            <Text variant="bodyLg" color={colors.textSecondary} center style={{ marginTop: spacing.xs }}>
+              {subtitulo}
+            </Text>
+          </View>
+
+          {formulario}
         </ScrollView>
       </KeyboardAvoidingView>
 
       <ModalPapeis visivel={papeisAbertos} onFechar={() => setPapeisAbertos(false)} />
+    </View>
+  );
+}
+
+/**
+ * A entrada no COMPUTADOR: a marca de um lado, o formulário do outro.
+ * ------------------------------------------------------------------
+ * Era o ecrã do telemóvel numa tira de 760px ao meio do monitor, com duas
+ * bandas cinzentas dos lados: parecia a app aberta com a janela mal esticada.
+ * Num ecrã largo, a entrada é a primeira página que se vê, e é a página onde a
+ * app se apresenta a quem chega pela primeira vez. À esquerda fica a marca, na
+ * cor da paleta, com a frase e as três coisas que a app faz; à direita, no
+ * creme, o formulário numa coluna da largura de um formulário (os campos não
+ * ganham nada com 900px de largura).
+ *
+ * Abaixo de ~1100px o painel da marca encolhe, mas não desaparece: o mínimo do
+ * desenho de desktop são 900px e cabem os dois.
+ */
+export function EcraLoginDesktop({
+  titulo,
+  largo,
+  children,
+}: {
+  titulo: string;
+  /** O registo, que tem mais para preencher e vai em grelha. */
+  largo: boolean;
+  children: ReactNode;
+}) {
+  const pontos: { icone: IconName; texto: string }[] = [
+    { icone: 'calendar-check-outline', texto: t('login.painelPrazos') },
+    { icone: 'cloud-off-outline', texto: t('login.painelSemRede') },
+    { icone: 'account-group-outline', texto: t('login.painelEquipa') },
+  ];
+  return (
+    <View style={{ flex: 1, flexDirection: 'row', backgroundColor: colors.background }}>
+      <View
+        style={{
+          width: '44%',
+          minWidth: 380,
+          maxWidth: 640,
+          backgroundColor: colors.primary,
+          paddingHorizontal: spacing.xxxl,
+          paddingVertical: spacing.xxl,
+          justifyContent: 'space-between',
+          overflow: 'hidden',
+        }}>
+        {/* Curvas de nível, ao canto: três círculos de traço fino, como as
+            linhas de um mapa de terreno. Enfeite puro, por isso sem toques e
+            escondidos do leitor de ecrã. */}
+        {[760, 560, 360].map((d) => (
+          <View
+            key={d}
+            pointerEvents="none"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={{
+              position: 'absolute',
+              width: d,
+              height: d,
+              right: -d / 2 + 60,
+              bottom: -d / 2 + 40,
+              borderRadius: radii.pill,
+              borderWidth: 1,
+              borderColor: colors.textOnDarkMuted,
+              opacity: 0.18,
+            }}
+          />
+        ))}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Logotipo tamanho={56} />
+          <Text variant="h2" color={colors.textOnDark}>
+            Terrabovina
+          </Text>
+        </View>
+
+        <View style={{ maxWidth: 480 }}>
+          <Text
+            variant="display"
+            color={colors.textOnDark}
+            style={{ fontSize: 44, lineHeight: 52 }}
+            maxFontSizeMultiplier={1.1}>
+            {t('login.lema')}
+          </Text>
+          <View style={{ marginTop: spacing.xxl, gap: spacing.lg }}>
+            {pontos.map((p) => (
+              <View key={p.icone} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <View
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: radii.pill,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.textOnDarkMuted,
+                  }}>
+                  <Icon name={p.icone} size="md" color={colors.textOnDark} />
+                </View>
+                <Text variant="bodyLg" color={colors.textOnDarkMuted} style={{ flex: 1 }}>
+                  {p.texto}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <Text variant="caption" color={colors.textOnDarkMuted}>
+          {t('login.painelRodape')}
+        </Text>
+      </View>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: spacing.xxl,
+          paddingVertical: spacing.xxl,
+        }}>
+        <View style={{ width: '100%', maxWidth: largo ? 640 : 460 }}>
+          <Text variant="display">{titulo}</Text>
+          {children}
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -585,6 +738,23 @@ function Campo({
           </Text>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * Dois campos na mesma linha (nome e email, as duas palavras-passe), só no
+ * registo do computador. Desligado, não acrescenta nada à árvore.
+ */
+function LadoALado({ ativo, children }: { ativo: boolean; children: ReactNode }) {
+  if (!ativo) return <>{children}</>;
+  return (
+    <View style={{ flexDirection: 'row', gap: spacing.md }}>
+      {Children.toArray(children).map((filho, i) => (
+        <View key={i} style={{ flex: 1 }}>
+          {filho}
+        </View>
+      ))}
     </View>
   );
 }

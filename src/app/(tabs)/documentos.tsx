@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CartaoIntroducao } from '@/components/CartaoIntroducao';
 import { ModalRelatorioPrazos } from '@/components/ModalRelatorioPrazos';
 import { SeccaoDocumentos } from '@/components/SeccaoDocumentos';
-import { Button, Card, EmptyState, Folha, Icon, type IconName, Text } from '@/components/ui';
+import { Button, Card, Colunas, EmptyState, Folha, Icon, type IconName, Text } from '@/components/ui';
 import { exportarAnimaisExcel } from '@/data/animalExcelFicheiro';
 import { avisar, confirmar } from '@/data/avisos';
 import { descarregarTabelaExcel, excelDisponivel } from '@/data/excelFicheiro';
@@ -80,9 +80,9 @@ export default function DocumentosScreen() {
 
   const coluna = {
     width: '100%',
-    maxWidth: desktop ? layout.conteudoEstreito : undefined,
+    maxWidth: desktop ? layout.conteudoDesktop : undefined,
     alignSelf: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
   } as const;
 
   // O separador já não aparece na barra a quem não tem isto (ver `(tabs)/
@@ -144,7 +144,12 @@ export default function DocumentosScreen() {
             ]}
           />
 
-
+          {/* No computador, duas colunas (ver `Colunas`): o que se comunica,
+              importa e exporta à esquerda; os papéis guardados e as notas à
+              direita. */}
+          <Colunas
+            esquerda={
+          <View style={{ gap: spacing.md }}>
           {/* O SNIRA vem PRIMEIRO, e fora do grupo das exportações: não é um
               ficheiro que se leva, é trabalho que tem prazo legal a correr. O
               número ao lado é o que falta comunicar — quando é zero, a linha
@@ -234,6 +239,10 @@ export default function DocumentosScreen() {
             )}
           </Grupo>
 
+          </View>
+            }
+            direita={
+          <View style={{ gap: spacing.md }}>
           {/* As gavetas dos papéis guardados, a seguir às exportações. Só as
               pastas: os documentos vivem dentro delas, em `/gaveta/[categoria]`
               — com meia dúzia de faturas, a lista aberta aqui era mais comprida
@@ -242,6 +251,9 @@ export default function DocumentosScreen() {
 
           {/* Notas */}
           <SeccaoNotas notas={notasApi} />
+          </View>
+            }
+          />
         </View>
       </ScrollView>
 

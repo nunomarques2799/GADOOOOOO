@@ -21,7 +21,7 @@ import {
 import { useGado } from '@/data/store';
 import { t } from '@/i18n';
 import { useAtualizarPuxando } from '@/hooks/useAtualizarPuxando';
-import { useDesktop } from '@/hooks/useDesktop';
+import { useDesktop, useTresColunas } from '@/hooks/useDesktop';
 import { colors, layout, radii, shadow, spacing } from '@/theme';
 
 /**
@@ -64,6 +64,7 @@ export default function ReproducaoScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const desktop = useDesktop();
+  const quadro = useTresColunas();
   const { animais, eventos } = useGado();
   const { podeEmAlguma } = useMembros();
   const { controlo: controloAtualizar } = useAtualizarPuxando();
@@ -123,58 +124,112 @@ export default function ReproducaoScreen() {
 
   const nadaARegistar = resumo.elegiveis === 0;
 
+  type Seccao = (typeof secoes)[number];
+  const linhaDe = (item: LinhaReproducao, section: Seccao) => (
+    <LinhaFemea
+      key={item.animal.id}
+      linha={item}
+      acao={section.acao}
+      acaoRotulo={section.acaoRotulo}
+      podeRegistar={podeRegistar}
+      onAbrir={() => router.push(`/animal/${item.animal.id}`)}
+      onRegistar={
+        section.acao
+          ? () =>
+              router.push({
+                pathname: '/evento/novo',
+                params: { tipo: section.acao, animalId: item.animal.id },
+              })
+          : undefined
+      }
+    />
+  );
+  const cabecalhoDe = (section: Seccao) => (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+        paddingTop: spacing.md,
+        paddingBottom: spacing.xs,
+        backgroundColor: colors.background,
+      }}>
+      <Icon name={section.icon} size="sm" color={section.cor} />
+      <Text variant="label" color={colors.textSecondary} style={{ flex: 1 }}>
+        {section.titulo.toUpperCase()}
+      </Text>
+      <Badge
+        tone={section.data.length === 0 ? 'neutral' : 'brand'}
+        label={String(section.data.length)}
+      />
+    </View>
+  );
+  const rodapeDe = (section: Seccao) =>
+    section.data.length === 0 ? (
+      <Card>
+        <Text variant="secondary" color={colors.textSecondary}>
+          {section.vazio}
+        </Text>
+      </Card>
+    ) : null;
+  const cabecalhoLista = (
+    <View style={{ paddingTop: insets.top + spacing.md }}>
+      <Text variant="display">{t('nav.reproducao')}</Text>
+      <Text variant="body" color={colors.textSecondary}>
+        {nadaARegistar
+          ? t('repro.subtituloVazio')
+          : t('repro.femeasEmIdade', { n: resumo.elegiveis })}
+      </Text>
+      {nadaARegistar ? null : <Resumo resumo={resumo} onAbrirFase={setGrupoAberto} />}
+    </View>
+  );
+  const listaVazia = nadaARegistar ? (
+    <EmptyState
+      icon="heart-pulse"
+      title={t('repro.vazioTitulo')}
+      message={t('repro.vazioMensagem')}
+    />
+  ) : null;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* No computador, as três listas lado a lado, como as colunas de um
+          quadro de trabalho: quem está para parir, quem falta diagnosticar e
+          quem está parada. Empilhadas numa coluna de 1100px, a terceira só se
+          via depois de rolar, e é ela a que mais custa dinheiro. */}
+      {quadro ? (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={controloAtualizar}
+          contentContainerStyle={{
+          width: '100%',
+          maxWidth: desktop ? layout.conteudoDesktop : undefined,
+          alignSelf: 'center',
+          paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
+          paddingBottom: spacing.huge + 40,
+        }}>
+          {cabecalhoLista}
+          {nadaARegistar ? (
+            listaVazia
+          ) : (
+            <View style={{ flexDirection: 'row', gap: spacing.lg, alignItems: 'flex-start' }}>
+              {secoes.map((section) => (
+                <View key={section.chave} style={{ flex: 1, minWidth: 0 }}>
+                  {cabecalhoDe(section)}
+                  {section.data.map((item) => linhaDe(item, section))}
+                  {rodapeDe(section)}
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      ) : (
       <SectionList
         sections={secoes}
         keyExtractor={(l) => l.animal.id}
-        renderItem={({ item, section }) => (
-          <LinhaFemea
-            linha={item}
-            acao={section.acao}
-            acaoRotulo={section.acaoRotulo}
-            podeRegistar={podeRegistar}
-            onAbrir={() => router.push(`/animal/${item.animal.id}`)}
-            onRegistar={
-              section.acao
-                ? () =>
-                    router.push({
-                      pathname: '/evento/novo',
-                      params: { tipo: section.acao, animalId: item.animal.id },
-                    })
-                : undefined
-            }
-          />
-        )}
-        renderSectionHeader={({ section }) => (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing.xs,
-              paddingTop: spacing.md,
-              paddingBottom: spacing.xs,
-              backgroundColor: colors.background,
-            }}>
-            <Icon name={section.icon} size="sm" color={section.cor} />
-            <Text variant="label" color={colors.textSecondary} style={{ flex: 1 }}>
-              {section.titulo.toUpperCase()}
-            </Text>
-            <Badge
-              tone={section.data.length === 0 ? 'neutral' : 'brand'}
-              label={String(section.data.length)}
-            />
-          </View>
-        )}
-        renderSectionFooter={({ section }) =>
-          section.data.length === 0 ? (
-            <Card>
-              <Text variant="secondary" color={colors.textSecondary}>
-                {section.vazio}
-              </Text>
-            </Card>
-          ) : null
-        }
+        renderItem={({ item, section }) => linhaDe(item, section)}
+        renderSectionHeader={({ section }) => cabecalhoDe(section)}
+        renderSectionFooter={({ section }) => rodapeDe(section)}
         stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
         refreshControl={controloAtualizar}
@@ -185,27 +240,10 @@ export default function ReproducaoScreen() {
           paddingHorizontal: desktop ? spacing.xxl : spacing.lg,
           paddingBottom: spacing.huge + 40,
         }}
-        ListHeaderComponent={
-          <View style={{ paddingTop: insets.top + spacing.md }}>
-            <Text variant="display">{t('nav.reproducao')}</Text>
-            <Text variant="body" color={colors.textSecondary}>
-              {nadaARegistar
-                ? t('repro.subtituloVazio')
-                : t('repro.femeasEmIdade', { n: resumo.elegiveis })}
-            </Text>
-            {nadaARegistar ? null : <Resumo resumo={resumo} onAbrirFase={setGrupoAberto} />}
-          </View>
-        }
-        ListEmptyComponent={
-          nadaARegistar ? (
-            <EmptyState
-              icon="heart-pulse"
-              title={t('repro.vazioTitulo')}
-              message={t('repro.vazioMensagem')}
-            />
-          ) : null
-        }
+        ListHeaderComponent={cabecalhoLista}
+        ListEmptyComponent={listaVazia}
       />
+      )}
       {podeRegistar && !nadaARegistar ? (
         <FAB
           label={t('repro.registarCobricao')}

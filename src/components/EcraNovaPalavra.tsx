@@ -1,10 +1,12 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { EcraLoginDesktop } from '@/components/EcraLogin';
+import { Logotipo } from '@/components/Logotipo';
 import { Button, Icon, type IconName, Text } from '@/components/ui';
 import { useAuth } from '@/data/auth';
+import { useDesktop } from '@/hooks/useDesktop';
 import { t } from '@/i18n';
 import { colors, fontFamily, radii, sizes, spacing } from '@/theme';
 
@@ -14,6 +16,7 @@ import { colors, fontFamily, radii, sizes, spacing } from '@/theme';
  */
 export function EcraNovaPalavra() {
   const insets = useSafeAreaInsets();
+  const desktop = useDesktop();
   const { definirNovaPalavra, sair } = useAuth();
 
   const [palavra, setPalavra] = useState('');
@@ -38,6 +41,63 @@ export function EcraNovaPalavra() {
     // de autenticação troca para a app sozinho.
   }
 
+  const formulario = (
+    <View style={{ paddingHorizontal: desktop ? 0 : spacing.lg, paddingTop: spacing.xl }}>
+      <Campo
+        label={t('novaPalavra.titulo')}
+        icon="lock-outline"
+        value={palavra}
+        onChangeText={setPalavra}
+        placeholder={t('login.palavraPassePlaceholder')}
+      />
+      <Campo
+        label={t('novaPalavra.confirmar')}
+        icon="lock-check-outline"
+        value={confirmar}
+        onChangeText={setConfirmar}
+        placeholder={t('novaPalavra.repita')}
+      />
+
+      {curta ? (
+        <Aviso texto={t('novaPalavra.curta')} />
+      ) : naoCoincide ? (
+        <Aviso texto={t('novaPalavra.naoCoincidem')} />
+      ) : erro ? (
+        <Aviso texto={erro} />
+      ) : null}
+
+      <Button
+        label={t('novaPalavra.guardar')}
+        icon="check"
+        onPress={guardar}
+        disabled={!valido}
+        loading={aProcessar}
+      />
+
+      <Pressable
+        onPress={() => void sair()}
+        accessibilityRole="button"
+        style={{ marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.xs }}>
+        <Text variant="body" color={colors.textSecondary}>
+          {t('comum.cancelar')}
+        </Text>
+      </Pressable>
+    </View>
+  );
+
+  // No computador, a mesma moldura da entrada: a marca de um lado e o
+  // formulário do outro (ver `EcraLoginDesktop`).
+  if (desktop) {
+    return (
+      <EcraLoginDesktop titulo={t('novaPalavra.titulo')} largo={false}>
+        <Text variant="body" color={colors.textSecondary} style={{ marginTop: spacing.xs }}>
+          {t('novaPalavra.subtitulo')}
+        </Text>
+        {formulario}
+      </EcraLoginDesktop>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
@@ -47,79 +107,24 @@ export function EcraNovaPalavra() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ flexGrow: 1 }}>
-          <LinearGradient
-            colors={[colors.headerFrom, colors.headerTo]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+          {/* A marca no creme, como no ecrã de entrada. Era um cabeçalho verde
+              em degradê com um cadeado, do desenho de antes da marca nova. */}
+          <View
             style={{
-              paddingTop: insets.top + spacing.xxl,
-              paddingBottom: spacing.xxl,
-              paddingHorizontal: spacing.lg,
-              borderBottomLeftRadius: radii.xl,
-              borderBottomRightRadius: radii.xl,
               alignItems: 'center',
+              paddingTop: insets.top + spacing.xxxl,
+              paddingHorizontal: spacing.lg,
             }}>
-            <View
-              style={{
-                width: 84,
-                height: 84,
-                borderRadius: radii.pill,
-                backgroundColor: 'rgba(255,255,255,0.16)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: spacing.sm,
-              }}>
-              <Icon name="lock-reset" size={48} color={colors.textOnDark} />
-            </View>
-            <Text variant="display" color={colors.textOnDark}>
+            <Logotipo tamanho={96} sombra />
+            <Text variant="display" center style={{ marginTop: spacing.lg }}>
               {t('novaPalavra.titulo')}
             </Text>
-            <Text variant="body" color={colors.textOnDarkMuted} style={{ marginTop: 2 }}>
+            <Text variant="body" color={colors.textSecondary} center style={{ marginTop: 2 }}>
               {t('novaPalavra.subtitulo')}
             </Text>
-          </LinearGradient>
-
-          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
-            <Campo
-              label={t('novaPalavra.titulo')}
-              icon="lock-outline"
-              value={palavra}
-              onChangeText={setPalavra}
-              placeholder={t('login.palavraPassePlaceholder')}
-            />
-            <Campo
-              label={t('novaPalavra.confirmar')}
-              icon="lock-check-outline"
-              value={confirmar}
-              onChangeText={setConfirmar}
-              placeholder={t('novaPalavra.repita')}
-            />
-
-            {curta ? (
-              <Aviso texto={t('novaPalavra.curta')} />
-            ) : naoCoincide ? (
-              <Aviso texto={t('novaPalavra.naoCoincidem')} />
-            ) : erro ? (
-              <Aviso texto={erro} />
-            ) : null}
-
-            <Button
-              label={t('novaPalavra.guardar')}
-              icon="check"
-              onPress={guardar}
-              disabled={!valido}
-              loading={aProcessar}
-            />
-
-            <Pressable
-              onPress={() => void sair()}
-              accessibilityRole="button"
-              style={{ marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.xs }}>
-              <Text variant="body" color={colors.textSecondary}>
-                {t('comum.cancelar')}
-              </Text>
-            </Pressable>
           </View>
+
+          {formulario}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

@@ -1,12 +1,21 @@
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   type StyleProp,
+  View,
   type ViewStyle,
 } from 'react-native';
 
-import { colors } from '@/theme';
+import { useDesktop } from '@/hooks/useDesktop';
+import { colors, layout, radii, spacing } from '@/theme';
+
+/**
+ * Verdadeiro dentro do painel de formulário do computador. O `Header` lê-o para
+ * encostar o título à mesma margem dos campos, e não à da página.
+ */
+const PainelFormulario = createContext(false);
+export const useDentroDePainel = () => useContext(PainelFormulario);
 
 /**
  * O invólucro dos ecrãs de formulário, para o teclado não tapar o que importa.
@@ -30,10 +39,56 @@ import { colors } from '@/theme';
 export function EcraComTeclado({
   children,
   style,
+  larguraDesktop = layout.formularioDesktop,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
+  /** A largura do painel no computador (ver abaixo). */
+  larguraDesktop?: number;
 }) {
+  const desktop = useDesktop();
+
+  /*
+   * No computador, o formulário é um PAINEL ao meio da página.
+   * ------------------------------------------------------------------
+   * Esticado pela janela, um campo de nome tinha 1100px de largura para cinco
+   * letras, os chips do sexo ficavam a meia janela de distância um do outro e a
+   * barra de gravar atravessava o monitor de um lado ao outro: era o desenho do
+   * telemóvel, ampliado. Aqui o formulário vive numa folha com bordas, como um
+   * papel pousado na mesa, e a barra de gravar fica DENTRO dela (é
+   * `position: 'absolute'` em cada formulário, e o painel é o seu contentor),
+   * debaixo dos campos a que pertence.
+   */
+  if (desktop) {
+    return (
+      <View
+        style={[
+          {
+            flex: 1,
+            backgroundColor: colors.background,
+            paddingHorizontal: spacing.xxl,
+            paddingVertical: spacing.xl,
+          },
+          style,
+        ]}>
+        <View
+          style={{
+            flex: 1,
+            width: '100%',
+            maxWidth: larguraDesktop,
+            alignSelf: 'center',
+            backgroundColor: colors.background,
+            borderRadius: radii.xl,
+            borderWidth: 1,
+            borderColor: colors.border,
+            overflow: 'hidden',
+          }}>
+          <PainelFormulario.Provider value>{children}</PainelFormulario.Provider>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={[{ flex: 1, backgroundColor: colors.background }, style]}

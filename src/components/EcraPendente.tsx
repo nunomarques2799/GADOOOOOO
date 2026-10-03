@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useState, type ReactNode } from 'react';
 import { ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -163,10 +162,9 @@ export function EcraPendente() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <LinearGradient
-        colors={[colors.headerFrom, colors.headerTo]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      {/* No creme, com uma risca por baixo. Era um cabeçalho verde em
+          degradê, do desenho de antes da marca nova. */}
+      <View
         style={{
           // Em janela larga o cabeçalho é uma faixa, não meio ecrã: o mesmo
           // desenho vertical que serve um telemóvel empurrava tudo o que
@@ -174,8 +172,8 @@ export function EcraPendente() {
           paddingTop: insets.top + (desktop ? spacing.lg : spacing.xxl),
           paddingBottom: desktop ? spacing.lg : spacing.xxl,
           paddingHorizontal: desktop ? spacing.xl : spacing.lg,
-          borderBottomLeftRadius: radii.xl,
-          borderBottomRightRadius: radii.xl,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.border,
           alignItems: desktop ? 'flex-start' : 'center',
         }}>
         <View
@@ -190,7 +188,7 @@ export function EcraPendente() {
               width: desktop ? 60 : 84,
               height: desktop ? 60 : 84,
               borderRadius: radii.pill,
-              backgroundColor: 'rgba(255,255,255,0.16)',
+              backgroundColor: colors.surfaceAlt,
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: desktop ? 0 : spacing.sm,
@@ -198,22 +196,22 @@ export function EcraPendente() {
             <Icon
               name={aprovado ? 'barn' : porCodigo ? 'ticket-confirmation-outline' : 'clock-outline'}
               size={desktop ? 32 : 48}
-              color={colors.textOnDark}
+              color={colors.primaryDark}
             />
           </View>
           <View style={{ flex: desktop ? 1 : undefined, alignItems: desktop ? 'flex-start' : 'center' }}>
-            <Text variant={desktop ? 'h1' : 'display'} color={colors.textOnDark}>
+            <Text variant={desktop ? 'h1' : 'display'}>
               {titulo}
             </Text>
             <Text
               variant="body"
-              color={colors.textOnDarkMuted}
+              color={colors.textSecondary}
               style={{ marginTop: 2, textAlign: desktop ? 'left' : 'center' }}>
               {nome ? `Olá, ${nome.split(' ')[0]}.` : email}
             </Text>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
